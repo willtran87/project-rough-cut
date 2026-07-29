@@ -6,7 +6,7 @@ Hole 1 is now a 360-unit authored course divided into four suspense zones: The T
 
 Generated hedge tunnels, overturned carts, water boundaries, bunker walls, audit boards, floodlights, trees, rope boundaries, and maintenance debris are physical landmarks rather than decoration. Swept player collision prevents sprint tunneling, collision volumes preserve readable passages, and hard cover only conceals the player when it actually breaks Joe's line of sight. Deep rough softens the player's outline but still rustles when crossed carelessly and bends into a temporary trail; sprinting leaves stronger evidence than crouching. Joe's mower paints persistent cut strips through the world. Following one is quieter than crossing rough, but the short grass removes concealment. Golf impacts leave persistent divots. The amber floodlight raises visibility.
 
-The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Joe follows an authored course patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Four golf-ball distractions support the longer traversal and become progressively less effective.
+The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Activating the system now soaks four projected course zones for 24 seconds. Wet turf muffles careful movement and slows Joe's mower to 68% speed, but it also creates brighter, stronger footprints that remain discoverable longer. Joe follows an authored course patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Four golf-ball distractions support the longer traversal and become progressively less effective.
 
 Clearing all three rotating Night Orders unlocks the optional Overtime Audit. It starts the player with two golf balls, makes Joe 16% faster and 22% quicker to confirm sight or sound, strengthens and extends player evidence, shortens golf-ball distraction windows, and awards a 1.30× score premium. Overtime escapes and captures are tracked separately, and the best Overtime result never replaces a normal route record.
 
@@ -37,7 +37,7 @@ Then open `http://127.0.0.1:4187/`.
 - Shift — sprint, with more noise.
 - Hold C — crouch; hard cover conceals when it breaks Joe's sightline, while rough provides partial concealment.
 - Hold Q — Listening Focus; slow down and read mower direction, nearby cover, landmarks, and exposure.
-- Enter — interact with the key, sprinkler, shed, and drainage culvert.
+- Enter — interact with the key, sprinkler, shed, and drainage culvert; sprinkler water creates temporary quiet routes but lasting tracks.
 - Hold Space, steer with A/D, then release — aim and chip a golf-ball distraction.
 - F — toggle fullscreen.
 - Escape — cancel an aimed shot, return from settings, or pause Hole 1.
