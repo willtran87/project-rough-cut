@@ -8,6 +8,8 @@ Generated hedge tunnels, overturned carts, water boundaries, bunker walls, audit
 
 The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Activating the system now soaks four projected course zones for 24 seconds. Wet turf muffles careful movement and slows Joe's mower to 68% speed, but it also creates brighter, stronger footprints that remain discoverable longer. Joe follows an authored course patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Four golf-ball distractions support the longer traversal and become progressively less effective. Every landed ball persists in the world and can be reclaimed with Enter or A, turning Joe's active investigation point into a renewable but dangerous resource.
 
+Three permanent bunkers add a second terrain gamble. Sand reduces the player's movement speed to 72%, makes every crossing conspicuously loud, and leaves stronger tracks that linger. Joe's mower also churns down to 76% speed in a bunker, so a well-timed lure can convert the hazard into breathing room and earn a capped Bunker Bait score bonus. Perspective-projected sand lips, rake lines, granular footsteps, mower-churn effects, course-map regions, and Listening Focus callouts keep the tradeoff readable without flattening the course.
+
 Clearing all three rotating Night Orders unlocks the optional Overtime Audit. It starts the player with two golf balls, makes Joe 16% faster and 22% quicker to confirm sight or sound, strengthens and extends player evidence, shortens golf-ball distraction windows, and awards a 1.30× score premium. Overtime escapes and captures are tracked separately, and the best Overtime result never replaces a normal route record.
 
 Every Night Order also places one Unfiled Change Request in a deliberately exposed side lane. Securing it makes a small noise and marks the document as banked for the current attempt, but its +650 score bonus and persistent filing credit are awarded only after a successful escape. The briefing, compact HUD, world view, Listening Focus, and course map all communicate the optional risk without turning it into a required checklist.
@@ -39,6 +41,7 @@ Then open `http://127.0.0.1:4187/`.
 - Shift — sprint, with more noise.
 - Hold C — crouch; hard cover conceals when it breaks Joe's sightline, while rough provides partial concealment.
 - Hold Q — Listening Focus; slow down and read mower direction, nearby cover, landmarks, and exposure.
+- Bunker sand — slows both you and Joe's mower, but your louder footprints linger; bait Joe into sand for a capped score bonus.
 - Enter — interact with the key, sprinkler, shed, drainage culvert, secure an Unfiled Change Request, or reclaim a landed golf ball; sprinkler water creates temporary quiet routes but lasting tracks.
 - Hold Space, steer with A/D, then release — aim and chip a golf-ball distraction.
 - F — toggle fullscreen.
