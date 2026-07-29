@@ -1,0 +1,30 @@
+{
+  "unitId": "portrait-inspired-man",
+  "status": "animation-draft",
+  "validationCommand": "python C:/Users/Will/.codex/skills/high-resolution-isometric-pixel-character/scripts/validate_character_package.py C:/Users/Will/Desktop/assets/characters/portrait-inspired-man --id portrait-inspired-man --type character",
+  "validationPassed": false,
+  "checks": {
+    "walkFrameCount": "pass",
+    "walkFrameDimensions": "pass",
+    "transparency": "pass",
+    "sharedBaseline": "pass",
+    "spriteSheet": "pass",
+    "directionConvention": "custom-front-facing",
+    "animationQuality": "needs-paint-pass",
+    "fullCharacterPackage": "incomplete"
+  },
+  "bespokeAnimationFrames": false,
+  "poseExpandedFrames": true,
+  "duplicatedFramesPresent": false,
+  "remainingPaintPasses": [
+    "Paint-clean all ten generated walk poses for exact facial, hand, garment, and limb consistency.",
+    "Refine foot-contact silhouettes and spacing to eliminate any residual skating.",
+    "Paint-clean the mower handle, wheel rotation, hand grips, erratic arm transitions, neck connections, and head-angle transitions across the mow-walk-chaotic loop.",
+    "Create the required NE, NW, SE, and SW directional walk cycles if promoting to the standard gameplay contract."
+  ],
+  "notes": [
+    "FRONT is a user-requested custom direction and is outside the standard NE/NW/SE/SW direction set.",
+    "The mow-walk-chaotic signature loop uses ten generated distinct poses at 10 FPS and includes a persistent lawn mower prop.",
+    "Version 2 adds independent erratic head tilts, chin changes, and gaze shifts while retaining the custom FRONT direction."
+  ]
+}

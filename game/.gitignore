@@ -1,0 +1,13 @@
+# Godot-generated state and imports
+.godot/
+
+# Exported packages
+builds/
+exports/
+*.pck
+
+# Editor and operating-system noise
+.DS_Store
+Thumbs.db
+desktop.ini
+

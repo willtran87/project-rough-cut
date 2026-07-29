@@ -1,0 +1,318 @@
+{
+  "unitId": "portrait-inspired-man",
+  "unitType": "character",
+  "layoutStandardVersion": "custom-front-facing-draft",
+  "frameSize": {
+    "w": 192,
+    "h": 192
+  },
+  "directions": [
+    "FRONT"
+  ],
+  "animations": [
+    {
+      "action": "walk",
+      "direction": "FRONT",
+      "fps": 12,
+      "loop": true,
+      "frameCount": 10,
+      "frames": [
+        {
+          "index": 0,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_00.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "left"
+          ],
+          "tags": [
+            "contact"
+          ]
+        },
+        {
+          "index": 1,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_01.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "left"
+          ],
+          "tags": [
+            "down"
+          ]
+        },
+        {
+          "index": 2,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_02.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "left"
+          ],
+          "tags": [
+            "passing"
+          ]
+        },
+        {
+          "index": 3,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_03.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "left"
+          ],
+          "tags": [
+            "up"
+          ]
+        },
+        {
+          "index": 4,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_04.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [],
+          "tags": [
+            "pre-contact"
+          ]
+        },
+        {
+          "index": 5,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_05.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "right"
+          ],
+          "tags": [
+            "contact"
+          ]
+        },
+        {
+          "index": 6,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_06.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "right"
+          ],
+          "tags": [
+            "down"
+          ]
+        },
+        {
+          "index": 7,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_07.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "right"
+          ],
+          "tags": [
+            "passing"
+          ]
+        },
+        {
+          "index": 8,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_08.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [
+            "right"
+          ],
+          "tags": [
+            "up"
+          ]
+        },
+        {
+          "index": 9,
+          "path": "exploration/portrait-inspired-man_walk_FRONT_09.png",
+          "durationMs": 83,
+          "pivot": {
+            "x": 96,
+            "y": 181
+          },
+          "footContact": [],
+          "tags": [
+            "pre-contact"
+          ]
+        }
+      ],
+      "spriteSheet": "sprite_sheets/portrait-inspired-man_walk_FRONT_sheet.png",
+      "loopStart": 0,
+      "loopEnd": 9,
+      "hitFrames": [],
+      "eventFrames": []
+    },
+    {
+      "action": "mow-walk-chaotic",
+      "direction": "FRONT",
+      "fps": 10,
+      "loop": true,
+      "frameCount": 10,
+      "frames": [
+        {
+          "index": 0,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_00.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "left-contact",
+            "two-hand-grip"
+          ]
+        },
+        {
+          "index": 1,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_01.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "left-down",
+            "left-arm-flail"
+          ]
+        },
+        {
+          "index": 2,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_02.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "left-passing",
+            "right-elbow-jerk"
+          ]
+        },
+        {
+          "index": 3,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_03.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "left-up",
+            "two-hand-wobble"
+          ]
+        },
+        {
+          "index": 4,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_04.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "right-pre-contact",
+            "right-arm-wave"
+          ]
+        },
+        {
+          "index": 5,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_05.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "right-contact",
+            "wide-regrip"
+          ]
+        },
+        {
+          "index": 6,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_06.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "right-down",
+            "left-arm-flail"
+          ]
+        },
+        {
+          "index": 7,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_07.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "right-passing",
+            "right-low-swing"
+          ]
+        },
+        {
+          "index": 8,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_08.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "right-up",
+            "off-center-grip"
+          ]
+        },
+        {
+          "index": 9,
+          "path": "exploration/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_09.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 187
+          },
+          "tags": [
+            "left-pre-contact",
+            "two-hand-recovery"
+          ]
+        }
+      ],
+      "spriteSheet": "sprite_sheets/portrait-inspired-man_mow-walk-chaotic-head_FRONT_v2_sheet.png",
+      "loopStart": 0,
+      "loopEnd": 9,
+      "hitFrames": [],
+      "eventFrames": []
+    }
+  ]
+}
