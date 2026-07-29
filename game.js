@@ -24,6 +24,20 @@
     "Rewatch the opening incident.",
     "End the shift. The course remembers.",
   ];
+  const PAUSE_ITEMS = [
+    "RESUME ROUND",
+    "HOW TO PLAY / SETTINGS",
+    "RESTART HOLE",
+    "RETURN TO CLUBHOUSE",
+  ];
+  const PAUSE_DESCRIPTIONS = [
+    "Continue from the exact point the audit stopped.",
+    "Review the assignment and adjust presentation.",
+    "Reset Hole 1 and begin again from the tee.",
+    "Abandon this attempt and return to the main menu.",
+  ];
+  const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
+  let preferencesStorageAvailable = true;
 
   const art = new Image();
   art.src = "./assets/rough-cut-opening.png";
@@ -204,16 +218,49 @@
     { x: -35, y: 195 },
   ];
 
+  function readSavedPreferences() {
+    try {
+      const parsed = JSON.parse(
+        window.localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}",
+      );
+      return {
+        volume:
+          Number.isFinite(parsed.volume)
+            ? Math.max(0, Math.min(1, parsed.volume))
+            : 0.72,
+        subtitles:
+          typeof parsed.subtitles === "boolean"
+            ? parsed.subtitles
+            : true,
+        reducedMotion:
+          typeof parsed.reducedMotion === "boolean"
+            ? parsed.reducedMotion
+            : false,
+      };
+    } catch {
+      preferencesStorageAvailable = false;
+      return {
+        volume: 0.72,
+        subtitles: true,
+        reducedMotion: false,
+      };
+    }
+  }
+
+  const savedPreferences = readSavedPreferences();
+
   const state = {
     mode: "gate",
     time: 0,
     menuIndex: 0,
+    pauseIndex: 0,
     stingerPlayed: false,
-    subtitles: true,
-    reducedMotion: false,
-    volume: 0.72,
+    subtitles: savedPreferences.subtitles,
+    reducedMotion: savedPreferences.reducedMotion,
+    volume: savedPreferences.volume,
     inputMethod: "keyboard",
     settingsIndex: 0,
+    settingsReturnMode: "menu",
     status: "Every blade is in scope.",
     manualTime: false,
     transitionAlpha: 0,
@@ -275,6 +322,7 @@
       hasMoved: false,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
+      controlHintTimer: 12,
       travelDistance: 0,
       blockedTimer: 0,
       blockedObstacle: null,
@@ -334,6 +382,22 @@
   function smoothstep(value) {
     const t = clamp(value, 0, 1);
     return t * t * (3 - 2 * t);
+  }
+
+  function savePreferences() {
+    try {
+      window.localStorage.setItem(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify({
+          volume: Number(state.volume.toFixed(2)),
+          subtitles: state.subtitles,
+          reducedMotion: state.reducedMotion,
+        }),
+      );
+    } catch {
+      preferencesStorageAvailable = false;
+      // Storage can be unavailable in private or embedded browser contexts.
+    }
   }
 
   function inputCopy(keyboardCopy, gamepadCopy) {
@@ -724,7 +788,11 @@
   }
 
   function drawSettings() {
-    drawMenu();
+    if (state.settingsReturnMode === "paused") {
+      drawFirstHole();
+    } else {
+      drawMenu();
+    }
     ctx.fillStyle = "rgba(0,0,0,0.74)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 150, y: 82, width: 980, height: 556 };
@@ -814,23 +882,112 @@
       "#d9dfcc",
       "left",
     );
+    ctx.fillStyle = "rgba(21,41,23,0.8)";
+    ctx.fillRect(700, 516, 350, 44);
+    strokeRect(700, 516, 350, 44, "#687e4a", 1);
     drawText(
-      controllerActive ? "A  CHANGE   •   B  RETURN" : "ESC  RETURN TO MENU",
-      700,
-      521,
+      `←  RETURN TO ${state.settingsReturnMode === "paused" ? "PAUSE" : "MENU"}`,
+      875,
+      544,
       14,
       "#d9dfcc",
-      "left",
+      "center",
+      true,
     );
     drawText(
       controllerActive
         ? "LEFT / RIGHT ADJUST VOLUME"
         : "ARROWS / ENTER OR CLICK TO ADJUST",
       700,
-      576,
+      588,
       12,
       "#8fa084",
       "left",
+    );
+  }
+
+  function drawPause() {
+    drawFirstHole();
+    ctx.fillStyle = "rgba(0,3,2,0.72)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const panel = { x: 330, y: 78, width: 620, height: 564 };
+    ctx.fillStyle = "rgba(4,14,8,0.97)";
+    ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
+    strokeRect(panel.x, panel.y, panel.width, panel.height, "#b9662f", 3);
+    strokeRect(panel.x + 12, panel.y + 12, panel.width - 24, panel.height - 24, "#3b5134", 1);
+
+    drawText("ROUND SUSPENDED", WIDTH * 0.5, 135, 34, "#f0e9cc", "center", true);
+    drawText(
+      `HOLE 1 // ${courseZoneAt(state.player.y).name} // ${Math.round(state.player.y / COURSE_LENGTH * 100)}% COMPLETE`,
+      WIDTH * 0.5,
+      167,
+      12,
+      "#bc8d56",
+      "center",
+      true,
+    );
+    drawText(
+      "Joe is paused. Your position is being held.",
+      WIDTH * 0.5,
+      204,
+      14,
+      "#99a891",
+      "center",
+    );
+
+    for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
+      const y = 238 + index * 68;
+      const selected = index === state.pauseIndex;
+      ctx.fillStyle = selected
+        ? "rgba(118,62,28,0.45)"
+        : "rgba(13,28,17,0.72)";
+      ctx.fillRect(390, y, 500, 50);
+      strokeRect(
+        390,
+        y,
+        500,
+        50,
+        selected ? "#e8873e" : "#33482f",
+        selected ? 2 : 1,
+      );
+      if (selected) {
+        ctx.fillStyle = "#e8873e";
+        polygon([
+          [410, y + 17],
+          [421, y + 25],
+          [410, y + 33],
+        ]);
+      }
+      drawText(
+        PAUSE_ITEMS[index],
+        438,
+        y + 33,
+        18,
+        selected ? "#ffe0ae" : "#c7d0bb",
+        "left",
+        selected,
+      );
+    }
+
+    drawText(
+      PAUSE_DESCRIPTIONS[state.pauseIndex],
+      WIDTH * 0.5,
+      545,
+      13,
+      "#a9b5a1",
+      "center",
+    );
+    drawText(
+      inputCopy(
+        "↑↓ SELECT  •  ENTER CONFIRM  •  ESC RESUME",
+        "D-PAD SELECT  •  A CONFIRM  •  B / START RESUME",
+      ),
+      WIDTH * 0.5,
+      598,
+      13,
+      "#d5c39c",
+      "center",
     );
   }
 
@@ -915,6 +1072,7 @@
       hasMoved: false,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
+      controlHintTimer: 12,
       travelDistance: 0,
       blockedTimer: 0,
       blockedObstacle: null,
@@ -1014,8 +1172,13 @@
   }
 
   function floodlightPower() {
+    const coursePresentation =
+      state.mode === "first_hole" ||
+      state.mode === "paused" ||
+      (state.mode === "settings" &&
+        state.settingsReturnMode === "paused");
     if (
-      state.mode !== "first_hole" ||
+      !coursePresentation ||
       !state.hole ||
       state.hole.blackoutTimer <= 0
     ) {
@@ -3367,59 +3530,79 @@
           : hole.keyCollected
             ? "RETURN TO THE SHED"
             : "FIND KEY OR RELEASE DRAIN";
+    const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
 
-    ctx.fillStyle = "rgba(2,8,5,0.86)";
-    ctx.fillRect(36, 34, 430, 224);
-    strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
-    drawText("HOLE 1 — THE PILOT", 62, 76, 32, "#efebcd", "left", true);
-    drawText(objective, 62, 112, 16, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
-
-    drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
-    drawText(
-      `${hole.keyCollected ? "✓" : "1"}  ${hole.keyCollected ? "KEY ACQUIRED" : "FIND KEY NEAR BUNKER"}`,
-      106,
-      151,
-      13,
-      hole.keyCollected ? "#9db57c" : "#e5d9b8",
-      "left",
-      !hole.keyCollected,
-    );
-    drawFieldIcon(1, 79, 184, 38);
-    drawText(
-      `${inputCopy("SPACE", "X")}  DISTRACT JOE   ×${hole.golfBalls}`,
-      106,
-      189,
-      13,
-      "#e5d9b8",
-      "left",
-    );
-    drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
-    drawText(
-      hole.drainUnlocked
-        ? `${inputCopy("ENTER", "A")}  DRAIN EXIT OPEN`
-        : `${inputCopy("ENTER", "A")}  INTERACT / UNLOCK`,
-      106,
-      227,
-      13,
-      hole.drainUnlocked ? "#87cba9" : "#e5d9b8",
-      "left",
-    );
     const terrainStatus =
       `${environment.zone.name}  •  ${environment.coverQuality.toUpperCase()}`;
-    drawText(
-      terrainStatus,
-      62,
-      249,
-      11,
+    const terrainColor =
       environment.hardCover && hole.crouched
         ? "#9fd285"
         : environment.lightExposure > 0.15
           ? "#f2a250"
           : inRough
             ? "#d5b25f"
-            : "#9fac92",
-      "left",
-    );
+            : "#9fac92";
+
+    if (expandedHud) {
+      ctx.fillStyle = "rgba(2,8,5,0.86)";
+      ctx.fillRect(36, 34, 430, 224);
+      strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
+      drawText("HOLE 1 — THE PILOT", 62, 76, 32, "#efebcd", "left", true);
+      drawText(objective, 62, 112, 16, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
+
+      drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
+      drawText(
+        `${hole.keyCollected ? "✓" : "1"}  ${hole.keyCollected ? "KEY ACQUIRED" : "FIND KEY NEAR BUNKER"}`,
+        106,
+        151,
+        13,
+        hole.keyCollected ? "#9db57c" : "#e5d9b8",
+        "left",
+        !hole.keyCollected,
+      );
+      drawFieldIcon(1, 79, 184, 38);
+      drawText(
+        `${inputCopy("SPACE", "X")}  DISTRACT JOE   ×${hole.golfBalls}`,
+        106,
+        189,
+        13,
+        "#e5d9b8",
+        "left",
+      );
+      drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
+      drawText(
+        hole.drainUnlocked
+          ? `${inputCopy("ENTER", "A")}  DRAIN EXIT OPEN`
+          : `${inputCopy("ENTER", "A")}  INTERACT / UNLOCK`,
+        106,
+        227,
+        13,
+        hole.drainUnlocked ? "#87cba9" : "#e5d9b8",
+        "left",
+      );
+      drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
+    } else {
+      ctx.fillStyle = "rgba(2,8,5,0.82)";
+      ctx.fillRect(36, 34, 402, 104);
+      strokeRect(
+        36,
+        34,
+        402,
+        104,
+        hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
+        2,
+      );
+      drawText("HOLE 1", 56, 65, 18, "#e9e4c9", "left", true);
+      drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
+      drawText(
+        `${terrainStatus}  •  ${hole.golfBalls} BALLS`,
+        56,
+        120,
+        11,
+        terrainColor,
+        "left",
+      );
+    }
 
     const meterX = WIDTH - 304;
     ctx.fillStyle = "rgba(2,8,5,0.82)";
@@ -3464,46 +3647,48 @@
     );
     drawCourseMiniMap();
 
-    ctx.fillStyle = "rgba(2,8,5,0.82)";
-    ctx.fillRect(36, 269, 430, 82);
-    strokeRect(36, 269, 430, 82, hole.focus ? "#c8b267" : "#4d6444", 2);
-    drawText(
-      hole.focus ? "LISTENING FOCUS" : "SURROUNDINGS",
-      54,
-      293,
-      13,
-      hole.focus ? "#f2d781" : "#ccd7c0",
-      "left",
-      true,
-    );
-    const landmarkText =
-      environment.nearestLandmark &&
-      environment.nearestLandmarkDistance < 72
-        ? `${environment.nearestLandmark.landmark.toUpperCase()}  ${Math.round(environment.nearestLandmarkDistance)}m`
-        : "NO LANDMARK WITHIN 72m";
-    drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
-    const awarenessText =
-      hole.blackoutTimer > 0
-        ? "FLOODLIGHT POWER LOW — MOVE NOW"
-        : environment.lightExposure > 0.15
-        ? "AMBER LIGHT: VISIBILITY RISING"
-        : environment.hardCover
-          ? "SOLID OBJECT BETWEEN YOU AND JOE"
-          : inRough
-            ? "ROUGH MUFFLES SHAPE, NOT SOUND"
-            : "OPEN SIGHTLINE — MOVE COVER TO COVER";
-    drawText(
-      awarenessText,
-      54,
-      338,
-      11,
-      hole.blackoutTimer > 0
-        ? "#75c4b8"
-        : environment.lightExposure > 0.15
-          ? "#f2a250"
-          : "#8fbc8a",
-      "left",
-    );
+    if (expandedHud) {
+      ctx.fillStyle = "rgba(2,8,5,0.82)";
+      ctx.fillRect(36, 269, 430, 82);
+      strokeRect(36, 269, 430, 82, hole.focus ? "#c8b267" : "#4d6444", 2);
+      drawText(
+        hole.focus ? "LISTENING FOCUS" : "SURROUNDINGS",
+        54,
+        293,
+        13,
+        hole.focus ? "#f2d781" : "#ccd7c0",
+        "left",
+        true,
+      );
+      const landmarkText =
+        environment.nearestLandmark &&
+        environment.nearestLandmarkDistance < 72
+          ? `${environment.nearestLandmark.landmark.toUpperCase()}  ${Math.round(environment.nearestLandmarkDistance)}m`
+          : "NO LANDMARK WITHIN 72m";
+      drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
+      const awarenessText =
+        hole.blackoutTimer > 0
+          ? "FLOODLIGHT POWER LOW — MOVE NOW"
+          : environment.lightExposure > 0.15
+          ? "AMBER LIGHT: VISIBILITY RISING"
+          : environment.hardCover
+            ? "SOLID OBJECT BETWEEN YOU AND JOE"
+            : inRough
+              ? "ROUGH MUFFLES SHAPE, NOT SOUND"
+              : "OPEN SIGHTLINE — MOVE COVER TO COVER";
+      drawText(
+        awarenessText,
+        54,
+        338,
+        11,
+        hole.blackoutTimer > 0
+          ? "#75c4b8"
+          : environment.lightExposure > 0.15
+            ? "#f2a250"
+            : "#8fbc8a",
+        "left",
+      );
+    }
 
     if (hole.zoneBannerTimer > 0) {
       const zoneAlpha = clamp(hole.zoneBannerTimer / 0.55, 0, 1);
@@ -3533,15 +3718,39 @@
     }
 
     drawText(
-      inputCopy(
-        "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  SPACE DISTRACT  •  ESC MENU",
-        "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  X DISTRACT  •  START MENU",
-      ),
+      expandedHud
+        ? inputCopy(
+            "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  SPACE DISTRACT  •  ESC PAUSE",
+            "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  X DISTRACT  •  START PAUSE",
+          )
+        : inputCopy(
+            "H CONTROLS  •  ESC PAUSE",
+            "Y CONTROLS  •  START PAUSE",
+          ),
       28,
       HEIGHT - 25,
       11,
-      "#c0c9b4",
+      expandedHud ? "#c0c9b4" : "#829079",
       "left",
+    );
+    ctx.fillStyle = "rgba(2,8,5,0.78)";
+    ctx.fillRect(WIDTH - 124, HEIGHT - 45, 96, 28);
+    strokeRect(
+      WIDTH - 124,
+      HEIGHT - 45,
+      96,
+      28,
+      "#687e4a",
+      1,
+    );
+    drawText(
+      "Ⅱ  PAUSE",
+      WIDTH - 76,
+      HEIGHT - 25,
+      11,
+      "#b9c5ae",
+      "center",
+      true,
     );
   }
 
@@ -3888,6 +4097,9 @@
       case "first_hole":
         drawFirstHole();
         break;
+      case "paused":
+        drawPause();
+        break;
       case "victory":
         drawVictory();
         break;
@@ -3935,6 +4147,10 @@
         return;
       }
       hole.elapsed += dt;
+      hole.controlHintTimer = Math.max(
+        0,
+        hole.controlHintTimer - dt,
+      );
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
@@ -4125,10 +4341,62 @@
 
   function enterMenu() {
     state.mode = "menu";
+    state.settingsReturnMode = "menu";
     state.time = Math.max(state.time, MENU_TIME);
     state.status = "Every blade is in scope.";
     state.transitionAlpha = 0.62;
     setMotorLevel(0.018, 48);
+  }
+
+  function enterPause() {
+    if (state.mode !== "first_hole") {
+      return;
+    }
+    state.mode = "paused";
+    state.pauseIndex = 0;
+    state.keys.clear();
+    state.gamepad.inputX = 0;
+    state.gamepad.inputY = 0;
+    state.gamepad.crouch = false;
+    state.gamepad.sprint = false;
+    state.gamepad.focus = false;
+    state.transitionAlpha = 0;
+    setMotorLevel(0.006, 42);
+    playUiTone(176, 0.07, 0.02);
+  }
+
+  function resumeFirstHole() {
+    if (state.mode !== "paused") {
+      return;
+    }
+    state.mode = "first_hole";
+    state.keys.clear();
+    state.transitionAlpha = 0.16;
+    playUiTone(310, 0.065, 0.022);
+  }
+
+  function activatePause() {
+    if (state.pauseIndex === 0) {
+      resumeFirstHole();
+    } else if (state.pauseIndex === 1) {
+      state.settingsReturnMode = "paused";
+      state.mode = "settings";
+      state.transitionAlpha = 0.22;
+    } else if (state.pauseIndex === 2) {
+      retryFirstHole();
+    } else {
+      enterMenu();
+    }
+  }
+
+  function returnFromSettings() {
+    if (state.settingsReturnMode === "paused") {
+      state.mode = "paused";
+      state.transitionAlpha = 0.12;
+      playUiTone(190, 0.055, 0.018);
+    } else {
+      enterMenu();
+    }
   }
 
   function activateMenu() {
@@ -4141,6 +4409,7 @@
         state.status = "Objective: escape through the shed or drainage route.";
         break;
       case 1:
+        state.settingsReturnMode = "menu";
         state.mode = "settings";
         state.transitionAlpha = 0.35;
         break;
@@ -4257,7 +4526,13 @@
     }
     const now = audioContext.currentTime;
     const isCourse = state.mode === "first_hole";
-    const isQuietScreen = ["menu", "settings", "claim", "victory", "clocked_out"].includes(state.mode);
+    const pausedPresentation =
+      state.mode === "paused" ||
+      (state.mode === "settings" &&
+        state.settingsReturnMode === "paused");
+    const isQuietScreen =
+      pausedPresentation ||
+      ["menu", "settings", "claim", "victory", "clocked_out"].includes(state.mode);
     const ambienceLevel =
       isCourse && state.hole.focus
         ? 0.018
@@ -4296,6 +4571,8 @@
       } else {
         setMotorLevel(0.018, 48);
       }
+    } else if (pausedPresentation) {
+      setMotorLevel(0.006, 42);
     } else if (state.mode === "menu" || state.mode === "settings" || state.mode === "claim") {
       setMotorLevel(0.018, 48);
     } else if (state.mode === "first_hole") {
@@ -4563,6 +4840,19 @@
     return -1;
   }
 
+  function pauseIndexAt(point) {
+    if (point.x < 390 || point.x > 890) {
+      return -1;
+    }
+    for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
+      const y = 238 + index * 68;
+      if (point.y >= y && point.y <= y + 50) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
   function handlePointerDown(event) {
     const point = canvasPoint(event);
     state.inputMethod = "keyboard";
@@ -4579,18 +4869,42 @@
         activateMenu();
       }
     } else if (state.mode === "settings") {
-      if (point.y >= 270 && point.y <= 325 && point.x >= 700 && point.x <= 1050) {
+      if (
+        point.x >= 690 &&
+        point.x <= 1060 &&
+        point.y >= 506 &&
+        point.y <= 570
+      ) {
+        returnFromSettings();
+      } else if (point.y >= 270 && point.y <= 325 && point.x >= 700 && point.x <= 1050) {
         state.settingsIndex = 0;
         applyVolume((point.x - 700) / 350);
       } else if (point.x >= 690 && point.x <= 1080 && point.y >= 330 && point.y <= 395) {
         state.settingsIndex = 1;
         state.subtitles = !state.subtitles;
+        savePreferences();
       } else if (point.x >= 690 && point.x <= 1080 && point.y >= 395 && point.y <= 465) {
         state.settingsIndex = 2;
         state.reducedMotion = !state.reducedMotion;
+        savePreferences();
       }
-    } else if (state.mode === "first_hole" && state.hole.tutorialVisible) {
-      dismissHoleTutorial(false);
+    } else if (state.mode === "paused") {
+      const index = pauseIndexAt(point);
+      if (index >= 0) {
+        state.pauseIndex = index;
+        playUiTone(255, 0.06, 0.025);
+        activatePause();
+      }
+    } else if (state.mode === "first_hole") {
+      if (state.hole.tutorialVisible) {
+        dismissHoleTutorial(false);
+      } else if (
+        point.x >= WIDTH - 132 &&
+        point.x <= WIDTH - 20 &&
+        point.y >= HEIGHT - 54
+      ) {
+        enterPause();
+      }
     } else if (state.mode === "clocked_out") {
       enterMenu();
     } else if (state.mode === "victory" || state.mode === "defeat") {
@@ -4599,14 +4913,26 @@
   }
 
   function handlePointerMove(event) {
-    if (state.mode !== "menu" && state.mode !== "claim") {
+    if (
+      state.mode !== "menu" &&
+      state.mode !== "claim" &&
+      state.mode !== "paused"
+    ) {
       return;
     }
     state.inputMethod = "keyboard";
-    const index = menuIndexAt(canvasPoint(event));
-    if (index >= 0 && index !== state.menuIndex) {
-      state.menuIndex = index;
-      playUiTone(190 + index * 14, 0.045, 0.016);
+    if (state.mode === "paused") {
+      const index = pauseIndexAt(canvasPoint(event));
+      if (index >= 0 && index !== state.pauseIndex) {
+        state.pauseIndex = index;
+        playUiTone(190 + index * 14, 0.045, 0.016);
+      }
+    } else {
+      const index = menuIndexAt(canvasPoint(event));
+      if (index >= 0 && index !== state.menuIndex) {
+        state.menuIndex = index;
+        playUiTone(190 + index * 14, 0.045, 0.016);
+      }
     }
   }
 
@@ -4627,6 +4953,7 @@
         0.025,
       );
     }
+    savePreferences();
   }
 
   function dismissHoleTutorial(startedMoving = false) {
@@ -4659,9 +4986,11 @@
       playUiTone(240 + state.volume * 80, 0.035, 0.012);
     } else if (state.settingsIndex === 1) {
       state.subtitles = !state.subtitles;
+      savePreferences();
       playUiTone(state.subtitles ? 320 : 210, 0.055, 0.02);
     } else {
       state.reducedMotion = !state.reducedMotion;
+      savePreferences();
       playUiTone(state.reducedMotion ? 235 : 300, 0.055, 0.02);
     }
   }
@@ -4676,6 +5005,8 @@
       activateMenu();
     } else if (state.mode === "settings") {
       adjustSelectedSetting(1);
+    } else if (state.mode === "paused") {
+      activatePause();
     } else if (state.mode === "first_hole") {
       if (state.hole.tutorialVisible) {
         dismissHoleTutorial(false);
@@ -4692,10 +5023,14 @@
   function handleGamepadBack() {
     if (state.mode === "intro") {
       enterMenu();
+    } else if (state.mode === "first_hole") {
+      enterPause();
+    } else if (state.mode === "paused") {
+      resumeFirstHole();
+    } else if (state.mode === "settings") {
+      returnFromSettings();
     } else if (
-      state.mode === "settings" ||
       state.mode === "claim" ||
-      state.mode === "first_hole" ||
       state.mode === "victory" ||
       state.mode === "defeat" ||
       state.mode === "clocked_out"
@@ -4808,6 +5143,16 @@
       } else if (directionPressed("right")) {
         adjustSelectedSetting(1);
       }
+    } else if (state.mode === "paused") {
+      if (directionPressed("down")) {
+        state.pauseIndex =
+          (state.pauseIndex + 1) % PAUSE_ITEMS.length;
+        playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
+      } else if (directionPressed("up")) {
+        state.pauseIndex =
+          (state.pauseIndex + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
+        playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
+      }
     } else if (
       state.mode === "first_hole" &&
       state.hole.tutorialVisible &&
@@ -4826,12 +5171,20 @@
         throwGolfBall();
       }
     }
+    if (pressed(3) && state.mode === "first_hole") {
+      state.hole.controlHintTimer = 8;
+      playUiTone(220, 0.045, 0.015);
+    }
     if (pressed(1)) {
       handleGamepadBack();
     }
     if (pressed(9)) {
       if (state.mode === "gate") {
         startIntro();
+      } else if (state.mode === "first_hole") {
+        enterPause();
+      } else if (state.mode === "paused") {
+        resumeFirstHole();
       } else if (state.mode !== "menu") {
         handleGamepadBack();
       }
@@ -4870,7 +5223,7 @@
         event.preventDefault();
       }
     } else if (state.mode === "settings" && event.code === "Escape") {
-      enterMenu();
+      returnFromSettings();
       event.preventDefault();
     } else if (state.mode === "settings") {
       if (event.code === "ArrowDown") {
@@ -4892,6 +5245,27 @@
         adjustSelectedSetting(1);
         event.preventDefault();
       }
+    } else if (state.mode === "paused") {
+      if (event.code === "ArrowDown") {
+        state.pauseIndex =
+          (state.pauseIndex + 1) % PAUSE_ITEMS.length;
+        playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
+        event.preventDefault();
+      } else if (event.code === "ArrowUp") {
+        state.pauseIndex =
+          (state.pauseIndex + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
+        playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
+        event.preventDefault();
+      } else if (
+        (event.code === "Enter" || event.code === "Space") &&
+        !event.repeat
+      ) {
+        activatePause();
+        event.preventDefault();
+      } else if (event.code === "Escape") {
+        resumeFirstHole();
+        event.preventDefault();
+      }
     } else if (state.mode === "first_hole") {
       const startKeys = [
         "KeyW",
@@ -4911,7 +5285,11 @@
         dismissHoleTutorial(!["Enter", "Space"].includes(event.code));
         event.preventDefault();
       } else if (event.code === "Escape") {
-        enterMenu();
+        enterPause();
+        event.preventDefault();
+      } else if (event.code === "KeyH") {
+        state.hole.controlHintTimer = 8;
+        playUiTone(220, 0.045, 0.015);
         event.preventDefault();
       } else if (event.code === "Enter" && !event.repeat) {
         interactWithCourse();
@@ -4938,6 +5316,12 @@
     state.keys.delete(event.code);
   });
 
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && state.mode === "first_hole") {
+      enterPause();
+    }
+  });
+
   canvas.addEventListener("pointerdown", handlePointerDown);
   canvas.addEventListener("pointermove", handlePointerMove);
 
@@ -4948,6 +5332,10 @@
     selectedMenuItem: state.mode === "menu" || state.mode === "claim"
       ? MENU_ITEMS[state.menuIndex]
       : null,
+    selectedPauseItem:
+      state.mode === "paused"
+        ? PAUSE_ITEMS[state.pauseIndex]
+        : null,
     dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
       : null,
@@ -4955,7 +5343,10 @@
     course: {
       length: COURSE_LENGTH,
       playerCollisionRadius: PLAYER_COLLISION_RADIUS,
-      zone: state.mode === "first_hole"
+      zone:
+        ["first_hole", "paused"].includes(state.mode) ||
+        (state.mode === "settings" &&
+          state.settingsReturnMode === "paused")
         ? courseZoneAt(state.player.y).id
         : null,
       zones: COURSE_ZONES.map((zone) => ({
@@ -4968,6 +5359,8 @@
       volume: Number(state.volume.toFixed(2)),
       subtitles: state.subtitles,
       reducedMotion: state.reducedMotion,
+      returnTarget: state.settingsReturnMode,
+      persisted: preferencesStorageAvailable,
       selected:
         ["volume", "subtitles", "reduced_motion"][state.settingsIndex],
     },
@@ -4992,7 +5385,10 @@
         (state.hole.joe.mode === "chase" ||
           worldDistance(state.hole.joe, state.player) < 36),
     },
-    player: ["first_hole", "victory", "defeat"].includes(state.mode)
+    player:
+      ["first_hole", "paused", "victory", "defeat"].includes(state.mode) ||
+      (state.mode === "settings" &&
+        state.settingsReturnMode === "paused")
       ? {
           x: Math.round(state.player.x),
           progress: Math.round(state.player.y),
@@ -5015,10 +5411,19 @@
           },
         }
       : null,
-    hole: ["first_hole", "victory", "defeat"].includes(state.mode)
+    hole:
+      ["first_hole", "paused", "victory", "defeat"].includes(state.mode) ||
+      (state.mode === "settings" &&
+        state.settingsReturnMode === "paused")
       ? {
           phase: state.hole.phase,
           tutorialVisible: state.hole.tutorialVisible,
+          hudExpanded:
+            state.hole.controlHintTimer > 0.01 ||
+            state.hole.focus,
+          controlHintSeconds: Number(
+            state.hole.controlHintTimer.toFixed(2),
+          ),
           keyCollected: state.hole.keyCollected,
           drainUnlocked: state.hole.drainUnlocked,
           escapeRoute: state.hole.escapeRoute,
@@ -5150,17 +5555,20 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Arrow keys and Enter, or pointer",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; Escape returns to menu",
+      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; H shows controls; Escape pauses",
+      pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Arrow keys and Enter, or pointer",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; Escape returns to menu",
+        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; H shows controls; Escape pauses",
+        pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
         menu: "D-pad selects; A confirms; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; A interacts; X throws a golf ball; Start returns to menu",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts; X throws a golf ball; Y shows controls; Start pauses",
+        pause: "D-pad selects; A confirms; B or Start resumes",
       },
     },
   });

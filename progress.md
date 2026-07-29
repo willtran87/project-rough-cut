@@ -177,3 +177,19 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Added path length, next waypoint, steering, stuck time, reroute count, current clearance, and minimum observed clearance diagnostics.
 - Verified an obstacle-routing chase that closed from 32 meters to 13 meters with at least 1.66 meters of recorded obstacle clearance, plus direct capture, clean retry, full shed victory, and full drain victory.
 - Revalidated the active chase at 2560×1600: the document matched the viewport, the stage remained contained, and no console or page errors were reported.
+
+## Pause, Persistence, and Adaptive HUD Polish — July 29, 2026
+
+- Replaced the destructive in-round Escape/Start behavior with a true pause state that freezes Joe, detection, timers, effects, and player movement.
+- Added a themed pause layer with resume, how-to/settings, restart-hole, and return-to-clubhouse actions.
+- Added keyboard, pointer, and standard-controller navigation for the pause flow, including visible in-game pause and settings-return controls for pointer users.
+- Made the game auto-pause when its browser tab becomes hidden so the pursuit cannot continue while the player is away.
+- Preserved the course as a dimmed spatial backdrop while paused and while opening settings from pause.
+- Persisted master volume, subtitle, and reduced-camera-motion preferences through browser reloads.
+- Reworked the gameplay HUD into an adaptive field display: onboarding details recede after 12 seconds, Listening Focus expands environmental detail, and H/Y recalls the full control reference.
+- Replaced the permanent full-width control strip with a compact control/pause reminder once onboarding is complete.
+- Expanded `render_game_to_text` with pause selection, settings return target, storage status, and adaptive-HUD diagnostics.
+- Verified that five seconds of simulated pause time leaves Joe and the HUD timer unchanged, then resumes from the same 43-unit course position.
+- Verified pointer pause, pointer settings return, keyboard resume, H/Y control recall, and preference persistence after reload.
+- Rechecked the compact HUD and pause overlay at 800×600 and 2560×1600 with viewport-matched document bounds and no browser errors.
+- Ran the required project Playwright client against the pause and pause-settings paths with no console or page errors.
