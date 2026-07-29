@@ -122,10 +122,18 @@
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
   const MAX_PLAYER_TRACKS = 72;
+  const SPRINKLER_SOAK_SECONDS = 24;
+  const WET_MOWER_SPEED_MULTIPLIER = 0.68;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: 24, y: 350, radius: 13 };
   const DRAIN_EXIT = { x: -76, y: 339, radius: 15 };
+  const SPRINKLER_SOAK_ZONES = [
+    { id: "west-tee", name: "WEST TEE", x: -82, y: 61, radius: 28 },
+    { id: "east-relief", name: "EAST RELIEF", x: 78, y: 181, radius: 27 },
+    { id: "pond-fringe", name: "POND FRINGE", x: 4, y: 226, radius: 30 },
+    { id: "final-approach", name: "FINAL APPROACH", x: -77, y: 323, radius: 28 },
+  ];
   const COURSE_ZONES = [
     {
       id: "tee",
@@ -499,10 +507,15 @@
         repathTimer: 0,
         minimumObstacleClearance: 99,
         lastCutPoint: { x: 44, y: 185 },
+        wet: false,
       },
       distraction: null,
       distractionTimer: 0,
       sprinklerUsed: false,
+      sprinklerSoakTimer: 0,
+      wetTrapCount: 0,
+      wetTrapSeconds: 0,
+      wetTrackCount: 0,
       drainUnlocked: false,
       escapeRoute: null,
       crouched: false,
@@ -1661,10 +1674,15 @@
           x: variant.joeStart.x,
           y: variant.joeStart.y,
         },
+        wet: false,
       },
       distraction: null,
       distractionTimer: 0,
       sprinklerUsed: false,
+      sprinklerSoakTimer: 0,
+      wetTrapCount: 0,
+      wetTrapSeconds: 0,
+      wetTrackCount: 0,
       drainUnlocked: false,
       escapeRoute: null,
       crouched: false,
@@ -1809,6 +1827,7 @@
       strength: options.strength ?? 1,
       radius: options.radius ?? (kind === "mowed" ? 7.2 : 4.2),
       discovered: false,
+      wet: Boolean(options.wet),
     };
     hole.nextTurfMarkId += 1;
     hole.turfMarks.push(mark);
@@ -1873,6 +1892,43 @@
     };
   }
 
+  function wetStateAt(point) {
+    if (
+      !state.hole ||
+      state.hole.sprinklerSoakTimer <= 0
+    ) {
+      return {
+        active: false,
+        zone: null,
+        distance: null,
+        edgeDistance: null,
+      };
+    }
+    let nearestZone = null;
+    let nearestDistance = Infinity;
+    let nearestEdgeDistance = Infinity;
+    for (
+      let index = 0;
+      index < SPRINKLER_SOAK_ZONES.length;
+      index += 1
+    ) {
+      const zone = SPRINKLER_SOAK_ZONES[index];
+      const distance = worldDistance(point, zone);
+      const edgeDistance = distance - zone.radius;
+      if (edgeDistance < nearestEdgeDistance) {
+        nearestZone = zone;
+        nearestDistance = distance;
+        nearestEdgeDistance = edgeDistance;
+      }
+    }
+    return {
+      active: nearestEdgeDistance <= 0,
+      zone: nearestZone,
+      distance: nearestDistance,
+      edgeDistance: nearestEdgeDistance,
+    };
+  }
+
   function updateTurfMarks(dt) {
     const hole = state.hole;
     for (let index = 0; index < hole.turfMarks.length; index += 1) {
@@ -1888,7 +1944,11 @@
   function recordPlayerTrack(sprinting) {
     const hole = state.hole;
     const terrain = turfStateAt(state.player);
-    if (!playerInRough() || terrain.mowed) {
+    const wet = wetStateAt(state.player);
+    if (
+      (!playerInRough() && !wet.active) ||
+      (terrain.mowed && !wet.active)
+    ) {
       hole.lastPlayerTrackDistance =
         hole.travelDistance;
       return;
@@ -1907,12 +1967,14 @@
         : 0.68;
     const strength = clamp(
       baseStrength +
-        (hole.overtime ? 0.18 : 0),
+        (hole.overtime ? 0.18 : 0) +
+        (wet.active ? 0.2 : 0),
       0,
       1,
     );
     const durationMultiplier =
-      hole.overtime ? 1.18 : 1;
+      (hole.overtime ? 1.18 : 1) *
+      (wet.active ? 1.55 : 1);
     addTurfMark(
       "track",
       state.player.x,
@@ -1924,15 +1986,21 @@
         duration:
           (22 + strength * 18) *
           durationMultiplier,
+        wet: wet.active,
       },
     );
     hole.lastPlayerTrackDistance =
       hole.travelDistance;
     hole.tracksCreated += 1;
+    if (wet.active) {
+      hole.wetTrackCount += 1;
+    }
     if (!hole.trackTutorialShown) {
       hole.trackTutorialShown = true;
       setHoleMessage(
-        "BENT GRASS HOLDS YOUR TRAIL — crouch to leave fainter evidence.",
+        wet.active
+          ? "WATER MUFFLES YOUR STEPS — but wet footprints stay bright for Joe."
+          : "BENT GRASS HOLDS YOUR TRAIL — crouch to leave fainter evidence.",
         3.2,
       );
     }
@@ -2045,6 +2113,7 @@
     const zone = courseZoneAt(player.y);
     const inRough = playerInRough(player);
     const turf = turfStateAt(player);
+    const wet = wetStateAt(player);
     const effectiveRough = inRough && !turf.mowed;
     let nearestCover = null;
     let nearestCoverDistance = Infinity;
@@ -2113,16 +2182,26 @@
       inRough,
       effectiveRough,
       mowed: turf.mowed,
+      wet: wet.active,
+      wetZone: wet.zone,
+      wetZoneDistance: wet.distance,
+      wetZoneEdgeDistance: wet.edgeDistance,
       nearestTrack: turf.nearestTrack,
       nearestTrackDistance:
         turf.nearestTrackDistance,
       nearestMowedDistance:
         turf.nearestMowedDistance,
-      turfLabel: turf.mowed
-        ? "MOWED STRIP"
-        : inRough
-          ? "BENT ROUGH"
-          : "FAIRWAY",
+      turfLabel: wet.active
+        ? turf.mowed
+          ? "SOAKED CUT"
+          : inRough
+            ? "SOAKED ROUGH"
+            : "SOAKED FAIRWAY"
+        : turf.mowed
+          ? "MOWED STRIP"
+          : inRough
+            ? "BENT ROUGH"
+            : "FAIRWAY",
       nearestCover,
       nearestCoverDistance,
       nearestLandmark,
@@ -2295,8 +2374,16 @@
     });
   }
 
-  function addStepParticles(inRough, sprinting) {
-    const count = sprinting ? 9 : inRough ? 6 : 3;
+  function addStepParticles(inRough, sprinting, wet = false) {
+    const count = wet
+      ? sprinting
+        ? 13
+        : 8
+      : sprinting
+        ? 9
+        : inRough
+          ? 6
+          : 3;
     for (let index = 0; index < count; index += 1) {
       const seed = hash(state.hole.travelDistance * 13 + index * 41);
       state.hole.screenParticles.push({
@@ -2306,8 +2393,18 @@
         vy: -(38 + hash(index * 11 + seed) * (sprinting ? 82 : 48)),
         age: 0,
         duration: 0.48 + hash(index * 7 + seed) * 0.34,
-        size: inRough ? 3 + hash(index + seed) * 4 : 2 + hash(index + seed) * 2,
-        color: inRough ? "#718348" : "#a9a56b",
+        size: wet
+          ? 2 + hash(index + seed) * 3
+          : inRough
+            ? 3 + hash(index + seed) * 4
+            : 2 + hash(index + seed) * 2,
+        color: wet
+          ? index % 3 === 0
+            ? "#b8e4d7"
+            : "#4e9b98"
+          : inRough
+            ? "#718348"
+            : "#a9a56b",
       });
     }
   }
@@ -2436,6 +2533,8 @@
 
     if (!state.hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
       state.hole.sprinklerUsed = true;
+      state.hole.sprinklerSoakTimer =
+        SPRINKLER_SOAK_SECONDS;
       state.hole.drainUnlocked = true;
       if (!state.hole.keyCollected) {
         state.hole.phase = "drain_open";
@@ -2445,7 +2544,13 @@
       state.hole.joe.mode = "investigate";
       announceJoeState("investigate");
       state.hole.lastSeenPlayer = { ...state.hole.distraction };
-      setHoleMessage("PRESSURE RELEASED — Drain exit open. Joe is investigating.", 3.6);
+      state.hole.stateBanner =
+        "SPRINKLERS LIVE // QUIET WATER, LASTING TRACKS";
+      state.hole.stateBannerTimer = 3.2;
+      setHoleMessage(
+        "PRESSURE RELEASED — Wet turf muffles steps and bogs Joe, but footprints last.",
+        4.2,
+      );
       addWorldEffect("sprinkler", sprinkler.x, sprinkler.y, 5.5);
       addWorldEffect("drain_open", drain.x, drain.y, 3.2);
       playSprinklerCue();
@@ -2948,6 +3053,28 @@
 
     joe.x = clamp(joe.x, -COURSE_MAX_X, COURSE_MAX_X);
     joe.y = clamp(joe.y, 4, COURSE_LENGTH);
+    const joeWet = wetStateAt(joe).active;
+    if (joeWet) {
+      hole.wetTrapSeconds += dt;
+    }
+    if (joeWet && !joe.wet) {
+      hole.wetTrapCount += 1;
+      hole.stateBanner =
+        "MOWER BOGGED // MOVE WHILE JOE CLEARS THE DECK";
+      hole.stateBannerTimer = 2.6;
+      setHoleMessage(
+        "JOE HIT SOAKED TURF — his mower is dragging at 68% speed.",
+        2.8,
+      );
+      addWorldEffect(
+        "mower_sputter",
+        joe.x,
+        joe.y,
+        2.1,
+      );
+      playMowerBogCue();
+    }
+    joe.wet = joeWet;
     recordJoeCut();
     joe.minimumObstacleClearance = Math.min(
       joe.minimumObstacleClearance,
@@ -3307,6 +3434,11 @@
         state.hole.overtime
           ? OVERTIME_JOE_SPEED_MULTIPLIER
           : 1
+      ) *
+      (
+        wetStateAt(joe).active
+          ? WET_MOWER_SPEED_MULTIPLIER
+          : 1
       );
     const start = { x: joe.x, y: joe.y };
     let tightestObstacle = null;
@@ -3628,6 +3760,199 @@
     ctx.restore();
   }
 
+  function drawWetTurf() {
+    const hole = state.hole;
+    if (hole.sprinklerSoakTimer <= 0) {
+      return;
+    }
+    const endingFade = clamp(
+      hole.sprinklerSoakTimer / 3.5,
+      0,
+      1,
+    );
+    const shimmer = state.reducedMotion
+      ? 0.5
+      : (Math.sin(hole.elapsed * 4.2) + 1) * 0.5;
+    const zones = SPRINKLER_SOAK_ZONES
+      .map((zone) => ({
+        zone,
+        point: worldToScreen(zone.x, zone.y),
+      }))
+      .filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -520 &&
+          entry.point.x < WIDTH + 520,
+      )
+      .sort((a, b) => a.point.y - b.point.y);
+
+    for (let index = 0; index < zones.length; index += 1) {
+      const zone = zones[index].zone;
+      const point = zones[index].point;
+      const radius =
+        zone.radius *
+        COURSE_CAMERA.worldUnitMeters *
+        point.pixelsPerMeter;
+      const drawRadius = Math.max(7, radius);
+      const verticalRadius = Math.max(
+        2,
+        drawRadius * 0.2,
+      );
+      const alpha =
+        endingFade *
+        clamp(
+          0.2 + point.scale * 0.33,
+          0.18,
+          0.6,
+        );
+      ctx.save();
+      const water = ctx.createRadialGradient(
+        point.x,
+        point.y,
+        0,
+        point.x,
+        point.y,
+        drawRadius,
+      );
+      water.addColorStop(
+        0,
+        `rgba(70,143,137,${alpha * 0.72})`,
+      );
+      water.addColorStop(
+        0.56,
+        `rgba(31,101,98,${alpha * 0.58})`,
+      );
+      water.addColorStop(1, "rgba(12,55,55,0)");
+      ctx.fillStyle = water;
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        drawRadius,
+        verticalRadius,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle =
+        `rgba(142,218,204,${alpha * (0.42 + shimmer * 0.3)})`;
+      ctx.lineWidth = Math.max(
+        1,
+        point.scale * 1.2,
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        drawRadius * 0.78,
+        verticalRadius * 0.62,
+        0,
+        Math.PI * 0.12,
+        Math.PI * 0.84,
+      );
+      ctx.stroke();
+      const glintCount = 7;
+      for (
+        let glint = 0;
+        glint < glintCount;
+        glint += 1
+      ) {
+        const seed = hash(
+          index * 73.7 +
+            glint * 29.3,
+        );
+        const phase =
+          state.reducedMotion
+            ? seed
+            : (
+                seed +
+                hole.elapsed *
+                  (0.035 + glint * 0.002)
+              ) %
+              1;
+        const glintX =
+          point.x +
+          (phase * 2 - 1) *
+            drawRadius *
+            0.76;
+        const glintY =
+          point.y +
+          (hash(seed * 41) - 0.5) *
+            verticalRadius *
+            0.9;
+        const glintWidth =
+          Math.max(
+            2,
+            drawRadius *
+              (0.035 +
+                hash(seed * 19) * 0.045),
+          );
+        ctx.strokeStyle =
+          `rgba(187,231,214,${alpha * 0.62})`;
+        ctx.beginPath();
+        ctx.moveTo(
+          glintX - glintWidth,
+          glintY,
+        );
+        ctx.lineTo(
+          glintX + glintWidth,
+          glintY,
+        );
+        ctx.stroke();
+      }
+      const sprayHeight =
+        Math.max(6, 25 * point.scale);
+      ctx.strokeStyle =
+        `rgba(125,204,196,${alpha * 0.72})`;
+      ctx.lineWidth = Math.max(
+        1,
+        point.scale * 0.9,
+      );
+      for (
+        let stream = -2;
+        stream <= 2;
+        stream += 1
+      ) {
+        const sway =
+          state.reducedMotion
+            ? stream * 0.18
+            : Math.sin(
+                hole.elapsed * 2.4 +
+                  stream * 1.3 +
+                  index,
+              ) *
+              0.18;
+        const reach =
+          drawRadius *
+          (0.2 + Math.abs(stream) * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y - 1);
+        ctx.quadraticCurveTo(
+          point.x +
+            (stream * 0.2 + sway) *
+              drawRadius,
+          point.y - sprayHeight,
+          point.x +
+            Math.sign(stream || 1) *
+              reach,
+          point.y -
+            verticalRadius * 0.12,
+        );
+        ctx.stroke();
+      }
+      ctx.fillStyle =
+        `rgba(169,222,209,${alpha})`;
+      ctx.fillRect(
+        Math.round(point.x - 2 * point.scale),
+        Math.round(point.y - 3 * point.scale),
+        Math.max(2, Math.round(4 * point.scale)),
+        Math.max(2, Math.round(4 * point.scale)),
+      );
+      ctx.restore();
+    }
+  }
+
   function drawTurfMarks() {
     const marks = state.hole.turfMarks
       .map((mark) => ({
@@ -3702,6 +4027,10 @@
         );
         ctx.strokeStyle = mark.discovered
           ? "#d66b35"
+          : mark.wet
+            ? state.hole.focus
+              ? "#a9e0d1"
+              : "#467e70"
           : state.hole.focus
             ? "#d5bc64"
             : "#3c5c2d";
@@ -4220,14 +4549,28 @@
 
     if (distance < 52 || joe.mode !== "patrol") {
       const label =
-        joe.mode === "chase"
+        joe.wet
+          ? "JOE: MOWER BOGGED"
+          : joe.mode === "chase"
           ? "JOE: PURSUING"
           : joe.mode === "investigate"
             ? "JOE: DISTRACTED"
             : joe.mode === "search"
               ? "JOE: SEARCHING"
               : "JOE: PATROLLING";
-      drawText(label, point.x, point.y + 27 * labelScale, 12, joe.mode === "chase" ? "#ff7045" : "#d3bc6d", "center", true);
+      drawText(
+        label,
+        point.x,
+        point.y + 27 * labelScale,
+        12,
+        joe.wet
+          ? "#8fd7ca"
+          : joe.mode === "chase"
+            ? "#ff7045"
+            : "#d3bc6d",
+        "center",
+        true,
+      );
     }
   }
 
@@ -4273,6 +4616,59 @@
       [panel.x + panel.width * 0.69, panel.y + 41],
       [panel.x + panel.width * 0.31, panel.y + 41],
     ]);
+    if (state.hole.sprinklerSoakTimer > 0) {
+      const wetAlpha = clamp(
+        state.hole.sprinklerSoakTimer / 3.5,
+        0,
+        1,
+      );
+      ctx.fillStyle =
+        `rgba(55,137,132,${0.34 * wetAlpha})`;
+      ctx.strokeStyle =
+        `rgba(137,216,203,${0.72 * wetAlpha})`;
+      ctx.lineWidth = 1.5;
+      for (
+        let index = 0;
+        index < SPRINKLER_SOAK_ZONES.length;
+        index += 1
+      ) {
+        const zone = SPRINKLER_SOAK_ZONES[index];
+        const zonePoint = mapPoint(
+          zone.x,
+          zone.y,
+        );
+        const radiusX =
+          zone.radius /
+          0.72 /
+          224 *
+          (panel.width - 28);
+        const radiusY =
+          zone.radius /
+          COURSE_LENGTH *
+          (mapBottom - mapTop);
+        ctx.beginPath();
+        ctx.ellipse(
+          zonePoint.x,
+          zonePoint.y,
+          radiusX,
+          radiusY,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.stroke();
+      }
+      drawText(
+        `WATER ${Math.ceil(state.hole.sprinklerSoakTimer)}s`,
+        panel.x + panel.width - 14,
+        panel.y + 23,
+        10,
+        "#8fd4ca",
+        "right",
+        true,
+      );
+    }
     ctx.fillStyle = "#101c12";
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       if (COURSE_OBSTACLES[index].draw === false) {
@@ -4606,6 +5002,54 @@
             point.y - 4 * scale,
           );
           ctx.stroke();
+        }
+      } else if (effect.kind === "mower_sputter") {
+        ctx.strokeStyle =
+          `rgba(118,205,196,${0.76 * alpha})`;
+        ctx.lineWidth = Math.max(1, 2 * scale);
+        for (let splash = 0; splash < 9; splash += 1) {
+          const splashSeed =
+            hash(effect.seed + splash * 27.4);
+          const side =
+            splash % 2 === 0 ? -1 : 1;
+          const reach =
+            (12 + splashSeed * 36 + progress * 22) *
+            scale;
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x + side * 5 * scale,
+            point.y - 2 * scale,
+          );
+          ctx.quadraticCurveTo(
+            point.x + side * reach * 0.56,
+            point.y -
+              (18 + splashSeed * 22) *
+                scale,
+            point.x + side * reach,
+            point.y + 2 * scale,
+          );
+          ctx.stroke();
+        }
+        ctx.fillStyle =
+          `rgba(212,233,213,${0.42 * alpha})`;
+        for (let puff = 0; puff < 4; puff += 1) {
+          const puffSize =
+            (5 + puff * 4 + progress * 13) *
+            scale;
+          ctx.beginPath();
+          ctx.arc(
+            point.x +
+              (puff - 1.5) *
+                8 *
+                scale,
+            point.y -
+              (38 + puff * 6 + progress * 28) *
+                scale,
+            puffSize,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
         }
       } else if (effect.kind === "pickup") {
         ctx.strokeStyle = `rgba(255,214,108,${alpha})`;
@@ -5332,6 +5776,45 @@
       );
     }
     if (
+      state.hole.sprinklerSoakTimer > 0 &&
+      environment.wetZone
+    ) {
+      const wetDeltaX =
+        environment.wetZone.x -
+        state.player.x;
+      const wetDeltaY =
+        environment.wetZone.y -
+        state.player.y;
+      const wetAngle = Math.atan2(
+        wetDeltaX * 0.72,
+        -wetDeltaY,
+      );
+      const wetX =
+        centerX +
+        Math.sin(wetAngle) *
+          (radius - 63);
+      const wetY =
+        centerY -
+        Math.cos(wetAngle) *
+          (radius - 63);
+      ctx.strokeStyle = "#78c8bd";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(wetX, wetY, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      drawText(
+        environment.wet
+          ? `IN WATER • ${Math.ceil(state.hole.sprinklerSoakTimer)}s`
+          : `WET TURF ${Math.max(0, Math.round(environment.wetZoneEdgeDistance))}m`,
+        wetX,
+        wetY + 18,
+        9,
+        "#9ed8ce",
+        "center",
+        true,
+      );
+    }
+    if (
       environment.nearestTrack &&
       environment.nearestTrackDistance < 52
     ) {
@@ -5456,10 +5939,18 @@
             : "FIND KEY OR RELEASE DRAIN";
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
 
+    const waterStatus =
+      hole.sprinklerSoakTimer > 0
+        ? `  •  WATER ${Math.ceil(hole.sprinklerSoakTimer)}s`
+        : "";
     const terrainStatus =
-      `${environment.zone.name}  •  ${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}  •  ORDER ${String(variant.number).padStart(2, "0")}`;
+      expandedHud
+        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}`
+        : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}`;
     const terrainColor =
-      environment.hardCover && hole.crouched
+      environment.wet
+        ? "#8fd4ca"
+        : environment.hardCover && hole.crouched
         ? "#9fd285"
         : environment.lightExposure > 0.15
           ? "#f2a250"
@@ -5763,6 +6254,7 @@
     }
 
     drawPerspectiveCourse(progress, walkBob);
+    drawWetTurf();
     drawTurfMarks();
 
     for (let layer = 0; layer < 3; layer += 1) {
@@ -6324,6 +6816,10 @@
       hole.zoneBannerTimer = Math.max(0, hole.zoneBannerTimer - dt);
       hole.blackoutTimer = Math.max(0, hole.blackoutTimer - dt);
       hole.dreadTimer = Math.max(0, hole.dreadTimer - dt);
+      hole.sprinklerSoakTimer = Math.max(
+        0,
+        hole.sprinklerSoakTimer - dt,
+      );
       hole.detectionPulse = Math.max(0, hole.detectionPulse - dt * 1.75);
       hole.lastKnownJoeTimer = Math.max(0, hole.lastKnownJoeTimer - dt);
       hole.trailWarningTimer = Math.max(
@@ -6375,11 +6871,27 @@
         recordPlayerTrack(sprinting);
         const stepSpacing = hole.crouched ? 5.8 : sprinting ? 5.3 : 4.1;
         if (hole.travelDistance - hole.lastStepDistance >= stepSpacing) {
-          const inStepRough = playerInRough();
+          const stepEnvironment =
+            getPlayerEnvironmentState();
+          const inStepRough =
+            stepEnvironment.effectiveRough;
           hole.lastStepDistance = hole.travelDistance;
-          playFootstep(inStepRough, sprinting, hole.crouched);
-          if (!hole.crouched || !inStepRough) {
-            addStepParticles(inStepRough, sprinting);
+          playFootstep(
+            inStepRough,
+            sprinting,
+            hole.crouched,
+            stepEnvironment.wet,
+          );
+          if (
+            stepEnvironment.wet ||
+            !hole.crouched ||
+            !inStepRough
+          ) {
+            addStepParticles(
+              inStepRough,
+              sprinting,
+              stepEnvironment.wet,
+            );
           }
         }
       }
@@ -6425,16 +6937,22 @@
         ? hole.focus
           ? 0.055
           : hole.crouched
-          ? effectiveRough
+          ? environment.wet
+            ? 0.06
+            : effectiveRough
             ? 0.1
             : environment.mowed
               ? 0.075
               : 0.15
           : sprinting
-          ? environment.mowed
+          ? environment.wet
+            ? 0.84
+            : environment.mowed
             ? 0.72
             : 1
-          : effectiveRough
+          : environment.wet
+            ? 0.18
+            : effectiveRough
             ? 0.64
             : environment.mowed
               ? 0.12
@@ -6943,14 +7461,35 @@
     source.stop(start + duration + 0.02);
   }
 
-  function playFootstep(inRough, sprinting, crouched = false) {
+  function playFootstep(
+    inRough,
+    sprinting,
+    crouched = false,
+    wet = false,
+  ) {
     const weight = crouched ? 0.45 : sprinting ? 1.25 : 1;
-    playTransientTone(92 * Math.max(0.7, weight), 46, 0.12, 0.045 * weight, "sine");
+    playTransientTone(
+      wet ? 116 : 92 * Math.max(0.7, weight),
+      wet ? 72 : 46,
+      wet ? 0.09 : 0.12,
+      (wet ? 0.032 : 0.045) * weight,
+      "sine",
+    );
     playNoiseBurst(
-      inRough ? (crouched ? 0.13 : 0.2) : 0.11,
-      (inRough ? 0.044 : 0.022) * weight,
-      inRough ? 1150 : 480,
-      inRough ? "bandpass" : "lowpass",
+      wet
+        ? 0.1
+        : inRough
+          ? crouched
+            ? 0.13
+            : 0.2
+          : 0.11,
+      (wet
+        ? 0.03
+        : inRough
+          ? 0.044
+          : 0.022) * weight,
+      wet ? 2100 : inRough ? 1150 : 480,
+      wet || inRough ? "bandpass" : "lowpass",
       (hash(state.hole.travelDistance * 9) - 0.5) * 0.35,
     );
   }
@@ -6983,6 +7522,12 @@
   function playSprinklerCue() {
     playTransientTone(246, 164, 0.18, 0.035, "square");
     playNoiseBurst(0.72, 0.07, 1800, "bandpass", -0.45, 0.08);
+  }
+
+  function playMowerBogCue() {
+    playTransientTone(78, 43, 0.34, 0.055, "sawtooth");
+    playTransientTone(64, 35, 0.28, 0.045, "square", 0.24);
+    playNoiseBurst(0.42, 0.045, 360, "lowpass", 0, 0.08);
   }
 
   function playDrainUnlockCue() {
@@ -7743,6 +8288,9 @@
           onMowedStrip:
             (state.hole.environment ||
               getPlayerEnvironmentState()).mowed,
+          onWetTurf:
+            (state.hole.environment ||
+              getPlayerEnvironmentState()).wet,
           crouched: state.hole.crouched,
           focus: state.hole.focus,
           concealment: Number(state.hole.concealment.toFixed(2)),
@@ -7901,6 +8449,32 @@
           distractionSecondsRemaining: Number(
             state.hole.distractionTimer.toFixed(2),
           ),
+          sprinklers: {
+            used: state.hole.sprinklerUsed,
+            soakSecondsRemaining: Number(
+              state.hole.sprinklerSoakTimer.toFixed(2),
+            ),
+            durationSeconds:
+              SPRINKLER_SOAK_SECONDS,
+            mowerSpeedMultiplier:
+              WET_MOWER_SPEED_MULTIPLIER,
+            activeZones:
+              state.hole.sprinklerSoakTimer > 0
+                ? SPRINKLER_SOAK_ZONES.map(
+                    (zone) => ({
+                      id: zone.id,
+                      x: zone.x,
+                      y: zone.y,
+                      radius: zone.radius,
+                    }),
+                  )
+                : [],
+            joeBogEntries:
+              state.hole.wetTrapCount,
+            joeBogSeconds: Number(
+              state.hole.wetTrapSeconds.toFixed(2),
+            ),
+          },
           noise: Number(state.hole.noise.toFixed(2)),
           turf: {
             mowedMarks:
@@ -7917,6 +8491,8 @@
               ).length,
             tracksCreated:
               state.hole.tracksCreated,
+            wetTracks:
+              state.hole.wetTrackCount,
             tracksDiscovered:
               state.hole.tracksDiscovered,
             nearestTrack:
@@ -7953,6 +8529,11 @@
                         getPlayerEnvironmentState()
                       ).nearestTrack.strength.toFixed(2),
                     ),
+                    wet:
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrack.wet,
                   }
                 : null,
           },
@@ -7999,6 +8580,19 @@
                   state.hole.environment.turfLabel,
                 mowed:
                   state.hole.environment.mowed,
+                wet:
+                  state.hole.environment.wet,
+                wetZone:
+                  state.hole.environment.wetZone?.id ||
+                  null,
+                wetZoneEdgeDistance:
+                  state.hole.environment
+                    .wetZoneEdgeDistance === null
+                    ? null
+                    : Number(
+                        state.hole.environment
+                          .wetZoneEdgeDistance.toFixed(2),
+                      ),
                 nearestMowedDistance:
                   state.hole.environment
                     .nearestMowedDistance === null
@@ -8029,6 +8623,7 @@
             y: Math.round(state.hole.joe.y),
             mode: state.hole.joe.mode,
             alert: Number(state.hole.joe.alert.toFixed(2)),
+            wet: state.hole.joe.wet,
             distance: Math.round(worldDistance(state.hole.joe, state.player)),
             hasLineOfSight: state.hole.hasLineOfSight,
             lineBlockedBy: state.hole.lineBlockedBy,

@@ -288,3 +288,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Add one authored turf-reaction set—sprinkler-wet grass, bunker disturbance, or recoverable divots—to deepen the evidence system without overloading the HUD.
 - Add a second Overtime contract only after telemetry shows the first modifier produces fair, legible repeat runs.
+
+## Sprinkler Wet-Turf Risk/Reward Pass — July 29, 2026
+
+- Turned the drainage-route valve into a 24-second course-wide tactical event with four authored soak zones across the tee, eastern relief, pond fringe, and final approach.
+- Added perspective-projected wet ground, animated sprinkler spray, moving surface glints, splash footsteps, a mower-sputter effect, cyan course-map regions, and wet-state Joe labels.
+- Made wet walking quieter at 0.18 noise and wet crouching nearly silent at 0.06, while keeping wet sprinting splashy at 0.84.
+- Made wet traversal leave tracks on rough, fairway, and cut turf. Wet tracks gain 0.20 strength, last 1.55× longer, render with a distinct water tint, and remain available to Joe's evidence search after the sprinklers stop.
+- Slowed Joe's mower to 68% movement speed inside wet zones, counted each mower-bog entry and duration, and added a clear “move while Joe clears the deck” response.
+- Added live sprinkler time, wet-surface naming, active water regions, Joe bog state, wet-track counts, and nearest-zone distance to the HUD, Listening Focus, and `render_game_to_text`.
+- Kept the system pause-safe and reset-safe: five seconds of simulated pause time changed neither Joe nor the water timer, and restarting cleared every wet-state counter and region.
+- Verified the exact project Playwright path with a live valve activation, wet player state, 0.88-strength/58.65-second footprint, Joe bog entry, and no console or page errors.
+- Measured Joe's one-second wet movement at approximately 15.4 course meters, matching 23 × 0.68 movement tuning.
+- Completed a full drainage escape with two mower bogs and 6.30 seconds of accumulated slowdown, then separately revalidated the capture outcome.
+- Visually inspected active water, map regions, and Listening Focus at 800×600, 1280×720, and 2560×1600 with viewport-matched document bounds and no overflow.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Consider a second authored terrain reaction—bunker disturbance or recoverable divots—after playtesting shows wet-turf choices remain legible under chase pressure.
+- Add a second Overtime contract only after telemetry shows the first modifier and sprinkler timing produce fair, replayable routes.
