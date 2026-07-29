@@ -251,6 +251,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 ### Next production priorities
 
-- Add one evidence-bearing/cuttable turf state so Joe's mowing and the course surface become a persistent information system.
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Add a lightweight optional challenge modifier after the player clears all three Night Orders.
+
+## Persistent Turf and Evidence Pass — July 29, 2026
+
+- Turned Joe's traversal into persistent world state: the mower now leaves connected, projected cut swaths that remain visible in the course view and mini-map for the full round.
+- Made cut turf a tactical shortcut with quieter walk, crouch, and sprint noise but no rough concealment.
+- Added temporary player-made bent-grass trails in rough; crouching creates faint, shorter-lived evidence while careless sprinting creates stronger, longer-lived tracks.
+- Added evidence discovery to Joe's behavior. Strong trails can pull him into a backtracking search, update the attention source, trigger a warning banner, and become highlighted in Listening Focus.
+- Added persistent golf divots at actual chip-shot landing points so the aimed-shot system changes the course instead of only producing a temporary sound effect.
+- Added perspective-correct cut strips, subtle bent-grass marks, divots, mini-map turf marks, Listening Focus evidence markers, and surface-specific HUD guidance.
+- Expanded `render_game_to_text` with player surface, mowed-strip state, turf counts, discovery totals, nearest evidence, and nearest cut-strip distance.
+- Added long-patrol clearance recovery after the new persistence test exposed a pond-edge navigation pinch; Joe now completes repeated patrol circuits instead of accumulating failed reroutes.
+- Verified fairway, rough, and mowed-strip noise/concealment values; faint versus strong trail behavior; evidence-driven search; divot creation; 90 seconds of patrol traversal; and zero browser/page errors.
+- Re-ran the required project Playwright client and visually inspected the briefing, aimed shot, divot impact, rough trail, and mowed-path presentations.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Add a lightweight optional challenge modifier after the player clears all three Night Orders.
+- Add one authored turf-reaction set—sprinkler-wet grass, bunker disturbance, or recoverable divots—to deepen the new evidence system without overloading the HUD.

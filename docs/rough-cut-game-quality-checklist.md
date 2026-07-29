@@ -164,7 +164,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - **Objective markers:** The key, sprinkler, and shed are currently easy to locate for vertical-slice clarity. Production levels should support configurable marker strength and more diegetic navigation through yardage books, course signs, landmarks, or recovered maintenance maps.
 - **Spatial model:** The slice now has authored collision, projected boundaries, line-of-sight occlusion, hiding terrain, multiple traversable routes, and obstacle-aware Joe navigation on a simplified 2D coordinate layer. Production work still needs larger cover volumes, richer authored path choices, and multi-area navigation.
 - **Golf depth:** The current golf mechanic now supports pressure-based charge, lateral aim, readable trajectory, delayed impact, and Joe redirection. It still stops short of the planned club choice, lie, spin, bounce, roll, wind, and deeper ball-physics system.
-- **Grass depth:** Fairway and rough currently provide a readable two-state noise/concealment tradeoff. The larger turf taxonomy, evidence system, samples, cutting, recovery, and environmental reactions remain future work.
+- **Grass depth:** Fairway, concealment-bearing rough, persistent mower-cut strips, temporary player trails, and golf divots now form a readable information system. The larger turf taxonomy, samples, player-operated cutting, recovery, and environmental reactions remain future work.
 - **Audio:** Current sound is procedural and functional. It still needs authored ambience, spatial layering, stronger mower-state transitions, human-performed Joe material if dialogue is added, and a proper mix.
 - **Input:** Keyboard, pointer, and standard gamepad play are implemented with automatic prompt switching and controller-navigable settings. Touch controls, rebinding, non-standard controller glyph sets, and remapping accessibility remain future work.
 - **Campaign systems:** Saves, checkpoints, multiple holes, progression, advanced difficulty modes, and the broader narrative arc are not yet implemented.
@@ -187,7 +187,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Add obstacle-aware Joe route selection with stuck recovery and state-specific patrol, investigate, search, and chase mower animation.
 - [x] Replace permanent live tracking with close-range/live-pursuit tracking and a decaying last-signal state.
 - [x] Add the first aimed golf shot with readable setup, consequence, and recovery.
-- [ ] Expand grass beyond the fairway/rough binary with at least one cuttable state and one evidence-bearing state.
+- [x] Expand grass beyond the fairway/rough binary with at least one cut state and one evidence-bearing state.
 - [ ] Commission or create authored sound layers and remove any remaining placeholder feel.
 - [ ] Generate and integrate a consistent production animation set for Joe and the mower.
 

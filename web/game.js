@@ -115,6 +115,10 @@
   const BALL_MAX_RANGE = 96;
   const BALL_CHARGE_SECONDS = 0.8;
   const BALL_MAX_AIM_ANGLE = 1.12;
+  const MOWED_MARK_SPACING = 5.2;
+  const PLAYER_TRACK_SPACING = 5.6;
+  const MAX_MOWED_MARKS = 150;
+  const MAX_PLAYER_TRACKS = 72;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: 24, y: 350, radius: 13 };
@@ -462,6 +466,7 @@
         routeTarget: null,
         repathTimer: 0,
         minimumObstacleClearance: 99,
+        lastCutPoint: { x: 44, y: 185 },
       },
       distraction: null,
       distractionTimer: 0,
@@ -502,6 +507,13 @@
       lastKnownJoeTimer: 0,
       worldEffects: [],
       screenParticles: [],
+      turfMarks: [],
+      nextTurfMarkId: 1,
+      lastPlayerTrackDistance: 0,
+      tracksCreated: 0,
+      tracksDiscovered: 0,
+      trackTutorialShown: false,
+      trailWarningTimer: 0,
       zoneIndex: 0,
       zoneBannerTimer: 0,
       zoneVisits: [1, 0, 0, 0],
@@ -1450,6 +1462,10 @@
         routeTarget: null,
         repathTimer: 0,
         minimumObstacleClearance: 99,
+        lastCutPoint: {
+          x: variant.joeStart.x,
+          y: variant.joeStart.y,
+        },
       },
       distraction: null,
       distractionTimer: 0,
@@ -1490,6 +1506,13 @@
       lastKnownJoeTimer: 0,
       worldEffects: [],
       screenParticles: [],
+      turfMarks: [],
+      nextTurfMarkId: 1,
+      lastPlayerTrackDistance: 0,
+      tracksCreated: 0,
+      tracksDiscovered: 0,
+      trackTutorialShown: false,
+      trailWarningTimer: 0,
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
       zoneVisits: [1, 0, 0, 0],
@@ -1573,6 +1596,201 @@
     return Math.abs(point.x) > courseZoneAt(point.y).fairwayHalfWidth;
   }
 
+  function addTurfMark(kind, x, y, options = {}) {
+    const hole = state.hole;
+    if (!hole || !hole.turfMarks) {
+      return null;
+    }
+    const mark = {
+      id: hole.nextTurfMarkId,
+      kind,
+      x,
+      y,
+      age: 0,
+      duration: options.duration ?? null,
+      heading: options.heading ?? 0,
+      strength: options.strength ?? 1,
+      radius: options.radius ?? (kind === "mowed" ? 7.2 : 4.2),
+      discovered: false,
+    };
+    hole.nextTurfMarkId += 1;
+    hole.turfMarks.push(mark);
+    const kindLimit =
+      kind === "mowed"
+        ? MAX_MOWED_MARKS
+        : kind === "track"
+          ? MAX_PLAYER_TRACKS
+          : 12;
+    const matching = hole.turfMarks.filter(
+      (candidate) => candidate.kind === kind,
+    );
+    if (matching.length > kindLimit) {
+      const removeCount = matching.length - kindLimit;
+      const removedIds = new Set(
+        matching
+          .slice(0, removeCount)
+          .map((candidate) => candidate.id),
+      );
+      hole.turfMarks = hole.turfMarks.filter(
+        (candidate) => !removedIds.has(candidate.id),
+      );
+    }
+    return mark;
+  }
+
+  function turfStateAt(point) {
+    const marks = state.hole?.turfMarks || [];
+    let nearestMowed = null;
+    let nearestTrack = null;
+    let mowedDistance = Infinity;
+    let trackDistance = Infinity;
+    for (let index = 0; index < marks.length; index += 1) {
+      const mark = marks[index];
+      const distance = worldDistance(point, mark);
+      if (
+        mark.kind === "mowed" &&
+        distance < mowedDistance
+      ) {
+        nearestMowed = mark;
+        mowedDistance = distance;
+      }
+      if (
+        mark.kind === "track" &&
+        distance < trackDistance
+      ) {
+        nearestTrack = mark;
+        trackDistance = distance;
+      }
+    }
+    return {
+      mowed: Boolean(
+        nearestMowed &&
+          mowedDistance <= nearestMowed.radius,
+      ),
+      nearestMowed,
+      nearestMowedDistance:
+        nearestMowed ? mowedDistance : null,
+      nearestTrack,
+      nearestTrackDistance:
+        nearestTrack ? trackDistance : null,
+    };
+  }
+
+  function updateTurfMarks(dt) {
+    const hole = state.hole;
+    for (let index = 0; index < hole.turfMarks.length; index += 1) {
+      hole.turfMarks[index].age += dt;
+    }
+    hole.turfMarks = hole.turfMarks.filter(
+      (mark) =>
+        mark.duration === null ||
+        mark.age < mark.duration,
+    );
+  }
+
+  function recordPlayerTrack(sprinting) {
+    const hole = state.hole;
+    const terrain = turfStateAt(state.player);
+    if (!playerInRough() || terrain.mowed) {
+      hole.lastPlayerTrackDistance =
+        hole.travelDistance;
+      return;
+    }
+    if (
+      hole.travelDistance -
+        hole.lastPlayerTrackDistance <
+      PLAYER_TRACK_SPACING
+    ) {
+      return;
+    }
+    const strength = hole.crouched
+      ? 0.38
+      : sprinting
+        ? 1
+        : 0.68;
+    addTurfMark(
+      "track",
+      state.player.x,
+      state.player.y,
+      {
+        heading: state.player.heading,
+        strength,
+        radius: 3.8 + strength * 2.2,
+        duration: 22 + strength * 18,
+      },
+    );
+    hole.lastPlayerTrackDistance =
+      hole.travelDistance;
+    hole.tracksCreated += 1;
+    if (!hole.trackTutorialShown) {
+      hole.trackTutorialShown = true;
+      setHoleMessage(
+        "BENT GRASS HOLDS YOUR TRAIL — crouch to leave fainter evidence.",
+        3.2,
+      );
+    }
+  }
+
+  function recordJoeCut() {
+    const joe = state.hole.joe;
+    if (
+      worldDistance(joe, joe.lastCutPoint) <
+      MOWED_MARK_SPACING
+    ) {
+      return;
+    }
+    addTurfMark(
+      "mowed",
+      joe.x,
+      joe.y,
+      {
+        heading:
+          Math.atan2(
+            joe.y - joe.lastCutPoint.y,
+            joe.x - joe.lastCutPoint.x,
+          ),
+        radius: 7.4,
+      },
+    );
+    joe.lastCutPoint = {
+      x: joe.x,
+      y: joe.y,
+    };
+  }
+
+  function trailEvidenceNearJoe() {
+    const hole = state.hole;
+    let evidence = null;
+    let nearestDistance = Infinity;
+    for (let index = 0; index < hole.turfMarks.length; index += 1) {
+      const mark = hole.turfMarks[index];
+      if (
+        mark.kind !== "track" ||
+        mark.discovered ||
+        mark.age > mark.duration * 0.92
+      ) {
+        continue;
+      }
+      const distance = worldDistance(hole.joe, mark);
+      const discoveryRadius =
+        14 + mark.strength * 24;
+      const evidenceBlocker =
+        lineBlockerBetween(hole.joe, mark);
+      if (
+        distance <= discoveryRadius &&
+        (
+          !evidenceBlocker ||
+          distance <= 24
+        ) &&
+        distance < nearestDistance
+      ) {
+        evidence = mark;
+        nearestDistance = distance;
+      }
+    }
+    return evidence;
+  }
+
   function nearestObstacleClearance(point) {
     let clearance = Infinity;
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
@@ -1619,6 +1837,8 @@
     const player = state.player;
     const zone = courseZoneAt(player.y);
     const inRough = playerInRough(player);
+    const turf = turfStateAt(player);
+    const effectiveRough = inRough && !turf.mowed;
     let nearestCover = null;
     let nearestCoverDistance = Infinity;
     let nearestLandmark = null;
@@ -1672,16 +1892,30 @@
       ? state.hole.crouched
         ? "concealed"
         : "hard cover"
-      : nearestCover
-        ? "cover nearby"
-        : inRough
-          ? state.hole.crouched
-            ? "rough concealment"
-            : "rustling rough"
-          : "exposed";
+        : nearestCover
+          ? "cover nearby"
+        : turf.mowed
+            ? "quiet / exposed"
+          : effectiveRough
+            ? state.hole.crouched
+              ? "rough concealment"
+              : "rustling rough"
+            : "exposed";
     return {
       zone,
       inRough,
+      effectiveRough,
+      mowed: turf.mowed,
+      nearestTrack: turf.nearestTrack,
+      nearestTrackDistance:
+        turf.nearestTrackDistance,
+      nearestMowedDistance:
+        turf.nearestMowedDistance,
+      turfLabel: turf.mowed
+        ? "MOWED STRIP"
+        : inRough
+          ? "BENT ROUGH"
+          : "FAIRWAY",
       nearestCover,
       nearestCoverDistance,
       nearestLandmark,
@@ -2170,6 +2404,16 @@
   function landGolfBall(target) {
     const hole = state.hole;
     hole.ballFlight = null;
+    addTurfMark(
+      "divot",
+      target.x,
+      target.y,
+      {
+        heading: state.player.heading,
+        radius: 4.8,
+        strength: 1,
+      },
+    );
     hole.distraction = { ...target };
     hole.distractionTimer = Math.max(
       2.25,
@@ -2245,7 +2489,7 @@
     );
     const moving = playerIsMoving();
     const environment = getPlayerEnvironmentState();
-    const inRough = environment.inRough;
+    const inRough = environment.effectiveRough;
     const blocker = environment.blocker;
     const visibilityRange =
       (hole.crouched && inRough
@@ -2271,6 +2515,47 @@
     const distractionActive =
       hole.distraction &&
       hole.distractionTimer > 0;
+    const trailEvidence =
+      !distractionActive &&
+      joe.mode !== "chase"
+        ? trailEvidenceNearJoe()
+        : null;
+    if (trailEvidence) {
+      trailEvidence.discovered = true;
+      hole.tracksDiscovered += 1;
+      hole.lastSeenPlayer = {
+        x: trailEvidence.x,
+        y: trailEvidence.y,
+      };
+      hole.searchTimer = Math.max(
+        hole.searchTimer,
+        4.8 + trailEvidence.strength * 2.2,
+      );
+      joe.mode = "search";
+      joe.alert = Math.max(
+        joe.alert,
+        0.28 + trailEvidence.strength * 0.24,
+      );
+      hole.detection = Math.max(
+        hole.detection,
+        0.18 + trailEvidence.strength * 0.2,
+      );
+      hole.stateBanner =
+        "EVIDENCE FOUND // JOE IS BACKTRACKING";
+      hole.stateBannerTimer = 2.5;
+      hole.trailWarningTimer = 3;
+      setHoleMessage(
+        "JOE FOUND YOUR BENT-GRASS TRAIL — leave the line or reach cut turf.",
+        3,
+      );
+      addWorldEffect(
+        "trail_found",
+        trailEvidence.x,
+        trailEvidence.y,
+        1.8,
+      );
+      playThreatCue("search");
+    }
     const directSound =
       audibleNow &&
       !distractionActive;
@@ -2293,7 +2578,10 @@
       ? "sight"
       : directSound
         ? "sound"
-        : null;
+        : trailEvidence ||
+            hole.trailWarningTimer > 0
+          ? "trail"
+          : null;
     hole.playerAudible = directSound;
     hole.visibilityRange = visibilityRange;
     hole.hearingRange = hearingRange;
@@ -2320,7 +2608,9 @@
         0.48,
       );
       setHoleMessage(
-        visibleNow
+        trailEvidence
+          ? "JOE FOUND YOUR TRAIL — move off the evidence line."
+          : visibleNow
           ? "JOE IS LOOKING — break the sightline before attention locks."
           : "JOE HEARD THAT — stop, crouch, or change direction.",
         2.2,
@@ -2330,7 +2620,10 @@
       hole.detection < 0.08 &&
       joe.mode !== "chase"
     ) {
-      if (hole.detectionWarning) {
+      if (
+        hole.detectionWarning &&
+        hole.trailWarningTimer <= 0
+      ) {
         setHoleMessage(
           "ATTENTION LOST — move when the mower turns away.",
           1.45,
@@ -2428,6 +2721,7 @@
 
     joe.x = clamp(joe.x, -COURSE_MAX_X, COURSE_MAX_X);
     joe.y = clamp(joe.y, 4, COURSE_LENGTH);
+    recordJoeCut();
     joe.minimumObstacleClearance = Math.min(
       joe.minimumObstacleClearance,
       joeObstacleClearanceAt(joe),
@@ -2781,6 +3075,84 @@
   function moveJoeToward(target, speed, dt) {
     const joe = state.hole.joe;
     const start = { x: joe.x, y: joe.y };
+    let tightestObstacle = null;
+    let tightestClearance = Infinity;
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle = COURSE_OBSTACLES[index];
+      if (!obstacle.blocks) {
+        continue;
+      }
+      const clearance =
+        worldDistance(joe, obstacle) -
+        obstacle.radius;
+      if (clearance < tightestClearance) {
+        tightestObstacle = obstacle;
+        tightestClearance = clearance;
+      }
+    }
+    if (
+      tightestObstacle &&
+      tightestClearance <
+        JOE_NAVIGATION_CLEARANCE
+    ) {
+      const metricX =
+        (joe.x - tightestObstacle.x) * 0.72;
+      const metricY =
+        joe.y - tightestObstacle.y;
+      const metricLength = Math.max(
+        0.001,
+        Math.hypot(metricX, metricY),
+      );
+      const escapeStep = Math.min(
+        speed * dt,
+        JOE_NAVIGATION_CLEARANCE -
+          tightestClearance +
+          0.12,
+      );
+      const escapeCandidate = {
+        x: clamp(
+          joe.x +
+            metricX /
+              metricLength *
+              escapeStep /
+              0.72,
+          -112,
+          112,
+        ),
+        y: clamp(
+          joe.y +
+            metricY /
+              metricLength *
+              escapeStep,
+          4,
+          COURSE_LENGTH,
+        ),
+      };
+      const escapeBlocker =
+        joeObstacleOnSegment(
+          start,
+          escapeCandidate,
+          0.1,
+        );
+      if (
+        !escapeBlocker ||
+        escapeBlocker.id ===
+          tightestObstacle.id
+      ) {
+        joe.x = escapeCandidate.x;
+        joe.y = escapeCandidate.y;
+        joe.routePath = [];
+        joe.repathTimer = 0;
+        joe.stuckTimer = 0;
+        joe.routeObstacle =
+          tightestObstacle.id;
+      }
+      return;
+    }
     const directBlocker = joeObstacleOnSegment(
       start,
       target,
@@ -2887,7 +3259,8 @@
         COURSE_LENGTH,
       ),
     };
-    const movementPadding = JOE_NAVIGATION_CLEARANCE;
+    const movementPadding =
+      JOE_NAVIGATION_CLEARANCE - 0.18;
     const movementBlocker = joeObstacleOnSegment(
       start,
       candidate,
@@ -3019,6 +3392,131 @@
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  function drawTurfMarks() {
+    const marks = state.hole.turfMarks
+      .map((mark) => ({
+        mark,
+        point: worldToScreen(mark.x, mark.y),
+      }))
+      .filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -260 &&
+          entry.point.x < WIDTH + 260,
+      )
+      .sort((a, b) => a.point.y - b.point.y);
+
+    for (let index = 0; index < marks.length; index += 1) {
+      const mark = marks[index].mark;
+      const point = marks[index].point;
+      const worldWidth =
+        mark.radius *
+        COURSE_CAMERA.worldUnitMeters *
+        point.pixelsPerMeter;
+      const angle = Math.atan2(
+        -Math.sin(mark.heading) * 0.28,
+        Math.cos(mark.heading),
+      );
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(angle);
+      if (mark.kind === "mowed") {
+        ctx.globalAlpha = clamp(
+          0.3 + point.scale * 0.42,
+          0.28,
+          0.78,
+        );
+        ctx.fillStyle = "#6f6d31";
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          Math.max(5, worldWidth),
+          Math.max(2, worldWidth * 0.17),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.strokeStyle = "rgba(187,164,75,0.72)";
+        ctx.lineWidth = Math.max(1, point.scale * 1.4);
+        for (let stripe = -1; stripe <= 1; stripe += 1) {
+          ctx.beginPath();
+          ctx.moveTo(-worldWidth * 0.78, stripe * worldWidth * 0.075);
+          ctx.lineTo(worldWidth * 0.78, stripe * worldWidth * 0.075);
+          ctx.stroke();
+        }
+      } else if (mark.kind === "track") {
+        const life = clamp(
+          1 - mark.age / mark.duration,
+          0,
+          1,
+        );
+        const focusBoost =
+          state.hole.focus || mark.discovered
+            ? 1.75
+            : 1;
+        ctx.globalAlpha = clamp(
+          life *
+            mark.strength *
+            focusBoost *
+            (0.24 + point.scale * 0.4),
+          0.08,
+          0.88,
+        );
+        ctx.strokeStyle = mark.discovered
+          ? "#d66b35"
+          : state.hole.focus
+            ? "#d5bc64"
+            : "#3c5c2d";
+        ctx.lineWidth = Math.max(
+          1,
+          point.scale * 1.6,
+        );
+        const length = Math.max(
+          4,
+          worldWidth * 0.5,
+        );
+        for (let step = -1; step <= 1; step += 2) {
+          ctx.beginPath();
+          ctx.moveTo(
+            -length * 0.5,
+            step * worldWidth * 0.085,
+          );
+          ctx.quadraticCurveTo(
+            0,
+            -step * worldWidth * 0.06,
+            length * 0.5,
+            step * worldWidth * 0.085,
+          );
+          ctx.stroke();
+        }
+      } else if (mark.kind === "divot") {
+        ctx.globalAlpha = clamp(
+          0.36 + point.scale * 0.38,
+          0.3,
+          0.8,
+        );
+        ctx.fillStyle = "#342917";
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          Math.max(4, worldWidth * 0.65),
+          Math.max(2, worldWidth * 0.2),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.strokeStyle = "#bd8b3d";
+        ctx.lineWidth = Math.max(1, point.scale);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   function drawCourseObstacle(obstacle) {
@@ -3551,6 +4049,24 @@
       ctx.arc(obstaclePoint.x, obstaclePoint.y, 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.fillStyle = "rgba(161,145,61,0.55)";
+    for (
+      let index = 0;
+      index < state.hole.turfMarks.length;
+      index += 1
+    ) {
+      const mark = state.hole.turfMarks[index];
+      if (mark.kind !== "mowed") {
+        continue;
+      }
+      const cutPoint = mapPoint(mark.x, mark.y);
+      ctx.fillRect(
+        cutPoint.x - 1.5,
+        cutPoint.y - 1,
+        3,
+        2,
+      );
+    }
     ctx.fillStyle = "#d0a95b";
     ctx.fillRect(shedPoint.x - 6, shedPoint.y - 5, 12, 10);
     ctx.strokeStyle = state.hole.drainUnlocked ? "#74c9ac" : "#687268";
@@ -3572,6 +4088,34 @@
       ctx.beginPath();
       ctx.arc(sprinklerPoint.x, sprinklerPoint.y, 5, 0, Math.PI * 2);
       ctx.stroke();
+    }
+    if (state.hole.focus) {
+      for (
+        let index = 0;
+        index < state.hole.turfMarks.length;
+        index += 1
+      ) {
+        const mark = state.hole.turfMarks[index];
+        if (
+          mark.kind !== "track" &&
+          mark.kind !== "divot"
+        ) {
+          continue;
+        }
+        const turfPoint = mapPoint(mark.x, mark.y);
+        ctx.fillStyle =
+          mark.kind === "divot"
+            ? "#bd8b3d"
+            : mark.discovered
+              ? "#d66137"
+              : "rgba(205,184,91,0.72)";
+        ctx.fillRect(
+          turfPoint.x - 1.5,
+          turfPoint.y - 1.5,
+          3,
+          3,
+        );
+      }
     }
     const shotTarget =
       state.hole.ballAim.target ||
@@ -3791,6 +4335,25 @@
             point.y -
               4 * scale +
               Math.sin(angle) * reach * 0.42,
+          );
+          ctx.stroke();
+        }
+      } else if (effect.kind === "trail_found") {
+        ctx.strokeStyle = `rgba(219,91,48,${0.82 * alpha})`;
+        ctx.lineWidth = Math.max(1, 3 * scale);
+        for (let ring = 0; ring < 3; ring += 1) {
+          const radius =
+            (12 + ring * 10 + progress * 34) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y,
+            radius,
+            radius * 0.24,
+            0,
+            0,
+            Math.PI * 2,
           );
           ctx.stroke();
         }
@@ -4412,7 +4975,7 @@
 
     drawText("CROUCH", 510, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "LB" : "C", 510, 526, 70);
-    drawText("SOLID COVER BLOCKS SIGHT", 510, 579, 10, "#9fac96", "center");
+    drawText("ROUGH HIDES YOU — BUT KEEPS TRACKS", 510, 579, 10, "#9fac96", "center");
 
     drawText("AIM / CHIP", 760, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "X" : "SPACE", 760, 526, 112);
@@ -4529,6 +5092,41 @@
         true,
       );
     }
+    if (
+      environment.nearestTrack &&
+      environment.nearestTrackDistance < 52
+    ) {
+      const track = environment.nearestTrack;
+      const trackDeltaX =
+        track.x - state.player.x;
+      const trackDeltaY =
+        track.y - state.player.y;
+      const trackAngle = Math.atan2(
+        trackDeltaX * 0.72,
+        -trackDeltaY,
+      );
+      const trackX =
+        centerX +
+        Math.sin(trackAngle) * (radius - 48);
+      const trackY =
+        centerY -
+        Math.cos(trackAngle) * (radius - 48);
+      ctx.fillStyle = track.discovered
+        ? "#d86439"
+        : "#d2b75e";
+      ctx.beginPath();
+      ctx.arc(trackX, trackY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      drawText(
+        `${track.discovered ? "FOUND TRAIL" : "BENT GRASS"} ${Math.round(environment.nearestTrackDistance)}m`,
+        trackX,
+        trackY + 17,
+        9,
+        track.discovered ? "#ee8d61" : "#dfcb83",
+        "center",
+        true,
+      );
+    }
     ctx.restore();
   }
 
@@ -4608,7 +5206,7 @@
     const variant = activeRunVariant();
     const playerDistance = worldDistance(hole.joe, state.player);
     const environment = hole.environment || getPlayerEnvironmentState();
-    const inRough = environment.inRough;
+    const inRough = environment.effectiveRough;
     const objective =
       hole.keyCollected && hole.drainUnlocked
         ? "CHOOSE SHED OR DRAIN EXIT"
@@ -4620,12 +5218,14 @@
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
 
     const terrainStatus =
-      `${environment.zone.name}  •  ${environment.coverQuality.toUpperCase()}  •  ORDER ${String(variant.number).padStart(2, "0")}`;
+      `${environment.zone.name}  •  ${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}  •  ORDER ${String(variant.number).padStart(2, "0")}`;
     const terrainColor =
       environment.hardCover && hole.crouched
         ? "#9fd285"
         : environment.lightExposure > 0.15
           ? "#f2a250"
+          : environment.mowed
+            ? "#d4c45e"
           : inRough
             ? "#d5b25f"
             : "#9fac92";
@@ -4728,6 +5328,8 @@
           ? "SIGHTLINE BUILDING"
           : hole.detectionSource === "sound"
             ? "NOISE DETECTED"
+            : hole.detectionSource === "trail"
+              ? "TRAIL EVIDENCE FOUND"
             : environment.blocker
               ? "SIGHTLINE BLOCKED"
               : "UNAWARE";
@@ -4776,8 +5378,10 @@
           ? "AMBER LIGHT: VISIBILITY RISING"
           : environment.hardCover
             ? "SOLID OBJECT BETWEEN YOU AND JOE"
+            : environment.mowed
+              ? "CUT STRIP: QUIET FOOTING, NO CONCEALMENT"
             : inRough
-              ? "ROUGH MUFFLES SHAPE, NOT SOUND"
+              ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
               : "OPEN SIGHTLINE — MOVE COVER TO COVER";
       drawText(
         awarenessText,
@@ -4885,6 +5489,7 @@
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     drawPerspectiveCourse(progress, walkBob);
+    drawTurfMarks();
 
     for (let layer = 0; layer < 3; layer += 1) {
       const fogY = 280 + layer * 105;
@@ -5414,7 +6019,12 @@
       hole.dreadTimer = Math.max(0, hole.dreadTimer - dt);
       hole.detectionPulse = Math.max(0, hole.detectionPulse - dt * 1.75);
       hole.lastKnownJoeTimer = Math.max(0, hole.lastKnownJoeTimer - dt);
+      hole.trailWarningTimer = Math.max(
+        0,
+        hole.trailWarningTimer - dt,
+      );
       updateCourseEffects(dt);
+      updateTurfMarks(dt);
       const movement = movementInput();
       updateGolfBallTactics(dt, movement);
       const moving = playerIsMoving();
@@ -5455,6 +6065,7 @@
       if (moving) {
         state.player.heading = Math.atan2(inputY, inputX);
         movePlayerBy(inputX * speed, inputY * speed);
+        recordPlayerTrack(sprinting);
         const stepSpacing = hole.crouched ? 5.8 : sprinting ? 5.3 : 4.1;
         if (hole.travelDistance - hole.lastStepDistance >= stepSpacing) {
           const inStepRough = playerInRough();
@@ -5500,19 +6111,27 @@
       hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
       const environment = getPlayerEnvironmentState();
       const inRough = environment.inRough;
+      const effectiveRough =
+        environment.effectiveRough;
       hole.environment = environment;
       const targetNoise = moving
         ? hole.focus
           ? 0.055
           : hole.crouched
-          ? inRough
+          ? effectiveRough
             ? 0.1
-            : 0.15
+            : environment.mowed
+              ? 0.075
+              : 0.15
           : sprinting
-          ? 1
-          : inRough
+          ? environment.mowed
+            ? 0.72
+            : 1
+          : effectiveRough
             ? 0.64
-            : 0.26
+            : environment.mowed
+              ? 0.12
+              : 0.26
         : 0;
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
       const targetConcealment =
@@ -5520,11 +6139,11 @@
           ? moving
             ? 0.82
             : 1
-          : hole.crouched && inRough
+          : hole.crouched && effectiveRough
             ? moving
               ? 0.58
               : 0.76
-          : inRough
+          : effectiveRough
             ? 0.16
             : 0;
       hole.concealment = lerp(
@@ -5532,7 +6151,7 @@
         targetConcealment,
         clamp(dt * 4.2, 0, 1),
       );
-      if (inRough && moving && !hole.crouched) {
+      if (effectiveRough && moving && !hole.crouched) {
         hole.joe.alert = clamp(hole.joe.alert + dt * 0.055, 0, 1);
       }
       if (environment.lightExposure > 0.15 && moving) {
@@ -6763,6 +7382,12 @@
           travelDistance: Math.round(state.hole.travelDistance),
           shedDistance: Math.max(0, Math.round(COURSE_LENGTH - state.player.y)),
           inRough: playerInRough(),
+          surface:
+            (state.hole.environment ||
+              getPlayerEnvironmentState()).turfLabel,
+          onMowedStrip:
+            (state.hole.environment ||
+              getPlayerEnvironmentState()).mowed,
           crouched: state.hole.crouched,
           focus: state.hole.focus,
           concealment: Number(state.hole.concealment.toFixed(2)),
@@ -6921,6 +7546,60 @@
             state.hole.distractionTimer.toFixed(2),
           ),
           noise: Number(state.hole.noise.toFixed(2)),
+          turf: {
+            mowedMarks:
+              state.hole.turfMarks.filter(
+                (mark) => mark.kind === "mowed",
+              ).length,
+            freshTracks:
+              state.hole.turfMarks.filter(
+                (mark) => mark.kind === "track",
+              ).length,
+            divots:
+              state.hole.turfMarks.filter(
+                (mark) => mark.kind === "divot",
+              ).length,
+            tracksCreated:
+              state.hole.tracksCreated,
+            tracksDiscovered:
+              state.hole.tracksDiscovered,
+            nearestTrack:
+              (state.hole.environment ||
+                getPlayerEnvironmentState())
+                .nearestTrack
+                ? {
+                    distance: Number(
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrackDistance.toFixed(2),
+                    ),
+                    discovered:
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrack.discovered,
+                    ageSeconds: Number(
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrack.age.toFixed(2),
+                    ),
+                    durationSeconds: Number(
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrack.duration.toFixed(2),
+                    ),
+                    strength: Number(
+                      (
+                        state.hole.environment ||
+                        getPlayerEnvironmentState()
+                      ).nearestTrack.strength.toFixed(2),
+                    ),
+                  }
+                : null,
+          },
           detection: {
             attention: Number(
               state.hole.detection.toFixed(2),
@@ -6960,6 +7639,20 @@
           environment: state.hole.environment
             ? {
                 coverQuality: state.hole.environment.coverQuality,
+                turfLabel:
+                  state.hole.environment.turfLabel,
+                mowed:
+                  state.hole.environment.mowed,
+                nearestMowedDistance:
+                  state.hole.environment
+                    .nearestMowedDistance === null
+                    ? null
+                    : Number(
+                        state.hole.environment
+                          .nearestMowedDistance.toFixed(2),
+                      ),
+                effectiveRough:
+                  state.hole.environment.effectiveRough,
                 hardCover: state.hole.environment.hardCover,
                 lineBlockedBy: state.hole.environment.blocker,
                 nearestCover: state.hole.environment.nearestCover?.id || null,
