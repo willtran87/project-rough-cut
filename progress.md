@@ -228,5 +228,29 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 ### Next production priorities
 
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
-- Build the first aimed golf shot and one evidence-bearing/cuttable turf state so golf and grass become deeper systemic tools.
+- Build the first evidence-bearing/cuttable turf state so grass becomes a deeper systemic tool alongside the new aimed chip shot.
+- Add a lightweight optional challenge modifier after the player clears all three Night Orders.
+
+## Aimed Golf Chip and Misdirection Pass — July 29, 2026
+
+- Replaced the automatic one-tap golf-ball throw with a player-directed chip shot.
+- Keyboard players hold Space, steer with A/D, and release; controller players hold X, steer with the left stick, and release.
+- Added a pressure-based charge window spanning useful quick chips through 96-meter full-power shots while Joe continues moving.
+- Locked player movement only during shot preparation so aiming is deliberate, readable, and dangerous rather than an accidental strafe.
+- Added a HUD-safe landing reticle, dotted trajectory preview, live landing distance, power meter, cancellation instruction, and explicit warning that Joe remains active.
+- Mirrored the aim target, projected route, airborne progress, and active landing point on the course mini-map.
+- Added a visible airborne golf ball, swing and impact cues, landing flash, grass/debris burst, and delayed sound rings.
+- Delayed Joe's investigation until the ball actually lands, creating a complete setup → flight → impact → reaction chain.
+- Preserved the existing four-ball resource limit and diminishing distraction windows, including the third-use pattern-recognition warning.
+- Added Escape/B cancellation that preserves the ball, prevented interaction while aiming, and kept in-flight balls frozen during pause.
+- Expanded `render_game_to_text` with aim source, power, angle, target, landing distance, flight progress, and active distraction coordinates.
+- Updated the survival briefing, how-to/settings panel, expanded HUD, footer controls, and controller copy to teach the new mechanic.
+- Verified keyboard charge, lateral steering, cancellation, flight delay, landing, impact effects, Joe investigation, repeated-use depletion, empty-resource feedback, and controller parity.
+- Completed a full input-driven Standard Review drainage escape after the refactor with an A grade, one ball remaining, and no browser errors.
+- Visually validated active aiming at 800×600, 1280×720, and 2560×1600 without document overflow.
+
+### Next production priorities
+
+- Add one evidence-bearing/cuttable turf state so Joe's mowing and the course surface become a persistent information system.
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Add a lightweight optional challenge modifier after the player clears all three Night Orders.
