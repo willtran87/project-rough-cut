@@ -10,6 +10,8 @@ The current vertical slice includes two complete escape routes: recover the bunk
 
 Clearing all three rotating Night Orders unlocks the optional Overtime Audit. It starts the player with two golf balls, makes Joe 16% faster and 22% quicker to confirm sight or sound, strengthens and extends player evidence, shortens golf-ball distraction windows, and awards a 1.30× score premium. Overtime escapes and captures are tracked separately, and the best Overtime result never replaces a normal route record.
 
+Every Night Order also places one Unfiled Change Request in a deliberately exposed side lane. Securing it makes a small noise and marks the document as banked for the current attempt, but its +650 score bonus and persistent filing credit are awarded only after a successful escape. The briefing, compact HUD, world view, Listening Focus, and course map all communicate the optional risk without turning it into a required checklist.
+
 Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
 Joe's attention is now telegraphed before pursuit locks: sight and sound build the attention meter, stopping or crouching can clear a warning, and an active chase shows whether visual contact, audible movement, or neither is keeping the pursuit alive. When both are broken, a contact-break meter communicates exactly how long the player must remain undetected. The Water Hazard's first-entry power sag temporarily reduces actual floodlight exposure, and zone events only deliver their full stinger once instead of replaying during tactical backtracking.
@@ -37,7 +39,7 @@ Then open `http://127.0.0.1:4187/`.
 - Shift — sprint, with more noise.
 - Hold C — crouch; hard cover conceals when it breaks Joe's sightline, while rough provides partial concealment.
 - Hold Q — Listening Focus; slow down and read mower direction, nearby cover, landmarks, and exposure.
-- Enter — interact with the key, sprinkler, shed, drainage culvert, or reclaim a landed golf ball; sprinkler water creates temporary quiet routes but lasting tracks.
+- Enter — interact with the key, sprinkler, shed, drainage culvert, secure an Unfiled Change Request, or reclaim a landed golf ball; sprinkler water creates temporary quiet routes but lasting tracks.
 - Hold Space, steer with A/D, then release — aim and chip a golf-ball distraction.
 - F — toggle fullscreen.
 - Escape — cancel an aimed shot, return from settings, or pause Hole 1.
