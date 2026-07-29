@@ -270,5 +270,21 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 ### Next production priorities
 
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
-- Add a lightweight optional challenge modifier after the player clears all three Night Orders.
 - Add one authored turf-reaction set—sprinkler-wet grass, bunker disturbance, or recoverable divots—to deepen the new evidence system without overloading the HUD.
+
+## Overtime Audit Mastery Pass — July 29, 2026
+
+- Added an optional Overtime Audit contract that unlocks only after all three curated Night Orders are cleared.
+- Added a dedicated menu contract card with locked progress, keyboard/pointer/controller authorization, an armed-state treatment, plain-language terms, and a separate persistent record.
+- Overtime starts with two golf balls, increases Joe's movement speed by 16%, increases positive sight/sound detection gain by 22%, strengthens and extends grass evidence, and shortens golf-ball distraction windows.
+- Added a 1.30× Overtime score premium with an explicit breakdown line, Overtime-specific victory presentation, and separate best-score storage so challenge scores never replace normal shed or drain records.
+- Added mastery-unlock messaging to the third-order scorecard plus Overtime-specific briefing, HUD identity, course-edge treatment, start copy, escape/capture counters, pause/restart preservation, and text-state diagnostics.
+- Verified the locked guard, keyboard R toggle, pointer toggle, mock standard-controller RB toggle, persistent armed state, two-ball start, stronger trail values, faster Joe traversal, full Overtime drain escape, Overtime capture accounting, separate record persistence, and normal A-grade drainage scoring.
+- Verified the 800×600, 1280×720, and 2560×1600 menu/briefing/gameplay/scorecard presentations without document overflow or browser errors.
+- Re-ran the required project Playwright client against the unchanged normal golf-impact path and visually inspected its gameplay screenshot.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Add one authored turf-reaction set—sprinkler-wet grass, bunker disturbance, or recoverable divots—to deepen the evidence system without overloading the HUD.
+- Add a second Overtime contract only after telemetry shows the first modifier produces fair, legible repeat runs.
