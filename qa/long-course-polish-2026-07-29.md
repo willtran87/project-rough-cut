@@ -43,6 +43,18 @@ Date: 2026-07-29
 - Confirmed deep rough provides partial concealment without acting as perfect cover.
 - Confirmed floodlight proximity produces exposure feedback.
 - Confirmed Q Listening Focus slows movement and displays mower direction, nearby cover, landmarks, and exposure.
+- Confirmed sprint noise produces a readable attention-warning window before pursuit.
+- Confirmed stopping and crouching can clear pre-chase attention.
+- Confirmed chase feedback distinguishes visual contact, audible contact, and contact-breaking progress.
+- Confirmed continued open sprinting still reaches the generated capture sequence.
+- Confirmed collision feedback identifies the contacted landmark and gives an axis-appropriate escape hint.
+
+### Suspense events
+
+- Confirmed first entry into the Water Hazard triggers the power-sag event.
+- Confirmed the flicker changes the actual floodlight exposure multiplier.
+- Confirmed the event expires and restores full floodlight power.
+- Confirmed backtracking and re-entering a zone does not replay its full first-entry event.
 
 ### Joe navigation
 

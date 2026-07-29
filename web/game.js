@@ -278,6 +278,7 @@
       travelDistance: 0,
       blockedTimer: 0,
       blockedObstacle: null,
+      blockedDirection: null,
       previousJoeMode: "patrol",
       stateBanner: "",
       stateBannerTimer: 0,
@@ -290,10 +291,19 @@
       screenParticles: [],
       zoneIndex: 0,
       zoneBannerTimer: 0,
+      zoneVisits: [1, 0, 0, 0],
+      blackoutTimer: 0,
+      dreadTimer: 0,
       focus: false,
       environment: null,
       discoveredY: 0,
       minimumPlayerClearance: 99,
+      detection: 0,
+      detectionSource: null,
+      detectionWarning: false,
+      playerAudible: false,
+      visibilityRange: 0,
+      hearingRange: 0,
     },
   };
 
@@ -908,6 +918,7 @@
       travelDistance: 0,
       blockedTimer: 0,
       blockedObstacle: null,
+      blockedDirection: null,
       previousJoeMode: "patrol",
       stateBanner: "",
       stateBannerTimer: 0,
@@ -920,10 +931,19 @@
       screenParticles: [],
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
+      zoneVisits: [1, 0, 0, 0],
+      blackoutTimer: 0,
+      dreadTimer: 0,
       focus: false,
       environment: null,
       discoveredY: 0,
       minimumPlayerClearance: 99,
+      detection: 0,
+      detectionSource: null,
+      detectionWarning: false,
+      playerAudible: false,
+      visibilityRange: 0,
+      hearingRange: 0,
     };
   }
 
@@ -993,6 +1013,28 @@
     return clearance;
   }
 
+  function floodlightPower() {
+    if (
+      state.mode !== "first_hole" ||
+      !state.hole ||
+      state.hole.blackoutTimer <= 0
+    ) {
+      return 1;
+    }
+    if (state.hole.blackoutTimer <= 1.2) {
+      return lerp(
+        0.22,
+        1,
+        1 - state.hole.blackoutTimer / 1.2,
+      );
+    }
+    const flicker =
+      hash(
+        Math.floor(state.hole.elapsed * 13.5) * 17.31,
+      );
+    return flicker > 0.56 ? 0.08 : 0.52;
+  }
+
   function getPlayerEnvironmentState() {
     const player = state.player;
     const zone = courseZoneAt(player.y);
@@ -1028,7 +1070,8 @@
       if (obstacle.lightRadius && distance < obstacle.lightRadius) {
         lightExposure = Math.max(
           lightExposure,
-          1 - distance / obstacle.lightRadius,
+          (1 - distance / obstacle.lightRadius) *
+            floodlightPower(),
         );
       }
     }
@@ -1199,6 +1242,14 @@
     if (initialBlocker) {
       state.hole.blockedTimer = 0.55;
       state.hole.blockedObstacle = initialBlocker.id;
+      state.hole.blockedDirection =
+        Math.abs(deltaX) > Math.abs(deltaY)
+          ? deltaX > 0
+            ? "RIGHT"
+            : "LEFT"
+          : deltaY > 0
+            ? "FORWARD"
+            : "BACK";
     }
     state.hole.travelDistance += appliedDistance;
     state.hole.minimumPlayerClearance = Math.min(
@@ -1274,7 +1325,14 @@
     state.hole.lastKnownJoe = { x: state.hole.joe.x, y: state.hole.joe.y };
     state.hole.lastKnownJoeTimer = 5;
     if (mode === "chase") {
-      setHoleMessage("JOE HAS EYES ON YOU — BREAK LEFT OR RIGHT.", 2.4);
+      setHoleMessage(
+        state.hole.hasLineOfSight
+          ? "JOE HAS EYES ON YOU — put solid cover between you."
+          : state.hole.playerAudible
+            ? "JOE HEARD YOU — stop making noise or change direction."
+            : "JOE COMMITTED TO PURSUIT — break contact.",
+        2.4,
+      );
     }
     playThreatCue(mode);
   }
@@ -1407,11 +1465,79 @@
             : 35) *
       lerp(1, 1.42, environment.lightExposure) *
       lerp(1, 0.62, hole.concealment);
-    const canSee = !blocker && playerDistance < visibilityRange;
+    const visibleNow =
+      !blocker &&
+      playerDistance < visibilityRange;
     const hearingRange = 18 + hole.noise * 58;
-    const canHear = hole.noise > 0.16 && playerDistance < hearingRange;
-    hole.hasLineOfSight = canSee;
+    const audibleNow =
+      hole.noise > 0.16 &&
+      playerDistance < hearingRange;
+    const distractionActive =
+      hole.distraction &&
+      hole.distractionTimer > 0;
+    const directSound =
+      audibleNow &&
+      !distractionActive;
+    const detectionGain = visibleNow
+      ? (moving ? 1.9 : 1.18) *
+        lerp(1, 1.55, environment.lightExposure)
+      : directSound
+        ? 0.64 + hole.noise * 0.68
+        : -(environment.hardCover ? 1.55 : 0.82);
+    hole.detection = clamp(
+      hole.detection + detectionGain * dt,
+      0,
+      1,
+    );
+    hole.detectionSource = visibleNow
+      ? "sight"
+      : directSound
+        ? "sound"
+        : null;
+    hole.playerAudible = directSound;
+    hole.visibilityRange = visibilityRange;
+    hole.hearingRange = hearingRange;
+    const confirmedDetection =
+      hole.detection >= 0.55 ||
+      playerDistance < 11;
+    const canSee =
+      visibleNow &&
+      (confirmedDetection || joe.mode === "chase");
+    const canHear =
+      directSound &&
+      (confirmedDetection || joe.mode === "chase");
+    hole.hasLineOfSight = visibleNow;
     hole.lineBlockedBy = blocker;
+
+    if (
+      hole.detection >= 0.2 &&
+      !hole.detectionWarning &&
+      joe.mode !== "chase"
+    ) {
+      hole.detectionWarning = true;
+      hole.detectionPulse = Math.max(
+        hole.detectionPulse,
+        0.48,
+      );
+      setHoleMessage(
+        visibleNow
+          ? "JOE IS LOOKING — break the sightline before attention locks."
+          : "JOE HEARD THAT — stop, crouch, or change direction.",
+        2.2,
+      );
+      playThreatCue("investigate");
+    } else if (
+      hole.detection < 0.08 &&
+      joe.mode !== "chase"
+    ) {
+      if (hole.detectionWarning) {
+        setHoleMessage(
+          "ATTENTION LOST — move when the mower turns away.",
+          1.45,
+        );
+      }
+      hole.detectionWarning = false;
+    }
 
     if (
       canSee ||
@@ -1437,6 +1563,10 @@
       }
     } else if (canSee || canHear) {
       joe.mode = "chase";
+      hole.detection = Math.max(
+        hole.detection,
+        0.72,
+      );
       hole.lostSightTimer = 0;
       hole.searchTimer = 6;
       if (!hole.lastSeenPlayer) {
@@ -1456,6 +1586,10 @@
       }
       if (hole.lostSightTimer >= 1.25) {
         joe.mode = "search";
+        hole.detection = Math.min(
+          hole.detection,
+          0.42,
+        );
         hole.searchTimer = 6;
         setHoleMessage("LINE OF SIGHT BROKEN — Stay crouched and quiet.", 2.7);
       }
@@ -2105,11 +2239,13 @@
       drawHeight,
     );
     if (obstacle.lightRadius) {
+      const power = floodlightPower();
       const flicker =
         state.reducedMotion
-          ? 0.16
-          : 0.12 +
-            hash(Math.floor(state.time * 9) + obstacle.y) * 0.12;
+          ? 0.16 * power
+          : (0.12 +
+              hash(Math.floor(state.time * 9) + obstacle.y) * 0.12) *
+            power;
       const glow = ctx.createRadialGradient(
         point.x + sway,
         point.y - drawHeight * 0.84,
@@ -2524,7 +2660,7 @@
   }
 
   function drawCourseMiniMap() {
-    const panel = { x: WIDTH - 274, y: 145, width: 234, height: 238 };
+    const panel = { x: WIDTH - 274, y: 176, width: 234, height: 238 };
     const mapTop = panel.y + 41;
     const mapBottom = panel.y + panel.height - 18;
     const mapPoint = (worldX, worldY) => ({
@@ -2736,6 +2872,31 @@
           ctx.ellipse(point.x, point.y - 18 * scale, radius, radius * 0.52, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
+      } else if (effect.kind === "power_sag") {
+        const power = floodlightPower();
+        ctx.strokeStyle = `rgba(241,164,64,${(0.28 + power * 0.5) * alpha})`;
+        ctx.lineWidth = Math.max(1, 2.5 * scale);
+        for (let spark = 0; spark < 8; spark += 1) {
+          const sparkSeed =
+            hash(effect.seed + spark * 19.7);
+          const angle =
+            sparkSeed * Math.PI * 2;
+          const reach =
+            (18 + progress * 42 + spark * 2) *
+            scale;
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x,
+            point.y - 78 * scale,
+          );
+          ctx.lineTo(
+            point.x + Math.cos(angle) * reach,
+            point.y -
+              78 * scale +
+              Math.sin(angle) * reach * 0.62,
+          );
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
@@ -2757,7 +2918,13 @@
     const distance = worldDistance(hole.joe, state.player);
     const proximity = clamp(1 - distance / 76, 0, 1);
     const chase = hole.joe.mode === "chase" ? 1 : 0;
-    const pressure = clamp(proximity * 0.72 + chase * 0.34, 0, 1);
+    const pressure = clamp(
+      proximity * 0.42 +
+        hole.detection * 0.5 +
+        chase * 0.34,
+      0,
+      1,
+    );
     if (pressure <= 0.04 && hole.detectionPulse <= 0.01) {
       return;
     }
@@ -2816,6 +2983,56 @@
     }
   }
 
+  function drawSuspenseEffects() {
+    const hole = state.hole;
+    if (hole.blackoutTimer > 0) {
+      const power = floodlightPower();
+      const blackout = 1 - power;
+      ctx.fillStyle = `rgba(0,4,5,${blackout * 0.38})`;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.strokeStyle = `rgba(220,145,52,${blackout * 0.2})`;
+      ctx.lineWidth = 2;
+      for (let index = 0; index < 9; index += 1) {
+        const y =
+          82 +
+          hash(
+            Math.floor(hole.elapsed * 11) +
+              index * 29,
+          ) *
+            (HEIGHT - 164);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(WIDTH, y + 2);
+        ctx.stroke();
+      }
+    }
+    if (hole.dreadTimer > 0) {
+      const progress =
+        1 - hole.dreadTimer / 5.2;
+      const pulse = state.reducedMotion
+        ? 0.72
+        : 0.62 +
+          Math.sin(state.time * 4.8) * 0.16;
+      const dread = ctx.createLinearGradient(
+        0,
+        HEIGHT * 0.48,
+        0,
+        HEIGHT,
+      );
+      dread.addColorStop(0, "rgba(52,8,2,0)");
+      dread.addColorStop(
+        1,
+        `rgba(74,9,2,${
+          (1 - smoothstep(progress)) *
+          0.24 *
+          pulse
+        })`,
+      );
+      ctx.fillStyle = dread;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    }
+  }
+
   function drawConcealmentEffects() {
     const hole = state.hole;
     const concealment = hole.concealment;
@@ -2863,12 +3080,17 @@
 
     if (concealment > 0.62) {
       const alpha = clamp((concealment - 0.62) / 0.3, 0, 1);
+      const hardCover =
+        Boolean(hole.environment?.hardCover);
+      const concealmentLabel = hardCover
+        ? "HARD COVER — VISUAL BLOCKED"
+        : "ROUGH CONCEALMENT — STAY STILL";
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.fillStyle = "rgba(3,17,8,0.86)";
-      ctx.fillRect(WIDTH * 0.5 - 112, HEIGHT * 0.52 + 72, 224, 32);
-      strokeRect(WIDTH * 0.5 - 112, HEIGHT * 0.52 + 72, 224, 32, "#6f9e61", 2);
-      drawText("CONCEALED — HOLD C", WIDTH * 0.5, HEIGHT * 0.52 + 94, 12, "#c8deb5", "center", true);
+      ctx.fillRect(WIDTH * 0.5 - 154, HEIGHT * 0.52 + 72, 308, 32);
+      strokeRect(WIDTH * 0.5 - 154, HEIGHT * 0.52 + 72, 308, 32, hardCover ? "#6f9e61" : "#9d8449", 2);
+      drawText(concealmentLabel, WIDTH * 0.5, HEIGHT * 0.52 + 94, 12, hardCover ? "#c8deb5" : "#dec98f", "center", true);
       ctx.restore();
     }
   }
@@ -3061,6 +3283,77 @@
     ctx.restore();
   }
 
+  function drawContactBreakFeedback() {
+    const hole = state.hole;
+    if (hole.joe.mode !== "chase") {
+      return;
+    }
+    const visualContact = hole.hasLineOfSight;
+    const audibleContact = hole.playerAudible;
+    const breaking =
+      !visualContact &&
+      !audibleContact;
+    const progress = breaking
+      ? clamp(hole.lostSightTimer / 1.25, 0, 1)
+      : 0;
+    const panel = {
+      x: WIDTH * 0.5 - 176,
+      y: HEIGHT * 0.67,
+      width: 352,
+      height: 54,
+    };
+    ctx.save();
+    ctx.fillStyle = "rgba(8,3,2,0.86)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      breaking ? "#80ad73" : "#d0522e",
+      2,
+    );
+    ctx.fillStyle = "#171e15";
+    ctx.fillRect(
+      panel.x + 18,
+      panel.y + 31,
+      panel.width - 36,
+      9,
+    );
+    ctx.fillStyle = breaking
+      ? "#82b878"
+      : audibleContact && !visualContact
+        ? "#d69b48"
+        : "#d64c2c";
+    ctx.fillRect(
+      panel.x + 18,
+      panel.y + 31,
+      (panel.width - 36) *
+        (breaking ? progress : 1),
+      9,
+    );
+    const label = breaking
+      ? `BREAKING CONTACT  ${Math.round(progress * 100)}%`
+      : visualContact
+        ? "VISUAL LOCK — PUT SOLID COVER BETWEEN YOU"
+        : "SIGHT BROKEN — YOUR MOVEMENT IS STILL AUDIBLE";
+    drawText(
+      label,
+      WIDTH * 0.5,
+      panel.y + 22,
+      11,
+      breaking ? "#b8d6ad" : "#ffad78",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawFirstHoleOverlay() {
     const hole = state.hole;
     const playerDistance = worldDistance(hole.joe, state.player);
@@ -3130,16 +3423,45 @@
 
     const meterX = WIDTH - 304;
     ctx.fillStyle = "rgba(2,8,5,0.82)";
-    ctx.fillRect(meterX, 36, 264, 92);
-    strokeRect(meterX, 36, 264, 92, hole.joe.mode === "chase" ? "#c84627" : "#536642", 2);
-    drawText("MOWER PROXIMITY", meterX + 18, 65, 13, "#d7deca", "left");
+    ctx.fillRect(meterX, 36, 264, 124);
+    strokeRect(meterX, 36, 264, 124, hole.joe.mode === "chase" ? "#c84627" : "#536642", 2);
+    drawText("JOE ATTENTION", meterX + 18, 65, 13, "#d7deca", "left");
     ctx.fillStyle = "#17231a";
     ctx.fillRect(meterX + 18, 79, 228, 18);
-    const danger = clamp(1 - playerDistance / 90, 0, 1);
-    ctx.fillStyle = danger > 0.68 ? "#d84a28" : danger > 0.38 ? "#d88935" : "#6c8a50";
-    ctx.fillRect(meterX + 18, 79, 228 * danger, 18);
+    const attention =
+      hole.joe.mode === "chase"
+        ? Math.max(0.72, hole.detection)
+        : hole.detection;
+    ctx.fillStyle = attention > 0.68 ? "#d84a28" : attention > 0.28 ? "#d88935" : "#6c8a50";
+    ctx.fillRect(meterX + 18, 79, 228 * attention, 18);
     strokeRect(meterX + 18, 79, 228, 18, "#889879", 1);
-    drawText(hole.joe.mode.toUpperCase(), meterX + 246, 117, 12, danger > 0.68 ? "#ff7045" : "#b8c2ad", "right");
+    const attentionStatus =
+      hole.joe.mode === "chase"
+        ? "PURSUIT LOCK"
+        : hole.detectionSource === "sight"
+          ? "SIGHTLINE BUILDING"
+          : hole.detectionSource === "sound"
+            ? "NOISE DETECTED"
+            : environment.blocker
+              ? "SIGHTLINE BLOCKED"
+              : "UNAWARE";
+    drawText(
+      attentionStatus,
+      meterX + 18,
+      119,
+      11,
+      attention > 0.68 ? "#ff7045" : attention > 0.2 ? "#e8a55d" : "#9db293",
+      "left",
+      true,
+    );
+    drawText(
+      `MOWER ${Math.round(playerDistance)}m`,
+      meterX + 246,
+      145,
+      11,
+      playerDistance < 42 ? "#e8a55d" : "#899985",
+      "right",
+    );
     drawCourseMiniMap();
 
     ctx.fillStyle = "rgba(2,8,5,0.82)";
@@ -3161,7 +3483,9 @@
         : "NO LANDMARK WITHIN 72m";
     drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
     const awarenessText =
-      environment.lightExposure > 0.15
+      hole.blackoutTimer > 0
+        ? "FLOODLIGHT POWER LOW — MOVE NOW"
+        : environment.lightExposure > 0.15
         ? "AMBER LIGHT: VISIBILITY RISING"
         : environment.hardCover
           ? "SOLID OBJECT BETWEEN YOU AND JOE"
@@ -3173,7 +3497,11 @@
       54,
       338,
       11,
-      environment.lightExposure > 0.15 ? "#f2a250" : "#8fbc8a",
+      hole.blackoutTimer > 0
+        ? "#75c4b8"
+        : environment.lightExposure > 0.15
+          ? "#f2a250"
+          : "#8fbc8a",
       "left",
     );
 
@@ -3317,16 +3645,40 @@
 
     if (state.hole.blockedTimer > 0) {
       const blockAlpha = clamp(state.hole.blockedTimer * 2, 0, 0.72);
+      const blockedObstacle = COURSE_OBSTACLES.find(
+        (obstacle) =>
+          obstacle.id === state.hole.blockedObstacle,
+      );
+      const blockedName = (
+        blockedObstacle?.landmark ||
+        state.hole.blockedObstacle ||
+        "boundary"
+      ).toUpperCase();
+      const escapeHint =
+        state.hole.blockedDirection === "FORWARD" ||
+        state.hole.blockedDirection === "BACK"
+          ? "TRY LEFT OR RIGHT"
+          : "SLIDE FORWARD OR BACK";
       ctx.fillStyle = `rgba(96,22,9,${blockAlpha * 0.2})`;
       ctx.fillRect(0, HEIGHT * 0.42, WIDTH, HEIGHT * 0.58);
       ctx.globalAlpha = blockAlpha;
-      drawText("ROUTE BLOCKED — MOVE AROUND", WIDTH * 0.5, HEIGHT - 142, 13, "#e89a63", "center", true);
+      drawText(
+        `CONTACT: ${blockedName} — ${escapeHint}`,
+        WIDTH * 0.5,
+        HEIGHT - 142,
+        13,
+        "#e89a63",
+        "center",
+        true,
+      );
       ctx.globalAlpha = 1;
     }
 
+    drawSuspenseEffects();
     drawPursuitEffects();
     drawConcealmentEffects();
     drawListeningFocus();
+    drawContactBreakFeedback();
     drawFirstHoleOverlay();
     drawJoeStateBanner();
     drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
@@ -3587,6 +3939,8 @@
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
       hole.zoneBannerTimer = Math.max(0, hole.zoneBannerTimer - dt);
+      hole.blackoutTimer = Math.max(0, hole.blackoutTimer - dt);
+      hole.dreadTimer = Math.max(0, hole.dreadTimer - dt);
       hole.detectionPulse = Math.max(0, hole.detectionPulse - dt * 1.75);
       hole.lastKnownJoeTimer = Math.max(0, hole.lastKnownJoeTimer - dt);
       updateCourseEffects(dt);
@@ -3637,9 +3991,33 @@
       const zoneIndex = COURSE_ZONES.indexOf(courseZoneAt(state.player.y));
       if (zoneIndex !== hole.zoneIndex) {
         hole.zoneIndex = zoneIndex;
-        hole.zoneBannerTimer = 3.4;
-        setHoleMessage(COURSE_ZONES[zoneIndex].cue, 3.4);
-        playThreatCue(zoneIndex >= 2 ? "search" : "investigate");
+        hole.zoneVisits[zoneIndex] += 1;
+        const firstVisit =
+          hole.zoneVisits[zoneIndex] === 1;
+        hole.zoneBannerTimer = firstVisit ? 3.4 : 1.45;
+        if (firstVisit) {
+          setHoleMessage(COURSE_ZONES[zoneIndex].cue, 3.4);
+          playThreatCue(zoneIndex >= 2 ? "search" : "investigate");
+          if (zoneIndex === 2) {
+            hole.blackoutTimer = 4.2;
+            setHoleMessage(
+              "POWER SAG — the floodlight is cycling. Move while it is dark.",
+              4.1,
+            );
+            addWorldEffect(
+              "power_sag",
+              18,
+              242,
+              4.2,
+            );
+          } else if (zoneIndex === 3) {
+            hole.dreadTimer = 5.2;
+            hole.joe.alert = Math.max(
+              hole.joe.alert,
+              0.2,
+            );
+          }
+        }
       }
       hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
       const environment = getPlayerEnvironmentState();
@@ -4650,6 +5028,33 @@
             state.hole.distractionTimer.toFixed(2),
           ),
           noise: Number(state.hole.noise.toFixed(2)),
+          detection: {
+            attention: Number(
+              state.hole.detection.toFixed(2),
+            ),
+            source: state.hole.detectionSource,
+            warning: state.hole.detectionWarning,
+            playerAudible: state.hole.playerAudible,
+            visibilityRange: Number(
+              state.hole.visibilityRange.toFixed(2),
+            ),
+            hearingRange: Number(
+              state.hole.hearingRange.toFixed(2),
+            ),
+          },
+          suspense: {
+            blackoutSeconds: Number(
+              state.hole.blackoutTimer.toFixed(2),
+            ),
+            dreadSeconds: Number(
+              state.hole.dreadTimer.toFixed(2),
+            ),
+            floodlightPower: Number(
+              floodlightPower().toFixed(2),
+            ),
+            zoneVisits:
+              state.hole.zoneVisits.slice(),
+          },
           message:
             state.hole.messageTimer > 0
               ? state.hole.message
@@ -4745,13 +5150,13 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Arrow keys and Enter, or pointer",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; Enter interacts; Space throws a golf ball; Escape returns to menu",
+      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; Escape returns to menu",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Arrow keys and Enter, or pointer",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; Enter interacts; Space throws a golf ball; Escape returns to menu",
+        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; Escape returns to menu",
       },
       gamepad: {
         menu: "D-pad selects; A confirms; B returns",

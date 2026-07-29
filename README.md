@@ -16,6 +16,7 @@ The browser build includes:
 - Two complete escape routes through the maintenance shed or drainage culvert.
 - Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
+- A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 

@@ -10,6 +10,8 @@ The current vertical slice includes two complete escape routes: recover the bunk
 
 Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
+Joe's attention is now telegraphed before pursuit locks: sight and sound build the attention meter, stopping or crouching can clear a warning, and an active chase shows whether visual contact, audible movement, or neither is keeping the pursuit alive. When both are broken, a contact-break meter communicates exactly how long the player must remain undetected. The Water Hazard's first-entry power sag temporarily reduces actual floodlight exposure, and zone events only deliver their full stinger once instead of replaying during tactical backtracking.
+
 The capture sequence uses the generated `rough-cut-joe-capture-v1.png` tableau and keeps all defeat copy in the renderer so timing, accessibility, and visual grading remain editable.
 
 ## Start locally
