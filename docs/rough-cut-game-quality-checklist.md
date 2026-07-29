@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, course grading, personal records, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, course grading, personal records, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -41,12 +41,12 @@
 - [x] Show a survival briefing before Joe begins moving.
 - [x] Give the player an explicit immediate choice: locate the shed key and unlock the maintenance shed, or release sprinkler pressure and escape through the drainage culvert.
 - [x] Support WASD and arrow-key movement.
-- [x] Support Shift to sprint, C to crouch, Enter to interact, Space to throw a golf-ball distraction, H to recall controls, and Escape to pause.
+- [x] Support Shift to sprint, C to crouch, Enter to interact, hold Space plus A/D to aim and chip a golf-ball distraction, H to recall controls, and Escape to cancel a shot or pause.
 - [x] Show visible movement chevrons and movement/sprint status so locomotion is discoverable.
 - [x] Place the shed key at a readable, authored landmark selected by the current Night Order.
 - [x] Provide a locked shed as the escape target.
 - [x] Provide a sprinkler valve that creates a major distraction and opens the alternate drainage route.
-- [x] Give the player a limited supply of four golf balls for thrown distractions.
+- [x] Give the player a limited supply of four golf balls for aimed chip-shot distractions.
 - [x] Make fairway travel quieter but more exposed.
 - [x] Make rough travel noisier but more concealed.
 - [x] Give Joe patrol, investigate, search, and chase states.
@@ -163,7 +163,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - **Mini-map knowledge:** Joe is now shown live only at close range or during active pursuit; lost contact decays to a temporary last-signal marker. A full game should extend this with sound direction, disturbed grass, camera coverage, or a valid tracking source. Exact live tracking may remain as an accessibility option.
 - **Objective markers:** The key, sprinkler, and shed are currently easy to locate for vertical-slice clarity. Production levels should support configurable marker strength and more diegetic navigation through yardage books, course signs, landmarks, or recovered maintenance maps.
 - **Spatial model:** The slice now has authored collision, projected boundaries, line-of-sight occlusion, hiding terrain, multiple traversable routes, and obstacle-aware Joe navigation on a simplified 2D coordinate layer. Production work still needs larger cover volumes, richer authored path choices, and multi-area navigation.
-- **Golf depth:** The current golf mechanic is a thrown-ball distraction. It proves that golf equipment can manipulate Joe, but it is not yet the planned shot setup, club choice, lie, power, timing, and ball-physics system.
+- **Golf depth:** The current golf mechanic now supports pressure-based charge, lateral aim, readable trajectory, delayed impact, and Joe redirection. It still stops short of the planned club choice, lie, spin, bounce, roll, wind, and deeper ball-physics system.
 - **Grass depth:** Fairway and rough currently provide a readable two-state noise/concealment tradeoff. The larger turf taxonomy, evidence system, samples, cutting, recovery, and environmental reactions remain future work.
 - **Audio:** Current sound is procedural and functional. It still needs authored ambience, spatial layering, stronger mower-state transitions, human-performed Joe material if dialogue is added, and a proper mix.
 - **Input:** Keyboard, pointer, and standard gamepad play are implemented with automatic prompt switching and controller-navigable settings. Touch controls, rebinding, non-standard controller glyph sets, and remapping accessibility remain future work.
@@ -186,7 +186,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Improve Joe’s line of sight, hearing, search memory, and detection recovery.
 - [x] Add obstacle-aware Joe route selection with stuck recovery and state-specific patrol, investigate, search, and chase mower animation.
 - [x] Replace permanent live tracking with close-range/live-pursuit tracking and a decaying last-signal state.
-- [ ] Add the first aimed golf shot with readable setup, consequence, and recovery.
+- [x] Add the first aimed golf shot with readable setup, consequence, and recovery.
 - [ ] Expand grass beyond the fairway/rough binary with at least one cuttable state and one evidence-bearing state.
 - [ ] Commission or create authored sound layers and remove any remaining placeholder feel.
 - [ ] Generate and integrate a consistent production animation set for Joe and the mower.
@@ -462,7 +462,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make golf serve horror, navigation, distraction, access, and survival rather than existing as a separate sports minigame.
 - [ ] Make taking a shot a deliberate commitment that can create noise, visibility, time pressure, and evidence.
 - [ ] Let shots open gates, strike switches, move keys, trigger machinery, break lights, disable sensors, or reach inaccessible objectives.
-- [ ] Let shots create distractions at controllable distances and elevations.
+- [x] Let shots create distractions at controllable distances and elevations.
 - [ ] Make the player choose between a quiet short shot and a powerful shot that may draw Joe from farther away.
 - [ ] Make the ball's landing location matter after the shot rather than treating the ball as a disposable visual effect.
 - [ ] Allow the player to use ball position to plan future distractions, routes, or puzzle solutions.
@@ -1108,7 +1108,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Avoid displaying Joe's exact position at all times.
 - [ ] Show Joe's last known position, suspicion, or system alerts only when the player has an in-world source for that information.
 - [ ] Make current objective, required item, ball count, selected club, injury, and sample status readable at a glance.
-- [ ] Show shot power, aim, lie, wind, uncertainty, and target information only while relevant.
+- [x] Show the currently implemented shot power, aim, trajectory, landing distance, and target information only while aiming or while the ball is airborne.
 - [ ] Avoid keeping large sports-game overlays on screen during stalking and exploration.
 - [ ] Use scorecards, project boards, phones, field guides, policy folders, maps, and course signs as diegetic interface where practical.
 - [ ] Make diegetic interfaces readable and accessible without requiring tiny in-world text.
@@ -1152,7 +1152,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Introduce one major system at a time before combining it with active pursuit.
 - [ ] Let the player safely observe an example of Joe's detection logic before severe consequences.
 - [ ] Teach the difference between suspicion, investigation, search, and pursuit through controlled situations.
-- [ ] Demonstrate how a golf ball can distract Joe before requiring it under pressure.
+- [ ] Demonstrate how a golf ball can distract Joe before requiring it under pressure; the briefing currently explains and illustrates the shot, but does not stage a live Joe reaction.
 - [ ] Demonstrate how grass conceals, records, or reveals movement before making it essential.
 - [ ] Teach the player to read course landmarks, wind, lies, and environmental systems.
 - [ ] Explain insurance and project-management mechanics using exact plain-language outcomes.
@@ -1238,7 +1238,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Test that Joe never sees through solid geometry without an explicitly supported system.
 - [ ] Test every sound source for radius, occlusion, investigation behavior, and false-positive risk.
 - [ ] Test every Joe state transition, memory rule, search duration, cooldown, and return to routine.
-- [ ] Test repeated distractions to ensure Joe adapts without becoming omniscient.
+- [x] Test repeated distractions to ensure Joe adapts without becoming omniscient.
 - [ ] Test every hiding location for entry, exit, visibility, sound, search behavior, and exploit potential.
 - [ ] Test every pursuit route for collision traps, impossible turns, chain captures, camera problems, and unfair re-entry.
 - [ ] Test Joe's pathfinding across fairways, rough, bunkers, bridges, stairs, doors, interiors, carts, and moving machinery.

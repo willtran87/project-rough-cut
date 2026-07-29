@@ -17,6 +17,7 @@ The browser build includes:
 - Two complete escape routes through the maintenance shed or drainage culvert.
 - Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
+- A pressure-driven golf chip: hold to charge, steer the landing point, release into a visible flight arc, and misdirect Joe on impact.
 - A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - An adaptive HUD that recedes after onboarding and can be recalled with H or Y.

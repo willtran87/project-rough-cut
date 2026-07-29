@@ -111,6 +111,10 @@
   const COURSE_MIN_Y = 0;
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
+  const BALL_MIN_RANGE = 56;
+  const BALL_MAX_RANGE = 96;
+  const BALL_CHARGE_SECONDS = 0.8;
+  const BALL_MAX_AIM_ANGLE = 1.12;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: 24, y: 350, radius: 13 };
@@ -299,6 +303,17 @@
     return activeRunVariant().sprinkler;
   }
 
+  function freshBallAimState() {
+    return {
+      active: false,
+      source: null,
+      angle: 0,
+      holdSeconds: 0,
+      power: 0,
+      target: null,
+    };
+  }
+
   function readSavedPreferences() {
     try {
       const parsed = JSON.parse(
@@ -461,6 +476,8 @@
       lineBlockedBy: null,
       hasLineOfSight: false,
       ballThrowsUsed: 0,
+      ballAim: freshBallAimState(),
+      ballFlight: null,
       prompt: "",
       message: "Find the shed key — or open the drain.",
       messageTimer: 4,
@@ -1184,7 +1201,7 @@
     drawText("THE ASSIGNMENT", 205, 213, 15, "#8f9e84", "left", true);
     const steps = [
       { y: 260, icon: 0, title: "1. CHOOSE AN EXIT", detail: "Key opens shed. Sprinkler opens drain." },
-      { y: 348, icon: 1, title: "2. MISDIRECT JOE", detail: controllerActive ? "X throws a golf ball." : "SPACE throws a golf ball." },
+      { y: 348, icon: 1, title: "2. MISDIRECT JOE", detail: controllerActive ? "Hold X + stick L/R, then release." : "Hold SPACE + A/D, then release." },
       { y: 436, icon: 2, title: "3. BREAK CONTACT", detail: controllerActive ? "Hold LB near hard cover or in rough." : "Hold C near hard cover or in rough." },
     ];
     for (const step of steps) {
@@ -1447,6 +1464,8 @@
       lineBlockedBy: null,
       hasLineOfSight: false,
       ballThrowsUsed: 0,
+      ballAim: freshBallAimState(),
+      ballFlight: null,
       prompt: "",
       message: "Find the shed key — or open the drain.",
       messageTimer: 4,
@@ -1505,6 +1524,9 @@
   }
 
   function playerIsMoving() {
+    if (state.hole?.ballAim?.active) {
+      return false;
+    }
     const input = movementInput();
     return Math.hypot(input.x, input.y) > 0.12;
   }
@@ -1849,6 +1871,52 @@
     }
   }
 
+  function addBallImpactParticles(target) {
+    const point = worldToScreen(target.x, target.y);
+    if (
+      !point.visible ||
+      point.x < -100 ||
+      point.x > WIDTH + 100
+    ) {
+      return;
+    }
+    const impactX = clamp(
+      point.x,
+      492,
+      WIDTH - 326,
+    );
+    for (let index = 0; index < 18; index += 1) {
+      const seed =
+        hash(
+          state.hole.elapsed * 41 +
+            target.x * 13 +
+            target.y * 7 +
+            index * 29,
+        );
+      state.hole.screenParticles.push({
+        x: impactX + (seed - 0.5) * 18,
+        y: point.y - 5,
+        vx:
+          (hash(seed * 97 + index * 11) - 0.5) *
+          92,
+        vy:
+          -(42 +
+            hash(seed * 61 + index * 17) * 88),
+        age: 0,
+        duration:
+          0.48 +
+          hash(seed * 37 + index) * 0.42,
+        size:
+          2 +
+          hash(seed * 53 + index * 3) * 3,
+        color:
+          index % 4 === 0
+            ? "#ded0a2"
+            : "#84934f",
+      });
+    }
+  }
+
   function updateCourseEffects(dt) {
     const hole = state.hole;
     for (let index = hole.worldEffects.length - 1; index >= 0; index -= 1) {
@@ -1968,40 +2036,202 @@
     }
   }
 
-  function throwGolfBall() {
-    if (state.mode !== "first_hole" || state.hole.golfBalls <= 0) {
-      if (state.mode === "first_hole") {
-        setHoleMessage("No golf balls left.", 1.8);
-      }
+  function golfBallAimTarget() {
+    const aim = state.hole.ballAim;
+    const range = lerp(
+      BALL_MIN_RANGE,
+      BALL_MAX_RANGE,
+      aim.power,
+    );
+    const physicalX = Math.sin(aim.angle);
+    const forwardY = Math.cos(aim.angle);
+    return {
+      x: clamp(
+        state.player.x +
+          physicalX * range / 0.72,
+        -COURSE_MAX_X,
+        COURSE_MAX_X,
+      ),
+      y: clamp(
+        state.player.y + forwardY * range,
+        8,
+        COURSE_LENGTH - 8,
+      ),
+    };
+  }
+
+  function beginGolfBallAim(source) {
+    if (
+      state.mode !== "first_hole" ||
+      state.hole.tutorialVisible ||
+      state.hole.ballAim.active
+    ) {
       return;
     }
-    state.hole.golfBalls -= 1;
-    state.hole.ballThrowsUsed += 1;
-    const direction = state.player.x <= state.hole.joe.x ? 1 : -1;
-    state.hole.distraction = {
-      x: clamp(state.player.x + direction * 88, -110, 110),
-      y: clamp(state.player.y + 28, 8, COURSE_LENGTH - 8),
+    if (state.hole.ballFlight) {
+      setHoleMessage(
+        "BALL IN FLIGHT — wait for the impact.",
+        1.3,
+      );
+      return;
+    }
+    if (state.hole.golfBalls <= 0) {
+      setHoleMessage("NO GOLF BALLS LEFT.", 1.8);
+      playUiTone(112, 0.08, 0.018);
+      return;
+    }
+    let openingAngle = 0;
+    if (state.hole.hasMoved) {
+      const headingForward = Math.sin(
+        state.player.heading,
+      );
+      if (headingForward > 0.08) {
+        openingAngle = clamp(
+          Math.atan2(
+            Math.cos(state.player.heading) * 0.72,
+            headingForward,
+          ),
+          -BALL_MAX_AIM_ANGLE,
+          BALL_MAX_AIM_ANGLE,
+        );
+      }
+    }
+    state.hole.ballAim = {
+      active: true,
+      source,
+      angle: openingAngle,
+      holdSeconds: 0,
+      power: 0,
+      target: null,
     };
-    state.hole.distractionTimer = Math.max(
-      2.25,
-      4.2 - (state.hole.ballThrowsUsed - 1) * 0.85,
+    state.hole.ballAim.target = golfBallAimTarget();
+    state.hole.messageTimer = 0;
+    state.hole.prompt = "";
+    playBallReadyCue();
+  }
+
+  function cancelGolfBallAim(showMessage = true) {
+    if (!state.hole.ballAim.active) {
+      return;
+    }
+    state.hole.ballAim = freshBallAimState();
+    if (showMessage) {
+      setHoleMessage(
+        "SHOT HELD — ball preserved.",
+        1.25,
+      );
+      playUiTone(156, 0.06, 0.016);
+    }
+  }
+
+  function commitGolfBallAim() {
+    const hole = state.hole;
+    if (
+      state.mode !== "first_hole" ||
+      !hole.ballAim.active ||
+      hole.golfBalls <= 0
+    ) {
+      return;
+    }
+    const target =
+      hole.ballAim.target ||
+      golfBallAimTarget();
+    const distance = worldDistance(
+      state.player,
+      target,
     );
-    state.hole.joe.mode = "investigate";
-    announceJoeState("investigate");
-    state.hole.noise = Math.max(state.hole.noise, 0.38);
+    const flightDuration =
+      0.34 + distance / 220;
+    hole.golfBalls -= 1;
+    hole.ballThrowsUsed += 1;
+    hole.ballFlight = {
+      start: {
+        x: state.player.x,
+        y: state.player.y,
+      },
+      target: { ...target },
+      elapsed: 0,
+      duration: flightDuration,
+      distance,
+      power: hole.ballAim.power,
+    };
+    const direction = Math.sign(
+      target.x - state.player.x,
+    );
+    hole.ballAim = freshBallAimState();
+    hole.prompt = "";
     setHoleMessage(
-      state.hole.ballThrowsUsed >= 3
-        ? "Joe recognized the pattern — this distraction will not last."
-        : "Golf ball thrown. Joe changed course.",
+      "CHIP AWAY — listen for the landing.",
+      1.15,
+    );
+    playBallSwingCue(direction);
+  }
+
+  function landGolfBall(target) {
+    const hole = state.hole;
+    hole.ballFlight = null;
+    hole.distraction = { ...target };
+    hole.distractionTimer = Math.max(
+      2.25,
+      4.2 - (hole.ballThrowsUsed - 1) * 0.85,
+    );
+    hole.joe.mode = "investigate";
+    announceJoeState("investigate");
+    hole.noise = Math.max(hole.noise, 0.38);
+    setHoleMessage(
+      hole.ballThrowsUsed >= 3
+        ? "JOE RECOGNIZED THE PATTERN — the window is shorter."
+        : "BALL LANDED — Joe changed course.",
       2.6,
     );
     addWorldEffect(
       "sound",
-      state.hole.distraction.x,
-      state.hole.distraction.y,
-      state.hole.distractionTimer,
+      target.x,
+      target.y,
+      hole.distractionTimer,
     );
-    playBallCue(direction);
+    addWorldEffect(
+      "ball_impact",
+      target.x,
+      target.y,
+      1.1,
+    );
+    addBallImpactParticles(target);
+    playBallCue(
+      Math.sign(target.x - state.player.x),
+    );
+  }
+
+  function updateGolfBallTactics(dt, movement) {
+    const hole = state.hole;
+    if (hole.ballAim.active) {
+      hole.ballAim.holdSeconds += dt;
+      hole.ballAim.power = clamp(
+        hole.ballAim.holdSeconds /
+          BALL_CHARGE_SECONDS,
+        0,
+        1,
+      );
+      hole.ballAim.angle = clamp(
+        hole.ballAim.angle +
+          movement.x * 1.72 * dt,
+        -BALL_MAX_AIM_ANGLE,
+        BALL_MAX_AIM_ANGLE,
+      );
+      hole.ballAim.target = golfBallAimTarget();
+    }
+    if (hole.ballFlight) {
+      hole.ballFlight.elapsed += dt;
+      if (
+        hole.ballFlight.elapsed >=
+        hole.ballFlight.duration
+      ) {
+        const target = {
+          ...hole.ballFlight.target,
+        };
+        landGolfBall(target);
+      }
+    }
   }
 
   function updateJoe(dt) {
@@ -3343,6 +3573,82 @@
       ctx.arc(sprinklerPoint.x, sprinklerPoint.y, 5, 0, Math.PI * 2);
       ctx.stroke();
     }
+    const shotTarget =
+      state.hole.ballAim.target ||
+      state.hole.ballFlight?.target ||
+      (state.hole.distractionTimer > 0
+        ? state.hole.distraction
+        : null);
+    if (shotTarget) {
+      const shotPoint = mapPoint(
+        shotTarget.x,
+        shotTarget.y,
+      );
+      const aiming =
+        state.hole.ballAim.active;
+      const inFlight =
+        Boolean(state.hole.ballFlight);
+      ctx.strokeStyle = aiming
+        ? "#f0cf65"
+        : inFlight
+          ? "#eee7c9"
+          : "#c9863f";
+      ctx.lineWidth = aiming ? 2 : 1.5;
+      ctx.setLineDash(
+        aiming ? [4, 4] : [2, 4],
+      );
+      ctx.beginPath();
+      ctx.moveTo(
+        playerPoint.x,
+        playerPoint.y,
+      );
+      ctx.lineTo(
+        shotPoint.x,
+        shotPoint.y,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const shotPulse =
+        5 +
+        (state.reducedMotion
+          ? 0
+          : Math.sin(state.time * 8) * 1.2);
+      ctx.beginPath();
+      ctx.arc(
+        shotPoint.x,
+        shotPoint.y,
+        shotPulse,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      if (inFlight) {
+        const flightProgress = clamp(
+          state.hole.ballFlight.elapsed /
+            state.hole.ballFlight.duration,
+          0,
+          1,
+        );
+        ctx.fillStyle = "#f2efd7";
+        ctx.beginPath();
+        ctx.arc(
+          lerp(
+            playerPoint.x,
+            shotPoint.x,
+            flightProgress,
+          ),
+          lerp(
+            playerPoint.y,
+            shotPoint.y,
+            flightProgress,
+          ),
+          3,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
     const joeVisible =
       state.hole.joe.mode === "chase" ||
       worldDistance(state.hole.joe, state.player) < 42;
@@ -3450,6 +3756,44 @@
           ctx.ellipse(point.x, point.y - 5 * scale, radius, radius * 0.34, 0, 0, Math.PI * 2);
           ctx.stroke();
         }
+      } else if (effect.kind === "ball_impact") {
+        const impact =
+          1 - smoothstep(progress);
+        const impactX = clamp(
+          point.x,
+          492,
+          WIDTH - 326,
+        );
+        ctx.fillStyle = `rgba(238,231,196,${impact})`;
+        ctx.fillRect(
+          Math.round(impactX - 3 * scale),
+          Math.round(point.y - 7 * scale),
+          Math.max(3, Math.round(6 * scale)),
+          Math.max(3, Math.round(6 * scale)),
+        );
+        ctx.strokeStyle = `rgba(231,185,77,${impact * 0.86})`;
+        ctx.lineWidth = Math.max(1, 2 * scale);
+        for (let ray = 0; ray < 8; ray += 1) {
+          const angle =
+            ray / 8 * Math.PI * 2;
+          const reach =
+            (12 + progress * 38) * scale;
+          ctx.beginPath();
+          ctx.moveTo(
+            impactX +
+              Math.cos(angle) * 7 * scale,
+            point.y -
+              4 * scale +
+              Math.sin(angle) * 3 * scale,
+          );
+          ctx.lineTo(
+            impactX + Math.cos(angle) * reach,
+            point.y -
+              4 * scale +
+              Math.sin(angle) * reach * 0.42,
+          );
+          ctx.stroke();
+        }
       } else if (effect.kind === "sprinkler") {
         ctx.strokeStyle = `rgba(122,205,202,${0.58 * Math.min(1, effect.age * 2) * alpha})`;
         ctx.lineWidth = Math.max(1, 2 * scale);
@@ -3526,6 +3870,271 @@
         Math.max(2, Math.round(particle.size * 2.2)),
       );
     }
+  }
+
+  function drawGolfBallTactics() {
+    const hole = state.hole;
+    const flight = hole.ballFlight;
+    if (flight) {
+      const progress = clamp(
+        flight.elapsed / flight.duration,
+        0,
+        1,
+      );
+      const targetPoint = worldToScreen(
+        flight.target.x,
+        flight.target.y,
+      );
+      const startX = WIDTH * 0.5;
+      const startY = HEIGHT * 0.75;
+      const targetX = clamp(
+        targetPoint.x,
+        492,
+        WIDTH - 326,
+      );
+      const targetY = clamp(
+        targetPoint.y,
+        122,
+        HEIGHT * 0.69,
+      );
+      const controlX =
+        lerp(startX, targetX, 0.48);
+      const controlY =
+        Math.min(startY, targetY) -
+        116 -
+        flight.power * 38;
+      const inverse = 1 - progress;
+      const ballX =
+        inverse * inverse * startX +
+        2 *
+          inverse *
+          progress *
+          controlX +
+        progress * progress * targetX;
+      const ballY =
+        inverse * inverse * startY +
+        2 *
+          inverse *
+          progress *
+          controlY +
+        progress * progress * targetY;
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.34)";
+      ctx.beginPath();
+      ctx.ellipse(
+        targetX,
+        targetY + 3,
+        14,
+        5,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.shadowColor = "rgba(247,231,172,0.9)";
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = "#f0e8c9";
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      drawText(
+        "BALL IN FLIGHT",
+        WIDTH * 0.5,
+        516,
+        11,
+        "#d9c77e",
+        "center",
+        true,
+      );
+      ctx.restore();
+    }
+
+    if (!hole.ballAim.active) {
+      return;
+    }
+
+    const target =
+      hole.ballAim.target ||
+      golfBallAimTarget();
+    const targetPoint = worldToScreen(
+      target.x,
+      target.y,
+    );
+    const targetX = clamp(
+      targetPoint.x,
+      492,
+      WIDTH - 326,
+    );
+    const targetY = clamp(
+      targetPoint.y,
+      112,
+      HEIGHT * 0.68,
+    );
+    const startX = WIDTH * 0.5;
+    const startY = HEIGHT * 0.73;
+    const controlX =
+      lerp(startX, targetX, 0.48);
+    const controlY =
+      Math.min(startY, targetY) -
+      102 -
+      hole.ballAim.power * 42;
+    const actualDistance = Math.round(
+      worldDistance(state.player, target),
+    );
+    const pulse = state.reducedMotion
+      ? 0.8
+      : 0.68 +
+        Math.sin(state.time * 7.2) * 0.16;
+
+    ctx.save();
+    const focusShade = ctx.createRadialGradient(
+      WIDTH * 0.5,
+      HEIGHT * 0.5,
+      90,
+      WIDTH * 0.5,
+      HEIGHT * 0.5,
+      520,
+    );
+    focusShade.addColorStop(
+      0,
+      "rgba(3,10,6,0)",
+    );
+    focusShade.addColorStop(
+      1,
+      "rgba(1,5,3,0.3)",
+    );
+    ctx.fillStyle = focusShade;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.strokeStyle = `rgba(238,202,102,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.ellipse(
+      targetX,
+      targetY,
+      28,
+      11,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(targetX - 10, targetY);
+    ctx.lineTo(targetX + 10, targetY);
+    ctx.moveTo(targetX, targetY - 10);
+    ctx.lineTo(targetX, targetY + 10);
+    ctx.stroke();
+
+    for (let index = 1; index < 13; index += 1) {
+      const amount = index / 13;
+      const inverse = 1 - amount;
+      const x =
+        inverse * inverse * startX +
+        2 * inverse * amount * controlX +
+        amount * amount * targetX;
+      const y =
+        inverse * inverse * startY +
+        2 * inverse * amount * controlY +
+        amount * amount * targetY;
+      ctx.globalAlpha =
+        0.28 + amount * 0.66;
+      ctx.fillStyle =
+        index % 3 === 0
+          ? "#f3d77e"
+          : "#d7dfc5";
+      ctx.beginPath();
+      ctx.arc(
+        x,
+        y,
+        2 + amount * 2.2,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    const panel = {
+      x: WIDTH * 0.5 - 210,
+      y: 538,
+      width: 420,
+      height: 104,
+    };
+    ctx.fillStyle = "rgba(2,10,6,0.94)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      "#d09b48",
+      2,
+    );
+    drawText(
+      `CHIP SHOT  //  LANDING ${actualDistance}m`,
+      WIDTH * 0.5,
+      panel.y + 24,
+      13,
+      "#f0e4bd",
+      "center",
+      true,
+    );
+    ctx.fillStyle = "#172219";
+    ctx.fillRect(
+      panel.x + 34,
+      panel.y + 36,
+      panel.width - 68,
+      13,
+    );
+    ctx.fillStyle =
+      hole.ballAim.power > 0.82
+        ? "#e4a24d"
+        : "#9bb65f";
+    ctx.fillRect(
+      panel.x + 34,
+      panel.y + 36,
+      (panel.width - 68) *
+        hole.ballAim.power,
+      13,
+    );
+    strokeRect(
+      panel.x + 34,
+      panel.y + 36,
+      panel.width - 68,
+      13,
+      "#778764",
+      1,
+    );
+    drawText(
+      inputCopy(
+        "A / D AIM  •  RELEASE SPACE TO CHIP  •  ESC CANCEL",
+        "STICK L/R AIM  •  RELEASE X TO CHIP  •  B CANCEL",
+      ),
+      WIDTH * 0.5,
+      panel.y + 71,
+      11,
+      "#ead79e",
+      "center",
+      true,
+    );
+    drawText(
+      "JOE KEEPS MOVING WHILE YOU LINE UP THE SHOT.",
+      WIDTH * 0.5,
+      panel.y + 91,
+      10,
+      "#c27443",
+      "center",
+    );
+    ctx.restore();
   }
 
   function drawPursuitEffects() {
@@ -3776,7 +4385,7 @@
     const controllerActive = state.inputMethod === "gamepad";
     const cards = [
       { x: 220, icon: 0, number: "1", title: "CHOOSE AN EXIT", detail: "KEY → SHED  •  VALVE → DRAIN" },
-      { x: 500, icon: 1, number: "2", title: "DISTRACT JOE", detail: controllerActive ? "X THROWS A GOLF BALL" : "SPACE THROWS A GOLF BALL" },
+      { x: 500, icon: 1, number: "2", title: "AIM A CHIP SHOT", detail: controllerActive ? "HOLD X  •  STICK  •  RELEASE" : "HOLD SPACE  •  A/D  •  RELEASE" },
       { x: 780, icon: 2, number: "3", title: "BREAK CONTACT", detail: controllerActive ? "LB CROUCH  •  LT LISTEN" : "C CROUCH  •  Q LISTEN" },
     ];
     for (const card of cards) {
@@ -3805,9 +4414,9 @@
     drawKeyCap(controllerActive ? "LB" : "C", 510, 526, 70);
     drawText("SOLID COVER BLOCKS SIGHT", 510, 579, 10, "#9fac96", "center");
 
-    drawText("DISTRACT", 760, 478, 13, "#8f9f85", "center");
+    drawText("AIM / CHIP", 760, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "X" : "SPACE", 760, 526, 112);
-    drawText("JOE FOLLOWS THE SOUND", 760, 579, 10, "#9fac96", "center");
+    drawText("JOE FOLLOWS THE LANDING", 760, 579, 10, "#9fac96", "center");
 
     drawText("INTERACT", 979, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "A" : "ENTER", 979, 526, 112);
@@ -4048,7 +4657,7 @@
       );
       drawFieldIcon(1, 79, 184, 38);
       drawText(
-        `${inputCopy("SPACE", "X")}  DISTRACT JOE   ×${hole.golfBalls}`,
+        `${inputCopy("HOLD SPACE", "HOLD X")}  AIM / CHIP   ×${hole.golfBalls}`,
         106,
         189,
         13,
@@ -4207,15 +4816,18 @@
       strokeRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46, "#d87532", 2);
       drawText(hole.message, WIDTH * 0.5, HEIGHT - 82, 15, "#f1e7c9", "center", true);
       ctx.globalAlpha = 1;
-    } else if (hole.prompt) {
+    } else if (
+      hole.prompt &&
+      !hole.ballAim.active
+    ) {
       drawText(hole.prompt, WIDTH * 0.5, HEIGHT - 82, 17, "#ffd184", "center", true);
     }
 
     drawText(
       expandedHud
         ? inputCopy(
-            "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  SPACE DISTRACT  •  ESC PAUSE",
-            "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  X DISTRACT  •  START PAUSE",
+            "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  HOLD SPACE AIM  •  ESC PAUSE",
+            "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  HOLD X AIM  •  START PAUSE",
           )
         : inputCopy(
             "H CONTROLS  •  ESC PAUSE",
@@ -4396,10 +5008,13 @@
     drawConcealmentEffects();
     drawListeningFocus();
     drawContactBreakFeedback();
+    drawGolfBallTactics();
     drawFirstHoleOverlay();
     drawJoeStateBanner();
-    drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
-    drawMovementFeedback(walkBob);
+    if (!state.hole.ballAim.active) {
+      drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
+      drawMovementFeedback(walkBob);
+    }
     if (state.hole.tutorialVisible) {
       drawTutorialBriefing();
     }
@@ -4801,6 +5416,7 @@
       hole.lastKnownJoeTimer = Math.max(0, hole.lastKnownJoeTimer - dt);
       updateCourseEffects(dt);
       const movement = movementInput();
+      updateGolfBallTactics(dt, movement);
       const moving = playerIsMoving();
       hole.crouched = crouchHeld();
       hole.focus = focusHeld();
@@ -4931,7 +5547,14 @@
       const sprinkler = activeSprinklerPoint();
       const shed = SHED_EXIT;
       const drain = DRAIN_EXIT;
-      if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
+      if (hole.ballAim.active) {
+        hole.prompt = inputCopy(
+          "RELEASE SPACE TO CHIP",
+          "RELEASE X TO CHIP",
+        );
+      } else if (hole.ballFlight) {
+        hole.prompt = "BALL IN FLIGHT";
+      } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy("ENTER — TAKE SHED KEY", "A — TAKE SHED KEY");
       } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
         hole.prompt = inputCopy(
@@ -4998,6 +5621,7 @@
     if (state.mode !== "first_hole") {
       return;
     }
+    cancelGolfBallAim(false);
     state.mode = "paused";
     state.pauseIndex = 0;
     state.keys.clear();
@@ -5441,6 +6065,33 @@
     playNoiseBurst(0.58, 0.055, 520, "lowpass", -0.42, 0.05);
   }
 
+  function playBallReadyCue() {
+    playTransientTone(
+      184,
+      228,
+      0.08,
+      0.014,
+      "triangle",
+    );
+  }
+
+  function playBallSwingCue(direction) {
+    playNoiseBurst(
+      0.11,
+      0.028,
+      1600,
+      "bandpass",
+      direction * 0.24,
+    );
+    playTransientTone(
+      246,
+      386,
+      0.1,
+      0.018,
+      "triangle",
+    );
+  }
+
   function playBallCue(direction) {
     playNoiseBurst(0.09, 0.042, 2200, "highpass", direction * 0.48);
     playTransientTone(520, 270, 0.1, 0.026, "sine");
@@ -5657,6 +6308,8 @@
     } else if (state.mode === "first_hole") {
       if (state.hole.tutorialVisible) {
         dismissHoleTutorial(false);
+      } else if (state.hole.ballAim.active) {
+        return;
       } else {
         interactWithCourse();
       }
@@ -5668,7 +6321,12 @@
   }
 
   function handleGamepadBack() {
-    if (state.mode === "intro") {
+    if (
+      state.mode === "first_hole" &&
+      state.hole.ballAim.active
+    ) {
+      cancelGolfBallAim();
+    } else if (state.mode === "intro") {
       enterMenu();
     } else if (state.mode === "first_hole") {
       enterPause();
@@ -5699,6 +6357,12 @@
       }
     }
     if (!pad) {
+      if (
+        state.hole?.ballAim?.active &&
+        state.hole.ballAim.source === "gamepad"
+      ) {
+        cancelGolfBallAim(false);
+      }
       state.gamepad.connected = false;
       state.gamepad.id = "";
       state.gamepad.inputX = 0;
@@ -5735,6 +6399,9 @@
     }
     const pressed = (index) =>
       currentButtons[index] && !state.gamepad.previousButtons[index];
+    const released = (index) =>
+      !currentButtons[index] &&
+      state.gamepad.previousButtons[index];
     let inputX = axisValue(0);
     let inputY = -axisValue(1);
     if (buttonDown(14)) {
@@ -5815,8 +6482,16 @@
       if (state.hole.tutorialVisible) {
         dismissHoleTutorial(false);
       } else {
-        throwGolfBall();
+        beginGolfBallAim("gamepad");
       }
+    }
+    if (
+      released(2) &&
+      state.mode === "first_hole" &&
+      state.hole.ballAim.active &&
+      state.hole.ballAim.source === "gamepad"
+    ) {
+      commitGolfBallAim();
     }
     if (pressed(3) && state.mode === "first_hole") {
       state.hole.controlHintTimer = 8;
@@ -5932,17 +6607,23 @@
         dismissHoleTutorial(!["Enter", "Space"].includes(event.code));
         event.preventDefault();
       } else if (event.code === "Escape") {
-        enterPause();
+        if (state.hole.ballAim.active) {
+          cancelGolfBallAim();
+        } else {
+          enterPause();
+        }
         event.preventDefault();
       } else if (event.code === "KeyH") {
         state.hole.controlHintTimer = 8;
         playUiTone(220, 0.045, 0.015);
         event.preventDefault();
       } else if (event.code === "Enter" && !event.repeat) {
-        interactWithCourse();
+        if (!state.hole.ballAim.active) {
+          interactWithCourse();
+        }
         event.preventDefault();
       } else if (event.code === "Space" && !event.repeat) {
-        throwGolfBall();
+        beginGolfBallAim("keyboard");
         event.preventDefault();
       }
     } else if (state.mode === "victory" || state.mode === "defeat") {
@@ -5961,6 +6642,15 @@
 
   window.addEventListener("keyup", (event) => {
     state.keys.delete(event.code);
+    if (
+      event.code === "Space" &&
+      state.mode === "first_hole" &&
+      state.hole.ballAim.active &&
+      state.hole.ballAim.source === "keyboard"
+    ) {
+      commitGolfBallAim();
+      event.preventDefault();
+    }
   });
 
   document.addEventListener("visibilitychange", () => {
@@ -6172,6 +6862,61 @@
           escapeRoute: state.hole.escapeRoute,
           golfBalls: state.hole.golfBalls,
           ballThrowsUsed: state.hole.ballThrowsUsed,
+          golfShot: {
+            aiming: state.hole.ballAim.active,
+            source: state.hole.ballAim.source,
+            power: Number(
+              state.hole.ballAim.power.toFixed(2),
+            ),
+            angleRadians: Number(
+              state.hole.ballAim.angle.toFixed(2),
+            ),
+            target: state.hole.ballAim.target
+              ? {
+                  x: Math.round(
+                    state.hole.ballAim.target.x,
+                  ),
+                  y: Math.round(
+                    state.hole.ballAim.target.y,
+                  ),
+                  distance: Math.round(
+                    worldDistance(
+                      state.player,
+                      state.hole.ballAim.target,
+                    ),
+                  ),
+                }
+              : null,
+            flight: state.hole.ballFlight
+              ? {
+                  target: {
+                    x: Math.round(
+                      state.hole.ballFlight.target.x,
+                    ),
+                    y: Math.round(
+                      state.hole.ballFlight.target.y,
+                    ),
+                  },
+                  progress: Number(
+                    (
+                      state.hole.ballFlight.elapsed /
+                      state.hole.ballFlight.duration
+                    ).toFixed(2),
+                  ),
+                }
+              : null,
+            distractionTarget:
+              state.hole.distraction
+                ? {
+                    x: Math.round(
+                      state.hole.distraction.x,
+                    ),
+                    y: Math.round(
+                      state.hole.distraction.y,
+                    ),
+                  }
+                : null,
+          },
           distractionSecondsRemaining: Number(
             state.hole.distractionTimer.toFixed(2),
           ),
@@ -6298,19 +7043,19 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Arrow keys and Enter, or pointer",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; H shows controls; Escape pauses",
+      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Arrow keys and Enter, or pointer",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; Space throws a golf ball; H shows controls; Escape pauses",
+        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
         menu: "D-pad selects; A confirms; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts; X throws a golf ball; Y shows controls; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },
     },
