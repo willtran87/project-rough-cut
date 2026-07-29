@@ -398,3 +398,32 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add touch controls and remappable keyboard/controller bindings with the same automatic prompt switching used by the current input system.
 - Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
 - Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
+
+## Touch-First Mobile Controls Pass — July 29, 2026
+
+- Added a complete multi-touch control scheme that appears only after touch input and leaves the existing keyboard/controller presentation untouched.
+- Added a large analog movement pad with clamped directional input plus independent held Run, Crouch, and Listen contacts for simultaneous movement and action.
+- Added direct Use interaction for keys, valves, exits, Change Requests, and recoverable golf balls.
+- Added a touch-specific aimed-chip lifecycle: hold Chip to charge, slide horizontally to steer, release to shoot, and preserve the ball when the browser cancels the contact.
+- Added a live charge ring, ball count, active-state colors, larger high-contrast labels, and a dedicated touch Pause target.
+- Replaced desktop control copy with touch-specific briefing cards, active HUD labels, aim instructions, interaction prompts, menu guidance, settings guidance, pause copy, and result-screen actions whenever touch is the latest input.
+- Added direct touch selection for main-menu items, the Overtime card, pause options, settings sliders, settings toggles, and return actions.
+- Added pointer-capture cleanup and explicit input handoff so switching to keyboard or controller clears every held touch action and cannot leave movement, stealth, or aiming stuck.
+- Made entering pause, returning to the menu, restarting, visibility loss, pointer cancellation, and a completed shot reset touch state safely.
+- Added `touch-action: none`, selection/callout suppression, and a coarse-pointer portrait prompt recommending landscape orientation.
+- Extended `render_game_to_text` with touch availability, control visibility, movement vector, aim steering, every held contact, and complete touch instructions.
+- Verified two-contact movement plus Run produced 1.07 seconds of sprinting and advanced the player from 1 to 41 course units in one simulated second.
+- Verified held Crouch accumulated crouch time and reduced movement noise, while held Listen activated Listening Focus without advancing another action.
+- Verified touch aiming reached full power, steered to 1.12 radians, consumed exactly one ball on release, completed flight, created a persistent landed ball, and sent Joe to investigate.
+- Verified pointer cancellation returned aiming to idle and preserved the full four-ball inventory.
+- Verified touch pause froze elapsed time at 4.40 seconds through three seconds of settings adjustments, then resumed at the same course position.
+- Completed a touch-only Standard Review drainage escape: activate the west-tee valve, return to the fairway, aim two distractions, navigate the complete obstacle route, and tap Use at the drain.
+- The touch-only run finished in 19.53 seconds with two balls remaining, no detection, an A grade, and a 6,424 score.
+- Verified retry retains touch onboarding, keyboard input immediately hides touch controls and clears contacts, and the exact desktop Playwright route remains unchanged.
+- Visually inspected touch briefing, movement HUD, charged aim state, victory scorecard, 800×600, 1280×720, 2560×1440, and 390×844 portrait guidance with no document overflow or browser errors.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
+- Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.

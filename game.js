@@ -48,6 +48,15 @@
     { id: "subtitles", label: "SUBTITLES", key: "subtitles", type: "toggle" },
     { id: "reduced_motion", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
   ];
+  const TOUCH_CONTROLS = {
+    move: { x: 116, y: 594, radius: 78 },
+    interact: { x: 1008, y: 568, radius: 38 },
+    aim: { x: 1106, y: 606, radius: 54 },
+    focus: { x: 1201, y: 548, radius: 32 },
+    crouch: { x: 1008, y: 653, radius: 31 },
+    sprint: { x: 1201, y: 650, radius: 36 },
+    pause: { x: 1160, y: 449, width: 88, height: 34 },
+  };
   let preferencesStorageAvailable = true;
   let careerStorageAvailable = true;
 
@@ -646,6 +655,18 @@
       previousButtons: [],
       previousDirections: { up: false, down: false, left: false, right: false },
     },
+    touch: {
+      seen: false,
+      movePointerId: null,
+      moveX: 0,
+      moveY: 0,
+      aimPointerId: null,
+      aimStartX: 0,
+      aimSteer: 0,
+      sprintPointerId: null,
+      crouchPointerId: null,
+      focusPointerId: null,
+    },
     player: { x: 0, y: 0, heading: 0 },
     hole: {
       variantIndex: 0,
@@ -1101,10 +1122,18 @@
     return result;
   }
 
-  function inputCopy(keyboardCopy, gamepadCopy) {
-    return state.inputMethod === "gamepad"
-      ? gamepadCopy
-      : keyboardCopy;
+  function inputCopy(
+    keyboardCopy,
+    gamepadCopy,
+    touchCopy = keyboardCopy,
+  ) {
+    if (state.inputMethod === "gamepad") {
+      return gamepadCopy;
+    }
+    if (state.inputMethod === "touch") {
+      return touchCopy;
+    }
+    return keyboardCopy;
   }
 
   function inverseLerp(a, b, value) {
@@ -1384,7 +1413,11 @@
     strokeRect(WIDTH * 0.28, HEIGHT * 0.34, WIDTH * 0.44, HEIGHT * 0.3, `rgba(222,113,39,${pulse})`, 3);
     drawText("ROUGH CUT", WIDTH * 0.5, HEIGHT * 0.44, 64, "#eef0d7", "center", true);
     drawText(
-      inputCopy("CLICK / ENTER TO BEGIN INCIDENT", "PRESS A TO BEGIN INCIDENT"),
+      inputCopy(
+        "CLICK / ENTER TO BEGIN INCIDENT",
+        "PRESS A TO BEGIN INCIDENT",
+        "TAP TO BEGIN INCIDENT",
+      ),
       WIDTH * 0.5,
       HEIGHT * 0.54,
       22,
@@ -1392,7 +1425,11 @@
       "center",
     );
     drawText(
-      inputCopy("AUDIO ENABLED • F FULLSCREEN", "CONTROLLER CONNECTED • AUDIO ENABLED"),
+      inputCopy(
+        "AUDIO ENABLED • F FULLSCREEN",
+        "CONTROLLER CONNECTED • AUDIO ENABLED",
+        "TOUCH CONTROLS READY • AUDIO ENABLED",
+      ),
       WIDTH * 0.5,
       HEIGHT * 0.59,
       14,
@@ -1429,7 +1466,11 @@
     }
 
     drawText(
-      inputCopy("SPACE / CLICK TO SKIP", "A / B TO SKIP"),
+      inputCopy(
+        "SPACE / CLICK TO SKIP",
+        "A / B TO SKIP",
+        "TAP TO SKIP",
+      ),
       WIDTH - 32,
       HEIGHT - 25,
       15,
@@ -1548,6 +1589,7 @@
         ? inputCopy(
             `R — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
             `RB — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+            `TAP CARD — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
           )
         : `${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED`,
       overtimePanel.x + overtimePanel.width - 24,
@@ -1614,6 +1656,9 @@
         overtimeAvailable
           ? "D-PAD SELECT  •  A CONFIRM  •  RB OVERTIME"
           : "D-PAD SELECT  •  A CONFIRM",
+        overtimeAvailable
+          ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
+          : "TAP A MENU ITEM",
       ),
       WIDTH - 32,
       HEIGHT - 25,
@@ -1646,6 +1691,7 @@
     drawText("ACCEPTANCE CRITERIA // NIGHT SHIFT", WIDTH * 0.5, 163, 13, "#d77b3b", "center");
 
     const controllerActive = state.inputMethod === "gamepad";
+    const touchActive = state.inputMethod === "touch";
     drawText("THE ASSIGNMENT", 205, 213, 15, "#8f9e84", "left", true);
     const steps = [
       {
@@ -1659,20 +1705,26 @@
         y: 348,
         icon: 1,
         title: "2. MISDIRECT JOE",
-        detail: controllerActive
-          ? "Hold X + stick L/R, then release."
-          : "Hold SPACE + A/D, then release.",
-        subdetail: controllerActive
-          ? "Landed balls stay. A reclaims them."
-          : "Landed balls stay. ENTER reclaims them.",
+        detail: touchActive
+          ? "Hold CHIP + slide, then release."
+          : controllerActive
+            ? "Hold X + stick L/R, then release."
+            : "Hold SPACE + A/D, then release.",
+        subdetail: touchActive
+          ? "Landed balls stay. USE reclaims them."
+          : controllerActive
+            ? "Landed balls stay. A reclaims them."
+            : "Landed balls stay. ENTER reclaims them.",
       },
       {
         y: 436,
         icon: 2,
         title: "3. BREAK CONTACT",
-        detail: controllerActive
-          ? "Hold LB near hard cover or in rough."
-          : "Hold C near hard cover or in rough.",
+        detail: touchActive
+          ? "Hold CROUCH near cover or in rough."
+          : controllerActive
+            ? "Hold LB near hard cover or in rough."
+            : "Hold C near hard cover or in rough.",
         subdetail:
           "Bunker sand slows both of you, but holds loud tracks.",
       },
@@ -1693,7 +1745,11 @@
       }
     }
     drawText(
-      controllerActive ? "LEFT STICK / D-PAD  MOVE" : "WASD / ARROWS  MOVE",
+      touchActive
+        ? "LEFT PAD  MOVE  •  RUN  SPRINT"
+        : controllerActive
+          ? "LEFT STICK / D-PAD  MOVE"
+          : "WASD / ARROWS  MOVE",
       205,
       520,
       14,
@@ -1701,7 +1757,11 @@
       "left",
     );
     drawText(
-      controllerActive ? "LB CROUCH  •  LT LISTENING FOCUS" : "C CROUCH  •  Q LISTENING FOCUS",
+      touchActive
+        ? "HOLD CROUCH  •  HOLD LISTEN"
+        : controllerActive
+          ? "LB CROUCH  •  LT LISTENING FOCUS"
+          : "C CROUCH  •  Q LISTENING FOCUS",
       205,
       548,
       14,
@@ -1711,7 +1771,9 @@
     drawText(
       controllerActive
         ? "RT SPRINTS — FAST, LOUD, AND EXPOSED."
-        : "SHIFT SPRINTS — FAST, LOUD, AND EXPOSED.",
+        : touchActive
+          ? "RUN IS FAST, LOUD, AND EXPOSED."
+          : "SHIFT SPRINTS — FAST, LOUD, AND EXPOSED.",
       205,
       587,
       12,
@@ -1783,7 +1845,11 @@
       }
     }
     drawText(
-      controllerActive ? "D-PAD  SELECT / ADJUST" : "F  FULLSCREEN",
+      touchActive
+        ? "TAP ROWS TO ADJUST"
+        : controllerActive
+          ? "D-PAD  SELECT / ADJUST"
+          : "F  FULLSCREEN",
       700,
       540,
       14,
@@ -1805,7 +1871,9 @@
     drawText(
       controllerActive
         ? "LEFT / RIGHT MIX  •  A TOGGLE  •  B RETURN"
-        : "ARROWS ADJUST  •  ENTER TOGGLE  •  ESC RETURN",
+        : touchActive
+          ? "TAP SLIDERS  •  TAP TOGGLES  •  TAP RETURN"
+          : "ARROWS ADJUST  •  ENTER TOGGLE  •  ESC RETURN",
       700,
       612,
       11,
@@ -1890,6 +1958,7 @@
       inputCopy(
         "↑↓ SELECT  •  ENTER CONFIRM  •  ESC RESUME",
         "D-PAD SELECT  •  A CONFIRM  •  B / START RESUME",
+        "TAP A MENU ITEM  •  TAP RESUME TO CONTINUE",
       ),
       WIDTH * 0.5,
       598,
@@ -1933,6 +2002,7 @@
   }
 
   function resetFirstHole(variantOverride = null) {
+    clearTouchInputs(true);
     const variant =
       variantOverride ||
       runVariantForRound(
@@ -2088,25 +2158,71 @@
       (state.keys.has("KeyW") || state.keys.has("ArrowUp") ? 1 : 0) -
       (state.keys.has("KeyS") || state.keys.has("ArrowDown") ? 1 : 0);
     return {
-      x: clamp(keyboardX + state.gamepad.inputX, -1, 1),
-      y: clamp(keyboardY + state.gamepad.inputY, -1, 1),
+      x: clamp(
+        keyboardX +
+          state.gamepad.inputX +
+          state.touch.moveX +
+          (
+            state.hole?.ballAim?.active &&
+            state.hole.ballAim.source === "touch"
+              ? state.touch.aimSteer
+              : 0
+          ),
+        -1,
+        1,
+      ),
+      y: clamp(
+        keyboardY +
+          state.gamepad.inputY +
+          state.touch.moveY,
+        -1,
+        1,
+      ),
     };
   }
 
   function crouchHeld() {
-    return state.keys.has("KeyC") || state.gamepad.crouch;
+    return (
+      state.keys.has("KeyC") ||
+      state.gamepad.crouch ||
+      state.touch.crouchPointerId !== null
+    );
   }
 
   function sprintHeld() {
     return (
       state.keys.has("ShiftLeft") ||
       state.keys.has("ShiftRight") ||
-      state.gamepad.sprint
+      state.gamepad.sprint ||
+      state.touch.sprintPointerId !== null
     );
   }
 
   function focusHeld() {
-    return state.keys.has("KeyQ") || state.gamepad.focus;
+    return (
+      state.keys.has("KeyQ") ||
+      state.gamepad.focus ||
+      state.touch.focusPointerId !== null
+    );
+  }
+
+  function clearTouchInputs(cancelAim = false) {
+    if (
+      cancelAim &&
+      state.hole?.ballAim?.active &&
+      state.hole.ballAim.source === "touch"
+    ) {
+      cancelGolfBallAim(false);
+    }
+    state.touch.movePointerId = null;
+    state.touch.moveX = 0;
+    state.touch.moveY = 0;
+    state.touch.aimPointerId = null;
+    state.touch.aimStartX = 0;
+    state.touch.aimSteer = 0;
+    state.touch.sprintPointerId = null;
+    state.touch.crouchPointerId = null;
+    state.touch.focusPointerId = null;
   }
 
   function courseZoneAt(y) {
@@ -6884,6 +7000,7 @@
       inputCopy(
         "A / D AIM  •  RELEASE SPACE TO CHIP  •  ESC CANCEL",
         "STICK L/R AIM  •  RELEASE X TO CHIP  •  B CANCEL",
+        "SLIDE CHIP BUTTON TO AIM  •  RELEASE TO CHIP",
       ),
       WIDTH * 0.5,
       panel.y + 71,
@@ -7154,6 +7271,7 @@
     );
 
     const controllerActive = state.inputMethod === "gamepad";
+    const touchActive = state.inputMethod === "touch";
     const cards = [
       {
         x: 220,
@@ -7168,21 +7286,27 @@
         icon: 1,
         number: "2",
         title: "AIM A CHIP SHOT",
-        detail: controllerActive
-          ? "HOLD X  •  STICK  •  RELEASE"
-          : "HOLD SPACE  •  A/D  •  RELEASE",
-        subdetail: controllerActive
-          ? "A RECLAIMS IT — IF JOE ALLOWS"
-          : "ENTER RECLAIMS IT — IF JOE ALLOWS",
+        detail: touchActive
+          ? "HOLD CHIP  •  SLIDE  •  RELEASE"
+          : controllerActive
+            ? "HOLD X  •  STICK  •  RELEASE"
+            : "HOLD SPACE  •  A/D  •  RELEASE",
+        subdetail: touchActive
+          ? "TAP USE TO RECLAIM — IF JOE ALLOWS"
+          : controllerActive
+            ? "A RECLAIMS IT — IF JOE ALLOWS"
+            : "ENTER RECLAIMS IT — IF JOE ALLOWS",
       },
       {
         x: 780,
         icon: 2,
         number: "3",
         title: "BREAK CONTACT",
-        detail: controllerActive
-          ? "LB CROUCH  •  LT LISTEN"
-          : "C CROUCH  •  Q LISTEN",
+        detail: touchActive
+          ? "HOLD CROUCH  •  HOLD LISTEN"
+          : controllerActive
+            ? "LB CROUCH  •  LT LISTEN"
+            : "C CROUCH  •  Q LISTEN",
         subdetail:
           "SAND SLOWS BOTH — YOUR TRACKS STAY",
       },
@@ -7209,7 +7333,10 @@
     }
 
     drawText("MOVE", 278, 478, 13, "#8f9f85", "center");
-    if (controllerActive) {
+    if (touchActive) {
+      drawKeyCap("LEFT PAD", 278, 526, 112);
+      drawText("HOLD RUN TO SPRINT — LOUD", 278, 579, 10, "#df8c47", "center");
+    } else if (controllerActive) {
       drawKeyCap("L STICK", 278, 526, 112);
       drawText("D-PAD MOVES • RT SPRINTS", 278, 579, 10, "#df8c47", "center");
     } else {
@@ -7221,23 +7348,52 @@
     }
 
     drawText("CROUCH", 510, 478, 13, "#8f9f85", "center");
-    drawKeyCap(controllerActive ? "LB" : "C", 510, 526, 70);
+    drawKeyCap(
+      touchActive
+        ? "CROUCH"
+        : controllerActive
+          ? "LB"
+          : "C",
+      510,
+      526,
+      touchActive ? 104 : 70,
+    );
     drawText("ROUGH HIDES YOU — BUT KEEPS TRACKS", 510, 579, 10, "#9fac96", "center");
 
     drawText("AIM / CHIP", 760, 478, 13, "#8f9f85", "center");
-    drawKeyCap(controllerActive ? "X" : "SPACE", 760, 526, 112);
+    drawKeyCap(
+      touchActive
+        ? "CHIP"
+        : controllerActive
+          ? "X"
+          : "SPACE",
+      760,
+      526,
+      112,
+    );
     drawText("JOE FOLLOWS IT — RECLAIM WHEN CLEAR", 760, 579, 10, "#9fac96", "center");
 
     drawText("INTERACT", 979, 478, 13, "#8f9f85", "center");
-    drawKeyCap(controllerActive ? "A" : "ENTER", 979, 526, 112);
+    drawKeyCap(
+      touchActive
+        ? "USE"
+        : controllerActive
+          ? "A"
+          : "ENTER",
+      979,
+      526,
+      112,
+    );
     drawText("USE KEY, VALVE, EXITS, LOST BALLS", 979, 579, 10, "#df8c47", "center");
 
     const pulse = 0.62 + (Math.sin(state.time * 4.2) + 1) * 0.18;
     ctx.globalAlpha = pulse;
     drawText(
-      controllerActive
-        ? "MOVE LEFT STICK OR PRESS A TO START"
-        : "PRESS A MOVEMENT KEY OR ENTER TO START",
+      touchActive
+        ? "TOUCH LEFT PAD OR TAP USE TO START"
+        : controllerActive
+          ? "MOVE LEFT STICK OR PRESS A TO START"
+          : "PRESS A MOVEMENT KEY OR ENTER TO START",
       WIDTH * 0.5,
       621,
       16,
@@ -7672,6 +7828,208 @@
     ctx.restore();
   }
 
+  function drawTouchButton(
+    control,
+    label,
+    active,
+    accent,
+    sublabel = "",
+  ) {
+    ctx.save();
+    ctx.globalAlpha = active ? 0.98 : 0.84;
+    ctx.fillStyle = active
+      ? "rgba(28,48,25,0.94)"
+      : "rgba(3,12,7,0.9)";
+    ctx.beginPath();
+    ctx.arc(
+      control.x,
+      control.y,
+      control.radius,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle = active
+      ? accent
+      : "rgba(139,159,118,0.68)";
+    ctx.lineWidth = active ? 3 : 2;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(
+      control.x,
+      control.y,
+      Math.max(8, control.radius - 7),
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    drawText(
+      label,
+      control.x,
+      control.y + (sublabel ? 1 : 5),
+      control.radius >= 45 ? 15 : 12,
+      active ? "#fff0c9" : "#d5dfcc",
+      "center",
+      true,
+    );
+    if (sublabel) {
+      drawText(
+        sublabel,
+        control.x,
+        control.y + 16,
+        8,
+        active ? accent : "#8fa083",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawTouchControls() {
+    if (
+      state.inputMethod !== "touch" ||
+      state.mode !== "first_hole" ||
+      state.hole.tutorialVisible
+    ) {
+      return;
+    }
+    const touch = state.touch;
+    const move = TOUCH_CONTROLS.move;
+    const aimActive =
+      state.hole.ballAim.active &&
+      state.hole.ballAim.source === "touch";
+    ctx.save();
+    ctx.globalAlpha =
+      touch.movePointerId !== null
+        ? 0.94
+        : 0.82;
+    ctx.fillStyle = "rgba(3,12,7,0.88)";
+    ctx.beginPath();
+    ctx.arc(move.x, move.y, move.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle =
+      touch.movePointerId !== null
+        ? "#a9bf72"
+        : "rgba(139,159,118,0.68)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(122,143,101,0.48)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(move.x - move.radius + 13, move.y);
+    ctx.lineTo(move.x + move.radius - 13, move.y);
+    ctx.moveTo(move.x, move.y - move.radius + 13);
+    ctx.lineTo(move.x, move.y + move.radius - 13);
+    ctx.stroke();
+    const knobX =
+      move.x +
+      touch.moveX *
+        (move.radius - 29);
+    const knobY =
+      move.y -
+      touch.moveY *
+        (move.radius - 29);
+    ctx.fillStyle = "rgba(116,139,84,0.82)";
+    ctx.beginPath();
+    ctx.arc(knobX, knobY, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#d8dfba";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    drawText(
+      "MOVE",
+      move.x,
+      move.y - move.radius - 9,
+      12,
+      "#aebca3",
+      "center",
+      true,
+    );
+    ctx.restore();
+
+    drawTouchButton(
+      TOUCH_CONTROLS.interact,
+      "USE",
+      Boolean(state.hole.prompt),
+      "#ef9b51",
+    );
+    drawTouchButton(
+      TOUCH_CONTROLS.aim,
+      "CHIP",
+      aimActive,
+      "#efc86d",
+      aimActive ? "SLIDE / RELEASE" : `×${state.hole.golfBalls}`,
+    );
+    if (aimActive) {
+      ctx.save();
+      ctx.strokeStyle = "#f2c45d";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(
+        TOUCH_CONTROLS.aim.x,
+        TOUCH_CONTROLS.aim.y,
+        TOUCH_CONTROLS.aim.radius + 7,
+        -Math.PI * 0.5,
+        -Math.PI * 0.5 +
+          Math.PI *
+            2 *
+            state.hole.ballAim.power,
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawTouchButton(
+      TOUCH_CONTROLS.focus,
+      "LISTEN",
+      touch.focusPointerId !== null,
+      "#d7c579",
+    );
+    drawTouchButton(
+      TOUCH_CONTROLS.crouch,
+      "CROUCH",
+      touch.crouchPointerId !== null,
+      "#8fc87f",
+    );
+    drawTouchButton(
+      TOUCH_CONTROLS.sprint,
+      "RUN",
+      touch.sprintPointerId !== null,
+      "#e07a45",
+    );
+
+    const pause = TOUCH_CONTROLS.pause;
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = "rgba(3,12,7,0.82)";
+    ctx.fillRect(
+      pause.x,
+      pause.y,
+      pause.width,
+      pause.height,
+    );
+    strokeRect(
+      pause.x,
+      pause.y,
+      pause.width,
+      pause.height,
+      "#7b906d",
+      2,
+    );
+    drawText(
+      "Ⅱ  PAUSE",
+      pause.x + pause.width * 0.5,
+      pause.y + 23,
+      10,
+      "#d5dfcc",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawFirstHoleOverlay() {
     const hole = state.hole;
     const variant = activeRunVariant();
@@ -7753,7 +8111,7 @@
       );
       drawFieldIcon(1, 79, 184, 38);
       drawText(
-        `${inputCopy("HOLD SPACE", "HOLD X")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
+        `${inputCopy("HOLD SPACE", "HOLD X", "HOLD CHIP")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
         106,
         189,
         13,
@@ -7763,8 +8121,8 @@
       drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
       drawText(
         hole.drainUnlocked
-          ? `${inputCopy("ENTER", "A")}  DRAIN EXIT OPEN`
-          : `${inputCopy("ENTER", "A")}  INTERACT / UNLOCK`,
+          ? `${inputCopy("ENTER", "A", "USE")}  DRAIN EXIT OPEN`
+          : `${inputCopy("ENTER", "A", "USE")}  INTERACT / UNLOCK`,
         106,
         227,
         13,
@@ -7934,41 +8292,43 @@
       drawText(hole.prompt, WIDTH * 0.5, HEIGHT - 82, 17, "#ffd184", "center", true);
     }
 
-    drawText(
-      expandedHud
-        ? inputCopy(
-            "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  HOLD SPACE AIM  •  ESC PAUSE",
-            "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  HOLD X AIM  •  START PAUSE",
-          )
-        : inputCopy(
-            "H CONTROLS  •  ESC PAUSE",
-            "Y CONTROLS  •  START PAUSE",
-          ),
-      28,
-      HEIGHT - 25,
-      11,
-      expandedHud ? "#c0c9b4" : "#829079",
-      "left",
-    );
-    ctx.fillStyle = "rgba(2,8,5,0.78)";
-    ctx.fillRect(WIDTH - 124, HEIGHT - 45, 96, 28);
-    strokeRect(
-      WIDTH - 124,
-      HEIGHT - 45,
-      96,
-      28,
-      "#687e4a",
-      1,
-    );
-    drawText(
-      "Ⅱ  PAUSE",
-      WIDTH - 76,
-      HEIGHT - 25,
-      11,
-      "#b9c5ae",
-      "center",
-      true,
-    );
+    if (state.inputMethod !== "touch") {
+      drawText(
+        expandedHud
+          ? inputCopy(
+              "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  HOLD SPACE AIM  •  ESC PAUSE",
+              "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  HOLD X AIM  •  START PAUSE",
+            )
+          : inputCopy(
+              "H CONTROLS  •  ESC PAUSE",
+              "Y CONTROLS  •  START PAUSE",
+            ),
+        28,
+        HEIGHT - 25,
+        11,
+        expandedHud ? "#c0c9b4" : "#829079",
+        "left",
+      );
+      ctx.fillStyle = "rgba(2,8,5,0.78)";
+      ctx.fillRect(WIDTH - 124, HEIGHT - 45, 96, 28);
+      strokeRect(
+        WIDTH - 124,
+        HEIGHT - 45,
+        96,
+        28,
+        "#687e4a",
+        1,
+      );
+      drawText(
+        "Ⅱ  PAUSE",
+        WIDTH - 76,
+        HEIGHT - 25,
+        11,
+        "#b9c5ae",
+        "center",
+        true,
+      );
+    }
   }
 
   function drawFirstHole() {
@@ -8184,6 +8544,7 @@
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
       drawMovementFeedback(walkBob);
     }
+    drawTouchControls();
     if (state.hole.tutorialVisible) {
       drawTutorialBriefing();
     }
@@ -8195,7 +8556,11 @@
     drawText("SHIFT ENDED", WIDTH * 0.5, HEIGHT * 0.46, 58, "#e9ead1", "center", true);
     drawText("Your coverage resumes at dawn.", WIDTH * 0.5, HEIGHT * 0.54, 21, "#d57b39", "center");
     drawText(
-      inputCopy("ENTER — RETURN TO MENU", "A — RETURN TO MENU"),
+      inputCopy(
+        "ENTER — RETURN TO MENU",
+        "A — RETURN TO MENU",
+        "TAP — RETURN TO MENU",
+      ),
       WIDTH * 0.5,
       HEIGHT * 0.64,
       16,
@@ -8466,6 +8831,7 @@
       inputCopy(
         "ENTER — PLAY AGAIN     ESC — MAIN MENU",
         "A — PLAY AGAIN     B — MAIN MENU",
+        "TAP — PLAY AGAIN",
       ),
       WIDTH * 0.5,
       610,
@@ -8526,6 +8892,7 @@
       inputCopy(
         "ENTER — RETRY HOLE 1     ESC — MAIN MENU",
         "A — RETRY HOLE 1     B — MAIN MENU",
+        "TAP — RETRY HOLE 1",
       ),
       WIDTH * 0.5,
       panelY + 203,
@@ -8637,6 +9004,7 @@
         hole.prompt = inputCopy(
           "PRESS A MOVEMENT KEY OR ENTER TO START",
           "MOVE LEFT STICK OR PRESS A TO START",
+          "TOUCH LEFT PAD OR TAP USE TO START",
         );
         updateAudio();
         return;
@@ -8903,15 +9271,21 @@
         hole.prompt = inputCopy(
           "RELEASE SPACE TO CHIP",
           "RELEASE X TO CHIP",
+          "RELEASE CHIP TO SHOOT",
         );
       } else if (hole.ballFlight) {
         hole.prompt = "BALL IN FLIGHT";
       } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
-        hole.prompt = inputCopy("ENTER — TAKE SHED KEY", "A — TAKE SHED KEY");
+        hole.prompt = inputCopy(
+          "ENTER — TAKE SHED KEY",
+          "A — TAKE SHED KEY",
+          "TAP USE — TAKE SHED KEY",
+        );
       } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
         hole.prompt = inputCopy(
           "ENTER — ACTIVATE SPRINKLERS",
           "A — ACTIVATE SPRINKLERS",
+          "TAP USE — ACTIVATE SPRINKLERS",
         );
       } else if (
         hole.keyCollected &&
@@ -8921,6 +9295,7 @@
         hole.prompt = inputCopy(
           "ENTER — UNLOCK SHED",
           "A — UNLOCK SHED",
+          "TAP USE — UNLOCK SHED",
         );
       } else if (
         hole.drainUnlocked &&
@@ -8930,6 +9305,7 @@
         hole.prompt = inputCopy(
           "ENTER — ESCAPE THROUGH DRAIN",
           "A — ESCAPE THROUGH DRAIN",
+          "TAP USE — ESCAPE THROUGH DRAIN",
         );
       } else if (
         !hole.changeRequestCollected &&
@@ -8941,6 +9317,7 @@
         hole.prompt = inputCopy(
           `ENTER — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
           `A — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+          `TAP USE — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
         );
       } else if (
         nearestBall.ball &&
@@ -8958,16 +9335,21 @@
           recoveryDanger.dangerous
             ? `A — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
             : "A — RECLAIM GOLF BALL",
+          recoveryDanger.dangerous
+            ? `TAP USE — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : "TAP USE — RECLAIM GOLF BALL",
         );
       } else if (worldDistance(state.player, shed) < shed.radius) {
         hole.prompt = inputCopy(
           "ENTER — TRY SHED DOOR",
           "A — TRY SHED DOOR",
+          "TAP USE — TRY SHED DOOR",
         );
       } else if (worldDistance(state.player, drain) < drain.radius) {
         hole.prompt = inputCopy(
           "ENTER — INSPECT SEALED DRAIN",
           "A — INSPECT SEALED DRAIN",
+          "TAP USE — INSPECT SEALED DRAIN",
         );
       } else {
         hole.prompt = "";
@@ -9003,6 +9385,7 @@
   }
 
   function enterMenu() {
+    clearTouchInputs(true);
     state.mode = "menu";
     state.settingsReturnMode = "menu";
     state.time = Math.max(state.time, MENU_TIME);
@@ -9016,6 +9399,7 @@
       return;
     }
     cancelGolfBallAim(false);
+    clearTouchInputs(false);
     state.mode = "paused";
     state.pauseIndex = 0;
     state.keys.clear();
@@ -9735,9 +10119,258 @@
     return -1;
   }
 
+  function pointInTouchCircle(point, control, padding = 0) {
+    return (
+      Math.hypot(
+        point.x - control.x,
+        point.y - control.y,
+      ) <=
+      control.radius + padding
+    );
+  }
+
+  function touchControlAt(point) {
+    const pause = TOUCH_CONTROLS.pause;
+    if (
+      point.x >= pause.x - 8 &&
+      point.x <= pause.x + pause.width + 8 &&
+      point.y >= pause.y - 8 &&
+      point.y <= pause.y + pause.height + 8
+    ) {
+      return "pause";
+    }
+    const order = [
+      "interact",
+      "aim",
+      "focus",
+      "crouch",
+      "sprint",
+    ];
+    for (const id of order) {
+      if (
+        pointInTouchCircle(
+          point,
+          TOUCH_CONTROLS[id],
+          8,
+        )
+      ) {
+        return id;
+      }
+    }
+    if (
+      pointInTouchCircle(
+        point,
+        TOUCH_CONTROLS.move,
+        18,
+      )
+    ) {
+      return "move";
+    }
+    return null;
+  }
+
+  function updateTouchMovement(point) {
+    const move = TOUCH_CONTROLS.move;
+    const range = move.radius - 20;
+    const dx = point.x - move.x;
+    const dy = point.y - move.y;
+    const length = Math.max(
+      range,
+      Math.hypot(dx, dy),
+    );
+    state.touch.moveX = clamp(
+      dx / length,
+      -1,
+      1,
+    );
+    state.touch.moveY = clamp(
+      -dy / length,
+      -1,
+      1,
+    );
+  }
+
+  function handleTouchPointerDown(
+    event,
+    point,
+  ) {
+    state.touch.seen = true;
+    state.inputMethod = "touch";
+    event.preventDefault();
+    try {
+      canvas.setPointerCapture?.(
+        event.pointerId,
+      );
+    } catch {
+      // Synthetic test events may not own a browser pointer capture.
+    }
+    const control = touchControlAt(point);
+    if (
+      state.hole.tutorialVisible
+    ) {
+      dismissHoleTutorial(
+        control === "move",
+      );
+      if (!control) {
+        return;
+      }
+    }
+    if (control === "pause") {
+      enterPause();
+    } else if (
+      control === "move" &&
+      state.touch.movePointerId === null
+    ) {
+      state.touch.movePointerId =
+        event.pointerId;
+      updateTouchMovement(point);
+    } else if (control === "interact") {
+      if (!state.hole.ballAim.active) {
+        interactWithCourse();
+      }
+    } else if (
+      control === "aim" &&
+      state.touch.aimPointerId === null
+    ) {
+      beginGolfBallAim("touch");
+      if (
+        state.hole.ballAim.active &&
+        state.hole.ballAim.source ===
+          "touch"
+      ) {
+        state.touch.aimPointerId =
+          event.pointerId;
+        state.touch.aimStartX = point.x;
+        state.touch.aimSteer = 0;
+      }
+    } else if (
+      control === "sprint" &&
+      state.touch.sprintPointerId === null
+    ) {
+      state.touch.sprintPointerId =
+        event.pointerId;
+    } else if (
+      control === "crouch" &&
+      state.touch.crouchPointerId === null
+    ) {
+      state.touch.crouchPointerId =
+        event.pointerId;
+    } else if (
+      control === "focus" &&
+      state.touch.focusPointerId === null
+    ) {
+      state.touch.focusPointerId =
+        event.pointerId;
+    }
+  }
+
+  function handleTouchPointerMove(
+    event,
+    point,
+  ) {
+    event.preventDefault();
+    state.inputMethod = "touch";
+    if (
+      event.pointerId ===
+      state.touch.movePointerId
+    ) {
+      updateTouchMovement(point);
+    }
+    if (
+      event.pointerId ===
+      state.touch.aimPointerId
+    ) {
+      state.touch.aimSteer = clamp(
+        (
+          point.x -
+          state.touch.aimStartX
+        ) / 64,
+        -1,
+        1,
+      );
+    }
+  }
+
+  function releaseTouchPointer(
+    event,
+    cancelled = false,
+  ) {
+    if (event.pointerType !== "touch") {
+      return;
+    }
+    event.preventDefault();
+    if (
+      event.pointerId ===
+      state.touch.movePointerId
+    ) {
+      state.touch.movePointerId = null;
+      state.touch.moveX = 0;
+      state.touch.moveY = 0;
+    }
+    if (
+      event.pointerId ===
+      state.touch.aimPointerId
+    ) {
+      if (
+        state.mode === "first_hole" &&
+        state.hole.ballAim.active &&
+        state.hole.ballAim.source ===
+          "touch"
+      ) {
+        if (cancelled) {
+          cancelGolfBallAim(false);
+        } else {
+          commitGolfBallAim();
+        }
+      }
+      state.touch.aimPointerId = null;
+      state.touch.aimStartX = 0;
+      state.touch.aimSteer = 0;
+    }
+    if (
+      event.pointerId ===
+      state.touch.sprintPointerId
+    ) {
+      state.touch.sprintPointerId = null;
+    }
+    if (
+      event.pointerId ===
+      state.touch.crouchPointerId
+    ) {
+      state.touch.crouchPointerId = null;
+    }
+    if (
+      event.pointerId ===
+      state.touch.focusPointerId
+    ) {
+      state.touch.focusPointerId = null;
+    }
+    try {
+      canvas.releasePointerCapture?.(
+        event.pointerId,
+      );
+    } catch {
+      // The browser may have released a cancelled contact already.
+    }
+  }
+
   function handlePointerDown(event) {
     const point = canvasPoint(event);
-    state.inputMethod = "keyboard";
+    const touchPointer =
+      event.pointerType === "touch";
+    if (
+      !touchPointer &&
+      state.inputMethod === "touch"
+    ) {
+      clearTouchInputs(true);
+    }
+    state.inputMethod = touchPointer
+      ? "touch"
+      : "keyboard";
+    if (touchPointer) {
+      state.touch.seen = true;
+      event.preventDefault();
+    }
     canvas.focus();
     if (state.mode === "gate") {
       startIntro();
@@ -9790,7 +10423,12 @@
         activatePause();
       }
     } else if (state.mode === "first_hole") {
-      if (state.hole.tutorialVisible) {
+      if (touchPointer) {
+        handleTouchPointerDown(
+          event,
+          point,
+        );
+      } else if (state.hole.tutorialVisible) {
         dismissHoleTutorial(false);
       } else if (
         point.x >= WIDTH - 132 &&
@@ -9808,12 +10446,26 @@
 
   function handlePointerMove(event) {
     if (
+      event.pointerType === "touch"
+    ) {
+      if (state.mode === "first_hole") {
+        handleTouchPointerMove(
+          event,
+          canvasPoint(event),
+        );
+      }
+      return;
+    }
+    if (
       state.mode !== "menu" &&
       state.mode !== "claim" &&
       state.mode !== "paused" &&
       state.mode !== "settings"
     ) {
       return;
+    }
+    if (state.inputMethod === "touch") {
+      clearTouchInputs(true);
     }
     state.inputMethod = "keyboard";
     if (state.mode === "settings") {
@@ -10069,6 +10721,11 @@
     state.gamepad.focus = buttonDown(6);
     state.gamepad.sprint = buttonDown(7) || buttonDown(5);
     if (meaningfulInput) {
+      if (
+        state.inputMethod === "touch"
+      ) {
+        clearTouchInputs(true);
+      }
       state.inputMethod = "gamepad";
     }
 
@@ -10154,6 +10811,9 @@
   }
 
   window.addEventListener("keydown", (event) => {
+    if (state.inputMethod === "touch") {
+      clearTouchInputs(true);
+    }
     state.inputMethod = "keyboard";
     state.keys.add(event.code);
     if (event.code === "KeyF") {
@@ -10301,6 +10961,16 @@
 
   canvas.addEventListener("pointerdown", handlePointerDown);
   canvas.addEventListener("pointermove", handlePointerMove);
+  canvas.addEventListener(
+    "pointerup",
+    (event) =>
+      releaseTouchPointer(event, false),
+  );
+  canvas.addEventListener(
+    "pointercancel",
+    (event) =>
+      releaseTouchPointer(event, true),
+  );
 
   window.render_game_to_text = () => JSON.stringify({
     coordinateSystem: "Canvas origin is top-left; +x points right; +y points down; canvas is 1280x720.",
@@ -10430,6 +11100,42 @@
       crouchHeld: crouchHeld(),
       sprintHeld: sprintHeld(),
       focusHeld: focusHeld(),
+      touch: {
+        seen: state.touch.seen,
+        controlsVisible:
+          state.inputMethod ===
+            "touch" &&
+          state.mode === "first_hole" &&
+          !state.hole.tutorialVisible,
+        movement: {
+          x: Number(
+            state.touch.moveX.toFixed(2),
+          ),
+          y: Number(
+            state.touch.moveY.toFixed(2),
+          ),
+        },
+        aimSteer: Number(
+          state.touch.aimSteer.toFixed(2),
+        ),
+        held: {
+          move:
+            state.touch.movePointerId !==
+            null,
+          aim:
+            state.touch.aimPointerId !==
+            null,
+          sprint:
+            state.touch.sprintPointerId !==
+            null,
+          crouch:
+            state.touch.crouchPointerId !==
+            null,
+          focus:
+            state.touch.focusPointerId !==
+            null,
+        },
+      },
     },
     audio: {
       initialized: Boolean(audioContext),
@@ -11037,6 +11743,13 @@
         menu: "D-pad selects; A confirms; RB toggles Overtime Audit after mastery; B returns",
         firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, secures a change request, or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
+      },
+      touch: {
+        gate: "Tap to begin",
+        intro: "Tap to skip",
+        menu: "Tap menu items directly; tap the Overtime card after mastery",
+        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact or reclaim a ball; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        pause: "Tap a menu item directly",
       },
     },
   });
