@@ -21,6 +21,7 @@ The browser build includes:
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
+- Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - An adaptive HUD that recedes after onboarding and can be recalled with H or Y.

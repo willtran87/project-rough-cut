@@ -354,3 +354,25 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
 - Consider a second terrain reaction—bunker disturbance or recoverable divots—after the new risk-route pacing has been playtested.
+
+## Disturbed Bunker Sand Risk/Reward Pass — July 29, 2026
+
+- Added three permanent, perspective-projected bunker hazards at the west tee, lower course, and cart lane, each with authored sand lips, rake lines, granular texture, map regions, and distinct world identity.
+- Made bunker traversal an explicit tradeoff: the player moves at 72% speed and creates conspicuously loud, stronger tracks that last 1.35× longer on both rough and short turf.
+- Slowed Joe's mower to 76% speed while it churns through sand, creating a short tactical escape window without turning passive patrol crossings into free rewards.
+- Added a +175 Bunker Bait bonus per successful mower entry, capped at two entries and included before the Overtime 1.30× premium.
+- Added terrain-sensitive sand footsteps, entry and mower-churn cues, grain bursts, sand-colored tracks, active-zone highlights, Joe state labels, and interruption-safe tactic banners.
+- Taught the mechanic in the survival briefing, How to Survive panel, compact/expanded HUD, scorecard, course map, and Listening Focus.
+- Extended `render_game_to_text` with all bunker geometry, nearest and active sand zones, movement multipliers, player entries and exposure time, sand-track totals, Joe trap entries and duration, and scoring rules.
+- Verified all three bunkers are reachable through legitimate movement lanes and that 90 seconds of passive Joe patrol produces no free Bunker Bait credit.
+- Measured one second of player movement at approximately 25 course meters on fairway and 17 in sand, matching the 0.72 movement multiplier.
+- Completed a normal shed escape with two bunker baits for a 5,863 B score and a separate Overtime shed escape for a 7,409 S score; both scorecards reported the correct +350 bonus and Overtime treatment.
+- Revalidated the complete Standard Review drainage route after integration, including sprinkler activation, two aimed chips, obstacle navigation, and an A-grade escape with no browser errors.
+- Verified pause freezes sand time and evidence, restart clears every bunker counter, capture still records correctly, and the tactic works in both normal and Overtime play.
+- Re-ran the exact project Playwright client and visually inspected the final bunker presentation at 800×600, 1280×720, and 2560×1440 with no overflow or console/page errors.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
+- Evaluate a second optional contract or rival score target only after bunker-bait telemetry confirms the new risk/reward route remains understandable under chase pressure.
