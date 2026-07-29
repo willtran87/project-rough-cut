@@ -143,6 +143,8 @@
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
   const MAX_PLAYER_TRACKS = 72;
+  const COURSE_ECHO_SAMPLE_SECONDS = 0.4;
+  const MAX_COURSE_ECHO_SAMPLES = 260;
   const SPRINKLER_SOAK_SECONDS = 24;
   const WET_MOWER_SPEED_MULTIPLIER = 0.68;
   const SAND_PLAYER_SPEED_MULTIPLIER = 0.72;
@@ -512,6 +514,63 @@
     }
   }
 
+  function validCourseEchoPath(path) {
+    if (!Array.isArray(path)) {
+      return [];
+    }
+    const samples = [];
+    let previousTime = -1;
+    let previousDistance = -1;
+    for (
+      let index = 0;
+      index < path.length &&
+      samples.length < MAX_COURSE_ECHO_SAMPLES;
+      index += 1
+    ) {
+      const sample = path[index];
+      if (
+        !sample ||
+        !Number.isFinite(sample.t) ||
+        !Number.isFinite(sample.x) ||
+        !Number.isFinite(sample.y) ||
+        !Number.isFinite(sample.d)
+      ) {
+        continue;
+      }
+      const time = Math.max(0, sample.t);
+      const distance = Math.max(0, sample.d);
+      if (
+        time < previousTime ||
+        distance < previousDistance
+      ) {
+        continue;
+      }
+      samples.push({
+        t: Number(time.toFixed(2)),
+        x: Number(
+          clamp(
+            sample.x,
+            -COURSE_MAX_X,
+            COURSE_MAX_X,
+          ).toFixed(2),
+        ),
+        y: Number(
+          clamp(
+            sample.y,
+            COURSE_MIN_Y,
+            COURSE_LENGTH,
+          ).toFixed(2),
+        ),
+        d: Number(distance.toFixed(2)),
+      });
+      previousTime = time;
+      previousDistance = distance;
+    }
+    return samples.length >= 2
+      ? samples
+      : [];
+  }
+
   function validCareerRecord(record) {
     if (
       !record ||
@@ -521,11 +580,21 @@
     ) {
       return null;
     }
+    const variantId = RUN_VARIANTS.some(
+      (variant) => variant.id === record.variantId,
+    )
+      ? record.variantId
+      : null;
     return {
       score: Math.max(0, Math.round(record.score)),
       timeSeconds: Math.max(0, record.timeSeconds),
       grade: record.grade.slice(0, 1),
       route: record.route === "drain" ? "drain" : "shed",
+      variantId,
+      overtime: record.overtime === true,
+      ghostPath: variantId
+        ? validCourseEchoPath(record.ghostPath)
+        : [],
     };
   }
 
@@ -736,6 +805,10 @@
       moveHintTimer: 0,
       controlHintTimer: 12,
       travelDistance: 0,
+      courseEchoRecord: null,
+      courseEchoSamples: [
+        { t: 0, x: 0, y: 0, d: 0 },
+      ],
       blockedTimer: 0,
       blockedObstacle: null,
       blockedDirection: null,
@@ -931,6 +1004,182 @@
     return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
   }
 
+  function compatibleCourseEchoRecord(
+    variantId = activeRunVariant().id,
+    overtime = state.hole?.overtime === true,
+  ) {
+    const records = overtime
+      ? [state.career.overtimeBest]
+      : [
+          state.career.routes.shed,
+          state.career.routes.drain,
+        ];
+    const compatible = records.filter(
+      (record) =>
+        record &&
+        record.variantId === variantId &&
+        record.overtime === overtime &&
+        Array.isArray(record.ghostPath) &&
+        record.ghostPath.length >= 2,
+    );
+    compatible.sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.timeSeconds - b.timeSeconds,
+    );
+    return compatible[0] || null;
+  }
+
+  function courseEchoSampleAt(
+    samples,
+    value,
+    key,
+  ) {
+    if (!samples || samples.length === 0) {
+      return null;
+    }
+    if (value <= samples[0][key]) {
+      return { ...samples[0] };
+    }
+    const last = samples[samples.length - 1];
+    if (value >= last[key]) {
+      return { ...last };
+    }
+    let low = 0;
+    let high = samples.length - 1;
+    while (high - low > 1) {
+      const middle = Math.floor((low + high) * 0.5);
+      if (samples[middle][key] <= value) {
+        low = middle;
+      } else {
+        high = middle;
+      }
+    }
+    const before = samples[low];
+    const after = samples[high];
+    const span = after[key] - before[key];
+    const amount =
+      span > 0
+        ? clamp((value - before[key]) / span, 0, 1)
+        : 0;
+    return {
+      t: lerp(before.t, after.t, amount),
+      x: lerp(before.x, after.x, amount),
+      y: lerp(before.y, after.y, amount),
+      d: lerp(before.d, after.d, amount),
+    };
+  }
+
+  function currentCourseEcho() {
+    const record = state.hole?.courseEchoRecord;
+    if (
+      !record ||
+      !Array.isArray(record.ghostPath) ||
+      record.ghostPath.length < 2
+    ) {
+      return null;
+    }
+    const position = courseEchoSampleAt(
+      record.ghostPath,
+      state.hole.elapsed,
+      "t",
+    );
+    const paceSample = courseEchoSampleAt(
+      record.ghostPath,
+      state.hole.travelDistance,
+      "d",
+    );
+    const paceDelta =
+      paceSample &&
+      state.hole.elapsed > 0.75
+        ? state.hole.elapsed - paceSample.t
+        : 0;
+    return {
+      record,
+      position,
+      paceDelta,
+      ahead: paceDelta <= 0,
+      finished:
+        state.hole.elapsed >=
+        record.timeSeconds,
+    };
+  }
+
+  function courseEchoPaceLabel(echo) {
+    if (!echo) {
+      return "";
+    }
+    if (Math.abs(echo.paceDelta) < 0.15) {
+      return "ECHO  EVEN";
+    }
+    return `ECHO  ${Math.abs(echo.paceDelta).toFixed(1)}s ${echo.ahead ? "AHEAD" : "BEHIND"}`;
+  }
+
+  function addCourseEchoSample(force = false) {
+    const hole = state.hole;
+    if (!hole || !Array.isArray(hole.courseEchoSamples)) {
+      return;
+    }
+    const last =
+      hole.courseEchoSamples[
+        hole.courseEchoSamples.length - 1
+      ];
+    if (
+      !force &&
+      last &&
+      hole.elapsed - last.t <
+        COURSE_ECHO_SAMPLE_SECONDS
+    ) {
+      return;
+    }
+    const sample = {
+      t: Number(hole.elapsed.toFixed(2)),
+      x: Number(state.player.x.toFixed(2)),
+      y: Number(state.player.y.toFixed(2)),
+      d: Number(
+        hole.travelDistance.toFixed(2),
+      ),
+    };
+    if (
+      force &&
+      last &&
+      Math.abs(sample.t - last.t) < 0.01
+    ) {
+      hole.courseEchoSamples[
+        hole.courseEchoSamples.length - 1
+      ] = sample;
+      return;
+    }
+    if (
+      hole.courseEchoSamples.length <
+      MAX_COURSE_ECHO_SAMPLES
+    ) {
+      hole.courseEchoSamples.push(sample);
+    } else if (force) {
+      hole.courseEchoSamples[
+        hole.courseEchoSamples.length - 1
+      ] = sample;
+    }
+  }
+
+  function careerRecordSummary(record) {
+    if (!record) {
+      return null;
+    }
+    return {
+      score: record.score,
+      timeSeconds: Number(
+        record.timeSeconds.toFixed(2),
+      ),
+      grade: record.grade,
+      route: record.route,
+      variantId: record.variantId,
+      overtime: record.overtime,
+      echoSamples:
+        record.ghostPath?.length || 0,
+    };
+  }
+
   function calculateRunResult(route) {
     const hole = state.hole;
     const variant = activeRunVariant();
@@ -1042,6 +1291,10 @@
       previousBestScore: null,
       masteryUnlocked: false,
       newChangeRequestFiled: false,
+      echoRoute: null,
+      echoScore: null,
+      echoTimeDelta: null,
+      echoOvertaken: false,
     };
   }
 
@@ -1063,7 +1316,24 @@
   }
 
   function recordVictory(route) {
+    addCourseEchoSample(true);
     const result = calculateRunResult(route);
+    const echoRecord =
+      state.hole.courseEchoRecord;
+    if (echoRecord) {
+      result.echoRoute = echoRecord.route;
+      result.echoScore = echoRecord.score;
+      result.echoTimeDelta =
+        result.timeSeconds -
+        echoRecord.timeSeconds;
+      result.echoOvertaken =
+        result.score > echoRecord.score ||
+        (
+          result.score === echoRecord.score &&
+          result.timeSeconds <
+            echoRecord.timeSeconds
+        );
+    }
     const masteredBefore =
       overtimeUnlocked();
     const previous = result.overtime
@@ -1109,6 +1379,12 @@
         score: result.score,
         grade: result.grade,
         timeSeconds: result.timeSeconds,
+        variantId: result.variantId,
+        overtime: true,
+        ghostPath:
+          validCourseEchoPath(
+            state.hole.courseEchoSamples,
+          ),
       };
     } else if (result.newBest) {
       state.career.routes[route] = {
@@ -1116,6 +1392,12 @@
         score: result.score,
         grade: result.grade,
         timeSeconds: result.timeSeconds,
+        variantId: result.variantId,
+        overtime: false,
+        ghostPath:
+          validCourseEchoPath(
+            state.hole.courseEchoSamples,
+          ),
       };
     }
     saveCareer();
@@ -2012,6 +2294,11 @@
     const overtime =
       state.overtimeSelected &&
       overtimeUnlocked();
+    const courseEchoRecord =
+      compatibleCourseEchoRecord(
+        variant.id,
+        overtime,
+      );
     state.player = { x: 0, y: 0, heading: 0 };
     state.shedReached = false;
     state.status = "Objective: escape through the shed or drainage route.";
@@ -2088,6 +2375,10 @@
       moveHintTimer: 0,
       controlHintTimer: 12,
       travelDistance: 0,
+      courseEchoRecord,
+      courseEchoSamples: [
+        { t: 0, x: 0, y: 0, d: 0 },
+      ],
       blockedTimer: 0,
       blockedObstacle: null,
       blockedDirection: null,
@@ -4887,6 +5178,184 @@
     }
   }
 
+  function drawCourseEchoTrail() {
+    const echo = currentCourseEcho();
+    if (!echo?.position) {
+      return;
+    }
+    const samples =
+      echo.record.ghostPath;
+    const trailStart =
+      Math.max(0, state.hole.elapsed - 10);
+    const visibleTrail = samples
+      .filter(
+        (sample) =>
+          sample.t >= trailStart &&
+          sample.t <= state.hole.elapsed,
+      )
+      .map((sample) => ({
+        sample,
+        point: worldToScreen(
+          sample.x,
+          sample.y,
+        ),
+      }))
+      .filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -100 &&
+          entry.point.x < WIDTH + 100,
+      );
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    for (
+      let index = 0;
+      index < visibleTrail.length;
+      index += 1
+    ) {
+      const entry = visibleTrail[index];
+      const next =
+        visibleTrail[
+          Math.min(
+            visibleTrail.length - 1,
+            index + 1,
+          )
+        ];
+      const age =
+        state.hole.elapsed -
+        entry.sample.t;
+      const life =
+        clamp(1 - age / 10, 0, 1);
+      const angle = Math.atan2(
+        next.point.y - entry.point.y,
+        next.point.x - entry.point.x,
+      );
+      const size = clamp(
+        entry.point.scale * 5.5,
+        1.8,
+        8,
+      );
+      ctx.save();
+      ctx.translate(
+        entry.point.x,
+        entry.point.y,
+      );
+      ctx.rotate(angle);
+      ctx.globalAlpha =
+        life *
+        (state.hole.focus ? 0.9 : 0.58);
+      ctx.fillStyle =
+        index % 2 === 0
+          ? "#79d6bf"
+          : "#b1ead7";
+      ctx.fillRect(
+        -size * 0.55,
+        -size * 0.25,
+        size,
+        Math.max(1, size * 0.34),
+      );
+      ctx.fillRect(
+        size * 0.12,
+        size * 0.2,
+        size * 0.72,
+        Math.max(1, size * 0.28),
+      );
+      ctx.restore();
+    }
+    const point = worldToScreen(
+      echo.position.x,
+      echo.position.y,
+    );
+    if (
+      point.visible &&
+      point.x > -120 &&
+      point.x < WIDTH + 120
+    ) {
+      const pulse =
+        state.reducedMotion
+          ? 0
+          : Math.sin(state.time * 5.2) * 4;
+      const radius = clamp(
+        9 * point.scale + pulse,
+        5,
+        24,
+      );
+      ctx.globalAlpha =
+        state.hole.focus ? 0.94 : 0.72;
+      ctx.strokeStyle =
+        echo.ahead
+          ? "#8ce5cb"
+          : "#e1b86c";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(
+        point.x,
+        point.y - radius * 0.25,
+        radius,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha =
+        state.hole.focus ? 0.3 : 0.18;
+      ctx.fillStyle =
+        echo.ahead
+          ? "#77d7bd"
+          : "#d4a65f";
+      ctx.beginPath();
+      ctx.arc(
+        point.x,
+        point.y - radius * 0.25,
+        radius * 0.7,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.globalAlpha =
+        state.hole.focus ? 0.96 : 0.8;
+      polygon([
+        [
+          point.x,
+          point.y - radius * 0.9,
+        ],
+        [
+          point.x + radius * 0.42,
+          point.y - radius * 0.25,
+        ],
+        [
+          point.x,
+          point.y + radius * 0.4,
+        ],
+        [
+          point.x - radius * 0.42,
+          point.y - radius * 0.25,
+        ],
+      ]);
+      if (
+        state.hole.focus ||
+        worldDistance(
+          state.player,
+          echo.position,
+        ) < 55
+      ) {
+        drawText(
+          `COURSE ECHO // ${echo.record.route.toUpperCase()}`,
+          point.x,
+          point.y - radius - 10,
+          10,
+          echo.ahead
+            ? "#a5ead7"
+            : "#e2bd76",
+          "center",
+          true,
+        );
+      }
+    }
+    ctx.restore();
+  }
+
   function drawTurfMarks() {
     const marks = state.hole.turfMarks
       .map((mark) => ({
@@ -5843,6 +6312,8 @@
 
   function drawCourseMiniMap() {
     const panel = { x: WIDTH - 274, y: 176, width: 234, height: 238 };
+    const courseEcho =
+      currentCourseEcho();
     const mapTop = panel.y + 41;
     const mapBottom = panel.y + panel.height - 18;
     const mapPoint = (worldX, worldY) => ({
@@ -5871,6 +6342,20 @@
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#566a45", 2);
     drawText("COURSE MAP", panel.x + 14, panel.y + 23, 13, "#dce4ce", "left", true);
+    if (courseEcho) {
+      drawText(
+        courseEchoPaceLabel(courseEcho)
+          .replace("ECHO  ", ""),
+        panel.x + panel.width - 14,
+        panel.y + 23,
+        8,
+        courseEcho.ahead
+          ? "#91dfcc"
+          : "#d8b875",
+        "right",
+        true,
+      );
+    }
 
     ctx.fillStyle = "#0a1b10";
     ctx.fillRect(panel.x + 13, panel.y + 33, panel.width - 26, panel.height - 47);
@@ -5988,7 +6473,7 @@
       drawText(
         `WATER ${Math.ceil(state.hole.sprinklerSoakTimer)}s`,
         panel.x + panel.width - 14,
-        panel.y + 23,
+        mapTop + 13,
         10,
         "#8fd4ca",
         "right",
@@ -6022,6 +6507,60 @@
         3,
         2,
       );
+    }
+    if (courseEcho) {
+      const echoSamples =
+        courseEcho.record.ghostPath.filter(
+          (sample) =>
+            sample.t <=
+            state.hole.elapsed,
+        );
+      if (echoSamples.length > 1) {
+        ctx.strokeStyle =
+          courseEcho.ahead
+            ? "rgba(121,214,191,0.72)"
+            : "rgba(216,170,98,0.72)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (
+          let index = 0;
+          index < echoSamples.length;
+          index += 1
+        ) {
+          const point = mapPoint(
+            echoSamples[index].x,
+            echoSamples[index].y,
+          );
+          if (index === 0) {
+            ctx.moveTo(point.x, point.y);
+          } else {
+            ctx.lineTo(point.x, point.y);
+          }
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      const echoPoint = mapPoint(
+        courseEcho.position.x,
+        courseEcho.position.y,
+      );
+      ctx.fillStyle =
+        courseEcho.ahead
+          ? "#85dec7"
+          : "#dfb368";
+      ctx.beginPath();
+      ctx.arc(
+        echoPoint.x,
+        echoPoint.y,
+        4,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle = "#e8f1df";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
     ctx.fillStyle = "#d0a95b";
     ctx.fillRect(shedPoint.x - 6, shedPoint.y - 5, 12, 10);
@@ -7402,6 +7941,17 @@
       true,
     );
     ctx.globalAlpha = 1;
+    if (state.hole.courseEchoRecord) {
+      drawText(
+        `COURSE ECHO READY  //  ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD  //  CHASE THE SPECTRAL TRAIL`,
+        WIDTH * 0.5,
+        650,
+        10,
+        "#83d9c1",
+        "center",
+        true,
+      );
+    }
   }
 
   function drawKeyCap(label, x, y, width) {
@@ -8394,6 +8944,7 @@
     drawBunkerSand();
     drawWetTurf();
     drawTurfMarks();
+    drawCourseEchoTrail();
     drawRecoverableGolfBalls();
     drawChangeRequest();
 
@@ -8731,7 +9282,9 @@
     const statRows = [
       [
         "TIME ON COURSE",
-        formatRunTime(result.timeSeconds),
+        result.echoTimeDelta !== null
+          ? `${formatRunTime(result.timeSeconds)}  •  ${Math.abs(result.echoTimeDelta).toFixed(1)}s ${result.echoTimeDelta <= 0 ? "AHEAD" : "BEHIND"}`
+          : formatRunTime(result.timeSeconds),
       ],
       [
         "ATTENTION AVOIDED",
@@ -8812,6 +9365,8 @@
         ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
         : result.newChangeRequestFiled
           ? `${activeChangeRequest().code} FILED. CHANGE REQUESTS ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} SECURED.`
+        : result.echoOvertaken
+          ? `COURSE ECHO OVERTAKEN. ${result.route.toUpperCase()} PAPERWORK NOW HAUNTS THE NEXT ROUND.`
         : result.newBest
           ? result.overtime
             ? "OVERTIME RECORD FILED. JOE REQUESTED A RETROSPECTIVE."
@@ -8822,6 +9377,7 @@
       13,
       result.masteryUnlocked ||
         result.newChangeRequestFiled ||
+        result.echoOvertaken ||
         result.newBest
         ? "#f0c66b"
         : "#d69a5c",
@@ -9116,6 +9672,7 @@
           }
         }
       }
+      addCourseEchoSample();
 
       const zoneIndex = COURSE_ZONES.indexOf(courseZoneAt(state.player.y));
       if (zoneIndex !== hole.zoneIndex) {
@@ -10545,6 +11102,12 @@
         : "Choose a route: key to shed, or sprinkler to drain.",
       3.6,
     );
+    if (state.hole.courseEchoRecord) {
+      state.hole.stateBanner =
+        `COURSE ECHO // ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD`;
+      state.hole.stateBannerTimer = 3.2;
+      state.hole.stateBannerLockTimer = 1.2;
+    }
     playUiTone(360, 0.09, 0.03);
   }
 
@@ -11074,7 +11637,9 @@
       overtimeCaptures:
         state.career.overtimeCaptures,
       overtimeBest:
-        state.career.overtimeBest,
+        careerRecordSummary(
+          state.career.overtimeBest,
+        ),
       nightOrdersCleared:
         state.career.completedVariants.length,
       completedVariants:
@@ -11083,10 +11648,16 @@
         state.career.filedChangeRequests.length,
       filedChangeRequests:
         state.career.filedChangeRequests.slice(),
-      bestOverall: bestCareerRecord(),
+      bestOverall: careerRecordSummary(
+        bestCareerRecord(),
+      ),
       routes: {
-        shed: state.career.routes.shed,
-        drain: state.career.routes.drain,
+        shed: careerRecordSummary(
+          state.career.routes.shed,
+        ),
+        drain: careerRecordSummary(
+          state.career.routes.drain,
+        ),
       },
     },
     input: {
@@ -11275,6 +11846,53 @@
           controlHintSeconds: Number(
             state.hole.controlHintTimer.toFixed(2),
           ),
+          courseEcho:
+            currentCourseEcho()
+              ? {
+                  route:
+                    currentCourseEcho().record.route,
+                  variantId:
+                    currentCourseEcho().record.variantId,
+                  score:
+                    currentCourseEcho().record.score,
+                  recordTimeSeconds: Number(
+                    currentCourseEcho().record.timeSeconds.toFixed(
+                      2,
+                    ),
+                  ),
+                  savedSamples:
+                    currentCourseEcho().record.ghostPath.length,
+                  recordedSamples:
+                    state.hole.courseEchoSamples.length,
+                  position: {
+                    x: Number(
+                      currentCourseEcho().position.x.toFixed(
+                        2,
+                      ),
+                    ),
+                    y: Number(
+                      currentCourseEcho().position.y.toFixed(
+                        2,
+                      ),
+                    ),
+                  },
+                  paceDeltaSeconds: Number(
+                    currentCourseEcho().paceDelta.toFixed(
+                      2,
+                    ),
+                  ),
+                  pace:
+                    currentCourseEcho().ahead
+                      ? "ahead"
+                      : "behind",
+                  finished:
+                    currentCourseEcho().finished,
+                }
+              : {
+                  available: false,
+                  recordedSamples:
+                    state.hole.courseEchoSamples.length,
+                },
           performance: {
             elapsedSeconds: Number(
               state.hole.elapsed.toFixed(2),

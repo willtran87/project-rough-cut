@@ -427,3 +427,26 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
 - Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
+
+## Persistent Course Echo Rival Pass — July 29, 2026
+
+- Added a bounded personal-best path recorder that samples elapsed time, world position, and cumulative distance every 0.4 seconds without changing movement, detection, or scoring.
+- Attached the recorded path, Night Order, route, and normal/Overtime contract identity only when a new score record is legitimately filed.
+- Added strict save validation, coordinate clamping, monotonic time/distance checks, and a 260-sample cap; older career saves continue to load and simply begin producing Echo data after the next record.
+- Added compatible-rival selection that refuses to replay a path from a different Night Order or contract type and chooses the strongest compatible route record when both exits have data.
+- Added time interpolation for the moving Echo and distance interpolation for the live pace comparison, so backtracking and optional-objective detours do not masquerade as forward progress.
+- Added spectral paired tracks, a pulsing in-world Echo marker, a labeled near-field/focus read, a mini-map route trace, and a moving mini-map rival point.
+- Added concise ahead/even/behind pacing in the map header, a one-time diegetic Course Echo banner, and repeat-run onboarding in the survival briefing.
+- Added scorecard comparison copy and a Course Echo overtaken result when a compatible rival is beaten.
+- Kept `render_game_to_text` concise by exposing record summaries and a live Echo diagnostic instead of dumping the full saved path.
+- Verified a compatible Standard Review Echo loads with 61 saved samples, interpolates correctly, records a fresh trace, and produces no console or page errors.
+- Verified legacy records without path metadata remain playable, a Standard Review path is suppressed during Eastern Exception, and no synthetic rival appears on a first-run profile.
+- Verified pause froze elapsed time and the recording at 1.10 seconds / three samples, while Restart returned the active Night Order to one fresh sample and retained its saved Echo.
+- Re-ran the exact project Playwright client against a clean career profile and inspected the gameplay screenshot plus complete text diagnostics; movement and the no-Echo first-run state remained correct.
+- Visually inspected active Echo onboarding, world marker, spectral trace, map route, pace read, and responsive presentation at 800×600, 1280×720, and 2560×1440 with no document overflow.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
+- Add a compact post-mastery reward for filing all three Change Requests and consider a cosmetic Course Echo reward only after repeat-run pacing is playtested.
