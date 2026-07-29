@@ -115,6 +115,9 @@
   const BALL_MAX_RANGE = 96;
   const BALL_CHARGE_SECONDS = 0.8;
   const BALL_MAX_AIM_ANGLE = 1.12;
+  const OVERTIME_SCORE_MULTIPLIER = 1.3;
+  const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
+  const OVERTIME_DETECTION_MULTIPLIER = 1.22;
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
@@ -393,6 +396,26 @@
               ),
             ]
           : [],
+        overtimeEnabled:
+          parsed.overtimeEnabled === true,
+        overtimeEscapes: Number.isFinite(
+          parsed.overtimeEscapes,
+        )
+          ? Math.max(
+              0,
+              Math.round(parsed.overtimeEscapes),
+            )
+          : 0,
+        overtimeCaptures: Number.isFinite(
+          parsed.overtimeCaptures,
+        )
+          ? Math.max(
+              0,
+              Math.round(parsed.overtimeCaptures),
+            )
+          : 0,
+        overtimeBest:
+          validCareerRecord(parsed.overtimeBest),
         routes: {
           shed: validCareerRecord(parsed.routes?.shed),
           drain: validCareerRecord(parsed.routes?.drain),
@@ -405,6 +428,10 @@
         escapes: 0,
         captures: 0,
         completedVariants: [],
+        overtimeEnabled: false,
+        overtimeEscapes: 0,
+        overtimeCaptures: 0,
+        overtimeBest: null,
         routes: { shed: null, drain: null },
       };
     }
@@ -426,6 +453,10 @@
     settingsIndex: 0,
     settingsReturnMode: "menu",
     career: savedCareer,
+    overtimeSelected:
+      savedCareer.overtimeEnabled &&
+      savedCareer.completedVariants.length ===
+        RUN_VARIANTS.length,
     status: "Every blade is in scope.",
     manualTime: false,
     transitionAlpha: 0,
@@ -446,6 +477,7 @@
     hole: {
       variantIndex: 0,
       variantId: RUN_VARIANTS[0].id,
+      overtime: false,
       phase: "find_key",
       keyCollected: false,
       golfBalls: 4,
@@ -614,6 +646,35 @@
     return records[0];
   }
 
+  function overtimeUnlocked() {
+    return (
+      state.career.completedVariants.length >=
+      RUN_VARIANTS.length
+    );
+  }
+
+  function toggleOvertimeAudit() {
+    if (!overtimeUnlocked()) {
+      state.status =
+        `Clear all ${RUN_VARIANTS.length} Night Orders to authorize Overtime Audit.`;
+      playUiTone(116, 0.08, 0.02);
+      return;
+    }
+    state.overtimeSelected =
+      !state.overtimeSelected;
+    state.career.overtimeEnabled =
+      state.overtimeSelected;
+    state.status = state.overtimeSelected
+      ? "Overtime Audit armed. Joe has accepted the escalation."
+      : "Overtime Audit stood down.";
+    saveCareer();
+    playUiTone(
+      state.overtimeSelected ? 365 : 190,
+      0.09,
+      0.03,
+    );
+  }
+
   function gradeForScore(score) {
     if (score >= 6700) {
       return "S";
@@ -674,7 +735,7 @@
       Math.min(3, hole.chaseBreaks) * 150 +
       Math.min(3, hole.closeCalls) * 250;
     const routeBonus = 250;
-    const score =
+    const baseScore =
       3000 +
       timeBonus +
       stealthBonus +
@@ -682,6 +743,14 @@
       composureBonus +
       recoveryBonus +
       routeBonus;
+    const overtimeBonus = hole.overtime
+      ? Math.round(
+          baseScore *
+            (OVERTIME_SCORE_MULTIPLIER - 1),
+        )
+      : 0;
+    const score =
+      baseScore + overtimeBonus;
     const grade = gradeForScore(score);
     const gradeLabels = {
       S: "UNMANAGEABLE EXPOSURE",
@@ -695,6 +764,10 @@
       variantId: variant.id,
       variantName: variant.name,
       variantNumber: variant.number,
+      overtime: hole.overtime,
+      scoreMultiplier: hole.overtime
+        ? OVERTIME_SCORE_MULTIPLIER
+        : 1,
       score,
       grade,
       gradeLabel: gradeLabels[grade],
@@ -719,9 +792,11 @@
         composure: composureBonus,
         recovery: recoveryBonus,
         route: routeBonus,
+        overtime: overtimeBonus,
       },
       newBest: false,
       previousBestScore: null,
+      masteryUnlocked: false,
     };
   }
 
@@ -736,12 +811,19 @@
 
   function recordCapture() {
     state.career.captures += 1;
+    if (state.hole.overtime) {
+      state.career.overtimeCaptures += 1;
+    }
     saveCareer();
   }
 
   function recordVictory(route) {
     const result = calculateRunResult(route);
-    const previous = state.career.routes[route];
+    const masteredBefore =
+      overtimeUnlocked();
+    const previous = result.overtime
+      ? state.career.overtimeBest
+      : state.career.routes[route];
     result.previousBestScore = previous?.score || null;
     result.newBest =
       !previous ||
@@ -749,7 +831,9 @@
       (result.score === previous.score &&
         result.timeSeconds < previous.timeSeconds);
     state.career.escapes += 1;
-    if (
+    if (result.overtime) {
+      state.career.overtimeEscapes += 1;
+    } else if (
       !state.career.completedVariants.includes(
         result.variantId,
       )
@@ -758,7 +842,20 @@
         result.variantId,
       );
     }
-    if (result.newBest) {
+    result.masteryUnlocked =
+      !masteredBefore &&
+      overtimeUnlocked();
+    if (
+      result.newBest &&
+      result.overtime
+    ) {
+      state.career.overtimeBest = {
+        route,
+        score: result.score,
+        grade: result.grade,
+        timeSeconds: result.timeSeconds,
+      };
+    } else if (result.newBest) {
       state.career.routes[route] = {
         route,
         score: result.score,
@@ -1165,6 +1262,96 @@
       drawText(label, 108, y + 31, 19, selected ? "#ffc16d" : "#dce5ca", "left");
     });
 
+    const overtimeAvailable =
+      overtimeUnlocked();
+    const overtimePanel = {
+      x: 558,
+      y: 510,
+      width: 650,
+      height: 126,
+    };
+    const overtimeActive =
+      overtimeAvailable &&
+      state.overtimeSelected;
+    ctx.fillStyle = overtimeActive
+      ? "rgba(39,12,7,0.93)"
+      : "rgba(3,13,8,0.88)";
+    ctx.fillRect(
+      overtimePanel.x,
+      overtimePanel.y,
+      overtimePanel.width,
+      overtimePanel.height,
+    );
+    strokeRect(
+      overtimePanel.x,
+      overtimePanel.y,
+      overtimePanel.width,
+      overtimePanel.height,
+      overtimeActive
+        ? "#df6c2f"
+        : overtimeAvailable
+          ? "#8b7844"
+          : "#394637",
+      overtimeActive ? 3 : 2,
+    );
+    drawText(
+      overtimeAvailable
+        ? "OVERTIME AUDIT"
+        : "OVERTIME AUDIT // LOCKED",
+      overtimePanel.x + 24,
+      overtimePanel.y + 31,
+      18,
+      overtimeActive
+        ? "#ffb467"
+        : overtimeAvailable
+          ? "#dcc47b"
+          : "#738071",
+      "left",
+      true,
+    );
+    drawText(
+      overtimeAvailable
+        ? inputCopy(
+            `R — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+            `RB — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+          )
+        : `${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED`,
+      overtimePanel.x + overtimePanel.width - 24,
+      overtimePanel.y + 31,
+      12,
+      overtimeActive ? "#ffcb89" : "#9eaa91",
+      "right",
+      overtimeAvailable,
+    );
+    drawText(
+      overtimeAvailable
+        ? "2 BALLS  •  FASTER JOE  •  STRONGER EVIDENCE  •  SCORE ×1.30"
+        : "MASTER EVERY ORDER TO UNLOCK JOE'S AFTER-HOURS CONTRACT.",
+      overtimePanel.x + 24,
+      overtimePanel.y + 65,
+      13,
+      overtimeActive ? "#e79355" : "#98a391",
+      "left",
+      overtimeActive,
+    );
+    drawText(
+      state.career.overtimeBest
+        ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
+        : overtimeAvailable
+          ? "OVERTIME RECORD  —  UNFILED"
+          : "CLEARANCE REQUIRED // ALL ORDERS",
+      overtimePanel.x + 24,
+      overtimePanel.y + 99,
+      12,
+      state.career.overtimeBest
+        ? gradeColor(
+            state.career.overtimeBest.grade,
+          )
+        : "#70806d",
+      "left",
+      Boolean(state.career.overtimeBest),
+    );
+
     if (state.status.startsWith("COVERAGE DENIED:")) {
       drawText("COVERAGE DENIED:", 91, 622, 13, "#db8041", "left");
       drawText("unauthorized presence in the rough.", 91, 643, 12, "#a7b29e", "left");
@@ -1183,8 +1370,12 @@
     }
     drawText(
       inputCopy(
-        "↑↓ SELECT  •  ENTER CONFIRM  •  F FULLSCREEN",
-        "D-PAD SELECT  •  A CONFIRM",
+        overtimeAvailable
+          ? "↑↓ SELECT  •  ENTER CONFIRM  •  R OVERTIME  •  F FULLSCREEN"
+          : "↑↓ SELECT  •  ENTER CONFIRM  •  F FULLSCREEN",
+        overtimeAvailable
+          ? "D-PAD SELECT  •  A CONFIRM  •  RB OVERTIME"
+          : "D-PAD SELECT  •  A CONFIRM",
       ),
       WIDTH - 32,
       HEIGHT - 25,
@@ -1436,15 +1627,19 @@
       state.career.roundsStarted,
     );
     const variantIndex = RUN_VARIANTS.indexOf(variant);
+    const overtime =
+      state.overtimeSelected &&
+      overtimeUnlocked();
     state.player = { x: 0, y: 0, heading: 0 };
     state.shedReached = false;
     state.status = "Objective: escape through the shed or drainage route.";
     state.hole = {
       variantIndex,
       variantId: variant.id,
+      overtime,
       phase: "find_key",
       keyCollected: false,
-      golfBalls: 4,
+      golfBalls: overtime ? 2 : 4,
       noise: 0,
       joe: {
         x: variant.joeStart.x,
@@ -1483,7 +1678,9 @@
       ballAim: freshBallAimState(),
       ballFlight: null,
       prompt: "",
-      message: "Find the shed key — or open the drain.",
+      message: overtime
+        ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
+        : "Find the shed key — or open the drain.",
       messageTimer: 4,
       elapsed: 0,
       tutorialVisible: true,
@@ -1703,11 +1900,19 @@
     ) {
       return;
     }
-    const strength = hole.crouched
+    const baseStrength = hole.crouched
       ? 0.38
       : sprinting
         ? 1
         : 0.68;
+    const strength = clamp(
+      baseStrength +
+        (hole.overtime ? 0.18 : 0),
+      0,
+      1,
+    );
+    const durationMultiplier =
+      hole.overtime ? 1.18 : 1;
     addTurfMark(
       "track",
       state.player.x,
@@ -1716,7 +1921,9 @@
         heading: state.player.heading,
         strength,
         radius: 3.8 + strength * 2.2,
-        duration: 22 + strength * 18,
+        duration:
+          (22 + strength * 18) *
+          durationMultiplier,
       },
     );
     hole.lastPlayerTrackDistance =
@@ -2416,8 +2623,11 @@
     );
     hole.distraction = { ...target };
     hole.distractionTimer = Math.max(
-      2.25,
-      4.2 - (hole.ballThrowsUsed - 1) * 0.85,
+      hole.overtime ? 1.65 : 2.25,
+      (
+        4.2 -
+        (hole.ballThrowsUsed - 1) * 0.85
+      ) * (hole.overtime ? 0.72 : 1),
     );
     hole.joe.mode = "investigate";
     announceJoeState("investigate");
@@ -2559,12 +2769,29 @@
     const directSound =
       audibleNow &&
       !distractionActive;
-    const detectionGain = visibleNow
-      ? (moving ? 1.9 : 1.18) *
-        lerp(1, 1.55, environment.lightExposure)
-      : directSound
-        ? 0.64 + hole.noise * 0.68
-        : -(environment.hardCover ? 1.55 : 0.82);
+    const detectionGain =
+      (
+        visibleNow
+          ? (moving ? 1.9 : 1.18) *
+            lerp(
+              1,
+              1.55,
+              environment.lightExposure,
+            )
+          : directSound
+            ? 0.64 + hole.noise * 0.68
+            : -(
+                environment.hardCover
+                  ? 1.55
+                  : 0.82
+              )
+      ) *
+      (
+        hole.overtime &&
+        (visibleNow || directSound)
+          ? OVERTIME_DETECTION_MULTIPLIER
+          : 1
+      );
     hole.detection = clamp(
       hole.detection + detectionGain * dt,
       0,
@@ -3074,6 +3301,13 @@
 
   function moveJoeToward(target, speed, dt) {
     const joe = state.hole.joe;
+    const effectiveSpeed =
+      speed *
+      (
+        state.hole.overtime
+          ? OVERTIME_JOE_SPEED_MULTIPLIER
+          : 1
+      );
     const start = { x: joe.x, y: joe.y };
     let tightestObstacle = null;
     let tightestClearance = Infinity;
@@ -3108,7 +3342,7 @@
         Math.hypot(metricX, metricY),
       );
       const escapeStep = Math.min(
-        speed * dt,
+        effectiveSpeed * dt,
         JOE_NAVIGATION_CLEARANCE -
           tightestClearance +
           0.12,
@@ -3241,7 +3475,7 @@
       navigationAngle - targetAngle,
     );
     const stepDistance = Math.min(
-      speed * dt,
+      effectiveSpeed * dt,
       navigationDistance,
     );
     const candidate = {
@@ -4911,6 +5145,7 @@
 
   function drawTutorialBriefing() {
     const variant = activeRunVariant();
+    const overtime = state.hole.overtime;
     ctx.fillStyle = "rgba(0,3,1,0.78)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 164, y: 76, width: 952, height: 568 };
@@ -4919,7 +5154,7 @@
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#d47431", 3);
 
     drawText(
-      `SURVIVAL BRIEFING // NIGHT ORDER ${String(variant.number).padStart(2, "0")}`,
+      `${overtime ? "OVERTIME AUDIT" : "SURVIVAL BRIEFING"} // NIGHT ORDER ${String(variant.number).padStart(2, "0")}`,
       WIDTH * 0.5,
       129,
       32,
@@ -4928,7 +5163,9 @@
       true,
     );
     drawText(
-      `${variant.name} // ${variant.briefing}`,
+      overtime
+        ? `${variant.name} // 2 BALLS • FASTER JOE • STRONGER EVIDENCE • SCORE ×1.30`
+        : `${variant.name} // ${variant.briefing}`,
       WIDTH * 0.5,
       163,
       13,
@@ -4937,7 +5174,9 @@
       true,
     );
     drawText(
-      "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
+      overtime
+        ? "AFTER-HOURS TERMS ARE VOLUNTARY. JOE'S ESCALATION IS NOT."
+        : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
       WIDTH * 0.5,
       184,
       10,
@@ -5235,10 +5474,10 @@
       ctx.fillRect(36, 34, 430, 224);
       strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
       drawText(
-        `HOLE 1 — ${variant.shortName}`,
+        `HOLE 1 — ${variant.shortName}${hole.overtime ? " // OVERTIME" : ""}`,
         62,
         76,
-        29,
+        hole.overtime ? 23 : 29,
         "#efebcd",
         "left",
         true,
@@ -5288,7 +5527,7 @@
         2,
       );
       drawText(
-        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
+        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}${hole.overtime ? "  //  OVERTIME" : ""}`,
         56,
         65,
         16,
@@ -5487,6 +5726,41 @@
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.fillStyle = `rgba(${zone.tint},0.08)`;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    if (state.hole.overtime) {
+      const overtimeGrade =
+        ctx.createLinearGradient(
+          0,
+          0,
+          WIDTH,
+          0,
+        );
+      overtimeGrade.addColorStop(
+        0,
+        "rgba(116,24,10,0.16)",
+      );
+      overtimeGrade.addColorStop(
+        0.28,
+        "rgba(116,24,10,0)",
+      );
+      overtimeGrade.addColorStop(
+        0.72,
+        "rgba(116,24,10,0)",
+      );
+      overtimeGrade.addColorStop(
+        1,
+        "rgba(116,24,10,0.16)",
+      );
+      ctx.fillStyle = overtimeGrade;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.strokeStyle = "rgba(222,91,43,0.42)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        18,
+        18,
+        WIDTH - 36,
+        HEIGHT - 36,
+      );
+    }
 
     drawPerspectiveCourse(progress, walkBob);
     drawTurfMarks();
@@ -5648,6 +5922,9 @@
       state.hole.result ||
       calculateRunResult(state.hole.escapeRoute);
     const resultColor = gradeColor(result.grade);
+    const activeRecord = result.overtime
+      ? state.career.overtimeBest
+      : state.career.routes[result.route];
     const scoreReveal = smoothstep(
       (state.time - 0.12) / 0.78,
     );
@@ -5684,9 +5961,19 @@
     ctx.fillStyle = routeAccent;
     ctx.fillRect(panel.x + 28, panel.y + 28, 84, 3);
     ctx.fillRect(panel.x + panel.width - 112, panel.y + 28, 84, 3);
-    drawText("HOLE 1 SURVIVED", WIDTH * 0.5, 142, 42, "#f0efd3", "center", true);
     drawText(
-      `AFTER-ACTION REVIEW // ORDER ${String(result.variantNumber).padStart(2, "0")} // ${result.variantName}`,
+      result.overtime
+        ? "OVERTIME SURVIVED"
+        : "HOLE 1 SURVIVED",
+      WIDTH * 0.5,
+      142,
+      42,
+      "#f0efd3",
+      "center",
+      true,
+    );
+    drawText(
+      `AFTER-ACTION REVIEW // ${result.overtime ? "OVERTIME // " : ""}ORDER ${String(result.variantNumber).padStart(2, "0")} // ${result.variantName}`,
       WIDTH * 0.5,
       177,
       12,
@@ -5722,8 +6009,10 @@
     );
     drawText(
       result.newBest
-        ? `NEW ${result.route.toUpperCase()} ROUTE RECORD`
-        : `ROUTE BEST  ${state.career.routes[result.route]?.score.toLocaleString() || result.score.toLocaleString()}`,
+        ? result.overtime
+          ? "NEW OVERTIME RECORD"
+          : `NEW ${result.route.toUpperCase()} ROUTE RECORD`
+        : `${result.overtime ? "OVERTIME" : "ROUTE"} BEST  ${activeRecord?.score.toLocaleString() || result.score.toLocaleString()}`,
       365,
       423,
       12,
@@ -5748,6 +6037,17 @@
       "left",
       true,
     );
+    if (result.overtime) {
+      drawText(
+        `INCLUDES +${result.breakdown.overtime.toLocaleString()} OVERTIME PREMIUM`,
+        540,
+        307,
+        10,
+        "#e69759",
+        "left",
+        true,
+      );
+    }
     const statRows = [
       [
         "TIME ON COURSE",
@@ -5808,8 +6108,8 @@
     strokeRect(260, 495, 760, 46, "#3f563a", 1);
     drawText(
       usedDrain
-        ? `DRAIN ROUTE  //  ${result.variantName}  //  UNAUTHORIZED EGRESS`
-        : `SHED ROUTE  //  ${result.variantName}  //  ACTION ITEM CLOSED`,
+        ? `DRAIN ROUTE  //  ${result.variantName}  //  ${result.overtime ? "AFTER-HOURS EGRESS" : "UNAUTHORIZED EGRESS"}`
+        : `SHED ROUTE  //  ${result.variantName}  //  ${result.overtime ? "OVERTIME CLOSED" : "ACTION ITEM CLOSED"}`,
       WIDTH * 0.5,
       524,
       13,
@@ -5818,13 +6118,20 @@
       true,
     );
     drawText(
-      result.newBest
-        ? `PERSONAL RECORD FILED. ${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED.`
-        : "PAR IS NOT A SAFETY STANDARD. JOE'S MOWER DID NOT STOP.",
+      result.masteryUnlocked
+        ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
+        : result.newBest
+          ? result.overtime
+            ? "OVERTIME RECORD FILED. JOE REQUESTED A RETROSPECTIVE."
+            : `PERSONAL RECORD FILED. ${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED.`
+          : "PAR IS NOT A SAFETY STANDARD. JOE'S MOWER DID NOT STOP.",
       WIDTH * 0.5,
       570,
       13,
-      result.newBest ? "#f0c66b" : "#d69a5c",
+      result.masteryUnlocked ||
+        result.newBest
+        ? "#f0c66b"
+        : "#d69a5c",
       "center",
     );
     drawText(
@@ -6778,6 +7085,15 @@
     } else if (state.mode === "intro") {
       enterMenu();
     } else if (state.mode === "menu" || state.mode === "claim") {
+      if (
+        point.x >= 558 &&
+        point.x <= 1208 &&
+        point.y >= 510 &&
+        point.y <= 636
+      ) {
+        toggleOvertimeAudit();
+        return;
+      }
       const index = menuIndexAt(point);
       if (index >= 0) {
         state.menuIndex = index;
@@ -6880,7 +7196,12 @@
     recordRoundStart();
     state.hole.hasMoved = startedMoving;
     state.hole.prompt = "";
-    setHoleMessage("Choose a route: key to shed, or sprinkler to drain.", 3.6);
+    setHoleMessage(
+      state.hole.overtime
+        ? "OVERTIME ACTIVE — two balls, faster Joe, stronger evidence, 1.30× score."
+        : "Choose a route: key to shed, or sprinkler to drain.",
+      3.6,
+    );
     playUiTone(360, 0.09, 0.03);
   }
 
@@ -7066,6 +7387,9 @@
           (state.menuIndex + MENU_ITEMS.length - 1) % MENU_ITEMS.length;
         playUiTone(190 + state.menuIndex * 14, 0.045, 0.016);
       }
+      if (pressed(5)) {
+        toggleOvertimeAudit();
+      }
     } else if (state.mode === "settings") {
       if (directionPressed("down")) {
         selectSettings(1);
@@ -7150,7 +7474,10 @@
       enterMenu();
       event.preventDefault();
     } else if (state.mode === "menu" || state.mode === "claim") {
-      if (event.code === "ArrowDown") {
+      if (event.code === "KeyR" && !event.repeat) {
+        toggleOvertimeAudit();
+        event.preventDefault();
+      } else if (event.code === "ArrowDown") {
         state.menuIndex = (state.menuIndex + 1) % MENU_ITEMS.length;
         playUiTone(190 + state.menuIndex * 14, 0.045, 0.016);
         event.preventDefault();
@@ -7306,6 +7633,28 @@
             ).name,
           }
         : null,
+    challenge: {
+      id: "overtime_audit",
+      unlocked: overtimeUnlocked(),
+      selected:
+        overtimeUnlocked() &&
+        state.overtimeSelected,
+      unlockProgress: {
+        cleared:
+          state.career.completedVariants.length,
+        required: RUN_VARIANTS.length,
+      },
+      modifiers: {
+        startingGolfBalls: 2,
+        joeSpeedMultiplier:
+          OVERTIME_JOE_SPEED_MULTIPLIER,
+        detectionMultiplier:
+          OVERTIME_DETECTION_MULTIPLIER,
+        scoreMultiplier:
+          OVERTIME_SCORE_MULTIPLIER,
+        strongerEvidence: true,
+      },
+    },
     dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
       : null,
@@ -7339,6 +7688,12 @@
       roundsStarted: state.career.roundsStarted,
       escapes: state.career.escapes,
       captures: state.career.captures,
+      overtimeEscapes:
+        state.career.overtimeEscapes,
+      overtimeCaptures:
+        state.career.overtimeCaptures,
+      overtimeBest:
+        state.career.overtimeBest,
       nightOrdersCleared:
         state.career.completedVariants.length,
       completedVariants:
@@ -7447,6 +7802,7 @@
             },
           },
           phase: state.hole.phase,
+          overtime: state.hole.overtime,
           tutorialVisible: state.hole.tutorialVisible,
           hudExpanded:
             state.hole.controlHintTimer > 0.01 ||
@@ -7735,19 +8091,19 @@
       global: "F fullscreen",
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
-      menu: "Arrow keys and Enter, or pointer",
+      menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
       firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
-        menu: "Arrow keys and Enter, or pointer",
+        menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
         firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
-        menu: "D-pad selects; A confirms; B returns",
+        menu: "D-pad selects; A confirms; RB toggles Overtime Audit after mastery; B returns",
         firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },

@@ -8,6 +8,8 @@ Generated hedge tunnels, overturned carts, water boundaries, bunker walls, audit
 
 The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Joe follows an authored course patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Four golf-ball distractions support the longer traversal and become progressively less effective.
 
+Clearing all three rotating Night Orders unlocks the optional Overtime Audit. It starts the player with two golf balls, makes Joe 16% faster and 22% quicker to confirm sight or sound, strengthens and extends player evidence, shortens golf-ball distraction windows, and awards a 1.30× score premium. Overtime escapes and captures are tracked separately, and the best Overtime result never replaces a normal route record.
+
 Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
 Joe's attention is now telegraphed before pursuit locks: sight and sound build the attention meter, stopping or crouching can clear a warning, and an active chase shows whether visual contact, audible movement, or neither is keeping the pursuit alive. When both are broken, a contact-break meter communicates exactly how long the player must remain undetected. The Water Hazard's first-entry power sag temporarily reduces actual floodlight exposure, and zone events only deliver their full stinger once instead of replaying during tactical backtracking.
@@ -29,6 +31,7 @@ Then open `http://127.0.0.1:4187/`.
 - Click, Enter, or Space — begin the incident.
 - Click, Enter, Space, or Escape — skip the opening.
 - Arrow keys and Enter — navigate the main menu.
+- R — toggle Overtime Audit after clearing all three Night Orders.
 - Pointer — select menu and settings controls.
 - WASD or arrow keys — move through Hole 1.
 - Shift — sprint, with more noise.
@@ -46,6 +49,7 @@ Standard gamepads are also supported:
 - LB — crouch and use hard cover or rough.
 - LT — Listening Focus.
 - A — confirm and interact.
+- RB — toggle Overtime Audit from the menu after mastery.
 - Hold X, steer with the left stick, then release — aim and chip a golf-ball distraction.
 - B — return from menus or result screens.
 - Start — pause Hole 1.

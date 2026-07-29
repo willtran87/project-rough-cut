@@ -27,6 +27,7 @@ The browser build includes:
 - A post-run course scorecard with S–D risk grades, close-call recognition, and route-specific personal records.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.
+- An unlockable Overtime Audit contract after all three Night Orders: fewer balls, faster pursuit, stronger evidence, a 1.30× score premium, and a separate persistent record.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
 Run it locally from the project root:
