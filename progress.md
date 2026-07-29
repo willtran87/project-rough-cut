@@ -215,7 +215,7 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Added three deterministic Hole 1 configurations: Standard Review, Eastern Exception, and Closing Shift.
 - Each Night Order relocates the shed key and sprinkler valve to a different authored landmark and gives Joe a distinct opening position, patrol waypoint, and hold time.
-- Rotated orders from the persistent rounds-started count so retries produce variety while remaining reproducible for learning and validation.
+- Rotated new rounds from the persistent rounds-started count while preserving the current Night Order on restart, keeping variety reproducible without changing a layout mid-attempt.
 - Added upcoming-order presentation to the main menu plus order-specific briefing copy, accent color, HUD identity, objective hints, mini-map markers, world markers, and after-action copy.
 - Persisted unique Night Order completions and exposed the cleared-order collection alongside existing route records.
 - Extended `render_game_to_text` with upcoming-order data, active variant coordinates, interaction radii, safe obstacle clearance, Joe's opening patrol, and completion state.
@@ -327,5 +327,30 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 ### Next production priorities
 
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
-- Add one optional, authored score pickup per Night Order to deepen route mastery without turning the course into a collectible checklist.
+- Measure whether the authored side routes remain optional and legible before adding any second score objective.
 - Consider a second terrain reaction—bunker disturbance or recoverable divots—after the new ball-recovery risk curve has been playtested.
+
+## Unfiled Change Request Risk Route — July 29, 2026
+
+- Added one authored optional document to each Night Order: CR-017 west of the Standard Review pond, CR-042 beside the Eastern Exception audit board, and CR-099 on the Closing Shift exit patrol.
+- Positioned all three pickups in clear but strategically exposed side lanes, with 11.83, 9.12, and 14.73 meters of measured obstacle clearance respectively.
+- Added an escape-contingent +650 score bonus. Picking up a document makes a small noise and raises Joe's alert, but neither the score nor permanent filing credit survives capture.
+- Added persistent unique filing progress across the three Night Orders and surfaced it on the clubhouse contract card, scorecard, and text diagnostics.
+- Added perspective-projected folder/paper art, flutter, shadows, an orange pickup burst, a dedicated cue, a close-range world marker, a course-map diamond, and a Listening Focus bearing.
+- Added concise onboarding in the survival briefing and How to Survive panel plus banked/unbanked status in both compact and expanded gameplay HUDs.
+- Added scorecard lines for the document and Overtime premium, including correct 1.30× Overtime multiplication and first-time filing feedback.
+- Fixed Restart Hole so it preserves the active Night Order and its matching document instead of silently advancing the career rotation.
+- Extended `render_game_to_text` with placement, hint, bonus, obstacle clearance, live distance, collected status, files-on-escape semantics, and persistent filing progress.
+- Reached and collected all three documents through legitimate input-driven routes, using golf-ball distractions and authored cover to manage Joe.
+- Completed a full Standard Review drain escape with CR-017 for a 6,844 S score; the breakdown included exactly +650 and filed 1/3 requests.
+- Completed a separate full Standard Review shed escape with CR-017 for a 6,682 A score, confirming the bonus and filing path work through both exits.
+- Completed an Overtime drain escape with CR-017 for an 8,683 S score; the scorecard showed both +650 and the +2,004 Overtime premium.
+- Verified that capture after collecting CR-099 recorded a denial but left filing progress at 0/3.
+- Verified pause freezes the collected state and elapsed time, restart clears the attempt pickup while preserving the Night Order, and reload preserves only successfully filed requests.
+- Re-ran the exact project Playwright client, inspected `render_game_to_text`, and visually checked the briefing, active pickup feedback, normal and Overtime scorecards, and 800×600 / 1280×720 / 2560×1440 layouts with no console or page errors.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
+- Consider a second terrain reaction—bunker disturbance or recoverable divots—after the new risk-route pacing has been playtested.

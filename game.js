@@ -119,6 +119,7 @@
   const OVERTIME_SCORE_MULTIPLIER = 1.3;
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
+  const CHANGE_REQUEST_BONUS = 650;
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
@@ -248,6 +249,15 @@
       shortName: "STANDARD",
       key: KEY_POINT,
       sprinkler: SPRINKLER_POINT,
+      changeRequest: {
+        id: "cr-017",
+        code: "CR-017",
+        x: -104,
+        y: 236,
+        radius: 10,
+        hint:
+          "WEST OF POND // INSIDE JOE'S CUT LINE",
+      },
       keyHint: "FIND KEY WEST OF WATER",
       joeStart: {
         x: 44,
@@ -266,6 +276,15 @@
       shortName: "EAST SHIFT",
       key: { x: 46, y: 221, radius: 16 },
       sprinkler: { x: 70, y: 138, radius: 18 },
+      changeRequest: {
+        id: "cr-042",
+        code: "CR-042",
+        x: 103,
+        y: 171,
+        radius: 10,
+        hint:
+          "EAST OF AUDIT BOARD // OPEN SIGHTLINE",
+      },
       keyHint: "FIND KEY BY FLOODLIGHT",
       joeStart: {
         x: -90,
@@ -284,6 +303,15 @@
       shortName: "CLOSING",
       key: { x: -4, y: 188, radius: 16 },
       sprinkler: { x: 105, y: 235, radius: 18 },
+      changeRequest: {
+        id: "cr-099",
+        code: "CR-099",
+        x: -103,
+        y: 296,
+        radius: 10,
+        hint:
+          "WEST DEAD GREEN // EXIT PATROL",
+      },
       keyHint: "FIND KEY IN AUDIT ROW",
       joeStart: {
         x: 20,
@@ -317,6 +345,11 @@
 
   function activeSprinklerPoint() {
     return activeRunVariant().sprinkler;
+  }
+
+  function activeChangeRequest() {
+    return activeRunVariant()
+      .changeRequest;
   }
 
   function golfBallCapacity() {
@@ -455,6 +488,21 @@
               ),
             ]
           : [],
+        filedChangeRequests: Array.isArray(
+          parsed.filedChangeRequests,
+        )
+          ? [
+              ...new Set(
+                parsed.filedChangeRequests.filter(
+                  (id) =>
+                    RUN_VARIANTS.some(
+                      (variant) =>
+                        variant.id === id,
+                    ),
+                ),
+              ),
+            ]
+          : [],
         overtimeEnabled:
           parsed.overtimeEnabled === true,
         overtimeEscapes: Number.isFinite(
@@ -487,6 +535,7 @@
         escapes: 0,
         captures: 0,
         completedVariants: [],
+        filedChangeRequests: [],
         overtimeEnabled: false,
         overtimeEscapes: 0,
         overtimeCaptures: 0,
@@ -539,6 +588,7 @@
       overtime: false,
       phase: "find_key",
       keyCollected: false,
+      changeRequestCollected: false,
       golfBalls: 4,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
@@ -802,6 +852,10 @@
       Math.min(3, hole.chaseBreaks) * 150 +
       Math.min(3, hole.closeCalls) * 250;
     const routeBonus = 250;
+    const changeRequestBonus =
+      hole.changeRequestCollected
+        ? CHANGE_REQUEST_BONUS
+        : 0;
     const baseScore =
       3000 +
       timeBonus +
@@ -809,6 +863,7 @@
       resourceBonus +
       composureBonus +
       recoveryBonus +
+      changeRequestBonus +
       routeBonus;
     const overtimeBonus = hole.overtime
       ? Math.round(
@@ -841,6 +896,8 @@
       timeSeconds: hole.elapsed,
       ballsRemaining: hole.golfBalls,
       ballsRecovered: hole.ballsRecovered,
+      changeRequestCollected:
+        hole.changeRequestCollected,
       maxDetection: hole.maxDetection,
       pursuitSeconds: hole.pursuitSeconds,
       chaseCount: hole.chaseCount,
@@ -859,12 +916,15 @@
         resources: resourceBonus,
         composure: composureBonus,
         recovery: recoveryBonus,
+        changeRequest:
+          changeRequestBonus,
         route: routeBonus,
         overtime: overtimeBonus,
       },
       newBest: false,
       previousBestScore: null,
       masteryUnlocked: false,
+      newChangeRequestFiled: false,
     };
   }
 
@@ -913,6 +973,16 @@
     result.masteryUnlocked =
       !masteredBefore &&
       overtimeUnlocked();
+    result.newChangeRequestFiled =
+      result.changeRequestCollected &&
+      !state.career.filedChangeRequests.includes(
+        result.variantId,
+      );
+    if (result.newChangeRequestFiled) {
+      state.career.filedChangeRequests.push(
+        result.variantId,
+      );
+    }
     if (
       result.newBest &&
       result.overtime
@@ -1402,12 +1472,16 @@
       "left",
       overtimeActive,
     );
+    const changeRequestProgress =
+      `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}`;
     drawText(
-      state.career.overtimeBest
-        ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
-        : overtimeAvailable
-          ? "OVERTIME RECORD  —  UNFILED"
-          : "CLEARANCE REQUIRED // ALL ORDERS",
+      `${
+        state.career.overtimeBest
+          ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
+          : overtimeAvailable
+            ? "OVERTIME RECORD  —  UNFILED"
+            : "CLEARANCE REQUIRED // ALL ORDERS"
+      }  •  ${changeRequestProgress}`,
       overtimePanel.x + 24,
       overtimePanel.y + 99,
       12,
@@ -1471,7 +1545,13 @@
     const controllerActive = state.inputMethod === "gamepad";
     drawText("THE ASSIGNMENT", 205, 213, 15, "#8f9e84", "left", true);
     const steps = [
-      { y: 260, icon: 0, title: "1. CHOOSE AN EXIT", detail: "Key opens shed. Sprinkler opens drain." },
+      {
+        y: 260,
+        icon: 0,
+        title: "1. CHOOSE AN EXIT",
+        detail: "Key opens shed. Sprinkler opens drain.",
+        subdetail: "Optional change request adds +650 on escape.",
+      },
       {
         y: 348,
         icon: 1,
@@ -1710,10 +1790,12 @@
     ctx.restore();
   }
 
-  function resetFirstHole() {
-    const variant = runVariantForRound(
-      state.career.roundsStarted,
-    );
+  function resetFirstHole(variantOverride = null) {
+    const variant =
+      variantOverride ||
+      runVariantForRound(
+        state.career.roundsStarted,
+      );
     const variantIndex = RUN_VARIANTS.indexOf(variant);
     const overtime =
       state.overtimeSelected &&
@@ -1727,6 +1809,7 @@
       overtime,
       phase: "find_key",
       keyCollected: false,
+      changeRequestCollected: false,
       golfBalls: overtime ? 2 : 4,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
@@ -2590,12 +2673,52 @@
     playVictoryCue();
   }
 
+  function collectChangeRequest(request) {
+    const hole = state.hole;
+    if (
+      hole.changeRequestCollected ||
+      !request
+    ) {
+      return false;
+    }
+    hole.changeRequestCollected = true;
+    hole.noise = Math.max(
+      hole.noise,
+      0.36,
+    );
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.34,
+    );
+    hole.detectionPulse = Math.max(
+      hole.detectionPulse,
+      0.34,
+    );
+    hole.stateBanner =
+      `UNFILED CHANGE SECURED // +${CHANGE_REQUEST_BONUS} IF YOU ESCAPE`;
+    hole.stateBannerTimer = 3;
+    setHoleMessage(
+      `${request.code} SECURED — Joe heard the paperwork. The bonus files only if you escape.`,
+      3.7,
+    );
+    addWorldEffect(
+      "change_request",
+      request.x,
+      request.y,
+      1.9,
+    );
+    playChangeRequestCue();
+    return true;
+  }
+
   function interactWithCourse() {
     if (state.mode !== "first_hole") {
       return;
     }
     const key = activeKeyPoint();
     const sprinkler = activeSprinklerPoint();
+    const changeRequest =
+      activeChangeRequest();
     const shed = SHED_EXIT;
     const drain = DRAIN_EXIT;
     const nearestBall =
@@ -2653,6 +2776,19 @@
         drain.radius
     ) {
       completeHole("drain");
+      return;
+    }
+
+    if (
+      !state.hole.changeRequestCollected &&
+      worldDistance(
+        state.player,
+        changeRequest,
+      ) < changeRequest.radius
+    ) {
+      collectChangeRequest(
+        changeRequest,
+      );
       return;
     }
 
@@ -4423,6 +4559,172 @@
     }
   }
 
+  function drawChangeRequest() {
+    const hole = state.hole;
+    if (hole.changeRequestCollected) {
+      return;
+    }
+    const request =
+      activeChangeRequest();
+    const point = worldToScreen(
+      request.x,
+      request.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -140 ||
+      point.x > WIDTH + 140
+    ) {
+      return;
+    }
+    const distance =
+      worldDistance(
+        state.player,
+        request,
+      );
+    const scale = clamp(
+      point.scale,
+      0.48,
+      1.65,
+    );
+    const width = 30 * scale;
+    const height = 38 * scale;
+    const pulse = state.reducedMotion
+      ? 0.62
+      : 0.55 +
+        Math.sin(
+          hole.elapsed * 4.8 +
+            request.x,
+        ) *
+          0.18;
+    const flutter = state.reducedMotion
+      ? -0.05
+      : Math.sin(
+          hole.elapsed * 2.6 +
+            request.y,
+        ) *
+        0.055;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.52)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 3 * scale,
+      width * 0.72,
+      height * 0.17,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle =
+      `rgba(229,112,53,${0.38 + pulse * 0.48})`;
+    ctx.lineWidth = Math.max(
+      1,
+      2 * scale,
+    );
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y,
+      width *
+        (0.72 + pulse * 0.12),
+      height *
+        (0.18 + pulse * 0.03),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.translate(
+      point.x,
+      point.y - height * 0.72,
+    );
+    ctx.rotate(flutter);
+    ctx.shadowColor =
+      "rgba(232,105,41,0.68)";
+    ctx.shadowBlur =
+      8 + pulse * 8;
+    ctx.fillStyle = "#a43f21";
+    ctx.fillRect(
+      -width * 0.55,
+      -height * 0.08,
+      width * 1.1,
+      height * 0.88,
+    );
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#d9662d";
+    ctx.fillRect(
+      -width * 0.58,
+      -height * 0.16,
+      width * 0.78,
+      height * 0.22,
+    );
+    ctx.fillStyle = "#e8dfbd";
+    ctx.fillRect(
+      -width * 0.42,
+      0,
+      width * 0.82,
+      height * 0.64,
+    );
+    ctx.fillStyle = "#2c382a";
+    const lineHeight =
+      Math.max(1, 2 * scale);
+    for (
+      let line = 0;
+      line < 4;
+      line += 1
+    ) {
+      ctx.fillRect(
+        -width * 0.3,
+        height *
+          (0.13 + line * 0.1),
+        width *
+          (line === 3 ? 0.36 : 0.58),
+        lineHeight,
+      );
+    }
+    ctx.strokeStyle = "#ef7136";
+    ctx.lineWidth = Math.max(
+      1,
+      1.5 * scale,
+    );
+    ctx.strokeRect(
+      -width * 0.24,
+      height * 0.48,
+      width * 0.48,
+      height * 0.12,
+    );
+    ctx.restore();
+    if (
+      hole.focus ||
+      distance < 42
+    ) {
+      drawText(
+        `${request.code} // UNFILED CHANGE`,
+        point.x,
+        point.y -
+          height -
+          14,
+        10,
+        "#ef9a62",
+        "center",
+        true,
+      );
+      if (distance < 42) {
+        drawText(
+          `+${CHANGE_REQUEST_BONUS} ON ESCAPE`,
+          point.x,
+          point.y -
+            height,
+          9,
+          "#e9d29b",
+          "center",
+        );
+      }
+    }
+  }
+
   function drawCourseObstacle(obstacle) {
     if (obstacle.draw === false) {
       return;
@@ -4926,11 +5228,18 @@
     const playerPoint = mapPoint(state.player.x, state.player.y);
     const key = activeKeyPoint();
     const sprinkler = activeSprinklerPoint();
+    const changeRequest =
+      activeChangeRequest();
     const keyPoint = mapPoint(key.x, key.y);
     const sprinklerPoint = mapPoint(
       sprinkler.x,
       sprinkler.y,
     );
+    const changeRequestPoint =
+      mapPoint(
+        changeRequest.x,
+        changeRequest.y,
+      );
     const shedPoint = mapPoint(SHED_EXIT.x, SHED_EXIT.y);
     const drainPoint = mapPoint(DRAIN_EXIT.x, DRAIN_EXIT.y);
 
@@ -5059,6 +5368,37 @@
       ctx.beginPath();
       ctx.arc(sprinklerPoint.x, sprinklerPoint.y, 5, 0, Math.PI * 2);
       ctx.stroke();
+    }
+    if (
+      !state.hole.changeRequestCollected
+    ) {
+      ctx.fillStyle = "#d96532";
+      polygon([
+        [
+          changeRequestPoint.x,
+          changeRequestPoint.y - 5,
+        ],
+        [
+          changeRequestPoint.x + 5,
+          changeRequestPoint.y,
+        ],
+        [
+          changeRequestPoint.x,
+          changeRequestPoint.y + 5,
+        ],
+        [
+          changeRequestPoint.x - 5,
+          changeRequestPoint.y,
+        ],
+      ]);
+      ctx.strokeStyle = "#f1b16e";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(
+        changeRequestPoint.x - 4,
+        changeRequestPoint.y - 4,
+        8,
+        8,
+      );
     }
     for (
       let index = 0;
@@ -5479,6 +5819,92 @@
           Math.PI * 2,
         );
         ctx.fill();
+      } else if (effect.kind === "change_request") {
+        ctx.strokeStyle =
+          `rgba(238,124,62,${0.82 * alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          2 * scale,
+        );
+        for (
+          let ray = 0;
+          ray < 10;
+          ray += 1
+        ) {
+          const angle =
+            ray / 10 *
+              Math.PI *
+              2 +
+            effect.seed;
+          const reach =
+            (14 +
+              progress * 56 +
+              ray * 1.5) *
+            scale;
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x +
+              Math.cos(angle) *
+                8 *
+                scale,
+            point.y -
+              16 *
+                scale +
+              Math.sin(angle) *
+                4 *
+                scale,
+          );
+          ctx.lineTo(
+            point.x +
+              Math.cos(angle) *
+                reach,
+            point.y -
+              16 *
+                scale +
+              Math.sin(angle) *
+                reach *
+                0.5,
+          );
+          ctx.stroke();
+        }
+        for (
+          let page = 0;
+          page < 7;
+          page += 1
+        ) {
+          const pageSeed =
+            hash(
+              effect.seed +
+                page * 31.7,
+            );
+          const direction =
+            page % 2 === 0 ? -1 : 1;
+          const pageX =
+            point.x +
+            direction *
+              (12 +
+                pageSeed * 48 +
+                progress * 24) *
+              scale;
+          const pageY =
+            point.y -
+            (18 +
+              pageSeed * 28 +
+              progress *
+                (24 + page * 3)) *
+              scale;
+          const pageWidth =
+            (5 + pageSeed * 5) *
+            scale;
+          ctx.fillStyle =
+            `rgba(235,222,184,${alpha})`;
+          ctx.fillRect(
+            pageX,
+            pageY,
+            pageWidth,
+            pageWidth * 0.72,
+          );
+        }
       } else if (effect.kind === "pickup") {
         ctx.strokeStyle = `rgba(255,214,108,${alpha})`;
         ctx.lineWidth = 2;
@@ -6058,7 +6484,14 @@
 
     const controllerActive = state.inputMethod === "gamepad";
     const cards = [
-      { x: 220, icon: 0, number: "1", title: "CHOOSE AN EXIT", detail: "KEY → SHED  •  VALVE → DRAIN" },
+      {
+        x: 220,
+        icon: 0,
+        number: "1",
+        title: "CHOOSE AN EXIT",
+        detail: "KEY → SHED  •  VALVE → DRAIN",
+        subdetail: `OPTIONAL ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS}`,
+      },
       {
         x: 500,
         icon: 1,
@@ -6264,6 +6697,72 @@
         true,
       );
     }
+    const changeRequest =
+      activeChangeRequest();
+    const changeRequestDistance =
+      worldDistance(
+        state.player,
+        changeRequest,
+      );
+    if (
+      !state.hole.changeRequestCollected &&
+      changeRequestDistance < 150
+    ) {
+      const requestDeltaX =
+        changeRequest.x -
+        state.player.x;
+      const requestDeltaY =
+        changeRequest.y -
+        state.player.y;
+      const requestAngle = Math.atan2(
+        requestDeltaX * 0.72,
+        -requestDeltaY,
+      );
+      const requestX =
+        centerX +
+        Math.sin(requestAngle) *
+          (radius + 18);
+      const requestY =
+        centerY -
+        Math.cos(requestAngle) *
+          (radius + 18);
+      ctx.fillStyle = "#d86232";
+      polygon([
+        [
+          requestX,
+          requestY - 7,
+        ],
+        [
+          requestX + 7,
+          requestY,
+        ],
+        [
+          requestX,
+          requestY + 7,
+        ],
+        [
+          requestX - 7,
+          requestY,
+        ],
+      ]);
+      ctx.strokeStyle = "#efab6c";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        requestX - 6,
+        requestY - 6,
+        12,
+        12,
+      );
+      drawText(
+        `${changeRequest.code} ${Math.round(changeRequestDistance)}m`,
+        requestX,
+        requestY - 14,
+        9,
+        "#f0a466",
+        "center",
+        true,
+      );
+    }
     const nearestBall =
       nearestRecoverableBall();
     if (
@@ -6451,6 +6950,10 @@
             ? "RETURN TO THE SHED"
             : "FIND KEY OR RELEASE DRAIN";
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
+    const changeRequestStatus =
+      hole.changeRequestCollected
+        ? "CR ✓ BANKED"
+        : `CR ◇ +${CHANGE_REQUEST_BONUS}`;
 
     const waterStatus =
       hole.sprinklerSoakTimer > 0
@@ -6484,6 +6987,17 @@
         hole.overtime ? 23 : 29,
         "#efebcd",
         "left",
+        true,
+      );
+      drawText(
+        changeRequestStatus,
+        446,
+        75,
+        11,
+        hole.changeRequestCollected
+          ? "#8fc58b"
+          : "#e69355",
+        "right",
         true,
       );
       drawText(objective, 62, 112, 16, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
@@ -6537,6 +7051,17 @@
         16,
         "#e9e4c9",
         "left",
+        true,
+      );
+      drawText(
+        changeRequestStatus,
+        420,
+        65,
+        10,
+        hole.changeRequestCollected
+          ? "#8fc58b"
+          : "#e69355",
+        "right",
         true,
       );
       drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
@@ -6770,6 +7295,7 @@
     drawWetTurf();
     drawTurfMarks();
     drawRecoverableGolfBalls();
+    drawChangeRequest();
 
     for (let layer = 0; layer < 3; layer += 1) {
       const fogY = 280 + layer * 105;
@@ -6817,6 +7343,24 @@
         "DISTRACTION",
         "#d6a74c",
         "!",
+      );
+    }
+    const changeRequest =
+      activeChangeRequest();
+    if (
+      !state.hole.changeRequestCollected &&
+      (state.hole.focus ||
+        worldDistance(
+          state.player,
+          changeRequest,
+        ) < 70)
+    ) {
+      drawWorldMarker(
+        changeRequest.x,
+        changeRequest.y,
+        `${changeRequest.code} // UNFILED`,
+        "#e26f38",
+        "◇",
       );
     }
     drawWorldMarker(
@@ -7043,13 +7587,30 @@
       "left",
       true,
     );
+    const scoreNotes = [];
+    if (result.changeRequestCollected) {
+      scoreNotes.push({
+        text: `+${result.breakdown.changeRequest.toLocaleString()} UNFILED CHANGE REQUEST`,
+        color: "#ef9b5f",
+      });
+    }
     if (result.overtime) {
+      scoreNotes.push({
+        text: `+${result.breakdown.overtime.toLocaleString()} OVERTIME PREMIUM`,
+        color: "#e69759",
+      });
+    }
+    for (
+      let index = 0;
+      index < scoreNotes.length;
+      index += 1
+    ) {
       drawText(
-        `INCLUDES +${result.breakdown.overtime.toLocaleString()} OVERTIME PREMIUM`,
+        scoreNotes[index].text,
         540,
-        307,
+        306 + index * 14,
         10,
-        "#e69759",
+        scoreNotes[index].color,
         "left",
         true,
       );
@@ -7083,7 +7644,17 @@
       index < statRows.length;
       index += 1
     ) {
-      const y = 324 + index * 33;
+      const statStart =
+        scoreNotes.length > 0
+          ? 348
+          : 324;
+      const statSpacing =
+        scoreNotes.length > 0
+          ? 28
+          : 33;
+      const y =
+        statStart +
+        index * statSpacing;
       if (index % 2 === 0) {
         ctx.fillStyle = "rgba(36,59,37,0.32)";
         ctx.fillRect(530, y - 20, 300, 28);
@@ -7126,6 +7697,8 @@
     drawText(
       result.masteryUnlocked
         ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
+        : result.newChangeRequestFiled
+          ? `${activeChangeRequest().code} FILED. CHANGE REQUESTS ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} SECURED.`
         : result.newBest
           ? result.overtime
             ? "OVERTIME RECORD FILED. JOE REQUESTED A RETROSPECTIVE."
@@ -7135,6 +7708,7 @@
       570,
       13,
       result.masteryUnlocked ||
+        result.newChangeRequestFiled ||
         result.newBest
         ? "#f0c66b"
         : "#d69a5c",
@@ -7503,6 +8077,8 @@
 
       const key = activeKeyPoint();
       const sprinkler = activeSprinklerPoint();
+      const changeRequest =
+        activeChangeRequest();
       const shed = SHED_EXIT;
       const drain = DRAIN_EXIT;
       const nearestBall =
@@ -7538,6 +8114,17 @@
         hole.prompt = inputCopy(
           "ENTER — ESCAPE THROUGH DRAIN",
           "A — ESCAPE THROUGH DRAIN",
+        );
+      } else if (
+        !hole.changeRequestCollected &&
+        worldDistance(
+          state.player,
+          changeRequest,
+        ) < changeRequest.radius
+      ) {
+        hole.prompt = inputCopy(
+          `ENTER — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+          `A — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
         );
       } else if (
         nearestBall.ball &&
@@ -8066,6 +8653,38 @@
     playNoiseBurst(0.12, 0.018, 2400, "highpass");
   }
 
+  function playChangeRequestCue() {
+    playNoiseBurst(
+      0.24,
+      0.036,
+      1900,
+      "highpass",
+    );
+    playTransientTone(
+      294,
+      588,
+      0.19,
+      0.046,
+      "square",
+    );
+    playTransientTone(
+      440,
+      880,
+      0.24,
+      0.034,
+      "triangle",
+      0.1,
+    );
+    playTransientTone(
+      660,
+      990,
+      0.2,
+      0.025,
+      "sine",
+      0.22,
+    );
+  }
+
   function playSprinklerCue() {
     playTransientTone(246, 164, 0.18, 0.035, "square");
     playNoiseBurst(0.72, 0.07, 1800, "bandpass", -0.45, 0.08);
@@ -8324,9 +8943,11 @@
   }
 
   function retryFirstHole() {
+    const retryVariant =
+      activeRunVariant();
     state.mode = "first_hole";
     state.time = 0;
-    resetFirstHole();
+    resetFirstHole(retryVariant);
     state.transitionAlpha = 0.8;
   }
 
@@ -8816,6 +9437,10 @@
         state.career.completedVariants.length,
       completedVariants:
         state.career.completedVariants.slice(),
+      changeRequestsFiled:
+        state.career.filedChangeRequests.length,
+      filedChangeRequests:
+        state.career.filedChangeRequests.slice(),
       bestOverall: bestCareerRecord(),
       routes: {
         shed: state.career.routes.shed,
@@ -8915,6 +9540,24 @@
                 ).toFixed(2),
               ),
             },
+            changeRequest: {
+              id: activeChangeRequest().id,
+              code: activeChangeRequest().code,
+              x: activeChangeRequest().x,
+              y: activeChangeRequest().y,
+              interactionRadius:
+                activeChangeRequest().radius,
+              hint: activeChangeRequest().hint,
+              bonus: CHANGE_REQUEST_BONUS,
+              obstacleClearance: Number(
+                (
+                  nearestObstacleClearance(
+                    activeChangeRequest(),
+                  ) -
+                  PLAYER_COLLISION_RADIUS
+                ).toFixed(2),
+              ),
+            },
             joeOpeningPatrol: {
               x: activeRunVariant().joeStart.x,
               y: activeRunVariant().joeStart.y,
@@ -8960,6 +9603,22 @@
           },
           result: state.hole.result,
           keyCollected: state.hole.keyCollected,
+          changeRequest: {
+            collected:
+              state.hole.changeRequestCollected,
+            filesOnEscape: true,
+            bonus: CHANGE_REQUEST_BONUS,
+            distance: Math.round(
+              worldDistance(
+                state.player,
+                activeChangeRequest(),
+              ),
+            ),
+            filedForThisOrder:
+              state.career.filedChangeRequests.includes(
+                activeRunVariant().id,
+              ),
+          },
           drainUnlocked: state.hole.drainUnlocked,
           escapeRoute: state.hole.escapeRoute,
           golfBalls: state.hole.golfBalls,
@@ -9298,19 +9957,19 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
         menu: "D-pad selects; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts, secures a change request, or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },
     },
