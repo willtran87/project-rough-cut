@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, settings, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -41,12 +41,12 @@
 - [x] Show a survival briefing before Joe begins moving.
 - [x] Give the player an explicit immediate choice: locate the shed key and unlock the maintenance shed, or release sprinkler pressure and escape through the drainage culvert.
 - [x] Support WASD and arrow-key movement.
-- [x] Support Shift to sprint, C to crouch, Enter to interact, Space to throw a golf-ball distraction, and Escape to open the menu.
+- [x] Support Shift to sprint, C to crouch, Enter to interact, Space to throw a golf-ball distraction, H to recall controls, and Escape to pause.
 - [x] Show visible movement chevrons and movement/sprint status so locomotion is discoverable.
 - [x] Place a shed key near the bunker.
 - [x] Provide a locked shed as the escape target.
 - [x] Provide a sprinkler valve that creates a major distraction and opens the alternate drainage route.
-- [x] Give the player a limited supply of three golf balls for thrown distractions.
+- [x] Give the player a limited supply of four golf balls for thrown distractions.
 - [x] Make fairway travel quieter but more exposed.
 - [x] Make rough travel noisier but more concealed.
 - [x] Give Joe patrol, investigate, search, and chase states.
@@ -60,12 +60,15 @@
 - [x] Trigger a distinct alternate victory when the player releases pressure and reaches the drainage culvert.
 - [x] Trigger defeat as a darkly comic “claim denied” outcome when Joe catches the player.
 - [x] Support retry, reset, and return-to-menu flows.
+- [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
+- [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
 
 ### Settings, Accessibility, and Verification
 
 - [x] Provide volume control.
 - [x] Provide subtitle control.
 - [x] Provide a reduced-camera-motion setting.
+- [x] Persist volume, subtitle, and reduced-camera-motion preferences across reloads.
 - [x] Make all settings navigable by pointer, keyboard, and standard gamepad.
 - [x] Support analog stick and D-pad movement, controller sprint, crouch, interaction, distraction, menu navigation, and retry.
 - [x] Switch tutorials, HUD labels, contextual prompts, menu help, settings help, and result-screen actions to the most recently active input method.
@@ -700,7 +703,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make false safety emerge from incomplete information, changed rules, or player assumptions rather than unavoidable scripted betrayal.
 - [ ] Give the player a fair opportunity to notice when a familiar refuge is no longer secure.
 - [ ] Prevent indefinite safe-space camping from solving time-sensitive objectives or Joe's wider control.
-- [ ] Avoid punishing players for pausing to read, configure settings, or manage accessibility needs.
+- [x] Avoid punishing players for pausing to read, configure settings, or manage accessibility needs.
 - [ ] Place save opportunities and major planning interfaces in spaces that support their use.
 - [ ] Use visual warmth, course ambience, music reduction, and physical enclosure to create genuine relief.
 - [ ] Make leaving safety feel like a deliberate return to danger.
@@ -1115,7 +1118,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make low-health, active pursuit, coverage loss, and objective failure noticeable without obscuring the course.
 - [ ] Ensure every interface value and preview matches authoritative game state.
 - [ ] Prevent accidental deletion, use, denial, reset, or commitment of important items and choices.
-- [ ] Make restart, checkpoint load, settings, accessibility, and quit options quick to reach.
+- [x] Make restart, settings, and return-to-menu actions quick to reach from the pause layer. Checkpoint loading remains future work.
 
 ## Map, Course Reading, and Navigation
 
@@ -1187,7 +1190,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Include adjustable golf timing windows, trajectory assistance, aim stabilization, and shot-preview detail.
 - [ ] Include adjustable Joe movement speed, perception, search duration, damage, capture tolerance, and pursuit intensity.
 - [ ] Include stealth assists such as clearer evidence, stronger state cues, slower suspicion, or more forgiving line-of-sight breaks.
-- [ ] Allow players to pause during single-player stalking, pursuits, and timed objectives.
+- [x] Allow players to pause during single-player stalking, pursuits, and timed objectives.
 - [ ] Support subtitle size, background, color, speaker names, placement, and sound-effect captions.
 - [ ] Provide directional visual indicators for important Joe, machinery, alarm, and ball sounds.
 - [ ] Avoid communicating turf type, danger, policy state, evidence, or objectives through color alone.

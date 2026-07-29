@@ -18,6 +18,9 @@ The browser build includes:
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
+- An adaptive HUD that recedes after onboarding and can be recalled with H or Y.
+- A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
+- Persistent volume, subtitle, and reduced-camera-motion preferences.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
 Run it locally from the project root:
@@ -27,6 +30,8 @@ python -m http.server 4187 --directory web
 ```
 
 Then open `http://127.0.0.1:4187/`.
+
+During Hole 1, press Escape or Start—or click the pause control—to suspend the pursuit without losing progress.
 
 ## Project documentation
 
