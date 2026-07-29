@@ -12,8 +12,10 @@ The browser build includes:
 
 - An original grass-and-weed-whacker horror-comedy opening.
 - Keyboard, pointer, and standard gamepad support with automatic prompt switching.
+- A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
 - Two complete escape routes through the maintenance shed or drainage culvert.
-- Noise, concealment, line-of-sight breaks, golf-ball distractions, and recoverable pursuit.
+- Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
+- Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
@@ -36,7 +38,7 @@ The immediately playable browser version is in `web/`. It reproduces the animate
 ## Directory map
 
 - `assets/characters/joe/` - Joe's current source art, animation sheets, frames, previews, and metadata.
-- `assets/environment/` - Course textures, foliage, props, terrain, structures, and environmental effects.
+- `assets/environment/` - Course textures, foliage, generated landmark kits, props, terrain, structures, and environmental effects.
 - `assets/audio/` - Mower states, course ambience, PA announcements, UI, and scare cues.
 - `design/` - Future mechanics specifications, level plans, narrative notes, and tuning data.
 - `docs/` - Project-facing documents.

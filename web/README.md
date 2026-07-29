@@ -2,11 +2,13 @@
 
 This is the immediately playable browser build for the opening cutscene, main menu, settings, and complete Hole 1 vertical slice.
 
-Hole 1 uses a layered first-person course renderer: a clean distant generated vista, perspective mowing lines and ground flow, depth-sorted world obstacles, Joe and the mower, fog/motes, and an opening near-camera grass fringe that moves down and clears as the player leaves the tee. Generated trees, hedges, rope boundaries, maintenance debris, signs, reeds, and bunker props form visible collision boundaries instead of functioning as decoration alone.
+Hole 1 is now a 360-unit authored course divided into four suspense zones: The Tee, Audit Row, Water Hazard, and The Dead Green. Its layered first-person renderer combines a clean distant generated vista, perspective mowing lines and ground flow, depth-sorted world obstacles, Joe and the mower, fog/motes, zone-specific grading, and an opening near-camera grass fringe that moves down and clears as the player leaves the tee.
 
-The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Joe follows an authored perimeter patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Crouching in deep rough reduces noise and visibility; repeated golf-ball distractions become progressively less effective.
+Generated hedge tunnels, overturned carts, water boundaries, bunker walls, audit boards, floodlights, trees, rope boundaries, and maintenance debris are physical landmarks rather than decoration. Swept player collision prevents sprint tunneling, collision volumes preserve readable passages, and hard cover only conceals the player when it actually breaks Joe's line of sight. Deep rough softens the player's outline but still rustles when crossed carelessly. The amber floodlight raises visibility.
 
-The presentation includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
+The current vertical slice includes two complete escape routes: recover the bunker-side key and reach the maintenance shed, or activate the sprinkler pressure system and escape through the drainage culvert. Joe follows an authored course patrol, investigates sounds, pursues visible or audible movement, remembers the last detected position, routes around course obstacles, and searches after contact is broken. Four golf-ball distractions support the longer traversal and become progressively less effective.
+
+Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
 The capture sequence uses the generated `rough-cut-joe-capture-v1.png` tableau and keeps all defeat copy in the renderer so timing, accessibility, and visual grading remain editable.
 
@@ -28,7 +30,8 @@ Then open `http://127.0.0.1:4187/`.
 - Pointer — select menu and settings controls.
 - WASD or arrow keys — move through Hole 1.
 - Shift — sprint, with more noise.
-- Hold C — crouch; deep rough conceals quiet players.
+- Hold C — crouch; hard cover conceals when it breaks Joe's sightline, while rough provides partial concealment.
+- Hold Q — Listening Focus; slow down and read mower direction, nearby cover, landmarks, and exposure.
 - Enter — interact with the key, sprinkler, shed, and drainage culvert.
 - Space — throw a golf-ball distraction.
 - F — toggle fullscreen.
@@ -38,7 +41,8 @@ Standard gamepads are also supported:
 
 - Left stick or D-pad — move and navigate menus.
 - RT — sprint.
-- LB — crouch and conceal in deep rough.
+- LB — crouch and use hard cover or rough.
+- LT — Listening Focus.
 - A — confirm and interact.
 - X — throw a golf-ball distraction.
 - B — return from menus or result screens.
