@@ -21,6 +21,8 @@ The browser build includes:
 - An adaptive HUD that recedes after onboarding and can be recalled with H or Y.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - Persistent volume, subtitle, and reduced-camera-motion preferences.
+- A post-run course scorecard with S–D risk grades, close-call recognition, and route-specific personal records.
+- A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
 Run it locally from the project root:
