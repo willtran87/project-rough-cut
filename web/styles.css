@@ -19,13 +19,17 @@ body {
 }
 
 body {
+  --stage-gap: clamp(0px, 1.2vw, 18px);
   display: grid;
   place-items: center;
-  padding: clamp(0px, 1.2vw, 18px);
+  padding: var(--stage-gap);
 }
 
 #game-shell {
-  width: min(100%, calc(100vh * 16 / 9));
+  width: min(
+    100%,
+    calc((100vh - 2 * var(--stage-gap)) * 16 / 9)
+  );
   aspect-ratio: 16 / 9;
   padding: clamp(0px, 0.7vw, 8px);
   position: relative;

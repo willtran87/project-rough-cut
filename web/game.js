@@ -39,6 +39,15 @@
   ];
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
   const CAREER_STORAGE_KEY = "rough-cut.career.v1";
+  const SETTINGS_ROWS = [
+    { id: "master", label: "MASTER MIX", key: "volume", type: "slider" },
+    { id: "ambience", label: "COURSE AMBIENCE", key: "ambienceVolume", type: "slider" },
+    { id: "mower", label: "JOE'S MOWER", key: "mowerVolume", type: "slider" },
+    { id: "effects", label: "GAMEPLAY EFFECTS", key: "effectsVolume", type: "slider" },
+    { id: "danger", label: "DANGER PULSE", key: "dangerVolume", type: "slider" },
+    { id: "subtitles", label: "SUBTITLES", key: "subtitles", type: "toggle" },
+    { id: "reduced_motion", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
+  ];
   let preferencesStorageAvailable = true;
   let careerStorageAvailable = true;
 
@@ -455,6 +464,22 @@
           Number.isFinite(parsed.volume)
             ? Math.max(0, Math.min(1, parsed.volume))
             : 0.72,
+        ambienceVolume:
+          Number.isFinite(parsed.ambienceVolume)
+            ? Math.max(0, Math.min(1, parsed.ambienceVolume))
+            : 0.9,
+        mowerVolume:
+          Number.isFinite(parsed.mowerVolume)
+            ? Math.max(0, Math.min(1, parsed.mowerVolume))
+            : 1,
+        effectsVolume:
+          Number.isFinite(parsed.effectsVolume)
+            ? Math.max(0, Math.min(1, parsed.effectsVolume))
+            : 1,
+        dangerVolume:
+          Number.isFinite(parsed.dangerVolume)
+            ? Math.max(0, Math.min(1, parsed.dangerVolume))
+            : 0.9,
         subtitles:
           typeof parsed.subtitles === "boolean"
             ? parsed.subtitles
@@ -468,6 +493,10 @@
       preferencesStorageAvailable = false;
       return {
         volume: 0.72,
+        ambienceVolume: 0.9,
+        mowerVolume: 1,
+        effectsVolume: 1,
+        dangerVolume: 0.9,
         subtitles: true,
         reducedMotion: false,
       };
@@ -589,6 +618,10 @@
     subtitles: savedPreferences.subtitles,
     reducedMotion: savedPreferences.reducedMotion,
     volume: savedPreferences.volume,
+    ambienceVolume: savedPreferences.ambienceVolume,
+    mowerVolume: savedPreferences.mowerVolume,
+    effectsVolume: savedPreferences.effectsVolume,
+    dangerVolume: savedPreferences.dangerVolume,
     inputMethod: "keyboard",
     settingsIndex: 0,
     settingsReturnMode: "menu",
@@ -735,6 +768,10 @@
   let lastFrame = performance.now();
   let audioContext = null;
   let masterGain = null;
+  let ambienceBusGain = null;
+  let mowerBusGain = null;
+  let effectsBusGain = null;
+  let dangerBusGain = null;
   let motorGain = null;
   let motorOscillator = null;
   let cutterOscillator = null;
@@ -767,6 +804,10 @@
         SETTINGS_STORAGE_KEY,
         JSON.stringify({
           volume: Number(state.volume.toFixed(2)),
+          ambienceVolume: Number(state.ambienceVolume.toFixed(2)),
+          mowerVolume: Number(state.mowerVolume.toFixed(2)),
+          effectsVolume: Number(state.effectsVolume.toFixed(2)),
+          dangerVolume: Number(state.dangerVolume.toFixed(2)),
           subtitles: state.subtitles,
           reducedMotion: state.reducedMotion,
         }),
@@ -1582,6 +1623,13 @@
     );
   }
 
+  function settingsRowGeometry(index) {
+    return {
+      y: 230 + index * 43,
+      height: 39,
+    };
+  }
+
   function drawSettings() {
     if (state.settingsReturnMode === "paused") {
       drawFirstHole();
@@ -1678,13 +1726,8 @@
     ctx.lineTo(640, 590);
     ctx.stroke();
 
-    drawText("SETTINGS", 700, 213, 15, "#8f9e84", "left", true);
-    const settingRows = [
-      { y: 247, height: 78 },
-      { y: 337, height: 48 },
-      { y: 397, height: 48 },
-    ];
-    const selectedSetting = settingRows[state.settingsIndex];
+    drawText("AUDIO / ACCESSIBILITY", 700, 213, 15, "#8f9e84", "left", true);
+    const selectedSetting = settingsRowGeometry(state.settingsIndex);
     ctx.fillStyle = "rgba(50,72,28,0.36)";
     ctx.fillRect(684, selectedSetting.y, 398, selectedSetting.height);
     strokeRect(
@@ -1695,42 +1738,77 @@
       "#d47431",
       2,
     );
-    drawText("MASTER VOLUME", 700, 266, 17, "#cdd6bd", "left");
-    ctx.fillStyle = "#172719";
-    ctx.fillRect(700, 288, 350, 18);
-    ctx.fillStyle = "#dc6c25";
-    ctx.fillRect(700, 288, 350 * state.volume, 18);
-    strokeRect(700, 288, 350, 18, "#789064", 1);
-    drawText(`${Math.round(state.volume * 100)}%`, 1050, 274, 15, "#dfe5d3", "right");
-    drawCheckbox(700, 350, "SUBTITLES", state.subtitles);
-    drawCheckbox(700, 410, "REDUCED CAMERA MOTION", state.reducedMotion);
+    for (let index = 0; index < SETTINGS_ROWS.length; index += 1) {
+      const setting = SETTINGS_ROWS[index];
+      const row = settingsRowGeometry(index);
+      if (setting.type === "slider") {
+        const value = state[setting.key];
+        const barX = 868;
+        const barY = row.y + 14;
+        const barWidth = 152;
+        drawText(
+          setting.label,
+          700,
+          row.y + 25,
+          13,
+          index === state.settingsIndex ? "#f2e7bd" : "#c6d0ba",
+          "left",
+          index === state.settingsIndex,
+        );
+        ctx.fillStyle = "#172719";
+        ctx.fillRect(barX, barY, barWidth, 10);
+        ctx.fillStyle =
+          setting.id === "danger"
+            ? "#bf4937"
+            : setting.id === "mower"
+              ? "#d17a31"
+              : "#879d55";
+        ctx.fillRect(barX, barY, barWidth * value, 10);
+        strokeRect(barX, barY, barWidth, 10, "#65785a", 1);
+        drawText(
+          `${Math.round(value * 100)}%`,
+          1052,
+          row.y + 25,
+          12,
+          "#dfe5d3",
+          "right",
+        );
+      } else {
+        drawCheckbox(
+          700,
+          row.y + 6,
+          setting.label,
+          Boolean(state[setting.key]),
+        );
+      }
+    }
     drawText(
       controllerActive ? "D-PAD  SELECT / ADJUST" : "F  FULLSCREEN",
       700,
-      490,
+      540,
       14,
       "#d9dfcc",
       "left",
     );
     ctx.fillStyle = "rgba(21,41,23,0.8)";
-    ctx.fillRect(700, 516, 350, 44);
-    strokeRect(700, 516, 350, 44, "#687e4a", 1);
+    ctx.fillRect(700, 554, 350, 36);
+    strokeRect(700, 554, 350, 36, "#687e4a", 1);
     drawText(
       `←  RETURN TO ${state.settingsReturnMode === "paused" ? "PAUSE" : "MENU"}`,
       875,
-      544,
-      14,
+      578,
+      13,
       "#d9dfcc",
       "center",
       true,
     );
     drawText(
       controllerActive
-        ? "LEFT / RIGHT ADJUST VOLUME"
-        : "ARROWS / ENTER OR CLICK TO ADJUST",
+        ? "LEFT / RIGHT MIX  •  A TOGGLE  •  B RETURN"
+        : "ARROWS ADJUST  •  ENTER TOGGLE  •  ESC RETURN",
       700,
-      588,
-      12,
+      612,
+      11,
       "#8fa084",
       "left",
     );
@@ -9034,14 +9112,27 @@
     masterGain.gain.value = state.volume * 0.55;
     masterGain.connect(audioContext.destination);
 
+    ambienceBusGain = audioContext.createGain();
+    mowerBusGain = audioContext.createGain();
+    effectsBusGain = audioContext.createGain();
+    dangerBusGain = audioContext.createGain();
+    ambienceBusGain.gain.value = state.ambienceVolume;
+    mowerBusGain.gain.value = state.mowerVolume;
+    effectsBusGain.gain.value = state.effectsVolume;
+    dangerBusGain.gain.value = state.dangerVolume;
+    ambienceBusGain.connect(masterGain);
+    mowerBusGain.connect(masterGain);
+    effectsBusGain.connect(masterGain);
+    dangerBusGain.connect(masterGain);
+
     motorGain = audioContext.createGain();
     motorGain.gain.value = 0;
     if (typeof audioContext.createStereoPanner === "function") {
       motorPanNode = audioContext.createStereoPanner();
       motorGain.connect(motorPanNode);
-      motorPanNode.connect(masterGain);
+      motorPanNode.connect(mowerBusGain);
     } else {
-      motorGain.connect(masterGain);
+      motorGain.connect(mowerBusGain);
     }
 
     motorOscillator = audioContext.createOscillator();
@@ -9084,7 +9175,7 @@
     ambienceGain.gain.value = 0;
     ambienceSource.connect(ambienceFilter);
     ambienceFilter.connect(ambienceGain);
-    ambienceGain.connect(masterGain);
+    ambienceGain.connect(ambienceBusGain);
     ambienceSource.start();
 
     ambienceDrone = audioContext.createOscillator();
@@ -9093,7 +9184,7 @@
     ambienceDroneGain = audioContext.createGain();
     ambienceDroneGain.gain.value = 0;
     ambienceDrone.connect(ambienceDroneGain);
-    ambienceDroneGain.connect(masterGain);
+    ambienceDroneGain.connect(dangerBusGain);
     ambienceDrone.start();
   }
 
@@ -9241,7 +9332,7 @@
   }
 
   function triggerStinger() {
-    if (!audioContext) {
+    if (!audioContext || !dangerBusGain) {
       return;
     }
     const oscillator = audioContext.createOscillator();
@@ -9249,16 +9340,16 @@
     oscillator.type = "sawtooth";
     oscillator.frequency.setValueAtTime(78, audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(34, audioContext.currentTime + 0.55);
-    gain.gain.setValueAtTime(0.13 * state.volume, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.13, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.62);
     oscillator.connect(gain);
-    gain.connect(audioContext.destination);
+    gain.connect(dangerBusGain);
     oscillator.start();
     oscillator.stop(audioContext.currentTime + 0.65);
   }
 
   function playUiTone(frequency = 210, duration = 0.07, volume = 0.025) {
-    if (!audioContext || !masterGain) {
+    if (!audioContext || !effectsBusGain) {
       return;
     }
     const oscillator = audioContext.createOscillator();
@@ -9268,7 +9359,7 @@
     gain.gain.setValueAtTime(volume, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
     oscillator.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(effectsBusGain);
     oscillator.start();
     oscillator.stop(audioContext.currentTime + duration);
   }
@@ -9280,8 +9371,9 @@
     volume,
     type = "sine",
     delay = 0,
+    destination = effectsBusGain,
   ) {
-    if (!audioContext || !masterGain) {
+    if (!audioContext || !destination) {
       return;
     }
     const start = audioContext.currentTime + delay;
@@ -9293,7 +9385,7 @@
     gain.gain.setValueAtTime(Math.max(0.0001, volume), start);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     oscillator.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(destination);
     oscillator.start(start);
     oscillator.stop(start + duration + 0.02);
   }
@@ -9305,8 +9397,9 @@
     filterType = "lowpass",
     pan = 0,
     delay = 0,
+    destination = effectsBusGain,
   ) {
-    if (!audioContext || !masterGain || !sharedNoiseBuffer) {
+    if (!audioContext || !destination || !sharedNoiseBuffer) {
       return;
     }
     const start = audioContext.currentTime + delay;
@@ -9325,9 +9418,9 @@
       const panner = audioContext.createStereoPanner();
       panner.pan.value = clamp(pan, -1, 1);
       gain.connect(panner);
-      panner.connect(masterGain);
+      panner.connect(destination);
     } else {
-      gain.connect(masterGain);
+      gain.connect(destination);
     }
     source.start(start, Math.random() * 1.4);
     source.stop(start + duration + 0.02);
@@ -9416,20 +9509,20 @@
 
   function playHeartbeat(strength) {
     const volume = 0.026 + strength * 0.045;
-    playTransientTone(74, 46, 0.13, volume, "sine");
-    playTransientTone(66, 42, 0.11, volume * 0.72, "sine", 0.18);
+    playTransientTone(74, 46, 0.13, volume, "sine", 0, dangerBusGain);
+    playTransientTone(66, 42, 0.11, volume * 0.72, "sine", 0.18, dangerBusGain);
   }
 
   function playThreatCue(mode) {
     if (mode === "chase") {
-      playTransientTone(118, 39, 0.62, 0.11, "sawtooth");
-      playNoiseBurst(0.28, 0.065, 920, "bandpass");
+      playTransientTone(118, 39, 0.62, 0.11, "sawtooth", 0, dangerBusGain);
+      playNoiseBurst(0.28, 0.065, 920, "bandpass", 0, 0, dangerBusGain);
     } else if (mode === "search") {
-      playTransientTone(94, 57, 0.34, 0.045, "triangle");
+      playTransientTone(94, 57, 0.34, 0.045, "triangle", 0, dangerBusGain);
     } else if (mode === "investigate") {
-      playTransientTone(178, 92, 0.22, 0.038, "square");
+      playTransientTone(178, 92, 0.22, 0.038, "square", 0, dangerBusGain);
     } else {
-      playTransientTone(82, 68, 0.16, 0.018, "sine");
+      playTransientTone(82, 68, 0.16, 0.018, "sine", 0, dangerBusGain);
     }
   }
 
@@ -9477,9 +9570,9 @@
   }
 
   function playMowerBogCue() {
-    playTransientTone(78, 43, 0.34, 0.055, "sawtooth");
-    playTransientTone(64, 35, 0.28, 0.045, "square", 0.24);
-    playNoiseBurst(0.42, 0.045, 360, "lowpass", 0, 0.08);
+    playTransientTone(78, 43, 0.34, 0.055, "sawtooth", 0, mowerBusGain);
+    playTransientTone(64, 35, 0.28, 0.045, "square", 0.24, mowerBusGain);
+    playNoiseBurst(0.42, 0.045, 360, "lowpass", 0, 0.08, mowerBusGain);
   }
 
   function playSandChurnCue() {
@@ -9488,6 +9581,9 @@
       0.07,
       520,
       "bandpass",
+      0,
+      0,
+      mowerBusGain,
     );
     playTransientTone(
       92,
@@ -9495,6 +9591,8 @@
       0.42,
       0.058,
       "sawtooth",
+      0,
+      mowerBusGain,
     );
     playTransientTone(
       74,
@@ -9503,6 +9601,7 @@
       0.042,
       "square",
       0.22,
+      mowerBusGain,
     );
   }
 
@@ -9585,8 +9684,8 @@
 
   function playCaptureCue() {
     triggerStinger();
-    playNoiseBurst(0.5, 0.12, 680, "lowpass");
-    playTransientTone(54, 28, 0.74, 0.13, "sawtooth");
+    playNoiseBurst(0.5, 0.12, 680, "lowpass", 0, 0, dangerBusGain);
+    playTransientTone(54, 28, 0.74, 0.13, "sawtooth", 0, dangerBusGain);
   }
 
   function canvasPoint(event) {
@@ -9623,6 +9722,19 @@
     return -1;
   }
 
+  function settingsIndexAt(point) {
+    if (point.x < 684 || point.x > 1082) {
+      return -1;
+    }
+    for (let index = 0; index < SETTINGS_ROWS.length; index += 1) {
+      const row = settingsRowGeometry(index);
+      if (point.y >= row.y && point.y <= row.y + row.height) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
   function handlePointerDown(event) {
     const point = canvasPoint(event);
     state.inputMethod = "keyboard";
@@ -9651,21 +9763,24 @@
       if (
         point.x >= 690 &&
         point.x <= 1060 &&
-        point.y >= 506 &&
-        point.y <= 570
+        point.y >= 548 &&
+        point.y <= 596
       ) {
         returnFromSettings();
-      } else if (point.y >= 270 && point.y <= 325 && point.x >= 700 && point.x <= 1050) {
-        state.settingsIndex = 0;
-        applyVolume((point.x - 700) / 350);
-      } else if (point.x >= 690 && point.x <= 1080 && point.y >= 330 && point.y <= 395) {
-        state.settingsIndex = 1;
-        state.subtitles = !state.subtitles;
-        savePreferences();
-      } else if (point.x >= 690 && point.x <= 1080 && point.y >= 395 && point.y <= 465) {
-        state.settingsIndex = 2;
-        state.reducedMotion = !state.reducedMotion;
-        savePreferences();
+      } else {
+        const index = settingsIndexAt(point);
+        if (index >= 0) {
+          state.settingsIndex = index;
+          const setting = SETTINGS_ROWS[index];
+          if (setting.type === "slider" && point.x >= 850) {
+            applyAudioSetting(setting.key, (point.x - 868) / 152);
+            playMixPreview(setting.id);
+          } else if (setting.type === "toggle") {
+            state[setting.key] = !state[setting.key];
+            savePreferences();
+            playUiTone(state[setting.key] ? 320 : 210, 0.055, 0.02);
+          }
+        }
       }
     } else if (state.mode === "paused") {
       const index = pauseIndexAt(point);
@@ -9695,12 +9810,19 @@
     if (
       state.mode !== "menu" &&
       state.mode !== "claim" &&
-      state.mode !== "paused"
+      state.mode !== "paused" &&
+      state.mode !== "settings"
     ) {
       return;
     }
     state.inputMethod = "keyboard";
-    if (state.mode === "paused") {
+    if (state.mode === "settings") {
+      const index = settingsIndexAt(canvasPoint(event));
+      if (index >= 0 && index !== state.settingsIndex) {
+        state.settingsIndex = index;
+        playUiTone(190 + index * 12, 0.04, 0.012);
+      }
+    } else if (state.mode === "paused") {
       const index = pauseIndexAt(canvasPoint(event));
       if (index >= 0 && index !== state.pauseIndex) {
         state.pauseIndex = index;
@@ -9723,16 +9845,38 @@
     }
   }
 
-  function applyVolume(value) {
-    state.volume = clamp(value, 0, 1);
-    if (audioContext && masterGain) {
-      masterGain.gain.setTargetAtTime(
-        state.volume * 0.55,
-        audioContext.currentTime,
-        0.025,
-      );
+  function applyAudioSetting(key, value) {
+    state[key] = clamp(value, 0, 1);
+    if (audioContext) {
+      const gainTargets = {
+        volume: { node: masterGain, scale: 0.55 },
+        ambienceVolume: { node: ambienceBusGain, scale: 1 },
+        mowerVolume: { node: mowerBusGain, scale: 1 },
+        effectsVolume: { node: effectsBusGain, scale: 1 },
+        dangerVolume: { node: dangerBusGain, scale: 1 },
+      };
+      const target = gainTargets[key];
+      if (target?.node) {
+        target.node.gain.setTargetAtTime(
+          state[key] * target.scale,
+          audioContext.currentTime,
+          0.025,
+        );
+      }
     }
     savePreferences();
+  }
+
+  function playMixPreview(id) {
+    if (id === "ambience") {
+      playNoiseBurst(0.18, 0.022, 620, "bandpass", 0, 0, ambienceBusGain);
+    } else if (id === "mower") {
+      playTransientTone(82, 58, 0.16, 0.045, "sawtooth", 0, mowerBusGain);
+    } else if (id === "danger") {
+      playHeartbeat(0.55);
+    } else {
+      playUiTone(260, 0.055, 0.022);
+    }
   }
 
   function dismissHoleTutorial(startedMoving = false) {
@@ -9763,22 +9907,23 @@
 
   function selectSettings(direction) {
     state.settingsIndex =
-      (state.settingsIndex + direction + 3) % 3;
+      (state.settingsIndex + direction + SETTINGS_ROWS.length) %
+      SETTINGS_ROWS.length;
     playUiTone(198 + state.settingsIndex * 20, 0.045, 0.016);
   }
 
   function adjustSelectedSetting(direction) {
-    if (state.settingsIndex === 0) {
-      applyVolume(state.volume + direction * 0.05);
-      playUiTone(240 + state.volume * 80, 0.035, 0.012);
-    } else if (state.settingsIndex === 1) {
-      state.subtitles = !state.subtitles;
-      savePreferences();
-      playUiTone(state.subtitles ? 320 : 210, 0.055, 0.02);
+    const setting = SETTINGS_ROWS[state.settingsIndex];
+    if (setting.type === "slider") {
+      applyAudioSetting(
+        setting.key,
+        state[setting.key] + direction * 0.05,
+      );
+      playMixPreview(setting.id);
     } else {
-      state.reducedMotion = !state.reducedMotion;
+      state[setting.key] = !state[setting.key];
       savePreferences();
-      playUiTone(state.reducedMotion ? 235 : 300, 0.055, 0.02);
+      playUiTone(state[setting.key] ? 320 : 210, 0.055, 0.02);
     }
   }
 
@@ -10238,12 +10383,16 @@
     },
     settings: {
       volume: Number(state.volume.toFixed(2)),
+      ambienceVolume: Number(state.ambienceVolume.toFixed(2)),
+      mowerVolume: Number(state.mowerVolume.toFixed(2)),
+      effectsVolume: Number(state.effectsVolume.toFixed(2)),
+      dangerVolume: Number(state.dangerVolume.toFixed(2)),
       subtitles: state.subtitles,
       reducedMotion: state.reducedMotion,
       returnTarget: state.settingsReturnMode,
       persisted: preferencesStorageAvailable,
       selected:
-        ["volume", "subtitles", "reduced_motion"][state.settingsIndex],
+        SETTINGS_ROWS[state.settingsIndex].id,
     },
     career: {
       persisted: careerStorageAvailable,
@@ -10286,6 +10435,19 @@
       initialized: Boolean(audioContext),
       ambience: Boolean(ambienceGain),
       spatialMower: Boolean(motorPanNode),
+      mix: {
+        master: Number(state.volume.toFixed(2)),
+        ambience: Number(state.ambienceVolume.toFixed(2)),
+        mower: Number(state.mowerVolume.toFixed(2)),
+        effects: Number(state.effectsVolume.toFixed(2)),
+        danger: Number(state.dangerVolume.toFixed(2)),
+      },
+      routing: {
+        ambienceBus: Boolean(ambienceBusGain),
+        mowerBus: Boolean(mowerBusGain),
+        effectsBus: Boolean(effectsBusGain),
+        dangerBus: Boolean(dangerBusGain),
+      },
       heartbeatActive:
         state.mode === "first_hole" &&
         (state.hole.joe.mode === "chase" ||

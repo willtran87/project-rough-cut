@@ -26,7 +26,7 @@ The browser build includes:
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - An adaptive HUD that recedes after onboarding and can be recalled with H or Y.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
-- Persistent volume, subtitle, and reduced-camera-motion preferences.
+- A persistent five-channel audio mix plus subtitle and reduced-camera-motion preferences.
 - A post-run course scorecard with S–D risk grades, close-call recognition, and route-specific personal records.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.
