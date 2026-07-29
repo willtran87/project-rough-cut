@@ -45,7 +45,7 @@ The immediately playable browser version is in `web/`. It reproduces the animate
 - `qa/` - Review output, test notes, and document render checks.
 - `tools/` - Project-local content and pipeline utilities.
 - `web/` - Static production slice deployed to GitHub Pages.
-- `.github/workflows/pages.yml` - Automated GitHub Pages deployment.
+- `gh-pages` branch - Published static snapshot of the `web/` build.
 
 ## Recommended first milestone
 
