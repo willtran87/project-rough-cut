@@ -193,3 +193,20 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Verified pointer pause, pointer settings return, keyboard resume, H/Y control recall, and preference persistence after reload.
 - Rechecked the compact HUD and pause overlay at 800×600 and 2560×1600 with viewport-matched document bounds and no browser errors.
 - Ran the required project Playwright client against the pause and pause-settings paths with no console or page errors.
+
+## Course Records and Replay Motivation Pass — July 29, 2026
+
+- Added a post-run performance model that grades completed rounds from S through D.
+- Balanced the score across elapsed time, maximum Joe attention, pursuit duration, golf balls preserved, crouched traversal, contact breaks, and survived close calls.
+- Kept scoring out of the active pursuit HUD so the horror loop remains primary; the complete evaluation appears only after escape.
+- Added a full after-action scorecard with animated score count-up, route result, risk class, time, attention avoided, pursuit summary, close calls, remaining resources, and new-record presentation.
+- Added close-call recognition when the player breaks pursuit after Joe comes within 18 meters.
+- Persisted separate shed and drain personal records plus rounds started, escapes, and captures in browser storage.
+- Added a compact course-record strip and player-file summary to the main menu.
+- Added scorecard priorities to the survival briefing without increasing the live HUD footprint.
+- Exposed current performance metrics, final result breakdown, and career records through `render_game_to_text`.
+- Completed a legitimate input-driven shed escape in 14.48 seconds with one ball remaining, no formal pursuit, an A grade, and a 6,290 score.
+- Verified that the first completion files a new route record, a lower subsequent score does not replace a seeded 9,000-point best, and the record survives reload.
+- Verified that capture increments the persistent denial count and that the count survives reload.
+- Visually validated the scorecard at 800×600, 1280×720, and 2560×1600 with no document overflow.
+- Re-ran the project Playwright client for the menu and updated survival briefing with no console or page errors.

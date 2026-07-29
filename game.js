@@ -37,7 +37,9 @@
     "Abandon this attempt and return to the main menu.",
   ];
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
+  const CAREER_STORAGE_KEY = "rough-cut.career.v1";
   let preferencesStorageAvailable = true;
+  let careerStorageAvailable = true;
 
   const art = new Image();
   art.src = "./assets/rough-cut-opening.png";
@@ -247,7 +249,57 @@
     }
   }
 
+  function validCareerRecord(record) {
+    if (
+      !record ||
+      !Number.isFinite(record.score) ||
+      !Number.isFinite(record.timeSeconds) ||
+      typeof record.grade !== "string"
+    ) {
+      return null;
+    }
+    return {
+      score: Math.max(0, Math.round(record.score)),
+      timeSeconds: Math.max(0, record.timeSeconds),
+      grade: record.grade.slice(0, 1),
+      route: record.route === "drain" ? "drain" : "shed",
+    };
+  }
+
+  function readSavedCareer() {
+    try {
+      const parsed = JSON.parse(
+        window.localStorage.getItem(CAREER_STORAGE_KEY) ||
+          "{}",
+      );
+      return {
+        roundsStarted: Number.isFinite(parsed.roundsStarted)
+          ? Math.max(0, Math.round(parsed.roundsStarted))
+          : 0,
+        escapes: Number.isFinite(parsed.escapes)
+          ? Math.max(0, Math.round(parsed.escapes))
+          : 0,
+        captures: Number.isFinite(parsed.captures)
+          ? Math.max(0, Math.round(parsed.captures))
+          : 0,
+        routes: {
+          shed: validCareerRecord(parsed.routes?.shed),
+          drain: validCareerRecord(parsed.routes?.drain),
+        },
+      };
+    } catch {
+      careerStorageAvailable = false;
+      return {
+        roundsStarted: 0,
+        escapes: 0,
+        captures: 0,
+        routes: { shed: null, drain: null },
+      };
+    }
+  }
+
   const savedPreferences = readSavedPreferences();
+  const savedCareer = readSavedCareer();
 
   const state = {
     mode: "gate",
@@ -261,6 +313,7 @@
     inputMethod: "keyboard",
     settingsIndex: 0,
     settingsReturnMode: "menu",
+    career: savedCareer,
     status: "Every blade is in scope.",
     manualTime: false,
     transitionAlpha: 0,
@@ -352,6 +405,17 @@
       playerAudible: false,
       visibilityRange: 0,
       hearingRange: 0,
+      attemptRecorded: false,
+      result: null,
+      maxDetection: 0,
+      pursuitSeconds: 0,
+      crouchedSeconds: 0,
+      sprintSeconds: 0,
+      chaseCount: 0,
+      chaseBreaks: 0,
+      closeCalls: 0,
+      closestJoeDistance: Infinity,
+      chaseClosestDistance: Infinity,
     },
   };
 
@@ -398,6 +462,175 @@
       preferencesStorageAvailable = false;
       // Storage can be unavailable in private or embedded browser contexts.
     }
+  }
+
+  function saveCareer() {
+    try {
+      window.localStorage.setItem(
+        CAREER_STORAGE_KEY,
+        JSON.stringify(state.career),
+      );
+    } catch {
+      careerStorageAvailable = false;
+    }
+  }
+
+  function bestCareerRecord() {
+    const records = [
+      state.career.routes.shed,
+      state.career.routes.drain,
+    ].filter(Boolean);
+    if (records.length === 0) {
+      return null;
+    }
+    records.sort((a, b) =>
+      b.score - a.score ||
+      a.timeSeconds - b.timeSeconds,
+    );
+    return records[0];
+  }
+
+  function gradeForScore(score) {
+    if (score >= 6700) {
+      return "S";
+    }
+    if (score >= 6000) {
+      return "A";
+    }
+    if (score >= 5000) {
+      return "B";
+    }
+    if (score >= 4200) {
+      return "C";
+    }
+    return "D";
+  }
+
+  function gradeColor(grade) {
+    const colors = {
+      S: "#f1cf68",
+      A: "#a9d879",
+      B: "#72c6b1",
+      C: "#df984f",
+      D: "#c95b3d",
+    };
+    return colors[grade] || "#d6dec9";
+  }
+
+  function formatRunTime(seconds) {
+    const total = Math.max(
+      0,
+      Math.floor(seconds),
+    );
+    const minutes = Math.floor(total / 60);
+    const remainder = total % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+  }
+
+  function calculateRunResult(route) {
+    const hole = state.hole;
+    const timeBonus = Math.max(
+      0,
+      Math.round((210 - hole.elapsed) * 9),
+    );
+    const exposure =
+      hole.maxDetection * 0.68 +
+      Math.min(1, hole.pursuitSeconds / 50) * 0.32;
+    const stealthBonus = Math.max(
+      0,
+      Math.round((1 - clamp(exposure, 0, 1)) * 1100),
+    );
+    const resourceBonus = hole.golfBalls * 180;
+    const composureBonus = Math.min(
+      400,
+      Math.round(hole.crouchedSeconds * 4),
+    );
+    const recoveryBonus =
+      Math.min(3, hole.chaseBreaks) * 150 +
+      Math.min(3, hole.closeCalls) * 250;
+    const routeBonus = 250;
+    const score =
+      3000 +
+      timeBonus +
+      stealthBonus +
+      resourceBonus +
+      composureBonus +
+      recoveryBonus +
+      routeBonus;
+    const grade = gradeForScore(score);
+    const gradeLabels = {
+      S: "UNMANAGEABLE EXPOSURE",
+      A: "OUT OF SCOPE",
+      B: "CONDITIONALLY COVERED",
+      C: "MITIGATION REQUIRED",
+      D: "HIGH-RISK ASSET",
+    };
+    return {
+      route,
+      score,
+      grade,
+      gradeLabel: gradeLabels[grade],
+      timeSeconds: hole.elapsed,
+      ballsRemaining: hole.golfBalls,
+      maxDetection: hole.maxDetection,
+      pursuitSeconds: hole.pursuitSeconds,
+      chaseCount: hole.chaseCount,
+      chaseBreaks: hole.chaseBreaks,
+      closeCalls: hole.closeCalls,
+      closestJoeDistance: Number.isFinite(
+        hole.closestJoeDistance,
+      )
+        ? hole.closestJoeDistance
+        : null,
+      cleanRun: hole.chaseCount === 0,
+      breakdown: {
+        base: 3000,
+        time: timeBonus,
+        stealth: stealthBonus,
+        resources: resourceBonus,
+        composure: composureBonus,
+        recovery: recoveryBonus,
+        route: routeBonus,
+      },
+      newBest: false,
+      previousBestScore: null,
+    };
+  }
+
+  function recordRoundStart() {
+    if (state.hole.attemptRecorded) {
+      return;
+    }
+    state.hole.attemptRecorded = true;
+    state.career.roundsStarted += 1;
+    saveCareer();
+  }
+
+  function recordCapture() {
+    state.career.captures += 1;
+    saveCareer();
+  }
+
+  function recordVictory(route) {
+    const result = calculateRunResult(route);
+    const previous = state.career.routes[route];
+    result.previousBestScore = previous?.score || null;
+    result.newBest =
+      !previous ||
+      result.score > previous.score ||
+      (result.score === previous.score &&
+        result.timeSeconds < previous.timeSeconds);
+    state.career.escapes += 1;
+    if (result.newBest) {
+      state.career.routes[route] = {
+        route,
+        score: result.score,
+        grade: result.grade,
+        timeSeconds: result.timeSeconds,
+      };
+    }
+    saveCareer();
+    return result;
   }
 
   function inputCopy(keyboardCopy, gamepadCopy) {
@@ -752,6 +985,22 @@
     drawText("ROUGH CUT", 90, 166, 65, "#f0f0d4", "left", true);
     drawText("THE COURSE CLOSES AT DUSK.", 92, 215, 18, "#ea8740", "left");
     drawText("JOE DOES NOT.", 92, 240, 18, "#ea8740", "left");
+    const careerBest = bestCareerRecord();
+    ctx.fillStyle = "rgba(9,25,13,0.88)";
+    ctx.fillRect(88, 252, 390, 25);
+    drawText(
+      careerBest
+        ? `COURSE RECORD  ${careerBest.grade}  //  ${careerBest.score.toLocaleString()}  //  ${careerBest.route.toUpperCase()}`
+        : "COURSE RECORD  —  UNFILED",
+      100,
+      270,
+      12,
+      careerBest
+        ? gradeColor(careerBest.grade)
+        : "#71806d",
+      "left",
+      Boolean(careerBest),
+    );
 
     MENU_ITEMS.forEach((label, index) => {
       const y = 286 + index * 61;
@@ -772,7 +1021,16 @@
       drawText("unauthorized presence in the rough.", 91, 643, 12, "#a7b29e", "left");
     } else {
       drawText(MENU_DESCRIPTIONS[state.menuIndex], 91, 621, 13, "#d0d8bf", "left");
-      drawText(state.status, 91, 644, 12, "#84927d", "left");
+      drawText(
+        state.career.roundsStarted > 0
+          ? `FILE: ${state.career.roundsStarted} ROUND${state.career.roundsStarted === 1 ? "" : "S"}  •  ${state.career.escapes} ESCAPED  •  ${state.career.captures} DENIED`
+          : state.status,
+        91,
+        644,
+        12,
+        "#84927d",
+        "left",
+      );
     }
     drawText(
       inputCopy(
@@ -1102,6 +1360,17 @@
       playerAudible: false,
       visibilityRange: 0,
       hearingRange: 0,
+      attemptRecorded: false,
+      result: null,
+      maxDetection: 0,
+      pursuitSeconds: 0,
+      crouchedSeconds: 0,
+      sprintSeconds: 0,
+      chaseCount: 0,
+      chaseBreaks: 0,
+      closeCalls: 0,
+      closestJoeDistance: Infinity,
+      chaseClosestDistance: Infinity,
     };
   }
 
@@ -1502,6 +1771,7 @@
 
   function completeHole(route) {
     state.hole.escapeRoute = route;
+    state.hole.result = recordVictory(route);
     state.mode = "victory";
     state.time = 0;
     state.transitionAlpha = 0.75;
@@ -1610,6 +1880,10 @@
     const joe = hole.joe;
     const previousMode = joe.mode;
     const playerDistance = worldDistance(joe, state.player);
+    hole.closestJoeDistance = Math.min(
+      hole.closestJoeDistance,
+      playerDistance,
+    );
     const moving = playerIsMoving();
     const environment = getPlayerEnvironmentState();
     const inRough = environment.inRough;
@@ -1651,6 +1925,10 @@
       hole.detection + detectionGain * dt,
       0,
       1,
+    );
+    hole.maxDetection = Math.max(
+      hole.maxDetection,
+      hole.detection,
     );
     hole.detectionSource = visibleNow
       ? "sight"
@@ -1795,8 +2073,47 @@
       joe.minimumObstacleClearance,
       joeObstacleClearanceAt(joe),
     );
+    if (
+      previousMode !== "chase" &&
+      joe.mode === "chase"
+    ) {
+      hole.chaseCount += 1;
+      hole.chaseClosestDistance = playerDistance;
+    }
+    if (joe.mode === "chase") {
+      hole.pursuitSeconds += dt;
+      hole.chaseClosestDistance = Math.min(
+        hole.chaseClosestDistance,
+        worldDistance(joe, state.player),
+      );
+    }
+    const brokeContact =
+      previousMode === "chase" &&
+      joe.mode === "search";
+    if (brokeContact) {
+      hole.chaseBreaks += 1;
+      if (hole.chaseClosestDistance < 18) {
+        hole.closeCalls += 1;
+      }
+    }
     if (joe.mode !== previousMode) {
       announceJoeState(joe.mode);
+      if (
+        brokeContact &&
+        hole.chaseClosestDistance < 18
+      ) {
+        hole.stateBanner =
+          "CLOSE CALL // EXPOSURE SURVIVED";
+        hole.stateBannerTimer = 2.1;
+        setHoleMessage(
+          "CLOSE CALL — Joe lost the line. Keep moving.",
+          2.15,
+        );
+        playUiTone(430, 0.09, 0.028);
+      }
+    }
+    if (brokeContact) {
+      hole.chaseClosestDistance = Infinity;
     }
     if (joe.mode === "chase" || playerDistance < 42) {
       hole.lastKnownJoe = { x: joe.x, y: joe.y };
@@ -1804,6 +2121,7 @@
     }
     hole.previousJoeMode = joe.mode;
     if (worldDistance(joe, state.player) < 8.2) {
+      recordCapture();
       state.mode = "defeat";
       state.time = 0;
       state.transitionAlpha = 0.6;
@@ -3295,6 +3613,14 @@
 
     drawText("SURVIVAL BRIEFING // HOLE 1", WIDTH * 0.5, 129, 36, "#f0efd8", "center", true);
     drawText("CROSS FOUR COURSE ZONES. TAKE THE SHED KEY — OR RELEASE THE DRAIN.", WIDTH * 0.5, 163, 15, "#df8c47", "center", true);
+    drawText(
+      "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
+      WIDTH * 0.5,
+      184,
+      10,
+      "#82927f",
+      "center",
+    );
 
     const controllerActive = state.inputMethod === "gamepad";
     const cards = [
@@ -3916,6 +4242,16 @@
     const reveal = smoothstep(state.time / 0.48);
     const usedDrain = state.hole.escapeRoute === "drain";
     const routeAccent = usedDrain ? "#73c9aa" : "#91ad62";
+    const result =
+      state.hole.result ||
+      calculateRunResult(state.hole.escapeRoute);
+    const resultColor = gradeColor(result.grade);
+    const scoreReveal = smoothstep(
+      (state.time - 0.12) / 0.78,
+    );
+    const displayedScore = Math.round(
+      result.score * scoreReveal,
+    );
     drawImageCover(ctx, holeArt, 0, 8, 1.05 + reveal * 0.018);
     ctx.fillStyle = `rgba(1,8,4,${0.42 + reveal * 0.18})`;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -3926,7 +4262,7 @@
       HEIGHT * 0.12,
     );
 
-    const panel = { x: 290, y: 142, width: 700, height: 430 };
+    const panel = { x: 220, y: 82, width: 840, height: 556 };
     ctx.save();
     ctx.globalAlpha = reveal;
     ctx.translate(0, (1 - reveal) * 28);
@@ -3935,46 +4271,168 @@
       : "rgba(3,15,8,0.92)";
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, routeAccent, 3);
+    strokeRect(
+      panel.x + 12,
+      panel.y + 12,
+      panel.width - 24,
+      panel.height - 24,
+      "#314a34",
+      1,
+    );
     ctx.fillStyle = routeAccent;
     ctx.fillRect(panel.x + 28, panel.y + 28, 84, 3);
     ctx.fillRect(panel.x + panel.width - 112, panel.y + 28, 84, 3);
-    drawText("HOLE 1 SURVIVED", WIDTH * 0.5, 225, 52, "#f0efd3", "center", true);
-    drawText("PAR IS NOT A SAFETY STANDARD.", WIDTH * 0.5, 278, 18, "#d6813d", "center");
+    drawText("HOLE 1 SURVIVED", WIDTH * 0.5, 142, 42, "#f0efd3", "center", true);
     drawText(
-      usedDrain ? "UNAUTHORIZED EGRESS RECORDED" : "ACTION ITEM CLOSED",
+      "AFTER-ACTION PERFORMANCE REVIEW",
       WIDTH * 0.5,
-      340,
+      177,
+      13,
+      "#d6813d",
+      "center",
+      true,
+    );
+    ctx.strokeStyle = "#40543c";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(panel.x + 30, 198);
+    ctx.lineTo(panel.x + panel.width - 30, 198);
+    ctx.stroke();
+
+    drawText("RISK CLASS", 365, 236, 13, "#93a28d", "center", true);
+    drawText(
+      result.grade,
+      365,
+      350,
+      118,
+      resultColor,
+      "center",
+      true,
+    );
+    drawText(
+      result.gradeLabel,
+      365,
+      384,
+      13,
+      resultColor,
+      "center",
+      true,
+    );
+    drawText(
+      result.newBest
+        ? `NEW ${result.route.toUpperCase()} ROUTE RECORD`
+        : `ROUTE BEST  ${state.career.routes[result.route]?.score.toLocaleString() || result.score.toLocaleString()}`,
+      365,
+      423,
+      12,
+      result.newBest ? "#f2c75f" : "#91a18b",
+      "center",
+      result.newBest,
+    );
+
+    ctx.strokeStyle = "#40543c";
+    ctx.beginPath();
+    ctx.moveTo(492, 218);
+    ctx.lineTo(492, 480);
+    ctx.stroke();
+
+    drawText("COURSE SCORE", 540, 237, 13, "#93a28d", "left", true);
+    drawText(
+      displayedScore.toLocaleString(),
+      540,
+      287,
+      40,
+      "#f2efd4",
+      "left",
+      true,
+    );
+    const statRows = [
+      [
+        "TIME ON COURSE",
+        formatRunTime(result.timeSeconds),
+      ],
+      [
+        "ATTENTION AVOIDED",
+        `${Math.round((1 - result.maxDetection) * 100)}%`,
+      ],
+      [
+        "PURSUIT",
+        result.cleanRun
+          ? "NONE RECORDED"
+          : `${result.chaseCount} / ${Math.round(result.pursuitSeconds)}s`,
+      ],
+      [
+        "CLOSE CALLS",
+        String(result.closeCalls),
+      ],
+      [
+        "RESOURCES",
+        `${result.ballsRemaining} BALL${result.ballsRemaining === 1 ? "" : "S"}`,
+      ],
+    ];
+    for (
+      let index = 0;
+      index < statRows.length;
+      index += 1
+    ) {
+      const y = 324 + index * 33;
+      if (index % 2 === 0) {
+        ctx.fillStyle = "rgba(36,59,37,0.32)";
+        ctx.fillRect(530, y - 20, 300, 28);
+      }
+      drawText(
+        statRows[index][0],
+        542,
+        y,
+        11,
+        "#899787",
+        "left",
+      );
+      drawText(
+        statRows[index][1],
+        818,
+        y,
+        13,
+        index === 3 && result.closeCalls > 0
+          ? "#efb158"
+          : "#d8dfcd",
+        "right",
+        true,
+      );
+    }
+
+    ctx.fillStyle = "rgba(14,31,18,0.8)";
+    ctx.fillRect(260, 495, 760, 46);
+    strokeRect(260, 495, 760, 46, "#3f563a", 1);
+    drawText(
+      usedDrain
+        ? "DRAIN ROUTE  //  PRESSURE RELEASED  //  UNAUTHORIZED EGRESS"
+        : "SHED ROUTE  //  KEY RECOVERED  //  ACTION ITEM CLOSED",
+      WIDTH * 0.5,
+      524,
       13,
       routeAccent,
       "center",
+      true,
     );
     drawText(
-      usedDrain
-        ? "The pressure dropped. The drain opened."
-        : "The key turned. The door opened.",
+      result.newBest
+        ? "PERSONAL RECORD FILED. JOE REQUESTS A REASSESSMENT."
+        : "PAR IS NOT A SAFETY STANDARD. JOE'S MOWER DID NOT STOP.",
       WIDTH * 0.5,
-      380,
-      20,
-      "#cbd6bd",
+      570,
+      13,
+      result.newBest ? "#f0c66b" : "#d69a5c",
       "center",
     );
-    drawText(
-      `${usedDrain ? "DRAIN ROUTE" : "SHED ROUTE"}  •  ${state.hole.golfBalls} BALL${state.hole.golfBalls === 1 ? "" : "S"} REMAINED  •  ${Math.round(state.hole.travelDistance)}m TRAVERSED`,
-      WIDTH * 0.5,
-      420,
-      14,
-      "#aeb99f",
-      "center",
-    );
-    drawText("Joe's mower did not stop.", WIDTH * 0.5, 458, 18, "#e09a58", "center");
     drawText(
       inputCopy(
         "ENTER — PLAY AGAIN     ESC — MAIN MENU",
         "A — PLAY AGAIN     B — MAIN MENU",
       ),
       WIDTH * 0.5,
-      518,
-      16,
+      610,
+      15,
       "#e7e4ca",
       "center",
       true,
@@ -4177,6 +4635,12 @@
         !hole.crouched &&
         !hole.focus &&
         sprintHeld();
+      if (moving && hole.crouched) {
+        hole.crouchedSeconds += dt;
+      }
+      if (sprinting) {
+        hole.sprintSeconds += dt;
+      }
       const speed =
         (hole.focus
           ? 11
@@ -4961,6 +5425,7 @@
       return;
     }
     state.hole.tutorialVisible = false;
+    recordRoundStart();
     state.hole.hasMoved = startedMoving;
     state.hole.prompt = "";
     setHoleMessage("Choose a route: key to shed, or sprinkler to drain.", 3.6);
@@ -5364,6 +5829,17 @@
       selected:
         ["volume", "subtitles", "reduced_motion"][state.settingsIndex],
     },
+    career: {
+      persisted: careerStorageAvailable,
+      roundsStarted: state.career.roundsStarted,
+      escapes: state.career.escapes,
+      captures: state.career.captures,
+      bestOverall: bestCareerRecord(),
+      routes: {
+        shed: state.career.routes.shed,
+        drain: state.career.routes.drain,
+      },
+    },
     input: {
       activeMethod: state.inputMethod,
       gamepadConnected: state.gamepad.connected,
@@ -5424,6 +5900,34 @@
           controlHintSeconds: Number(
             state.hole.controlHintTimer.toFixed(2),
           ),
+          performance: {
+            elapsedSeconds: Number(
+              state.hole.elapsed.toFixed(2),
+            ),
+            maxDetection: Number(
+              state.hole.maxDetection.toFixed(2),
+            ),
+            pursuitSeconds: Number(
+              state.hole.pursuitSeconds.toFixed(2),
+            ),
+            crouchedSeconds: Number(
+              state.hole.crouchedSeconds.toFixed(2),
+            ),
+            sprintSeconds: Number(
+              state.hole.sprintSeconds.toFixed(2),
+            ),
+            chaseCount: state.hole.chaseCount,
+            chaseBreaks: state.hole.chaseBreaks,
+            closeCalls: state.hole.closeCalls,
+            closestJoeDistance: Number.isFinite(
+              state.hole.closestJoeDistance,
+            )
+              ? Number(
+                  state.hole.closestJoeDistance.toFixed(2),
+                )
+              : null,
+          },
+          result: state.hole.result,
           keyCollected: state.hole.keyCollected,
           drainUnlocked: state.hole.drainUnlocked,
           escapeRoute: state.hole.escapeRoute,
