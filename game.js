@@ -24,6 +24,7 @@
     "Rewatch the opening incident.",
     "End the shift. The course remembers.",
   ];
+  const MENU_ITEM_START_Y = 294;
   const PAUSE_ITEMS = [
     "RESUME ROUND",
     "HOW TO PLAY / SETTINGS",
@@ -111,7 +112,7 @@
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
-  const SPRINKLER_POINT = { x: -92, y: 105, radius: 18 };
+  const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: 24, y: 350, radius: 13 };
   const DRAIN_EXIT = { x: -76, y: 339, radius: 15 };
   const COURSE_ZONES = [
@@ -219,6 +220,84 @@
     { x: -110, y: 195 },
     { x: -35, y: 195 },
   ];
+  const RUN_VARIANTS = [
+    {
+      id: "standard_review",
+      number: 1,
+      name: "STANDARD REVIEW",
+      shortName: "STANDARD",
+      key: KEY_POINT,
+      sprinkler: SPRINKLER_POINT,
+      keyHint: "FIND KEY WEST OF WATER",
+      joeStart: {
+        x: 44,
+        y: 185,
+        patrolIndex: 0,
+        hold: 2.4,
+      },
+      briefing:
+        "KEY WEST OF WATER  •  VALVE AT WEST TEE  •  BOTH EXITS ACTIVE",
+      accent: "#91ad62",
+    },
+    {
+      id: "eastern_exception",
+      number: 2,
+      name: "EASTERN EXCEPTION",
+      shortName: "EAST SHIFT",
+      key: { x: 46, y: 221, radius: 16 },
+      sprinkler: { x: 70, y: 138, radius: 18 },
+      keyHint: "FIND KEY BY FLOODLIGHT",
+      joeStart: {
+        x: -90,
+        y: 250,
+        patrolIndex: 4,
+        hold: 1.8,
+      },
+      briefing:
+        "KEY BY FLOODLIGHT  •  VALVE EAST OF AUDIT ROW  •  JOE STARTS WEST",
+      accent: "#d59a4f",
+    },
+    {
+      id: "closing_shift",
+      number: 3,
+      name: "CLOSING SHIFT",
+      shortName: "CLOSING",
+      key: { x: -4, y: 188, radius: 16 },
+      sprinkler: { x: 105, y: 235, radius: 18 },
+      keyHint: "FIND KEY IN AUDIT ROW",
+      joeStart: {
+        x: 20,
+        y: 345,
+        patrolIndex: 7,
+        hold: 1.25,
+      },
+      briefing:
+        "KEY IN AUDIT ROW  •  VALVE AT EAST WATER EDGE  •  JOE GUARDS EXITS",
+      accent: "#77b9aa",
+    },
+  ];
+
+  function runVariantForRound(roundsStarted) {
+    return RUN_VARIANTS[
+      Math.max(0, roundsStarted) %
+        RUN_VARIANTS.length
+    ];
+  }
+
+  function activeRunVariant() {
+    return (
+      RUN_VARIANTS[state.hole?.variantIndex || 0] ||
+      RUN_VARIANTS[0]
+    );
+  }
+
+  function activeKeyPoint() {
+    return activeRunVariant().key;
+  }
+
+  function activeSprinklerPoint() {
+    return activeRunVariant().sprinkler;
+  }
 
   function readSavedPreferences() {
     try {
@@ -282,6 +361,19 @@
         captures: Number.isFinite(parsed.captures)
           ? Math.max(0, Math.round(parsed.captures))
           : 0,
+        completedVariants: Array.isArray(
+          parsed.completedVariants,
+        )
+          ? [
+              ...new Set(
+                parsed.completedVariants.filter((id) =>
+                  RUN_VARIANTS.some(
+                    (variant) => variant.id === id,
+                  ),
+                ),
+              ),
+            ]
+          : [],
         routes: {
           shed: validCareerRecord(parsed.routes?.shed),
           drain: validCareerRecord(parsed.routes?.drain),
@@ -293,6 +385,7 @@
         roundsStarted: 0,
         escapes: 0,
         captures: 0,
+        completedVariants: [],
         routes: { shed: null, drain: null },
       };
     }
@@ -332,6 +425,8 @@
     },
     player: { x: 0, y: 0, heading: 0 },
     hole: {
+      variantIndex: 0,
+      variantId: RUN_VARIANTS[0].id,
       phase: "find_key",
       keyCollected: false,
       golfBalls: 4,
@@ -529,6 +624,7 @@
 
   function calculateRunResult(route) {
     const hole = state.hole;
+    const variant = activeRunVariant();
     const timeBonus = Math.max(
       0,
       Math.round((210 - hole.elapsed) * 9),
@@ -567,6 +663,9 @@
     };
     return {
       route,
+      variantId: variant.id,
+      variantName: variant.name,
+      variantNumber: variant.number,
       score,
       grade,
       gradeLabel: gradeLabels[grade],
@@ -621,6 +720,15 @@
       (result.score === previous.score &&
         result.timeSeconds < previous.timeSeconds);
     state.career.escapes += 1;
+    if (
+      !state.career.completedVariants.includes(
+        result.variantId,
+      )
+    ) {
+      state.career.completedVariants.push(
+        result.variantId,
+      );
+    }
     if (result.newBest) {
       state.career.routes[route] = {
         route,
@@ -986,8 +1094,11 @@
     drawText("THE COURSE CLOSES AT DUSK.", 92, 215, 18, "#ea8740", "left");
     drawText("JOE DOES NOT.", 92, 240, 18, "#ea8740", "left");
     const careerBest = bestCareerRecord();
+    const nextVariant = runVariantForRound(
+      state.career.roundsStarted,
+    );
     ctx.fillStyle = "rgba(9,25,13,0.88)";
-    ctx.fillRect(88, 252, 390, 25);
+    ctx.fillRect(88, 252, 390, 34);
     drawText(
       careerBest
         ? `COURSE RECORD  ${careerBest.grade}  //  ${careerBest.score.toLocaleString()}  //  ${careerBest.route.toUpperCase()}`
@@ -1001,9 +1112,18 @@
       "left",
       Boolean(careerBest),
     );
+    drawText(
+      `NEXT ORDER  ${String(nextVariant.number).padStart(2, "0")}  //  ${nextVariant.name}`,
+      100,
+      284,
+      11,
+      nextVariant.accent,
+      "left",
+      true,
+    );
 
     MENU_ITEMS.forEach((label, index) => {
-      const y = 286 + index * 61;
+      const y = MENU_ITEM_START_Y + index * 61;
       const selected = state.menuIndex === index;
       const selectionPulse = 0.86 + (Math.sin(state.time * 4.5) + 1) * 0.07;
       ctx.fillStyle = selected ? `rgba(48,66,22,${selectionPulse})` : "rgba(10,27,14,0.88)";
@@ -1283,21 +1403,27 @@
   }
 
   function resetFirstHole() {
+    const variant = runVariantForRound(
+      state.career.roundsStarted,
+    );
+    const variantIndex = RUN_VARIANTS.indexOf(variant);
     state.player = { x: 0, y: 0, heading: 0 };
     state.shedReached = false;
     state.status = "Objective: escape through the shed or drainage route.";
     state.hole = {
+      variantIndex,
+      variantId: variant.id,
       phase: "find_key",
       keyCollected: false,
       golfBalls: 4,
       noise: 0,
       joe: {
-        x: 44,
-        y: 185,
+        x: variant.joeStart.x,
+        y: variant.joeStart.y,
         mode: "patrol",
         alert: 0,
-        patrolIndex: 0,
-        patrolPause: 2.4,
+        patrolIndex: variant.joeStart.patrolIndex,
+        patrolPause: variant.joeStart.hold,
         routeObstacle: null,
         routeSide: 1,
         steeringAngle: 0,
@@ -1784,8 +1910,8 @@
     if (state.mode !== "first_hole") {
       return;
     }
-    const key = KEY_POINT;
-    const sprinkler = SPRINKLER_POINT;
+    const key = activeKeyPoint();
+    const sprinkler = activeSprinklerPoint();
     const shed = SHED_EXIT;
     const drain = DRAIN_EXIT;
 
@@ -1822,7 +1948,10 @@
       if (state.hole.keyCollected) {
         completeHole("shed");
       } else {
-        setHoleMessage("SHED LOCKED — Find the key near the bunker.", 3.2);
+        setHoleMessage(
+          `SHED LOCKED — ${activeRunVariant().keyHint}.`,
+          3.2,
+        );
         state.hole.phase = "find_key";
         playDoorRattle();
       }
@@ -3149,8 +3278,13 @@
       y: mapBottom - worldY / COURSE_LENGTH * (mapBottom - mapTop),
     });
     const playerPoint = mapPoint(state.player.x, state.player.y);
-    const keyPoint = mapPoint(KEY_POINT.x, KEY_POINT.y);
-    const sprinklerPoint = mapPoint(SPRINKLER_POINT.x, SPRINKLER_POINT.y);
+    const key = activeKeyPoint();
+    const sprinkler = activeSprinklerPoint();
+    const keyPoint = mapPoint(key.x, key.y);
+    const sprinklerPoint = mapPoint(
+      sprinkler.x,
+      sprinkler.y,
+    );
     const shedPoint = mapPoint(SHED_EXIT.x, SHED_EXIT.y);
     const drainPoint = mapPoint(DRAIN_EXIT.x, DRAIN_EXIT.y);
 
@@ -3604,6 +3738,7 @@
   }
 
   function drawTutorialBriefing() {
+    const variant = activeRunVariant();
     ctx.fillStyle = "rgba(0,3,1,0.78)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 164, y: 76, width: 952, height: 568 };
@@ -3611,8 +3746,24 @@
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#d47431", 3);
 
-    drawText("SURVIVAL BRIEFING // HOLE 1", WIDTH * 0.5, 129, 36, "#f0efd8", "center", true);
-    drawText("CROSS FOUR COURSE ZONES. TAKE THE SHED KEY — OR RELEASE THE DRAIN.", WIDTH * 0.5, 163, 15, "#df8c47", "center", true);
+    drawText(
+      `SURVIVAL BRIEFING // NIGHT ORDER ${String(variant.number).padStart(2, "0")}`,
+      WIDTH * 0.5,
+      129,
+      32,
+      "#f0efd8",
+      "center",
+      true,
+    );
+    drawText(
+      `${variant.name} // ${variant.briefing}`,
+      WIDTH * 0.5,
+      163,
+      13,
+      variant.accent,
+      "center",
+      true,
+    );
     drawText(
       "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
       WIDTH * 0.5,
@@ -3845,6 +3996,7 @@
 
   function drawFirstHoleOverlay() {
     const hole = state.hole;
+    const variant = activeRunVariant();
     const playerDistance = worldDistance(hole.joe, state.player);
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.inRough;
@@ -3859,7 +4011,7 @@
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
 
     const terrainStatus =
-      `${environment.zone.name}  •  ${environment.coverQuality.toUpperCase()}`;
+      `${environment.zone.name}  •  ${environment.coverQuality.toUpperCase()}  •  ORDER ${String(variant.number).padStart(2, "0")}`;
     const terrainColor =
       environment.hardCover && hole.crouched
         ? "#9fd285"
@@ -3873,12 +4025,20 @@
       ctx.fillStyle = "rgba(2,8,5,0.86)";
       ctx.fillRect(36, 34, 430, 224);
       strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
-      drawText("HOLE 1 — THE PILOT", 62, 76, 32, "#efebcd", "left", true);
+      drawText(
+        `HOLE 1 — ${variant.shortName}`,
+        62,
+        76,
+        29,
+        "#efebcd",
+        "left",
+        true,
+      );
       drawText(objective, 62, 112, 16, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
 
       drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
       drawText(
-        `${hole.keyCollected ? "✓" : "1"}  ${hole.keyCollected ? "KEY ACQUIRED" : "FIND KEY NEAR BUNKER"}`,
+        `${hole.keyCollected ? "✓" : "1"}  ${hole.keyCollected ? "KEY ACQUIRED" : variant.keyHint}`,
         106,
         151,
         13,
@@ -3918,7 +4078,15 @@
         hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
         2,
       );
-      drawText("HOLE 1", 56, 65, 18, "#e9e4c9", "left", true);
+      drawText(
+        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
+        56,
+        65,
+        16,
+        "#e9e4c9",
+        "left",
+        true,
+      );
       drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
       drawText(
         `${terrainStatus}  •  ${hole.golfBalls} BALLS`,
@@ -4081,6 +4249,8 @@
   }
 
   function drawFirstHole() {
+    const key = activeKeyPoint();
+    const sprinkler = activeSprinklerPoint();
     const progress = clamp(state.player.y / COURSE_LENGTH, 0, 1);
     const zone = courseZoneAt(state.player.y);
     const zoom = 1.08 + progress * 0.16;
@@ -4124,12 +4294,24 @@
     if (
       !state.hole.keyCollected &&
       (!state.hole.drainUnlocked ||
-        worldDistance(state.player, KEY_POINT) < 42)
+        worldDistance(state.player, key) < 42)
     ) {
-      drawWorldMarker(KEY_POINT.x, KEY_POINT.y, "SHED KEY", "#e7bd58", "◆");
+      drawWorldMarker(
+        key.x,
+        key.y,
+        "SHED KEY",
+        "#e7bd58",
+        "◆",
+      );
     }
     if (!state.hole.sprinklerUsed) {
-      drawWorldMarker(SPRINKLER_POINT.x, SPRINKLER_POINT.y, "SPRINKLER", "#6aa8a0", "◉");
+      drawWorldMarker(
+        sprinkler.x,
+        sprinkler.y,
+        "SPRINKLER",
+        "#6aa8a0",
+        "◉",
+      );
     }
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
       drawWorldMarker(
@@ -4284,10 +4466,10 @@
     ctx.fillRect(panel.x + panel.width - 112, panel.y + 28, 84, 3);
     drawText("HOLE 1 SURVIVED", WIDTH * 0.5, 142, 42, "#f0efd3", "center", true);
     drawText(
-      "AFTER-ACTION PERFORMANCE REVIEW",
+      `AFTER-ACTION REVIEW // ORDER ${String(result.variantNumber).padStart(2, "0")} // ${result.variantName}`,
       WIDTH * 0.5,
       177,
-      13,
+      12,
       "#d6813d",
       "center",
       true,
@@ -4406,8 +4588,8 @@
     strokeRect(260, 495, 760, 46, "#3f563a", 1);
     drawText(
       usedDrain
-        ? "DRAIN ROUTE  //  PRESSURE RELEASED  //  UNAUTHORIZED EGRESS"
-        : "SHED ROUTE  //  KEY RECOVERED  //  ACTION ITEM CLOSED",
+        ? `DRAIN ROUTE  //  ${result.variantName}  //  UNAUTHORIZED EGRESS`
+        : `SHED ROUTE  //  ${result.variantName}  //  ACTION ITEM CLOSED`,
       WIDTH * 0.5,
       524,
       13,
@@ -4417,7 +4599,7 @@
     );
     drawText(
       result.newBest
-        ? "PERSONAL RECORD FILED. JOE REQUESTS A REASSESSMENT."
+        ? `PERSONAL RECORD FILED. ${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED.`
         : "PAR IS NOT A SAFETY STANDARD. JOE'S MOWER DID NOT STOP.",
       WIDTH * 0.5,
       570,
@@ -4745,8 +4927,8 @@
         );
       }
 
-      const key = KEY_POINT;
-      const sprinkler = SPRINKLER_POINT;
+      const key = activeKeyPoint();
+      const sprinkler = activeSprinklerPoint();
       const shed = SHED_EXIT;
       const drain = DRAIN_EXIT;
       if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
@@ -5296,7 +5478,7 @@
       return -1;
     }
     for (let index = 0; index < MENU_ITEMS.length; index += 1) {
-      const y = 286 + index * 61;
+      const y = MENU_ITEM_START_Y + index * 61;
       if (point.y >= y && point.y <= y + 48) {
         return index;
       }
@@ -5801,6 +5983,20 @@
       state.mode === "paused"
         ? PAUSE_ITEMS[state.pauseIndex]
         : null,
+    nextNightOrder:
+      state.mode === "menu" || state.mode === "claim"
+        ? {
+            id: runVariantForRound(
+              state.career.roundsStarted,
+            ).id,
+            number: runVariantForRound(
+              state.career.roundsStarted,
+            ).number,
+            name: runVariantForRound(
+              state.career.roundsStarted,
+            ).name,
+          }
+        : null,
     dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
       : null,
@@ -5834,6 +6030,10 @@
       roundsStarted: state.career.roundsStarted,
       escapes: state.career.escapes,
       captures: state.career.captures,
+      nightOrdersCleared:
+        state.career.completedVariants.length,
+      completedVariants:
+        state.career.completedVariants.slice(),
       bestOverall: bestCareerRecord(),
       routes: {
         shed: state.career.routes.shed,
@@ -5892,6 +6092,45 @@
       (state.mode === "settings" &&
         state.settingsReturnMode === "paused")
       ? {
+          variant: {
+            id: activeRunVariant().id,
+            number: activeRunVariant().number,
+            name: activeRunVariant().name,
+            briefing: activeRunVariant().briefing,
+            key: {
+              x: activeKeyPoint().x,
+              y: activeKeyPoint().y,
+              interactionRadius: activeKeyPoint().radius,
+              obstacleClearance: Number(
+                (
+                  nearestObstacleClearance(
+                    activeKeyPoint(),
+                  ) -
+                  PLAYER_COLLISION_RADIUS
+                ).toFixed(2),
+              ),
+            },
+            sprinkler: {
+              x: activeSprinklerPoint().x,
+              y: activeSprinklerPoint().y,
+              interactionRadius:
+                activeSprinklerPoint().radius,
+              obstacleClearance: Number(
+                (
+                  nearestObstacleClearance(
+                    activeSprinklerPoint(),
+                  ) -
+                  PLAYER_COLLISION_RADIUS
+                ).toFixed(2),
+              ),
+            },
+            joeOpeningPatrol: {
+              x: activeRunVariant().joeStart.x,
+              y: activeRunVariant().joeStart.y,
+              waypoint:
+                activeRunVariant().joeStart.patrolIndex,
+            },
+          },
           phase: state.hole.phase,
           tutorialVisible: state.hole.tutorialVisible,
           hudExpanded:
