@@ -376,3 +376,25 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
 - Evaluate a second optional contract or rival score target only after bunker-bait telemetry confirms the new risk/reward route remains understandable under chase pressure.
+
+## Adaptive Audio Mix and Accessibility Pass — July 29, 2026
+
+- Replaced the single master-volume control with a persistent five-channel mix: Master Mix, Course Ambience, Joe's Mower, Gameplay Effects, and Danger Pulse.
+- Rebuilt the Web Audio graph around dedicated ambience, mower, effects, and danger buses beneath the existing master gain.
+- Routed spatial mower movement and mower-churn cues independently from footsteps, UI feedback, pickups, ball impacts, and other gameplay effects.
+- Routed heartbeat, pursuit transitions, capture impacts, the opening stinger, and the low danger drone through one adjustable Danger Pulse channel.
+- Added short category-specific previews while sliders are adjusted, keeping each control understandable without requiring a live pursuit.
+- Reworked the How to Survive panel into a compact seven-row audio/accessibility layout with distinct mix colors, clear percentages, keyboard/controller instructions, and unchanged gameplay onboarding.
+- Added complete pointer hit areas and hover selection plus keyboard and standard-controller navigation, adjustment, toggle, and return behavior.
+- Preserved compatibility with older saved preferences: a legacy master-volume record receives safe defaults for all four new channels.
+- Extended `render_game_to_text` with all persisted mix values, selected setting identity, and live audio-bus initialization diagnostics.
+- Verified pointer values at 80/50/35/65/20%, storage serialization, reload persistence, legacy fallback, 0% and 100% clamps, subtitle/reduced-motion toggles, and controller parity.
+- Verified that opening settings from pause freezes elapsed time while audio is adjusted, returns to the pause screen, and resumes movement from the exact prior state.
+- Corrected a pre-existing 16-pixel overflow at 2560×1440 by including responsive body padding in the 16:9 stage calculation.
+- Re-ran the exact project Playwright client and visually inspected the final mix panel at 800×600, 1280×720, and 2560×1440 with no console/page errors.
+
+### Next production priorities
+
+- Add touch controls and remappable keyboard/controller bindings with the same automatic prompt switching used by the current input system.
+- Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
+- Add a compact post-mastery reward for filing all three Change Requests only after telemetry confirms the side routes remain optional and readable.
