@@ -41,6 +41,8 @@
   fieldKitArt.src = "./assets/rough-cut-field-kit-v1.png";
   const courseObstacleArt = new Image();
   courseObstacleArt.src = "./assets/rough-cut-course-obstacle-kit-v1.png";
+  const expandedCourseArt = new Image();
+  expandedCourseArt.src = "./assets/rough-cut-expanded-course-kit-v1.png";
   const foregroundFringeArt = new Image();
   foregroundFringeArt.src = "./assets/rough-cut-foreground-fringe-v1.png";
   const defeatArt = new Image();
@@ -88,7 +90,56 @@
     },
   };
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
-  const DRAIN_EXIT = { x: -18, y: 92, radius: 15 };
+  const COURSE_LENGTH = 360;
+  const COURSE_MIN_Y = 0;
+  const COURSE_MAX_X = 112;
+  const PLAYER_COLLISION_RADIUS = 2.4;
+  const KEY_POINT = { x: -48, y: 249, radius: 16 };
+  const SPRINKLER_POINT = { x: -92, y: 105, radius: 18 };
+  const SHED_EXIT = { x: 24, y: 350, radius: 13 };
+  const DRAIN_EXIT = { x: -76, y: 339, radius: 15 };
+  const COURSE_ZONES = [
+    {
+      id: "tee",
+      name: "THE TEE",
+      subtitle: "QUIET EXPOSURE",
+      start: 0,
+      end: 88,
+      fairwayHalfWidth: 67,
+      tint: "18,39,21",
+      cue: "The fairway is open. The mower is somewhere ahead.",
+    },
+    {
+      id: "audit_row",
+      name: "AUDIT ROW",
+      subtitle: "HEDGE CORRIDOR",
+      start: 88,
+      end: 178,
+      fairwayHalfWidth: 55,
+      tint: "27,42,19",
+      cue: "AUDIT ROW — clipped hedges create hard sight breaks.",
+    },
+    {
+      id: "water_hazard",
+      name: "WATER HAZARD",
+      subtitle: "LIGHT AND REEDS",
+      start: 178,
+      end: 276,
+      fairwayHalfWidth: 60,
+      tint: "11,37,38",
+      cue: "WATER HAZARD — reeds hide movement; the floodlight exposes it.",
+    },
+    {
+      id: "dead_green",
+      name: "THE DEAD GREEN",
+      subtitle: "FINAL APPROACH",
+      start: 276,
+      end: COURSE_LENGTH + 1,
+      fairwayHalfWidth: 62,
+      tint: "44,24,14",
+      cue: "THE DEAD GREEN — choose an exit before Joe closes the course.",
+    },
+  ];
   const COURSE_OBSTACLE_CELLS = [
     { x: 36, y: 134, width: 521, height: 326, heightMeters: 2.15 },
     { x: 557, y: 303, width: 531, height: 152, heightMeters: 1.05 },
@@ -97,34 +148,60 @@
     { x: 662, y: 551, width: 453, height: 307, heightMeters: 1.75 },
     { x: 1115, y: 563, width: 476, height: 290, heightMeters: 1.55 },
   ];
-  const COURSE_OBSTACLES = [
-    { id: "start-hedge", type: 0, x: -42, y: 28, radius: 15, scale: 1, blocks: true },
-    { id: "start-boundary", type: 1, x: 75, y: 22, radius: 18, scale: 1, blocks: true },
-    { id: "service-cart", type: 3, x: 28, y: 43, radius: 13, scale: 1, blocks: true },
-    { id: "east-pine", type: 2, x: 86, y: 49, radius: 18, scale: 1, blocks: true },
-    { id: "bunker-rake", type: 5, x: -85, y: 64, radius: 16, scale: 1, blocks: true },
-    { id: "course-sign", type: 4, x: -32, y: 68, radius: 9, scale: 1, blocks: true },
-    { id: "mid-boundary", type: 1, x: 55, y: 72, radius: 17, scale: 0.94, blocks: true },
-    { id: "north-hedge", type: 0, x: 86, y: 84, radius: 17, scale: 0.92, blocks: true },
-    { id: "north-pine", type: 2, x: -94, y: 90, radius: 19, scale: 0.9, blocks: true },
+  const EXPANDED_OBSTACLE_CELLS = [
+    { x: 50, y: 55, width: 520, height: 410, heightMeters: 3.2 },
+    { x: 610, y: 65, width: 480, height: 410, heightMeters: 1.55 },
+    { x: 1110, y: 45, width: 530, height: 420, heightMeters: 1.35 },
+    { x: 50, y: 565, width: 520, height: 325, heightMeters: 1.25 },
+    { x: 620, y: 495, width: 480, height: 380, heightMeters: 3.15 },
+    { x: 1180, y: 465, width: 285, height: 415, heightMeters: 5 },
   ];
-  const SIGHT_BLOCKING_TYPES = new Set([0, 2, 3, 5]);
+  const COURSE_OBSTACLES = [
+    { id: "start-hedge", kit: "base", type: 0, x: -42, y: 28, radius: 15, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "clipped hedge" },
+    { id: "start-boundary", kit: "base", type: 1, x: 75, y: 22, radius: 18, coverRadius: 22, scale: 1, blocks: true, sight: false, landmark: "stone boundary" },
+    { id: "service-cart", kit: "base", type: 3, x: 28, y: 43, radius: 13, coverRadius: 21, scale: 1, blocks: true, sight: true, landmark: "service cart" },
+    { id: "east-pine", kit: "base", type: 2, x: 86, y: 49, radius: 18, coverRadius: 27, scale: 1, blocks: true, sight: true, landmark: "pine" },
+    { id: "bunker-rake", kit: "base", type: 5, x: -85, y: 64, radius: 16, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "bunker lip" },
+    { id: "course-sign", kit: "base", type: 4, x: -32, y: 68, radius: 9, coverRadius: 14, scale: 1, blocks: true, sight: false, landmark: "course sign" },
+    { id: "mid-boundary", kit: "base", type: 1, x: 55, y: 72, radius: 17, coverRadius: 21, scale: 0.94, blocks: true, sight: false, landmark: "stone boundary" },
+    { id: "north-hedge", kit: "base", type: 0, x: 86, y: 84, radius: 17, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge" },
+    { id: "north-pine", kit: "base", type: 2, x: -94, y: 90, radius: 19, coverRadius: 28, scale: 0.9, blocks: true, sight: true, landmark: "pine" },
+    { id: "audit-arch", kit: "expanded", type: 0, x: 0, y: 116, radius: 0, scale: 1.05, blocks: false, sight: false, landmark: "hedge tunnel" },
+    { id: "audit-arch-left", x: -35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-arch-right", x: 35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-cart", kit: "expanded", type: 1, x: -58, y: 145, radius: 18, coverRadius: 27, scale: 1.08, blocks: true, sight: true, landmark: "overturned cart" },
+    { id: "audit-board", kit: "expanded", type: 4, x: 72, y: 174, radius: 11, coverRadius: 19, scale: 0.94, blocks: true, sight: true, landmark: "audit board" },
+    { id: "audit-hedge", kit: "base", type: 0, x: -94, y: 174, radius: 18, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "clipped hedge" },
+    { id: "pond-west", kit: "expanded", type: 2, x: -63, y: 215, radius: 22, coverRadius: 29, scale: 1.18, blocks: true, sight: true, landmark: "black-water reeds" },
+    { id: "water-pine", kit: "base", type: 2, x: 91, y: 207, radius: 19, coverRadius: 28, scale: 0.92, blocks: true, sight: true, landmark: "pine" },
+    { id: "floodlight", kit: "expanded", type: 5, x: 18, y: 242, radius: 6, coverRadius: 11, lightRadius: 57, scale: 1.04, blocks: true, sight: false, landmark: "maintenance floodlight" },
+    { id: "pond-east", kit: "expanded", type: 2, x: 70, y: 260, radius: 22, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "pond edge" },
+    { id: "bunker-wall", kit: "expanded", type: 3, x: -18, y: 274, radius: 19, coverRadius: 27, scale: 1.12, blocks: true, sight: true, landmark: "bunker wall" },
+    { id: "final-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
+    { id: "final-arch", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-left", x: -35, y: 310, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-right", x: 35, y: 310, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
+    { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 334, radius: 20, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
+    { id: "shed-boundary", kit: "base", type: 1, x: 62, y: 349, radius: 15, coverRadius: 20, scale: 0.88, blocks: true, sight: false, landmark: "shed wall" },
+  ];
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
   const JOE_NAVIGATION_REPATH_SECONDS = 0.42;
   const JOE_PATROL_ROUTE = [
-    { x: 19, y: 65 },
-    { x: 15, y: 85 },
-    { x: 0, y: 100 },
-    { x: -50, y: 100 },
-    { x: -112, y: 40 },
-    { x: -98, y: 34 },
-    { x: -30, y: 10 },
-    { x: 40, y: 8 },
-    { x: 112, y: 28 },
-    { x: 110, y: 64 },
-    { x: 108, y: 100 },
-    { x: 25, y: 100 },
+    { x: 44, y: 185 },
+    { x: 45, y: 215 },
+    { x: 0, y: 230 },
+    { x: 0, y: 250 },
+    { x: -110, y: 250 },
+    { x: -110, y: 340 },
+    { x: -35, y: 345 },
+    { x: 20, y: 345 },
+    { x: -35, y: 345 },
+    { x: -110, y: 340 },
+    { x: -110, y: 250 },
+    { x: -110, y: 195 },
+    { x: -35, y: 195 },
   ];
 
   const state = {
@@ -149,6 +226,7 @@
       inputY: 0,
       crouch: false,
       sprint: false,
+      focus: false,
       previousButtons: [],
       previousDirections: { up: false, down: false, left: false, right: false },
     },
@@ -156,11 +234,11 @@
     hole: {
       phase: "find_key",
       keyCollected: false,
-      golfBalls: 3,
+      golfBalls: 4,
       noise: 0,
       joe: {
-        x: 19,
-        y: 65,
+        x: 44,
+        y: 185,
         mode: "patrol",
         alert: 0,
         patrolIndex: 0,
@@ -210,6 +288,12 @@
       lastKnownJoeTimer: 0,
       worldEffects: [],
       screenParticles: [],
+      zoneIndex: 0,
+      zoneBannerTimer: 0,
+      focus: false,
+      environment: null,
+      discoveredY: 0,
+      minimumPlayerClearance: 99,
     },
   };
 
@@ -645,7 +729,7 @@
     const steps = [
       { y: 260, icon: 0, title: "1. CHOOSE AN EXIT", detail: "Key opens shed. Sprinkler opens drain." },
       { y: 348, icon: 1, title: "2. MISDIRECT JOE", detail: controllerActive ? "X throws a golf ball." : "SPACE throws a golf ball." },
-      { y: 436, icon: 2, title: "3. BREAK CONTACT", detail: controllerActive ? "Hold LB in rough to conceal yourself." : "Hold C in rough to conceal yourself." },
+      { y: 436, icon: 2, title: "3. BREAK CONTACT", detail: controllerActive ? "Hold LB near hard cover or in rough." : "Hold C near hard cover or in rough." },
     ];
     for (const step of steps) {
       drawFieldIcon(step.icon, 242, step.y, 64);
@@ -661,7 +745,7 @@
       "left",
     );
     drawText(
-      controllerActive ? "LB  CROUCH / CONCEAL IN ROUGH" : "C  CROUCH / CONCEAL IN ROUGH",
+      controllerActive ? "LB CROUCH  •  LT LISTENING FOCUS" : "C CROUCH  •  Q LISTENING FOCUS",
       205,
       548,
       14,
@@ -780,11 +864,11 @@
     state.hole = {
       phase: "find_key",
       keyCollected: false,
-      golfBalls: 3,
+      golfBalls: 4,
       noise: 0,
       joe: {
-        x: 19,
-        y: 65,
+        x: 44,
+        y: 185,
         mode: "patrol",
         alert: 0,
         patrolIndex: 0,
@@ -834,6 +918,12 @@
       lastKnownJoeTimer: 0,
       worldEffects: [],
       screenParticles: [],
+      zoneIndex: 0,
+      zoneBannerTimer: 2.8,
+      focus: false,
+      environment: null,
+      discoveredY: 0,
+      minimumPlayerClearance: 99,
     };
   }
 
@@ -871,6 +961,116 @@
     );
   }
 
+  function focusHeld() {
+    return state.keys.has("KeyQ") || state.gamepad.focus;
+  }
+
+  function courseZoneAt(y) {
+    for (let index = 0; index < COURSE_ZONES.length; index += 1) {
+      if (y >= COURSE_ZONES[index].start && y < COURSE_ZONES[index].end) {
+        return COURSE_ZONES[index];
+      }
+    }
+    return COURSE_ZONES[COURSE_ZONES.length - 1];
+  }
+
+  function playerInRough(point = state.player) {
+    return Math.abs(point.x) > courseZoneAt(point.y).fairwayHalfWidth;
+  }
+
+  function nearestObstacleClearance(point) {
+    let clearance = Infinity;
+    for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
+      const obstacle = COURSE_OBSTACLES[index];
+      if (!obstacle.blocks) {
+        continue;
+      }
+      clearance = Math.min(
+        clearance,
+        worldDistance(point, obstacle) - obstacle.radius,
+      );
+    }
+    return clearance;
+  }
+
+  function getPlayerEnvironmentState() {
+    const player = state.player;
+    const zone = courseZoneAt(player.y);
+    const inRough = playerInRough(player);
+    let nearestCover = null;
+    let nearestCoverDistance = Infinity;
+    let nearestLandmark = null;
+    let nearestLandmarkDistance = Infinity;
+    let lightExposure = 0;
+
+    for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
+      const obstacle = COURSE_OBSTACLES[index];
+      const distance = worldDistance(player, obstacle);
+      if (
+        obstacle.landmark &&
+        obstacle.draw !== false &&
+        distance < nearestLandmarkDistance
+      ) {
+        nearestLandmark = obstacle;
+        nearestLandmarkDistance = distance;
+      }
+      if (
+        obstacle.coverRadius &&
+        distance <= obstacle.coverRadius &&
+        distance >= Math.max(0, obstacle.radius - 1)
+      ) {
+        const coverDistance = distance - obstacle.radius;
+        if (coverDistance < nearestCoverDistance) {
+          nearestCover = obstacle;
+          nearestCoverDistance = coverDistance;
+        }
+      }
+      if (obstacle.lightRadius && distance < obstacle.lightRadius) {
+        lightExposure = Math.max(
+          lightExposure,
+          1 - distance / obstacle.lightRadius,
+        );
+      }
+    }
+
+    const blocker = lineBlockerBetween(state.hole.joe, player);
+    const blockingCover = blocker
+      ? COURSE_OBSTACLES.find((obstacle) => obstacle.id === blocker)
+      : null;
+    const hardCover =
+      Boolean(blockingCover && blockingCover.coverRadius) &&
+      worldDistance(player, blockingCover) <= blockingCover.coverRadius;
+    if (hardCover && blockingCover) {
+      nearestCover = blockingCover;
+      nearestCoverDistance =
+        worldDistance(player, blockingCover) - blockingCover.radius;
+    }
+    const coverQuality = hardCover
+      ? state.hole.crouched
+        ? "concealed"
+        : "hard cover"
+      : nearestCover
+        ? "cover nearby"
+        : inRough
+          ? state.hole.crouched
+            ? "rough concealment"
+            : "rustling rough"
+          : "exposed";
+    return {
+      zone,
+      inRough,
+      nearestCover,
+      nearestCoverDistance,
+      nearestLandmark,
+      nearestLandmarkDistance,
+      blocker,
+      hardCover,
+      lightExposure,
+      coverQuality,
+      clearance: nearestObstacleClearance(player),
+    };
+  }
+
   function lineBlockerBetween(start, end) {
     const ax = start.x * 0.72;
     const ay = start.y;
@@ -881,12 +1081,11 @@
     const lengthSquared = Math.max(0.001, dx * dx + dy * dy);
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       const obstacle = COURSE_OBSTACLES[index];
-      if (!obstacle.blocks || !SIGHT_BLOCKING_TYPES.has(obstacle.type)) {
+      if (!obstacle.blocks || !obstacle.sight) {
         continue;
       }
       if (
-        worldDistance(start, obstacle) < obstacle.radius * 0.72 ||
-        worldDistance(end, obstacle) < obstacle.radius * 0.72
+        worldDistance(start, obstacle) < obstacle.radius * 0.72
       ) {
         continue;
       }
@@ -926,14 +1125,14 @@
     };
   }
 
-  function obstacleAtPosition(x, y) {
+  function obstacleAtPosition(x, y, radius = PLAYER_COLLISION_RADIUS) {
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       const obstacle = COURSE_OBSTACLES[index];
       if (!obstacle.blocks) {
         continue;
       }
       const distance = worldDistance({ x, y }, obstacle);
-      if (distance < obstacle.radius) {
+      if (distance < obstacle.radius + radius) {
         return obstacle;
       }
     }
@@ -965,38 +1164,47 @@
 
   function movePlayerBy(deltaX, deltaY) {
     const player = state.player;
-    const targetX = clamp(player.x + deltaX, -112, 112);
-    const targetY = clamp(player.y + deltaY, 0, 100);
-    let appliedX = 0;
-    let appliedY = 0;
-    let blocker = obstacleAtPosition(targetX, targetY);
-    const initialBlocker = blocker;
+    const requestedDistance = Math.hypot(deltaX, deltaY);
+    const steps = Math.max(1, Math.ceil(requestedDistance / 1.15));
+    const stepX = deltaX / steps;
+    const stepY = deltaY / steps;
+    let appliedDistance = 0;
+    let initialBlocker = null;
 
-    if (!blocker) {
-      appliedX = targetX - player.x;
-      appliedY = targetY - player.y;
-      player.x = targetX;
-      player.y = targetY;
-    } else {
-      const horizontalBlocker = obstacleAtPosition(targetX, player.y);
-      if (!horizontalBlocker) {
-        appliedX = targetX - player.x;
+    for (let index = 0; index < steps; index += 1) {
+      const startX = player.x;
+      const startY = player.y;
+      const targetX = clamp(player.x + stepX, -COURSE_MAX_X, COURSE_MAX_X);
+      const targetY = clamp(player.y + stepY, COURSE_MIN_Y, COURSE_LENGTH);
+      const blocker = obstacleAtPosition(targetX, targetY);
+      if (!blocker) {
         player.x = targetX;
-        blocker = null;
-      }
-      const verticalBlocker = obstacleAtPosition(player.x, targetY);
-      if (!verticalBlocker) {
-        appliedY = targetY - player.y;
         player.y = targetY;
-        blocker = null;
+      } else {
+        if (!initialBlocker) {
+          initialBlocker = blocker;
+        }
+        const horizontalBlocker = obstacleAtPosition(targetX, player.y);
+        if (!horizontalBlocker) {
+          player.x = targetX;
+        }
+        const verticalBlocker = obstacleAtPosition(player.x, targetY);
+        if (!verticalBlocker) {
+          player.y = targetY;
+        }
       }
+      appliedDistance += Math.hypot(player.x - startX, player.y - startY);
     }
 
     if (initialBlocker) {
       state.hole.blockedTimer = 0.55;
       state.hole.blockedObstacle = initialBlocker.id;
     }
-    state.hole.travelDistance += Math.hypot(appliedX, appliedY);
+    state.hole.travelDistance += appliedDistance;
+    state.hole.minimumPlayerClearance = Math.min(
+      state.hole.minimumPlayerClearance,
+      nearestObstacleClearance(player),
+    );
   }
 
   function setHoleMessage(message, duration = 2.6) {
@@ -1085,12 +1293,12 @@
     if (state.mode !== "first_hole") {
       return;
     }
-    const key = { x: -68, y: 46 };
-    const sprinkler = { x: -91, y: 19 };
-    const shed = { x: 0, y: 100 };
+    const key = KEY_POINT;
+    const sprinkler = SPRINKLER_POINT;
+    const shed = SHED_EXIT;
     const drain = DRAIN_EXIT;
 
-    if (!state.hole.keyCollected && worldDistance(state.player, key) < 16) {
+    if (!state.hole.keyCollected && worldDistance(state.player, key) < key.radius) {
       state.hole.keyCollected = true;
       state.hole.phase = "return_to_shed";
       state.hole.joe.alert = Math.max(state.hole.joe.alert, 0.38);
@@ -1100,13 +1308,13 @@
       return;
     }
 
-    if (!state.hole.sprinklerUsed && worldDistance(state.player, sprinkler) < 18) {
+    if (!state.hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
       state.hole.sprinklerUsed = true;
       state.hole.drainUnlocked = true;
       if (!state.hole.keyCollected) {
         state.hole.phase = "drain_open";
       }
-      state.hole.distraction = { x: -102, y: 42 };
+      state.hole.distraction = { x: 104, y: 178 };
       state.hole.distractionTimer = 5.5;
       state.hole.joe.mode = "investigate";
       announceJoeState("investigate");
@@ -1119,7 +1327,7 @@
       return;
     }
 
-    if (worldDistance(state.player, shed) < 13) {
+    if (worldDistance(state.player, shed) < shed.radius) {
       if (state.hole.keyCollected) {
         completeHole("shed");
       } else {
@@ -1152,7 +1360,7 @@
     const direction = state.player.x <= state.hole.joe.x ? 1 : -1;
     state.hole.distraction = {
       x: clamp(state.player.x + direction * 88, -110, 110),
-      y: clamp(state.player.y + 22, 8, 94),
+      y: clamp(state.player.y + 28, 8, COURSE_LENGTH - 8),
     };
     state.hole.distractionTimer = Math.max(
       2.25,
@@ -1182,20 +1390,23 @@
     const previousMode = joe.mode;
     const playerDistance = worldDistance(joe, state.player);
     const moving = playerIsMoving();
-    const inRough = Math.abs(state.player.x) > 67;
-    const blocker = lineBlockerBetween(joe, state.player);
+    const environment = getPlayerEnvironmentState();
+    const inRough = environment.inRough;
+    const blocker = environment.blocker;
     const visibilityRange =
-      hole.crouched && inRough
+      (hole.crouched && inRough
         ? moving
-          ? 13
-          : 8
+          ? 17
+          : 11
         : inRough
           ? moving
-            ? 25
-            : 19
+            ? 29
+            : 22
           : moving
-            ? 39
-            : 32;
+            ? 43
+            : 35) *
+      lerp(1, 1.42, environment.lightExposure) *
+      lerp(1, 0.62, hole.concealment);
     const canSee = !blocker && playerDistance < visibilityRange;
     const hearingRange = 18 + hole.noise * 58;
     const canHear = hole.noise > 0.16 && playerDistance < hearingRange;
@@ -1281,8 +1492,8 @@
       }
     }
 
-    joe.x = clamp(joe.x, -112, 112);
-    joe.y = clamp(joe.y, 4, 100);
+    joe.x = clamp(joe.x, -COURSE_MAX_X, COURSE_MAX_X);
+    joe.y = clamp(joe.y, 4, COURSE_LENGTH);
     joe.minimumObstacleClearance = Math.min(
       joe.minimumObstacleClearance,
       joeObstacleClearanceAt(joe),
@@ -1389,7 +1600,7 @@
       point.x < -112 ||
       point.x > 112 ||
       point.y < 4 ||
-      point.y > 100
+      point.y > COURSE_LENGTH
     ) {
       return false;
     }
@@ -1414,7 +1625,7 @@
     const xCount =
       Math.floor(224 / JOE_NAVIGATION_GRID) + 1;
     const yCount =
-      Math.floor(96 / JOE_NAVIGATION_GRID) + 1;
+      Math.floor((COURSE_LENGTH - 4) / JOE_NAVIGATION_GRID) + 1;
     const cellKey = (xIndex, yIndex) =>
       `${xIndex},${yIndex}`;
     const cellPoint = (xIndex, yIndex) => ({
@@ -1443,7 +1654,7 @@
     ]);
     let iterations = 0;
 
-    while (open.length > 0 && iterations < 900) {
+    while (open.length > 0 && iterations < 3600) {
       iterations += 1;
       let bestIndex = 0;
       for (let index = 1; index < open.length; index += 1) {
@@ -1610,9 +1821,7 @@
         joeObstacleOnSegment(
           start,
           joe.routePath[0],
-          joe.routePath.length === 1
-            ? 0.8
-            : JOE_NAVIGATION_CLEARANCE,
+          JOE_NAVIGATION_CLEARANCE,
         ),
       );
 
@@ -1621,9 +1830,12 @@
       joe.routeTarget = null;
       joe.routeObstacle = null;
     } else if (
-      joe.routePath.length === 0 ||
-      targetMoved ||
-      pathBlocked
+      joe.repathTimer <= 0 &&
+      (
+        joe.routePath.length === 0 ||
+        targetMoved ||
+        pathBlocked
+      )
     ) {
       const route = planJoeRoute(start, target);
       if (route.length > 0) {
@@ -1698,13 +1910,10 @@
         joe.y +
           Math.sin(navigationAngle) * stepDistance,
         4,
-        100,
+        COURSE_LENGTH,
       ),
     };
-    const movementPadding =
-      joe.routePath.length > 1
-        ? JOE_NAVIGATION_CLEARANCE
-        : 0.8;
+    const movementPadding = JOE_NAVIGATION_CLEARANCE;
     const movementBlocker = joeObstacleOnSegment(
       start,
       candidate,
@@ -1712,13 +1921,17 @@
     );
     if (movementBlocker) {
       joe.stuckTimer += dt;
-      joe.repathTimer = 0;
+      joe.repathTimer = Math.max(
+        joe.repathTimer,
+        0.08,
+      );
       joe.routeObstacle = movementBlocker.id;
-      if (joe.stuckTimer >= 0.3) {
+      if (joe.stuckTimer >= 0.55) {
         joe.routeSide *= -1;
         joe.routePath = [];
         joe.rerouteCount += 1;
         joe.stuckTimer = 0;
+        joe.repathTimer = 0;
       }
       return;
     }
@@ -1835,14 +2048,28 @@
   }
 
   function drawCourseObstacle(obstacle) {
-    if (!courseObstacleArt.complete || courseObstacleArt.naturalWidth === 0) {
+    if (obstacle.draw === false) {
+      return;
+    }
+    const obstacleArt =
+      obstacle.kit === "expanded"
+        ? expandedCourseArt
+        : courseObstacleArt;
+    const obstacleCells =
+      obstacle.kit === "expanded"
+        ? EXPANDED_OBSTACLE_CELLS
+        : COURSE_OBSTACLE_CELLS;
+    if (!obstacleArt.complete || obstacleArt.naturalWidth === 0) {
       return;
     }
     const point = worldToScreen(obstacle.x, obstacle.y);
     if (!point.visible || point.x < -420 || point.x > WIDTH + 420) {
       return;
     }
-    const cell = COURSE_OBSTACLE_CELLS[obstacle.type];
+    const cell = obstacleCells[obstacle.type];
+    if (!cell) {
+      return;
+    }
     const drawHeight =
       cell.heightMeters *
       obstacle.scale *
@@ -1867,7 +2094,7 @@
     );
     ctx.fill();
     ctx.drawImage(
-      courseObstacleArt,
+      obstacleArt,
       cell.x,
       cell.y,
       cell.width,
@@ -1877,6 +2104,31 @@
       drawWidth,
       drawHeight,
     );
+    if (obstacle.lightRadius) {
+      const flicker =
+        state.reducedMotion
+          ? 0.16
+          : 0.12 +
+            hash(Math.floor(state.time * 9) + obstacle.y) * 0.12;
+      const glow = ctx.createRadialGradient(
+        point.x + sway,
+        point.y - drawHeight * 0.84,
+        2,
+        point.x + sway,
+        point.y - drawHeight * 0.84,
+        Math.max(24, drawHeight * 0.38),
+      );
+      glow.addColorStop(0, `rgba(255,188,78,${flicker + 0.16})`);
+      glow.addColorStop(0.34, `rgba(214,127,43,${flicker})`);
+      glow.addColorStop(1, "rgba(214,127,43,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(
+        point.x - drawWidth,
+        point.y - drawHeight * 1.25,
+        drawWidth * 2,
+        drawHeight * 0.8,
+      );
+    }
     ctx.restore();
   }
 
@@ -1947,6 +2199,9 @@
     const entities = [];
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       const obstacle = COURSE_OBSTACLES[index];
+      if (obstacle.draw === false) {
+        continue;
+      }
       const point = worldToScreen(obstacle.x, obstacle.y);
       if (point.visible) {
         entities.push({
@@ -2269,17 +2524,17 @@
   }
 
   function drawCourseMiniMap() {
-    const panel = { x: WIDTH - 274, y: 145, width: 234, height: 190 };
+    const panel = { x: WIDTH - 274, y: 145, width: 234, height: 238 };
     const mapTop = panel.y + 41;
     const mapBottom = panel.y + panel.height - 18;
     const mapPoint = (worldX, worldY) => ({
       x: panel.x + panel.width * 0.5 + worldX / 224 * (panel.width - 28),
-      y: mapBottom - worldY / 100 * (mapBottom - mapTop),
+      y: mapBottom - worldY / COURSE_LENGTH * (mapBottom - mapTop),
     });
     const playerPoint = mapPoint(state.player.x, state.player.y);
-    const keyPoint = mapPoint(-68, 46);
-    const sprinklerPoint = mapPoint(-91, 19);
-    const shedPoint = mapPoint(0, 100);
+    const keyPoint = mapPoint(KEY_POINT.x, KEY_POINT.y);
+    const sprinklerPoint = mapPoint(SPRINKLER_POINT.x, SPRINKLER_POINT.y);
+    const shedPoint = mapPoint(SHED_EXIT.x, SHED_EXIT.y);
     const drainPoint = mapPoint(DRAIN_EXIT.x, DRAIN_EXIT.y);
 
     ctx.fillStyle = "rgba(2,8,5,0.86)";
@@ -2289,6 +2544,15 @@
 
     ctx.fillStyle = "#0a1b10";
     ctx.fillRect(panel.x + 13, panel.y + 33, panel.width - 26, panel.height - 47);
+    for (let index = 1; index < COURSE_ZONES.length; index += 1) {
+      const zoneY = mapPoint(0, COURSE_ZONES[index].start).y;
+      ctx.strokeStyle = "rgba(164,178,125,0.22)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(panel.x + 14, zoneY);
+      ctx.lineTo(panel.x + panel.width - 14, zoneY);
+      ctx.stroke();
+    }
     ctx.fillStyle = "#294426";
     polygon([
       [panel.x + panel.width * 0.43, panel.y + panel.height - 14],
@@ -2298,9 +2562,12 @@
     ]);
     ctx.fillStyle = "#101c12";
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
+      if (COURSE_OBSTACLES[index].draw === false) {
+        continue;
+      }
       const obstaclePoint = mapPoint(COURSE_OBSTACLES[index].x, COURSE_OBSTACLES[index].y);
       ctx.beginPath();
-      ctx.arc(obstaclePoint.x, obstaclePoint.y, 3.5, 0, Math.PI * 2);
+      ctx.arc(obstaclePoint.x, obstaclePoint.y, 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.fillStyle = "#d0a95b";
@@ -2613,8 +2880,9 @@
     }
     const visible = clamp(hole.stateBannerTimer * 2.2, 0, 1);
     const width = hole.joe.mode === "chase" ? 340 : 330;
-    const x = WIDTH * 0.5 - width * 0.5;
-    const y = 42;
+    const bannerCenterX = WIDTH * 0.5 + 108;
+    const x = bannerCenterX - width * 0.5;
+    const y = hole.zoneBannerTimer > 0 ? 128 : 42;
     ctx.save();
     ctx.globalAlpha = visible;
     ctx.fillStyle = hole.joe.mode === "chase" ? "rgba(39,5,2,0.93)" : "rgba(3,13,7,0.91)";
@@ -2622,7 +2890,7 @@
     strokeRect(x, y, width, 42, hole.joe.mode === "chase" ? "#d04d28" : "#a4773f", 2);
     drawText(
       hole.stateBanner,
-      WIDTH * 0.5,
+      bannerCenterX,
       y + 27,
       13,
       hole.joe.mode === "chase" ? "#ffbc83" : "#e2cf9c",
@@ -2641,13 +2909,13 @@
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#d47431", 3);
 
     drawText("SURVIVAL BRIEFING // HOLE 1", WIDTH * 0.5, 129, 36, "#f0efd8", "center", true);
-    drawText("TAKE THE SHED KEY — OR RELEASE THE DRAIN.", WIDTH * 0.5, 163, 15, "#df8c47", "center", true);
+    drawText("CROSS FOUR COURSE ZONES. TAKE THE SHED KEY — OR RELEASE THE DRAIN.", WIDTH * 0.5, 163, 15, "#df8c47", "center", true);
 
     const controllerActive = state.inputMethod === "gamepad";
     const cards = [
-      { x: 220, icon: 0, number: "1", title: "CHOOSE AN EXIT", detail: "Key opens shed. Sprinkler opens drain." },
-      { x: 500, icon: 1, number: "2", title: "DISTRACT JOE", detail: controllerActive ? "X throws a golf ball." : "SPACE throws a golf ball." },
-      { x: 780, icon: 2, number: "3", title: "BREAK CONTACT", detail: controllerActive ? "Hold LB in rough to hide from Joe." : "Hold C in rough to hide from Joe." },
+      { x: 220, icon: 0, number: "1", title: "CHOOSE AN EXIT", detail: "KEY → SHED  •  VALVE → DRAIN" },
+      { x: 500, icon: 1, number: "2", title: "DISTRACT JOE", detail: controllerActive ? "X THROWS A GOLF BALL" : "SPACE THROWS A GOLF BALL" },
+      { x: 780, icon: 2, number: "3", title: "BREAK CONTACT", detail: controllerActive ? "LB CROUCH  •  LT LISTEN" : "C CROUCH  •  Q LISTEN" },
     ];
     for (const card of cards) {
       ctx.fillStyle = "rgba(10,28,15,0.94)";
@@ -2662,26 +2930,26 @@
     drawText("MOVE", 278, 478, 13, "#8f9f85", "center");
     if (controllerActive) {
       drawKeyCap("L STICK", 278, 526, 112);
-      drawText("D-PAD ALSO MOVES • RT SPRINTS", 278, 579, 10, "#df8c47", "center");
+      drawText("D-PAD MOVES • RT SPRINTS", 278, 579, 10, "#df8c47", "center");
     } else {
       drawKeyCap("W", 278, 504, 42);
       drawKeyCap("A", 231, 551, 42);
       drawKeyCap("S", 278, 551, 42);
       drawKeyCap("D", 325, 551, 42);
-      drawText("SHIFT = SPRINT (LOUD)", 278, 579, 11, "#df8c47", "center");
+      drawText("SHIFT SPRINTS — LOUD", 278, 579, 11, "#df8c47", "center");
     }
 
     drawText("CROUCH", 510, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "LB" : "C", 510, 526, 70);
-    drawText("Hold in rough to conceal yourself", 510, 579, 11, "#9fac96", "center");
+    drawText("SOLID COVER BLOCKS SIGHT", 510, 579, 10, "#9fac96", "center");
 
     drawText("DISTRACT", 760, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "X" : "SPACE", 760, 526, 112);
-    drawText("Joe follows the sound, not you", 760, 579, 11, "#9fac96", "center");
+    drawText("JOE FOLLOWS THE SOUND", 760, 579, 10, "#9fac96", "center");
 
     drawText("INTERACT", 979, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "A" : "ENTER", 979, 526, 112);
-    drawText("Use valves, exits, and the key", 979, 579, 11, "#df8c47", "center");
+    drawText("USE KEY, VALVE, EXITS", 979, 579, 10, "#df8c47", "center");
 
     const pulse = 0.62 + (Math.sin(state.time * 4.2) + 1) * 0.18;
     ctx.globalAlpha = pulse;
@@ -2706,10 +2974,98 @@
     drawText(label, x, y, 16, "#f0edd7", "center", true);
   }
 
+  function drawListeningFocus() {
+    if (!state.hole.focus) {
+      return;
+    }
+    const environment = state.hole.environment || getPlayerEnvironmentState();
+    const joeDeltaX = state.hole.joe.x - state.player.x;
+    const joeDeltaY = state.hole.joe.y - state.player.y;
+    const joeDistance = worldDistance(state.hole.joe, state.player);
+    const angle = Math.atan2(joeDeltaX * 0.72, -joeDeltaY);
+    const centerX = WIDTH * 0.5;
+    const centerY = HEIGHT * 0.51;
+    const radius = 116;
+    const pulse = state.reducedMotion ? 0.76 : 0.68 + Math.sin(state.time * 5.2) * 0.16;
+
+    ctx.save();
+    const focusShade = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      65,
+      centerX,
+      centerY,
+      520,
+    );
+    focusShade.addColorStop(0, "rgba(4,12,7,0)");
+    focusShade.addColorStop(0.52, "rgba(4,12,7,0.16)");
+    focusShade.addColorStop(1, "rgba(0,3,2,0.6)");
+    ctx.fillStyle = focusShade;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.strokeStyle = `rgba(224,197,111,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 8]);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const markerX = centerX + Math.sin(angle) * radius;
+    const markerY = centerY - Math.cos(angle) * radius;
+    ctx.fillStyle = joeDistance < 45 ? "#e65b37" : "#d2ae5b";
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(226,113,67,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, 13 + pulse * 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    let direction = "AHEAD";
+    if (Math.abs(joeDeltaX) > Math.abs(joeDeltaY) * 0.7) {
+      direction = joeDeltaX < 0 ? "LEFT" : "RIGHT";
+    } else if (joeDeltaY < 0) {
+      direction = "BEHIND";
+    }
+    drawText(
+      `MOWER ${direction}  •  ${Math.round(joeDistance)}m`,
+      centerX,
+      centerY + radius + 34,
+      13,
+      joeDistance < 45 ? "#ff9867" : "#e5cf8c",
+      "center",
+      true,
+    );
+
+    if (environment.nearestCover) {
+      const coverDeltaX = environment.nearestCover.x - state.player.x;
+      const coverDeltaY = environment.nearestCover.y - state.player.y;
+      const coverAngle = Math.atan2(coverDeltaX * 0.72, -coverDeltaY);
+      const coverX = centerX + Math.sin(coverAngle) * (radius - 27);
+      const coverY = centerY - Math.cos(coverAngle) * (radius - 27);
+      ctx.strokeStyle = "#86b57b";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(coverX - 6, coverY - 6, 12, 12);
+      drawText(
+        `COVER ${Math.max(0, Math.round(environment.nearestCoverDistance))}m`,
+        coverX,
+        coverY - 15,
+        9,
+        "#9bc58f",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
   function drawFirstHoleOverlay() {
     const hole = state.hole;
     const playerDistance = worldDistance(hole.joe, state.player);
-    const inRough = Math.abs(state.player.x) > 67;
+    const environment = hole.environment || getPlayerEnvironmentState();
+    const inRough = environment.inRough;
     const objective =
       hole.keyCollected && hole.drainUnlocked
         ? "CHOOSE SHED OR DRAIN EXIT"
@@ -2756,19 +3112,19 @@
       "left",
     );
     const terrainStatus =
-      hole.crouched && inRough
-        ? "CROUCHED IN ROUGH: CONCEALED"
-        : hole.crouched
-          ? "CROUCHED: QUIET, STILL EXPOSED"
-          : inRough
-            ? "ROUGH: COVER — MOVEMENT RUSTLES"
-            : "FAIRWAY: QUIET BUT EXPOSED";
+      `${environment.zone.name}  •  ${environment.coverQuality.toUpperCase()}`;
     drawText(
       terrainStatus,
       62,
       249,
       11,
-      hole.crouched && inRough ? "#9fd285" : inRough ? "#e68b42" : "#9fac92",
+      environment.hardCover && hole.crouched
+        ? "#9fd285"
+        : environment.lightExposure > 0.15
+          ? "#f2a250"
+          : inRough
+            ? "#d5b25f"
+            : "#9fac92",
       "left",
     );
 
@@ -2786,12 +3142,62 @@
     drawText(hole.joe.mode.toUpperCase(), meterX + 246, 117, 12, danger > 0.68 ? "#ff7045" : "#b8c2ad", "right");
     drawCourseMiniMap();
 
+    ctx.fillStyle = "rgba(2,8,5,0.82)";
+    ctx.fillRect(36, 269, 430, 82);
+    strokeRect(36, 269, 430, 82, hole.focus ? "#c8b267" : "#4d6444", 2);
+    drawText(
+      hole.focus ? "LISTENING FOCUS" : "SURROUNDINGS",
+      54,
+      293,
+      13,
+      hole.focus ? "#f2d781" : "#ccd7c0",
+      "left",
+      true,
+    );
+    const landmarkText =
+      environment.nearestLandmark &&
+      environment.nearestLandmarkDistance < 72
+        ? `${environment.nearestLandmark.landmark.toUpperCase()}  ${Math.round(environment.nearestLandmarkDistance)}m`
+        : "NO LANDMARK WITHIN 72m";
+    drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
+    const awarenessText =
+      environment.lightExposure > 0.15
+        ? "AMBER LIGHT: VISIBILITY RISING"
+        : environment.hardCover
+          ? "SOLID OBJECT BETWEEN YOU AND JOE"
+          : inRough
+            ? "ROUGH MUFFLES SHAPE, NOT SOUND"
+            : "OPEN SIGHTLINE — MOVE COVER TO COVER";
+    drawText(
+      awarenessText,
+      54,
+      338,
+      11,
+      environment.lightExposure > 0.15 ? "#f2a250" : "#8fbc8a",
+      "left",
+    );
+
+    if (hole.zoneBannerTimer > 0) {
+      const zoneAlpha = clamp(hole.zoneBannerTimer / 0.55, 0, 1);
+      const bannerCenterX = WIDTH * 0.5 + 108;
+      const bannerWidth = 400;
+      ctx.save();
+      ctx.globalAlpha = zoneAlpha;
+      ctx.fillStyle = "rgba(2,7,4,0.88)";
+      ctx.fillRect(bannerCenterX - bannerWidth * 0.5, 42, bannerWidth, 74);
+      strokeRect(bannerCenterX - bannerWidth * 0.5, 42, bannerWidth, 74, "#9c7a43", 2);
+      drawText(environment.zone.name, bannerCenterX, 74, 25, "#f0e4bd", "center", true);
+      drawText(environment.zone.subtitle, bannerCenterX, 99, 12, "#bd9860", "center");
+      ctx.restore();
+    }
+
     if (hole.messageTimer > 0) {
       const alpha = clamp(hole.messageTimer, 0, 1);
+      const messageWidth = 720;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = "rgba(2,8,4,0.9)";
-      ctx.fillRect(WIDTH * 0.5 - 270, HEIGHT - 112, 540, 46);
-      strokeRect(WIDTH * 0.5 - 270, HEIGHT - 112, 540, 46, "#d87532", 2);
+      ctx.fillRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46);
+      strokeRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46, "#d87532", 2);
       drawText(hole.message, WIDTH * 0.5, HEIGHT - 82, 15, "#f1e7c9", "center", true);
       ctx.globalAlpha = 1;
     } else if (hole.prompt) {
@@ -2800,8 +3206,8 @@
 
     drawText(
       inputCopy(
-        "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  ENTER INTERACT  •  SPACE DISTRACT  •  ESC MENU",
-        "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  A INTERACT  •  X DISTRACT  •  START MENU",
+        "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  SPACE DISTRACT  •  ESC MENU",
+        "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  X DISTRACT  •  START MENU",
       ),
       28,
       HEIGHT - 25,
@@ -2812,7 +3218,8 @@
   }
 
   function drawFirstHole() {
-    const progress = clamp(state.player.y / 100, 0, 1);
+    const progress = clamp(state.player.y / COURSE_LENGTH, 0, 1);
+    const zone = courseZoneAt(state.player.y);
     const zoom = 1.08 + progress * 0.16;
     const panX = clamp(-state.player.x * 0.5, -60, 60);
     const walkBob = state.reducedMotion
@@ -2828,6 +3235,8 @@
     dangerTint.addColorStop(0.62, "rgba(7,20,10,0.05)");
     dangerTint.addColorStop(1, `rgba(20,4,1,${0.1 + progress * 0.13})`);
     ctx.fillStyle = dangerTint;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = `rgba(${zone.tint},0.08)`;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     drawPerspectiveCourse(progress, walkBob);
@@ -2852,12 +3261,12 @@
     if (
       !state.hole.keyCollected &&
       (!state.hole.drainUnlocked ||
-        worldDistance(state.player, { x: -68, y: 46 }) < 28)
+        worldDistance(state.player, KEY_POINT) < 42)
     ) {
-      drawWorldMarker(-68, 46, "SHED KEY", "#e7bd58", "◆");
+      drawWorldMarker(KEY_POINT.x, KEY_POINT.y, "SHED KEY", "#e7bd58", "◆");
     }
     if (!state.hole.sprinklerUsed) {
-      drawWorldMarker(-91, 19, "SPRINKLER", "#6aa8a0", "◉");
+      drawWorldMarker(SPRINKLER_POINT.x, SPRINKLER_POINT.y, "SPRINKLER", "#6aa8a0", "◉");
     }
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
       drawWorldMarker(
@@ -2876,7 +3285,7 @@
       state.hole.drainUnlocked ? "⇩" : "×",
     );
     if (!state.hole.drainUnlocked || state.hole.keyCollected) {
-      drawWorldMarker(0, 100, "MAINTENANCE SHED", "#d8b46b", "⌂");
+      drawWorldMarker(SHED_EXIT.x, SHED_EXIT.y, "MAINTENANCE SHED", "#d8b46b", "⌂");
     }
 
     const openingForeground = drawForegroundFringe(walkBob);
@@ -2917,6 +3326,7 @@
 
     drawPursuitEffects();
     drawConcealmentEffects();
+    drawListeningFocus();
     drawFirstHoleOverlay();
     drawJoeStateBanner();
     drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
@@ -3176,12 +3586,14 @@
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
+      hole.zoneBannerTimer = Math.max(0, hole.zoneBannerTimer - dt);
       hole.detectionPulse = Math.max(0, hole.detectionPulse - dt * 1.75);
       hole.lastKnownJoeTimer = Math.max(0, hole.lastKnownJoeTimer - dt);
       updateCourseEffects(dt);
       const movement = movementInput();
       const moving = playerIsMoving();
       hole.crouched = crouchHeld();
+      hole.focus = focusHeld();
       if (moving) {
         hole.hasMoved = true;
         hole.moveVector.x = movement.x;
@@ -3193,8 +3605,16 @@
       const sprinting =
         moving &&
         !hole.crouched &&
+        !hole.focus &&
         sprintHeld();
-      const speed = (hole.crouched ? 24 : sprinting ? 56 : 42) * dt;
+      const speed =
+        (hole.focus
+          ? 11
+          : hole.crouched
+            ? 15
+            : sprinting
+              ? 38
+              : 24) * dt;
       let inputX = movement.x;
       let inputY = movement.y;
       const inputLength = Math.max(1, Math.hypot(inputX, inputY));
@@ -3205,7 +3625,7 @@
         movePlayerBy(inputX * speed, inputY * speed);
         const stepSpacing = hole.crouched ? 5.8 : sprinting ? 5.3 : 4.1;
         if (hole.travelDistance - hole.lastStepDistance >= stepSpacing) {
-          const inStepRough = Math.abs(state.player.x) > 67;
+          const inStepRough = playerInRough();
           hole.lastStepDistance = hole.travelDistance;
           playFootstep(inStepRough, sprinting, hole.crouched);
           if (!hole.crouched || !inStepRough) {
@@ -3214,9 +3634,21 @@
         }
       }
 
-      const inRough = Math.abs(state.player.x) > 67;
+      const zoneIndex = COURSE_ZONES.indexOf(courseZoneAt(state.player.y));
+      if (zoneIndex !== hole.zoneIndex) {
+        hole.zoneIndex = zoneIndex;
+        hole.zoneBannerTimer = 3.4;
+        setHoleMessage(COURSE_ZONES[zoneIndex].cue, 3.4);
+        playThreatCue(zoneIndex >= 2 ? "search" : "investigate");
+      }
+      hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
+      const environment = getPlayerEnvironmentState();
+      const inRough = environment.inRough;
+      hole.environment = environment;
       const targetNoise = moving
-        ? hole.crouched
+        ? hole.focus
+          ? 0.055
+          : hole.crouched
           ? inRough
             ? 0.1
             : 0.15
@@ -3228,12 +3660,16 @@
         : 0;
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
       const targetConcealment =
-        hole.crouched && inRough
+        hole.crouched && environment.hardCover
           ? moving
-            ? 0.74
+            ? 0.82
             : 1
+          : hole.crouched && inRough
+            ? moving
+              ? 0.58
+              : 0.76
           : inRough
-            ? 0.22
+            ? 0.16
             : 0;
       hole.concealment = lerp(
         hole.concealment,
@@ -3243,19 +3679,26 @@
       if (inRough && moving && !hole.crouched) {
         hole.joe.alert = clamp(hole.joe.alert + dt * 0.055, 0, 1);
       }
+      if (environment.lightExposure > 0.15 && moving) {
+        hole.joe.alert = clamp(
+          hole.joe.alert + dt * environment.lightExposure * 0.06,
+          0,
+          1,
+        );
+      }
 
-      const key = { x: -68, y: 46 };
-      const sprinkler = { x: -91, y: 19 };
-      const shed = { x: 0, y: 100 };
+      const key = KEY_POINT;
+      const sprinkler = SPRINKLER_POINT;
+      const shed = SHED_EXIT;
       const drain = DRAIN_EXIT;
-      if (!hole.keyCollected && worldDistance(state.player, key) < 16) {
+      if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy("ENTER — TAKE SHED KEY", "A — TAKE SHED KEY");
-      } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < 18) {
+      } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
         hole.prompt = inputCopy(
           "ENTER — ACTIVATE SPRINKLERS",
           "A — ACTIVATE SPRINKLERS",
         );
-      } else if (worldDistance(state.player, shed) < 13) {
+      } else if (worldDistance(state.player, shed) < shed.radius) {
         hole.prompt = hole.keyCollected
           ? inputCopy("ENTER — UNLOCK SHED", "A — UNLOCK SHED")
           : inputCopy("ENTER — TRY SHED DOOR", "A — TRY SHED DOOR");
@@ -3437,7 +3880,14 @@
     const now = audioContext.currentTime;
     const isCourse = state.mode === "first_hole";
     const isQuietScreen = ["menu", "settings", "claim", "victory", "clocked_out"].includes(state.mode);
-    const ambienceLevel = isCourse ? 0.032 : isQuietScreen ? 0.013 : 0.018;
+    const ambienceLevel =
+      isCourse && state.hole.focus
+        ? 0.018
+        : isCourse
+          ? 0.032
+          : isQuietScreen
+            ? 0.013
+            : 0.018;
     if (ambienceGain) {
       ambienceGain.gain.setTargetAtTime(ambienceLevel, now, 0.32);
     }
@@ -3474,6 +3924,7 @@
       const distance = worldDistance(state.hole.joe, state.player);
       const proximity = clamp(1 - distance / 95, 0, 1);
       const joeMode = state.hole.joe.mode;
+      const listeningBoost = state.hole.focus ? 0.014 : 0;
       const modeGain =
         joeMode === "chase"
           ? 0.055
@@ -3514,6 +3965,7 @@
           0.008 +
             proximity * 0.048 +
             modeGain +
+            listeningBoost +
             cadence +
             routeStress * 0.006,
         ),
@@ -3893,6 +4345,7 @@
       state.gamepad.inputY = 0;
       state.gamepad.crouch = false;
       state.gamepad.sprint = false;
+      state.gamepad.focus = false;
       state.gamepad.previousButtons = [];
       state.gamepad.previousDirections = {
         up: false,
@@ -3951,8 +4404,9 @@
     state.gamepad.id = pad.id || "Gamepad";
     state.gamepad.inputX = inputX;
     state.gamepad.inputY = inputY;
-    state.gamepad.crouch = buttonDown(4) || buttonDown(6);
-    state.gamepad.sprint = buttonDown(5) || buttonDown(7);
+    state.gamepad.crouch = buttonDown(4);
+    state.gamepad.focus = buttonDown(6);
+    state.gamepad.sprint = buttonDown(7) || buttonDown(5);
     if (meaningfulInput) {
       state.inputMethod = "gamepad";
     }
@@ -4071,6 +4525,7 @@
         "ArrowLeft",
         "ArrowRight",
         "KeyC",
+        "KeyQ",
         "Enter",
         "Space",
       ];
@@ -4119,6 +4574,18 @@
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
       : null,
     status: state.status,
+    course: {
+      length: COURSE_LENGTH,
+      playerCollisionRadius: PLAYER_COLLISION_RADIUS,
+      zone: state.mode === "first_hole"
+        ? courseZoneAt(state.player.y).id
+        : null,
+      zones: COURSE_ZONES.map((zone) => ({
+        id: zone.id,
+        start: zone.start,
+        end: Math.min(zone.end, COURSE_LENGTH),
+      })),
+    },
     settings: {
       volume: Number(state.volume.toFixed(2)),
       subtitles: state.subtitles,
@@ -4134,8 +4601,9 @@
         x: Number(state.gamepad.inputX.toFixed(2)),
         y: Number(state.gamepad.inputY.toFixed(2)),
       },
-      crouchHeld: state.gamepad.crouch,
-      sprintHeld: state.gamepad.sprint,
+      crouchHeld: crouchHeld(),
+      sprintHeld: sprintHeld(),
+      focusHeld: focusHeld(),
     },
     audio: {
       initialized: Boolean(audioContext),
@@ -4150,12 +4618,16 @@
       ? {
           x: Math.round(state.player.x),
           progress: Math.round(state.player.y),
+          progressPercent: Math.round(state.player.y / COURSE_LENGTH * 100),
           headingRadians: Number(state.player.heading.toFixed(2)),
           travelDistance: Math.round(state.hole.travelDistance),
-          shedDistancePercent: Math.max(0, 100 - Math.round(state.player.y)),
-          inRough: Math.abs(state.player.x) > 67,
+          shedDistance: Math.max(0, Math.round(COURSE_LENGTH - state.player.y)),
+          inRough: playerInRough(),
           crouched: state.hole.crouched,
+          focus: state.hole.focus,
           concealment: Number(state.hole.concealment.toFixed(2)),
+          clearance: Number(nearestObstacleClearance(state.player).toFixed(2)),
+          zone: courseZoneAt(state.player.y).id,
           openingForeground: {
             visibility: Number(getOpeningForegroundTransform().visibility.toFixed(2)),
             departure: Number(getOpeningForegroundTransform().departure.toFixed(2)),
@@ -4187,6 +4659,24 @@
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
           activeEffects: state.hole.worldEffects.map((effect) => effect.kind),
           visibleObstacles: visibleObstacleState(),
+          environment: state.hole.environment
+            ? {
+                coverQuality: state.hole.environment.coverQuality,
+                hardCover: state.hole.environment.hardCover,
+                lineBlockedBy: state.hole.environment.blocker,
+                nearestCover: state.hole.environment.nearestCover?.id || null,
+                nearestCoverDistance: state.hole.environment.nearestCover
+                  ? Number(
+                      state.hole.environment.nearestCoverDistance.toFixed(2),
+                    )
+                  : null,
+                nearestLandmark:
+                  state.hole.environment.nearestLandmark?.landmark || null,
+                lightExposure: Number(
+                  state.hole.environment.lightExposure.toFixed(2),
+                ),
+              }
+            : null,
           joe: {
             x: Math.round(state.hole.joe.x),
             y: Math.round(state.hole.joe.y),
@@ -4296,6 +4786,7 @@
   joeMowerErraticHeadArt.addEventListener("load", render);
   fieldKitArt.addEventListener("load", render);
   courseObstacleArt.addEventListener("load", render);
+  expandedCourseArt.addEventListener("load", render);
   foregroundFringeArt.addEventListener("load", render);
   defeatArt.addEventListener("load", render);
   drainArt.addEventListener("load", render);
