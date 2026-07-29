@@ -13,6 +13,7 @@ The browser build includes:
 - An original grass-and-weed-whacker horror-comedy opening.
 - Keyboard, pointer, and standard gamepad support with automatic prompt switching.
 - A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
+- Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - Two complete escape routes through the maintenance shed or drainage culvert.
 - Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
@@ -23,6 +24,7 @@ The browser build includes:
 - Persistent volume, subtitle, and reduced-camera-motion preferences.
 - A post-run course scorecard with S–D risk grades, close-call recognition, and route-specific personal records.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
+- Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
 Run it locally from the project root:

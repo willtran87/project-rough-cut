@@ -114,7 +114,7 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Replace or layer the procedural mower and wind sources with licensed or custom-recorded stems while retaining the current adaptive mix controls.
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
-- Add curated objective and Joe-start variants, then validate that each seeded layout preserves viable stealth and escape routes.
+- Add a lightweight optional challenge modifier after the player clears all three curated Night Orders.
 - Build the first aimed golf shot and one evidence-bearing/cuttable turf state so golf and grass become deeper systemic tools.
 
 ## Opening Foreground Parallax Correction — July 29, 2026
@@ -210,3 +210,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Verified that capture increments the persistent denial count and that the count survives reload.
 - Visually validated the scorecard at 800×600, 1280×720, and 2560×1600 with no document overflow.
 - Re-ran the project Playwright client for the menu and updated survival briefing with no console or page errors.
+
+## Curated Night Order Replay Pass — July 29, 2026
+
+- Added three deterministic Hole 1 configurations: Standard Review, Eastern Exception, and Closing Shift.
+- Each Night Order relocates the shed key and sprinkler valve to a different authored landmark and gives Joe a distinct opening position, patrol waypoint, and hold time.
+- Rotated orders from the persistent rounds-started count so retries produce variety while remaining reproducible for learning and validation.
+- Added upcoming-order presentation to the main menu plus order-specific briefing copy, accent color, HUD identity, objective hints, mini-map markers, world markers, and after-action copy.
+- Persisted unique Night Order completions and exposed the cleared-order collection alongside existing route records.
+- Extended `render_game_to_text` with upcoming-order data, active variant coordinates, interaction radii, safe obstacle clearance, Joe's opening patrol, and completion state.
+- Corrected the original sprinkler placement after automated inspection found its marker embedded in the north pine collider; the new west-tee position is visually clear and directly reachable.
+- Verified safe player clearance at all six objective placements and exact Joe opening positions for all three orders.
+- Completed both objectives in Eastern Exception and Closing Shift using only keyboard movement and interaction input.
+- Completed Standard Review through the drainage route in 20.65 seconds, earning an A grade and filing its unique Night Order completion.
+- Re-ran the required project Playwright client against the final menu and briefing with no console or page errors.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Build the first aimed golf shot and one evidence-bearing/cuttable turf state so golf and grass become deeper systemic tools.
+- Add a lightweight optional challenge modifier after the player clears all three Night Orders.

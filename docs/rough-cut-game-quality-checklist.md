@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, course grading, personal records, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, course grading, personal records, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -43,7 +43,7 @@
 - [x] Support WASD and arrow-key movement.
 - [x] Support Shift to sprint, C to crouch, Enter to interact, Space to throw a golf-ball distraction, H to recall controls, and Escape to pause.
 - [x] Show visible movement chevrons and movement/sprint status so locomotion is discoverable.
-- [x] Place a shed key near the bunker.
+- [x] Place the shed key at a readable, authored landmark selected by the current Night Order.
 - [x] Provide a locked shed as the escape target.
 - [x] Provide a sprinkler valve that creates a major distraction and opens the alternate drainage route.
 - [x] Give the player a limited supply of four golf balls for thrown distractions.
@@ -65,6 +65,7 @@
 - [x] Grade completed runs without exposing a constant live score during the horror sequence.
 - [x] Reward a balanced mix of speed, stealth, saved golf balls, careful movement, and successful pursuit recovery.
 - [x] Persist separate shed- and drain-route personal records plus rounds, escapes, and captures.
+- [x] Rotate three curated objective-and-patrol layouts, identify the upcoming Night Order in the menu, and persist which orders the player has cleared.
 - [x] Present completion results as an in-fiction after-action performance review.
 
 ### Settings, Accessibility, and Verification
@@ -90,7 +91,7 @@ The intended first-session flow is:
 2. The menu establishes the title, mood, and clear access to instructions and settings.
 3. A short briefing explains movement, sprinting, crouch concealment, noise, distraction, and both escape routes.
 4. The player enters the moonlit course, reads the mini-map and terrain, and begins moving before Joe closes in.
-5. The player chooses between searching near the bunker for the shed key or reaching the sprinkler controls to open the drainage culvert.
+5. The player reads the current Night Order, then chooses between its relocated shed key or sprinkler controls.
 6. Golf balls redirect Joe with diminishing effectiveness; sight blockers and deep rough let the player break pursuit and survive a search.
 7. Unlocking the shed or entering the opened drain ends the slice with route-specific success; being caught ends it with a claim-denied screen.
 
@@ -1171,7 +1172,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make replayability come from alternate routes, objective orders, grass discoveries, equipment choices, Joe responses, and narrative decisions.
 - [ ] Preserve authored course identity while allowing selected variation in resources, evidence, weather, route access, and Joe routines.
 - [ ] Avoid uncontrolled randomization that places Joe or objectives unfairly.
-- [ ] Use seeded or curated variants where reproducibility benefits challenge and learning.
+- [x] Use seeded or curated variants where reproducibility benefits challenge and learning; Hole 1 now rotates three deterministic Night Orders.
 - [ ] Let experienced players skip or accelerate introductory sequences.
 - [ ] Support chapter, course, confrontation, or challenge replay after completion.
 - [ ] Include optional modes such as no-capture, limited-ball, no-map, perfect-sample, par escape, speedrun, or heightened-audit challenges where appropriate.
