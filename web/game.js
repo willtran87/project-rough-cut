@@ -115,6 +115,7 @@
   const BALL_MAX_RANGE = 96;
   const BALL_CHARGE_SECONDS = 0.8;
   const BALL_MAX_AIM_ANGLE = 1.12;
+  const BALL_RECOVERY_RADIUS = 8;
   const OVERTIME_SCORE_MULTIPLIER = 1.3;
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
@@ -318,6 +319,56 @@
     return activeRunVariant().sprinkler;
   }
 
+  function golfBallCapacity() {
+    return state.hole?.overtime ? 2 : 4;
+  }
+
+  function golfBallDangerState(ball) {
+    const hole = state.hole;
+    const joeDistance = worldDistance(
+      hole.joe,
+      ball,
+    );
+    const activeLure =
+      Boolean(hole.distraction) &&
+      hole.distractionTimer > 0 &&
+      worldDistance(
+        hole.distraction,
+        ball,
+      ) < 2;
+    return {
+      activeLure,
+      joeDistance,
+      dangerous:
+        activeLure ||
+        joeDistance < 32,
+    };
+  }
+
+  function nearestRecoverableBall(point = state.player) {
+    const balls =
+      state.hole?.recoverableBalls || [];
+    let nearest = null;
+    let distance = Infinity;
+    for (
+      let index = 0;
+      index < balls.length;
+      index += 1
+    ) {
+      const candidateDistance =
+        worldDistance(point, balls[index]);
+      if (candidateDistance < distance) {
+        nearest = balls[index];
+        distance = candidateDistance;
+      }
+    }
+    return {
+      ball: nearest,
+      distance:
+        nearest ? distance : null,
+    };
+  }
+
   function freshBallAimState() {
     return {
       active: false,
@@ -489,6 +540,9 @@
       phase: "find_key",
       keyCollected: false,
       golfBalls: 4,
+      recoverableBalls: [],
+      nextRecoverableBallId: 1,
+      ballsRecovered: 0,
       noise: 0,
       joe: {
         x: 44,
@@ -786,6 +840,7 @@
       gradeLabel: gradeLabels[grade],
       timeSeconds: hole.elapsed,
       ballsRemaining: hole.golfBalls,
+      ballsRecovered: hole.ballsRecovered,
       maxDetection: hole.maxDetection,
       pursuitSeconds: hole.pursuitSeconds,
       chaseCount: hole.chaseCount,
@@ -1417,13 +1472,33 @@
     drawText("THE ASSIGNMENT", 205, 213, 15, "#8f9e84", "left", true);
     const steps = [
       { y: 260, icon: 0, title: "1. CHOOSE AN EXIT", detail: "Key opens shed. Sprinkler opens drain." },
-      { y: 348, icon: 1, title: "2. MISDIRECT JOE", detail: controllerActive ? "Hold X + stick L/R, then release." : "Hold SPACE + A/D, then release." },
+      {
+        y: 348,
+        icon: 1,
+        title: "2. MISDIRECT JOE",
+        detail: controllerActive
+          ? "Hold X + stick L/R, then release."
+          : "Hold SPACE + A/D, then release.",
+        subdetail: controllerActive
+          ? "Landed balls stay. A reclaims them."
+          : "Landed balls stay. ENTER reclaims them.",
+      },
       { y: 436, icon: 2, title: "3. BREAK CONTACT", detail: controllerActive ? "Hold LB near hard cover or in rough." : "Hold C near hard cover or in rough." },
     ];
     for (const step of steps) {
       drawFieldIcon(step.icon, 242, step.y, 64);
       drawText(step.title, 292, step.y - 4, 15, "#eee8ce", "left", true);
       drawText(step.detail, 292, step.y + 22, 12, "#9eaa96", "left");
+      if (step.subdetail) {
+        drawText(
+          step.subdetail,
+          292,
+          step.y + 40,
+          11,
+          "#d29a5b",
+          "left",
+        );
+      }
     }
     drawText(
       controllerActive ? "LEFT STICK / D-PAD  MOVE" : "WASD / ARROWS  MOVE",
@@ -1653,6 +1728,9 @@
       phase: "find_key",
       keyCollected: false,
       golfBalls: overtime ? 2 : 4,
+      recoverableBalls: [],
+      nextRecoverableBallId: 1,
+      ballsRecovered: 0,
       noise: 0,
       joe: {
         x: variant.joeStart.x,
@@ -2520,6 +2598,8 @@
     const sprinkler = activeSprinklerPoint();
     const shed = SHED_EXIT;
     const drain = DRAIN_EXIT;
+    const nearestBall =
+      nearestRecoverableBall();
 
     if (!state.hole.keyCollected && worldDistance(state.player, key) < key.radius) {
       state.hole.keyCollected = true;
@@ -2558,27 +2638,57 @@
       return;
     }
 
-    if (worldDistance(state.player, shed) < shed.radius) {
-      if (state.hole.keyCollected) {
-        completeHole("shed");
-      } else {
-        setHoleMessage(
-          `SHED LOCKED — ${activeRunVariant().keyHint}.`,
-          3.2,
-        );
-        state.hole.phase = "find_key";
-        playDoorRattle();
-      }
+    if (
+      state.hole.keyCollected &&
+      worldDistance(state.player, shed) <
+        shed.radius
+    ) {
+      completeHole("shed");
       return;
     }
 
-    if (worldDistance(state.player, drain) < drain.radius) {
-      if (state.hole.drainUnlocked) {
-        completeHole("drain");
-      } else {
-        setHoleMessage("DRAIN SEALED — Release pressure at the sprinkler valve.", 3.2);
-        playDoorRattle();
-      }
+    if (
+      state.hole.drainUnlocked &&
+      worldDistance(state.player, drain) <
+        drain.radius
+    ) {
+      completeHole("drain");
+      return;
+    }
+
+    if (
+      nearestBall.ball &&
+      nearestBall.distance <
+        BALL_RECOVERY_RADIUS
+    ) {
+      recoverGolfBall(
+        nearestBall.ball,
+      );
+      return;
+    }
+
+    if (
+      worldDistance(state.player, shed) <
+      shed.radius
+    ) {
+      setHoleMessage(
+        `SHED LOCKED — ${activeRunVariant().keyHint}.`,
+        3.2,
+      );
+      state.hole.phase = "find_key";
+      playDoorRattle();
+      return;
+    }
+
+    if (
+      worldDistance(state.player, drain) <
+      drain.radius
+    ) {
+      setHoleMessage(
+        "DRAIN SEALED — Release pressure at the sprinkler valve.",
+        3.2,
+      );
+      playDoorRattle();
     }
   }
 
@@ -2716,6 +2826,18 @@
   function landGolfBall(target) {
     const hole = state.hole;
     hole.ballFlight = null;
+    const landedBall = {
+      id: hole.nextRecoverableBallId,
+      x: target.x,
+      y: target.y,
+      landedAt: hole.elapsed,
+      throwNumber: hole.ballThrowsUsed,
+      wet: wetStateAt(target).active,
+    };
+    hole.nextRecoverableBallId += 1;
+    hole.recoverableBalls.push(
+      landedBall,
+    );
     addTurfMark(
       "divot",
       target.x,
@@ -2739,9 +2861,9 @@
     hole.noise = Math.max(hole.noise, 0.38);
     setHoleMessage(
       hole.ballThrowsUsed >= 3
-        ? "JOE RECOGNIZED THE PATTERN — the window is shorter."
-        : "BALL LANDED — Joe changed course.",
-      2.6,
+        ? "JOE RECOGNIZED THE PATTERN — reclaim the ball only if the lane clears."
+        : "BALL LANDED — Joe changed course. The ball can be reclaimed.",
+      3.1,
     );
     addWorldEffect(
       "sound",
@@ -2759,6 +2881,66 @@
     playBallCue(
       Math.sign(target.x - state.player.x),
     );
+  }
+
+  function recoverGolfBall(ball) {
+    const hole = state.hole;
+    if (!ball) {
+      return false;
+    }
+    if (
+      hole.golfBalls >=
+      golfBallCapacity()
+    ) {
+      setHoleMessage(
+        `POCKETS FULL — carrying ${golfBallCapacity()} balls.`,
+        1.7,
+      );
+      playUiTone(112, 0.08, 0.018);
+      return false;
+    }
+    const danger =
+      golfBallDangerState(ball);
+    hole.recoverableBalls =
+      hole.recoverableBalls.filter(
+        (candidate) =>
+          candidate.id !== ball.id,
+      );
+    hole.golfBalls += 1;
+    hole.ballsRecovered += 1;
+    hole.noise = Math.max(
+      hole.noise,
+      danger.dangerous ? 0.32 : 0.18,
+    );
+    addWorldEffect(
+      "ball_recovered",
+      ball.x,
+      ball.y,
+      1.45,
+    );
+    if (danger.dangerous) {
+      const closeRecovery =
+        danger.joeDistance < 32;
+      hole.stateBanner = closeRecovery
+        ? "BALL RECLAIMED // JOE IS STILL IN THE AREA"
+        : "BALL RECLAIMED // JOE REMAINS COMMITTED";
+      hole.stateBannerTimer = 2.25;
+      setHoleMessage(
+        closeRecovery
+          ? `BALL RECLAIMED UNDER PRESSURE — Joe is ${Math.round(danger.joeDistance)}m away.`
+          : `BALL RECLAIMED DURING INVESTIGATION — ${Math.round(danger.joeDistance)}m buffer.`,
+        2.5,
+      );
+    } else {
+      setHoleMessage(
+        "BALL RECLAIMED — one distraction restored.",
+        2.1,
+      );
+    }
+    playBallRecoveryCue(
+      danger.dangerous,
+    );
+    return true;
   }
 
   function updateGolfBallTactics(dt, movement) {
@@ -4082,6 +4264,165 @@
     }
   }
 
+  function drawRecoverableGolfBalls() {
+    const hole = state.hole;
+    const balls = hole.recoverableBalls
+      .map((ball) => ({
+        ball,
+        point: worldToScreen(
+          ball.x,
+          ball.y,
+        ),
+      }))
+      .filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -120 &&
+          entry.point.x < WIDTH + 120,
+      )
+      .sort(
+        (a, b) =>
+          a.point.y - b.point.y,
+      );
+    for (
+      let index = 0;
+      index < balls.length;
+      index += 1
+    ) {
+      const ball = balls[index].ball;
+      const point = balls[index].point;
+      const danger =
+        golfBallDangerState(ball);
+      const playerDistance =
+        worldDistance(
+          state.player,
+          ball,
+        );
+      const pulse = state.reducedMotion
+        ? 0.65
+        : 0.56 +
+          Math.sin(
+            hole.elapsed * 6.4 +
+              ball.id * 1.7,
+          ) *
+            0.18;
+      const ballRadius = clamp(
+        2 + point.scale * 2.1,
+        2,
+        7,
+      );
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.52)";
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y + ballRadius * 0.45,
+        ballRadius * 2.2,
+        ballRadius * 0.66,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle =
+        danger.dangerous
+          ? `rgba(232,142,68,${0.5 + pulse * 0.35})`
+          : `rgba(224,211,143,${0.34 + pulse * 0.3})`;
+      ctx.lineWidth = Math.max(
+        1,
+        point.scale * 1.1,
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        ballRadius *
+          (2.4 + pulse * 0.7),
+        ballRadius *
+          (0.72 + pulse * 0.16),
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.shadowColor =
+        ball.wet
+          ? "rgba(139,220,207,0.92)"
+          : "rgba(247,231,172,0.92)";
+      ctx.shadowBlur =
+        7 + pulse * 8;
+      ctx.fillStyle =
+        ball.wet
+          ? "#d4f0e5"
+          : "#f1ead1";
+      ctx.beginPath();
+      ctx.arc(
+        point.x,
+        point.y - ballRadius * 0.35,
+        ballRadius,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle =
+        ball.wet
+          ? "#72aaa1"
+          : "#a9a279";
+      ctx.fillRect(
+        Math.round(
+          point.x -
+            ballRadius * 0.34,
+        ),
+        Math.round(
+          point.y -
+            ballRadius * 0.8,
+        ),
+        Math.max(
+          1,
+          Math.round(
+            ballRadius * 0.45,
+          ),
+        ),
+        Math.max(
+          1,
+          Math.round(
+            ballRadius * 0.45,
+          ),
+        ),
+      );
+      if (
+        hole.focus ||
+        playerDistance < 24
+      ) {
+        const label =
+          danger.activeLure
+            ? "LIVE BAIT"
+            : playerDistance <
+                BALL_RECOVERY_RADIUS
+              ? inputCopy(
+                  "ENTER — RECLAIM",
+                  "A — RECLAIM",
+                )
+              : `LOST BALL ${Math.round(playerDistance)}m`;
+        drawText(
+          label,
+          point.x,
+          point.y -
+            17 -
+            ballRadius,
+          9,
+          danger.dangerous
+            ? "#efa462"
+            : "#e8dfb3",
+          "center",
+          true,
+        );
+      }
+      ctx.restore();
+    }
+  }
+
   function drawCourseObstacle(obstacle) {
     if (obstacle.draw === false) {
       return;
@@ -4719,6 +5060,47 @@
       ctx.arc(sprinklerPoint.x, sprinklerPoint.y, 5, 0, Math.PI * 2);
       ctx.stroke();
     }
+    for (
+      let index = 0;
+      index <
+      state.hole.recoverableBalls.length;
+      index += 1
+    ) {
+      const ball =
+        state.hole.recoverableBalls[index];
+      const ballPoint = mapPoint(
+        ball.x,
+        ball.y,
+      );
+      const danger =
+        golfBallDangerState(ball);
+      ctx.fillStyle = ball.wet
+        ? "#b7e0d5"
+        : "#eee6c7";
+      ctx.beginPath();
+      ctx.arc(
+        ballPoint.x,
+        ballPoint.y,
+        danger.dangerous ? 3.2 : 2.5,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      if (danger.dangerous) {
+        ctx.strokeStyle =
+          "rgba(222,132,62,0.8)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(
+          ballPoint.x,
+          ballPoint.y,
+          5.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+    }
     if (state.hole.focus) {
       for (
         let index = 0;
@@ -5051,6 +5433,52 @@
           );
           ctx.fill();
         }
+      } else if (effect.kind === "ball_recovered") {
+        ctx.strokeStyle =
+          `rgba(244,220,139,${alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          2 * scale,
+        );
+        for (
+          let ring = 0;
+          ring < 3;
+          ring += 1
+        ) {
+          const radius =
+            (8 +
+              ring * 9 +
+              progress * 34) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y -
+              progress * 18 * scale,
+            radius,
+            radius * 0.34,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+        ctx.fillStyle =
+          `rgba(248,236,191,${alpha})`;
+        ctx.beginPath();
+        ctx.arc(
+          point.x,
+          point.y -
+            (8 + progress * 34) *
+              scale,
+          Math.max(
+            2,
+            4 * scale,
+          ),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
       } else if (effect.kind === "pickup") {
         ctx.strokeStyle = `rgba(255,214,108,${alpha})`;
         ctx.lineWidth = 2;
@@ -5631,7 +6059,18 @@
     const controllerActive = state.inputMethod === "gamepad";
     const cards = [
       { x: 220, icon: 0, number: "1", title: "CHOOSE AN EXIT", detail: "KEY → SHED  •  VALVE → DRAIN" },
-      { x: 500, icon: 1, number: "2", title: "AIM A CHIP SHOT", detail: controllerActive ? "HOLD X  •  STICK  •  RELEASE" : "HOLD SPACE  •  A/D  •  RELEASE" },
+      {
+        x: 500,
+        icon: 1,
+        number: "2",
+        title: "AIM A CHIP SHOT",
+        detail: controllerActive
+          ? "HOLD X  •  STICK  •  RELEASE"
+          : "HOLD SPACE  •  A/D  •  RELEASE",
+        subdetail: controllerActive
+          ? "A RECLAIMS IT — IF JOE ALLOWS"
+          : "ENTER RECLAIMS IT — IF JOE ALLOWS",
+      },
       { x: 780, icon: 2, number: "3", title: "BREAK CONTACT", detail: controllerActive ? "LB CROUCH  •  LT LISTEN" : "C CROUCH  •  Q LISTEN" },
     ];
     for (const card of cards) {
@@ -5642,6 +6081,17 @@
       drawFieldIcon(card.icon, card.x + 121, 284, 112);
       drawText(card.title, card.x + 121, 370, 16, "#f0e8ce", "center", true);
       drawText(card.detail, card.x + 121, 398, 11, "#aebaa5", "center");
+      if (card.subdetail) {
+        drawText(
+          card.subdetail,
+          card.x + 121,
+          413,
+          9,
+          "#d69a5c",
+          "center",
+          true,
+        );
+      }
     }
 
     drawText("MOVE", 278, 478, 13, "#8f9f85", "center");
@@ -5662,11 +6112,11 @@
 
     drawText("AIM / CHIP", 760, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "X" : "SPACE", 760, 526, 112);
-    drawText("JOE FOLLOWS THE LANDING", 760, 579, 10, "#9fac96", "center");
+    drawText("JOE FOLLOWS IT — RECLAIM WHEN CLEAR", 760, 579, 10, "#9fac96", "center");
 
     drawText("INTERACT", 979, 478, 13, "#8f9f85", "center");
     drawKeyCap(controllerActive ? "A" : "ENTER", 979, 526, 112);
-    drawText("USE KEY, VALVE, EXITS", 979, 579, 10, "#df8c47", "center");
+    drawText("USE KEY, VALVE, EXITS, LOST BALLS", 979, 579, 10, "#df8c47", "center");
 
     const pulse = 0.62 + (Math.sin(state.time * 4.2) + 1) * 0.18;
     ctx.globalAlpha = pulse;
@@ -5810,6 +6260,69 @@
         wetY + 18,
         9,
         "#9ed8ce",
+        "center",
+        true,
+      );
+    }
+    const nearestBall =
+      nearestRecoverableBall();
+    if (
+      nearestBall.ball &&
+      nearestBall.distance < 90
+    ) {
+      const ballDeltaX =
+        nearestBall.ball.x -
+        state.player.x;
+      const ballDeltaY =
+        nearestBall.ball.y -
+        state.player.y;
+      const ballAngle = Math.atan2(
+        ballDeltaX * 0.72,
+        -ballDeltaY,
+      );
+      const ballX =
+        centerX +
+        Math.sin(ballAngle) *
+          (radius - 34);
+      const ballY =
+        centerY -
+        Math.cos(ballAngle) *
+          (radius - 34);
+      const ballDanger =
+        golfBallDangerState(
+          nearestBall.ball,
+        );
+      ctx.fillStyle =
+        ballDanger.dangerous
+          ? "#e89651"
+          : "#ece2b9";
+      ctx.beginPath();
+      ctx.arc(
+        ballX,
+        ballY,
+        4,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle =
+        ballDanger.dangerous
+          ? "#ee8d4c"
+          : "#c9b96d";
+      ctx.strokeRect(
+        ballX - 7,
+        ballY - 7,
+        14,
+        14,
+      );
+      drawText(
+        `${ballDanger.dangerous ? "RISKY BALL" : "BALL"} ${Math.round(nearestBall.distance)}m`,
+        ballX,
+        ballY - 14,
+        9,
+        ballDanger.dangerous
+          ? "#f1a166"
+          : "#e5d89e",
         "center",
         true,
       );
@@ -5987,7 +6500,7 @@
       );
       drawFieldIcon(1, 79, 184, 38);
       drawText(
-        `${inputCopy("HOLD SPACE", "HOLD X")}  AIM / CHIP   ×${hole.golfBalls}`,
+        `${inputCopy("HOLD SPACE", "HOLD X")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
         106,
         189,
         13,
@@ -6028,7 +6541,7 @@
       );
       drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
       drawText(
-        `${terrainStatus}  •  ${hole.golfBalls} BALLS`,
+        `${terrainStatus}  •  ${hole.golfBalls} BALLS${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}`,
         56,
         120,
         11,
@@ -6256,6 +6769,7 @@
     drawPerspectiveCourse(progress, walkBob);
     drawWetTurf();
     drawTurfMarks();
+    drawRecoverableGolfBalls();
 
     for (let layer = 0; layer < 3; layer += 1) {
       const fogY = 280 + layer * 105;
@@ -6561,7 +7075,7 @@
       ],
       [
         "RESOURCES",
-        `${result.ballsRemaining} BALL${result.ballsRemaining === 1 ? "" : "S"}`,
+        `${result.ballsRemaining} BALL${result.ballsRemaining === 1 ? "" : "S"}  •  ${result.ballsRecovered} RECLAIMED`,
       ],
     ];
     for (
@@ -6991,6 +7505,8 @@
       const sprinkler = activeSprinklerPoint();
       const shed = SHED_EXIT;
       const drain = DRAIN_EXIT;
+      const nearestBall =
+        nearestRecoverableBall();
       if (hole.ballAim.active) {
         hole.prompt = inputCopy(
           "RELEASE SPACE TO CHIP",
@@ -7005,20 +7521,51 @@
           "ENTER — ACTIVATE SPRINKLERS",
           "A — ACTIVATE SPRINKLERS",
         );
+      } else if (
+        hole.keyCollected &&
+        worldDistance(state.player, shed) <
+          shed.radius
+      ) {
+        hole.prompt = inputCopy(
+          "ENTER — UNLOCK SHED",
+          "A — UNLOCK SHED",
+        );
+      } else if (
+        hole.drainUnlocked &&
+        worldDistance(state.player, drain) <
+          drain.radius
+      ) {
+        hole.prompt = inputCopy(
+          "ENTER — ESCAPE THROUGH DRAIN",
+          "A — ESCAPE THROUGH DRAIN",
+        );
+      } else if (
+        nearestBall.ball &&
+        nearestBall.distance <
+          BALL_RECOVERY_RADIUS
+      ) {
+        const recoveryDanger =
+          golfBallDangerState(
+            nearestBall.ball,
+          );
+        hole.prompt = inputCopy(
+          recoveryDanger.dangerous
+            ? `ENTER — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : "ENTER — RECLAIM GOLF BALL",
+          recoveryDanger.dangerous
+            ? `A — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : "A — RECLAIM GOLF BALL",
+        );
       } else if (worldDistance(state.player, shed) < shed.radius) {
-        hole.prompt = hole.keyCollected
-          ? inputCopy("ENTER — UNLOCK SHED", "A — UNLOCK SHED")
-          : inputCopy("ENTER — TRY SHED DOOR", "A — TRY SHED DOOR");
+        hole.prompt = inputCopy(
+          "ENTER — TRY SHED DOOR",
+          "A — TRY SHED DOOR",
+        );
       } else if (worldDistance(state.player, drain) < drain.radius) {
-        hole.prompt = hole.drainUnlocked
-          ? inputCopy(
-              "ENTER — ESCAPE THROUGH DRAIN",
-              "A — ESCAPE THROUGH DRAIN",
-            )
-          : inputCopy(
-              "ENTER — INSPECT SEALED DRAIN",
-              "A — INSPECT SEALED DRAIN",
-            );
+        hole.prompt = inputCopy(
+          "ENTER — INSPECT SEALED DRAIN",
+          "A — INSPECT SEALED DRAIN",
+        );
       } else {
         hole.prompt = "";
       }
@@ -7567,6 +8114,32 @@
     playNoiseBurst(0.09, 0.042, 2200, "highpass", direction * 0.48);
     playTransientTone(520, 270, 0.1, 0.026, "sine");
     playTransientTone(360, 190, 0.09, 0.032, "triangle", 0.24);
+  }
+
+  function playBallRecoveryCue(dangerous) {
+    playTransientTone(
+      dangerous ? 330 : 440,
+      dangerous ? 220 : 660,
+      0.16,
+      0.036,
+      "triangle",
+    );
+    playTransientTone(
+      dangerous ? 196 : 784,
+      dangerous ? 130 : 1046,
+      0.19,
+      0.025,
+      "sine",
+      0.09,
+    );
+    if (dangerous) {
+      playNoiseBurst(
+        0.16,
+        0.022,
+        780,
+        "bandpass",
+      );
+    }
   }
 
   function playDoorRattle() {
@@ -8390,6 +8963,44 @@
           drainUnlocked: state.hole.drainUnlocked,
           escapeRoute: state.hole.escapeRoute,
           golfBalls: state.hole.golfBalls,
+          golfBallCapacity:
+            golfBallCapacity(),
+          ballsRecovered:
+            state.hole.ballsRecovered,
+          recoverableBalls:
+            state.hole.recoverableBalls.map(
+              (ball) => {
+                const danger =
+                  golfBallDangerState(ball);
+                return {
+                  id: ball.id,
+                  x: Math.round(ball.x),
+                  y: Math.round(ball.y),
+                  distance: Math.round(
+                    worldDistance(
+                      state.player,
+                      ball,
+                    ),
+                  ),
+                  joeDistance: Math.round(
+                    danger.joeDistance,
+                  ),
+                  dangerous:
+                    danger.dangerous,
+                  activeLure:
+                    danger.activeLure,
+                  wet: ball.wet,
+                  ageSeconds: Number(
+                    (
+                      state.hole.elapsed -
+                      ball.landedAt
+                    ).toFixed(2),
+                  ),
+                  interactionRadius:
+                    BALL_RECOVERY_RADIUS,
+                };
+              },
+            ),
           ballThrowsUsed: state.hole.ballThrowsUsed,
           golfShot: {
             aiming: state.hole.ballAim.active,
@@ -8687,19 +9298,19 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; Enter interacts or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
         menu: "D-pad selects; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; A interacts or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },
     },

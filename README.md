@@ -17,7 +17,7 @@ The browser build includes:
 - Two complete escape routes through the maintenance shed or drainage culvert.
 - Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
-- A pressure-driven golf chip: hold to charge, steer the landing point, release into a visible flight arc, and misdirect Joe on impact.
+- A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
 - A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.

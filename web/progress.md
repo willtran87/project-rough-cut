@@ -308,3 +308,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
 - Consider a second authored terrain reaction—bunker disturbance or recoverable divots—after playtesting shows wet-turf choices remain legible under chase pressure.
 - Add a second Overtime contract only after telemetry shows the first modifier and sprinkler timing produce fair, replayable routes.
+
+## Recoverable Golf-Ball Risk Loop — July 29, 2026
+
+- Turned each landed golf ball into a persistent, perspective-projected world object that remains where the player's aimed chip actually lands.
+- Added Enter/A recovery within eight course meters, restoring exactly one ball without allowing inventory to exceed the normal four-ball or Overtime two-ball capacity.
+- Preserved the escalating distraction penalty across reclaimed throws, so repeated reuse creates a deliberate risk curve instead of an infinite safe lure.
+- Added a danger read based on Joe's distance and whether the ball remains his active investigation target.
+- Added bright pixel-ball rendering, projected shadows, wet-ball tinting, pulsing danger rings, animated recovery lift, a two-part pickup cue, mini-map dots, and Listening Focus direction/distance labels.
+- Added “on course” inventory copy, proximity prompts with Joe's distance, pressure-specific banners, briefing and settings instructions, and scorecard recovery accounting.
+- Extended `render_game_to_text` with carry capacity, recovery count, every active ball's world position, player and Joe distance, lure state, danger state, wet state, age, and interaction radius.
+- Verified the complete landing → persistent object → approach prompt → pickup effect → restored inventory chain with the exact project Playwright client and no console or page errors.
+- Verified the intended escalation: the first straight reclaim restored inventory safely, while immediately repeating the maneuver placed Joe on the second landing point and ended in capture.
+- Verified Overtime inventory moving from two to one and back to two, plus pause freezing both landed-ball age and lure time and restart clearing every ball and recovery counter.
+- Completed a full drainage escape with one route-crossing reclaim; the B-grade 5,927 scorecard correctly reported two balls remaining and one reclaimed.
+- Visually inspected the briefing, settings guidance, active landed-ball state, Listening Focus, recovery feedback, and scorecard at 800×600, 1280×720, and 2560×1600 without document overflow.
+
+### Next production priorities
+
+- Add separate music/SFX controls, remapping, touch input, subtitle presentation options, and independent intensity controls for heartbeat and chase effects.
+- Add one optional, authored score pickup per Night Order to deepen route mastery without turning the course into a collectible checklist.
+- Consider a second terrain reaction—bunker disturbance or recoverable divots—after the new ball-recovery risk curve has been playtested.
