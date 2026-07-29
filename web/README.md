@@ -61,6 +61,15 @@ Standard gamepads are also supported:
 - B — return from menus or result screens.
 - Start — pause Hole 1.
 
-The interface switches between keyboard and controller prompts based on the most recent active input. Master, ambience, mower, effects, danger-pulse, subtitle, and reduced-camera-motion settings are navigable with pointer, keyboard, or controller and persist across sessions.
+Touch devices receive a dedicated in-game control layer:
+
+- Drag the left pad to move; hold Run with a second touch to sprint.
+- Hold Crouch or Listen while moving to use stealth and Listening Focus.
+- Tap Use to interact, unlock exits, secure a change request, or reclaim a landed ball.
+- Hold Chip, slide left or right to aim, and release to shoot.
+- Tap Pause to suspend the round; menus and settings use direct touch targets.
+- Landscape orientation is recommended. Portrait touch devices receive an explicit rotation prompt.
+
+The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Master, ambience, mower, effects, danger-pulse, subtitle, and reduced-camera-motion settings are navigable with pointer, keyboard, controller, or touch and persist across sessions.
 
 Browser audio requires the initial click or key press. Joe's line is presented as an on-screen subtitle; no synthetic dialogue voice is used.

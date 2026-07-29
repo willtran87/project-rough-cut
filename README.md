@@ -11,7 +11,7 @@ Working directory for a first-person 2.5D pixel-horror game about Joe, a product
 The browser build includes:
 
 - An original grass-and-weed-whacker horror-comedy opening.
-- Keyboard, pointer, and standard gamepad support with automatic prompt switching.
+- Keyboard, pointer, standard gamepad, and complete multi-touch support with automatic prompt switching.
 - A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
 - Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.

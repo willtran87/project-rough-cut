@@ -47,6 +47,10 @@ body {
   pointer-events: none;
 }
 
+#game-shell::after {
+  display: none;
+}
+
 #game {
   display: block;
   width: 100%;
@@ -61,6 +65,34 @@ body {
   image-rendering: crisp-edges;
   cursor: crosshair;
   outline: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  #game-shell::after {
+    content: "↻  ROTATE DEVICE FOR FULL-SIZE TOUCH CONTROLS";
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: -54px;
+    width: min(92vw, 430px);
+    padding: 10px 12px;
+    transform: translateX(-50%);
+    z-index: 3;
+    border: 1px solid #b76832;
+    background: rgb(4 15 8 / 94%);
+    color: #f0d69f;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1.25;
+    text-align: center;
+    letter-spacing: 0.04em;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 68%);
+    pointer-events: none;
+  }
 }
 
 #game:focus-visible {
