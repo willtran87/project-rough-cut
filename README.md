@@ -28,7 +28,7 @@ The browser build includes:
 - An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
-- A post-run course scorecard with S–D risk grades, banked Risk Premium and Razor Cut recognition, and route-specific personal records.
+- A post-run course scorecard with S–D risk grades, banked Risk Premium and Razor Cut recognition, route-specific personal records, a targeted rematch, direct next-order play, and a Clubhouse return.
 - A persistent Course Echo that replays the best compatible route as spectral world tracks and a live mini-map rival, with ahead/behind pacing on repeat attempts.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.

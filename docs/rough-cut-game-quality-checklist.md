@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes with vulnerable Final Filing commitments, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes with vulnerable Final Filing commitments, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, a target-driven after-action replay hub, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -59,14 +59,14 @@
 - [x] Trigger victory when the player reaches and unlocks the shed with the key.
 - [x] Trigger a distinct alternate victory when the player releases pressure and reaches the drainage culvert.
 - [x] Trigger defeat as a darkly comic “claim denied” outcome when Joe catches the player.
-- [x] Support retry, reset, and return-to-menu flows.
+- [x] Support immediate same-order rematch, direct next-order play, reset, and return-to-Clubhouse flows from both victory and defeat.
 - [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
 - [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
 - [x] Grade completed runs without exposing a constant live score during the horror sequence; the in-run File Projection shows only a letter class and brief cause, while exact points remain in the after-action review.
 - [x] Reward a balanced mix of speed, stealth, saved golf balls, careful movement, and successful pursuit recovery.
 - [x] Persist separate shed- and drain-route personal records plus rounds, escapes, and captures.
 - [x] Rotate three curated objective-and-patrol layouts, identify the upcoming Night Order in the menu, and persist which orders the player has cleared.
-- [x] Present completion results as an in-fiction after-action performance review.
+- [x] Present completion results as an in-fiction after-action performance review that identifies the next unearned Performance Stamp and offers Rematch File, Next Order, and Clubhouse actions.
 
 ### Settings, Accessibility, and Verification
 
@@ -94,6 +94,7 @@ The intended first-session flow is:
 5. The player reads the current Night Order, then chooses between its relocated shed key or sprinkler controls.
 6. Golf balls redirect Joe with diminishing effectiveness; sight blockers and deep rough let the player break pursuit and survive a search.
 7. Unlocking the shed or entering the opened drain ends the slice with route-specific success; being caught ends it with a claim-denied screen.
+8. The result screen converts records and Performance Stamps into a clear next target, then lets the player immediately rematch the file, advance to the next authored Night Order, or return to the Clubhouse.
 
 This loop is the foundation for the larger game: **enter a course, read its grass and hazards, discover an escape requirement, manipulate Joe’s attention, and survive a final route to safety**.
 
