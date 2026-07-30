@@ -1097,6 +1097,12 @@
       blockedTimer: 0,
       blockedObstacle: null,
       blockedDirection: null,
+      blockedEscape: null,
+      blockedLandmark: null,
+      blockedWorldX: 0,
+      blockedWorldY: 0,
+      blockedRadius: 0,
+      blockedCueCooldown: 0,
       previousJoeMode: "patrol",
       stateBanner: "",
       stateBannerTimer: 0,
@@ -4129,6 +4135,12 @@
       blockedTimer: 0,
       blockedObstacle: null,
       blockedDirection: null,
+      blockedEscape: null,
+      blockedLandmark: null,
+      blockedWorldX: 0,
+      blockedWorldY: 0,
+      blockedRadius: 0,
+      blockedCueCooldown: 0,
       previousJoeMode: "patrol",
       stateBanner: "",
       stateBannerTimer: 0,
@@ -4876,6 +4888,89 @@
     return null;
   }
 
+  function projectedGroundRadius(target, radius) {
+    const point = worldToScreen(target.x, target.y);
+    const nearPoint = worldToScreen(
+      target.x,
+      target.y - radius,
+    );
+    const farPoint = worldToScreen(
+      target.x,
+      target.y + radius,
+    );
+    return {
+      point,
+      radiusX: clamp(
+        radius *
+          COURSE_CAMERA.worldUnitMeters *
+          point.pixelsPerMeter,
+        5,
+        WIDTH * 0.2,
+      ),
+      radiusY: clamp(
+        Math.abs(
+          nearPoint.y - farPoint.y,
+        ) * 0.5,
+        2.5,
+        HEIGHT * 0.13,
+      ),
+    };
+  }
+
+  function collisionEscapeDirection(
+    obstacle,
+  ) {
+    if (obstacle.id === "east-course-edge") {
+      return "MOVE LEFT BACK IN";
+    }
+    if (obstacle.id === "west-course-edge") {
+      return "MOVE RIGHT BACK IN";
+    }
+    if (obstacle.id === "north-course-edge") {
+      return "MOVE BACK DOWN COURSE";
+    }
+    if (obstacle.id === "south-course-edge") {
+      return "MOVE FORWARD ONTO COURSE";
+    }
+    const awayX =
+      state.player.x - obstacle.x;
+    const awayY =
+      state.player.y - obstacle.y;
+    if (Math.abs(awayX) > 0.35) {
+      return awayX < 0
+        ? "MOVE LEFT AWAY"
+        : "MOVE RIGHT AWAY";
+    }
+    if (
+      Math.abs(awayX) >
+      Math.abs(awayY) * 0.7
+    ) {
+      return awayX < 0
+        ? "MOVE LEFT AWAY"
+        : "MOVE RIGHT AWAY";
+    }
+    if (awayY > 0) {
+      return "MOVE FORWARD AWAY";
+    }
+    const leftClear =
+      !obstacleAtPosition(
+        state.player.x - 5,
+        state.player.y,
+      );
+    const rightClear =
+      !obstacleAtPosition(
+        state.player.x + 5,
+        state.player.y,
+      );
+    if (leftClear && !rightClear) {
+      return "MOVE LEFT AROUND";
+    }
+    if (rightClear && !leftClear) {
+      return "MOVE RIGHT AROUND";
+    }
+    return "MOVE LEFT OR RIGHT AROUND";
+  }
+
   function visibleObstacleState() {
     const visible = [];
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
@@ -4884,9 +4979,22 @@
       if (point.visible && point.x > -120 && point.x < WIDTH + 120) {
         visible.push({
           id: obstacle.id,
+          landmark: obstacle.landmark,
           x: obstacle.x,
           y: obstacle.y,
+          radius: obstacle.radius,
+          blocks: obstacle.blocks,
           distance: Math.round(worldDistance(obstacle, state.player)),
+          clearance: Number(
+            (
+              worldDistance(
+                obstacle,
+                state.player,
+              ) -
+              obstacle.radius -
+              PLAYER_COLLISION_RADIUS
+            ).toFixed(2),
+          ),
           forwardDistance: Math.round(point.forwardDistance),
           projectedScale: Number(point.scale.toFixed(2)),
           pixelsPerMeter: Math.round(point.pixelsPerMeter),
@@ -4897,6 +5005,103 @@
     }
     visible.sort((a, b) => a.distance - b.distance);
     return visible.slice(0, 6);
+  }
+
+  function interactableWorldState() {
+    const key = activeKeyPoint();
+    const sprinkler =
+      activeSprinklerPoint();
+    const changeRequest =
+      activeChangeRequest();
+    const definitions = [
+      {
+        id: "shed-key",
+        label: "SHED KEY",
+        target: key,
+        available:
+          !state.hole.keyCollected,
+        worldImage: "field-kit-key",
+      },
+      {
+        id: "sprinkler",
+        label: "SPRINKLER",
+        target: sprinkler,
+        available:
+          !state.hole.sprinklerUsed,
+        worldImage:
+          "field-kit-valve",
+      },
+      {
+        id: changeRequest.id,
+        label: changeRequest.code,
+        target: changeRequest,
+        available:
+          !state.hole
+            .changeRequestCollected,
+        worldImage:
+          "procedural-clipboard",
+      },
+      {
+        id: "maintenance-shed",
+        label: "MAINTENANCE SHED",
+        target: SHED_EXIT,
+        available: true,
+        worldImage:
+          "course-landmark",
+      },
+      {
+        id: "drain-exit",
+        label: "DRAIN EXIT",
+        target: DRAIN_EXIT,
+        available: true,
+        worldImage:
+          "drain-culvert",
+      },
+    ];
+    return definitions.map(
+      (definition) => {
+        const point =
+          worldToScreen(
+            definition.target.x,
+            definition.target.y,
+          );
+        const distance =
+          worldDistance(
+            state.player,
+            definition.target,
+          );
+        return {
+          id: definition.id,
+          label: definition.label,
+          available:
+            definition.available,
+          x: definition.target.x,
+          y: definition.target.y,
+          distance: Number(
+            distance.toFixed(2),
+          ),
+          interactionRadius:
+            definition.target.radius,
+          inReach:
+            definition.available &&
+            distance <
+              definition.target.radius,
+          visible:
+            definition.available &&
+            point.visible &&
+            point.x > -180 &&
+            point.x < WIDTH + 180,
+          screenX: Math.round(
+            point.x,
+          ),
+          screenY: Math.round(
+            point.y,
+          ),
+          worldImage:
+            definition.worldImage,
+        };
+      },
+    );
   }
 
   function visibleDeadGreenSceneryState() {
@@ -4933,9 +5138,73 @@
     for (let index = 0; index < steps; index += 1) {
       const startX = player.x;
       const startY = player.y;
-      const targetX = clamp(player.x + stepX, -COURSE_MAX_X, COURSE_MAX_X);
-      const targetY = clamp(player.y + stepY, COURSE_MIN_Y, COURSE_LENGTH);
-      const blocker = obstacleAtPosition(targetX, targetY);
+      const requestedX =
+        player.x + stepX;
+      const requestedY =
+        player.y + stepY;
+      const targetX = clamp(
+        requestedX,
+        -COURSE_MAX_X,
+        COURSE_MAX_X,
+      );
+      const targetY = clamp(
+        requestedY,
+        COURSE_MIN_Y,
+        COURSE_LENGTH,
+      );
+      let boundaryBlocker = null;
+      if (requestedX > COURSE_MAX_X) {
+        boundaryBlocker = {
+          id: "east-course-edge",
+          x: COURSE_MAX_X,
+          y: player.y,
+          radius: 0,
+          sight: false,
+          landmark:
+            "east course boundary",
+        };
+      } else if (
+        requestedX < -COURSE_MAX_X
+      ) {
+        boundaryBlocker = {
+          id: "west-course-edge",
+          x: -COURSE_MAX_X,
+          y: player.y,
+          radius: 0,
+          sight: false,
+          landmark:
+            "west course boundary",
+        };
+      } else if (
+        requestedY > COURSE_LENGTH
+      ) {
+        boundaryBlocker = {
+          id: "north-course-edge",
+          x: player.x,
+          y: COURSE_LENGTH,
+          radius: 0,
+          sight: false,
+          landmark:
+            "end of maintained course",
+        };
+      } else if (
+        requestedY < COURSE_MIN_Y
+      ) {
+        boundaryBlocker = {
+          id: "south-course-edge",
+          x: player.x,
+          y: COURSE_MIN_Y,
+          radius: 0,
+          sight: false,
+          landmark:
+            "clubhouse boundary",
+        };
+      }
+      const blocker =
+        obstacleAtPosition(
+          targetX,
+          targetY,
+        ) || boundaryBlocker;
       if (!blocker) {
         player.x = targetX;
         player.y = targetY;
@@ -4943,12 +5212,55 @@
         if (!initialBlocker) {
           initialBlocker = blocker;
         }
-        const horizontalBlocker = obstacleAtPosition(targetX, player.y);
-        if (!horizontalBlocker) {
+        const blockerDistance =
+          worldDistance(
+            player,
+            blocker,
+          );
+        const horizontalBlocker =
+          obstacleAtPosition(
+            targetX,
+            player.y,
+          );
+        const horizontalEscapes =
+          horizontalBlocker &&
+          horizontalBlocker.id ===
+            blocker.id &&
+          worldDistance(
+            {
+              x: targetX,
+              y: player.y,
+            },
+            blocker,
+          ) >
+            blockerDistance + 0.001;
+        if (
+          !horizontalBlocker ||
+          horizontalEscapes
+        ) {
           player.x = targetX;
         }
-        const verticalBlocker = obstacleAtPosition(player.x, targetY);
-        if (!verticalBlocker) {
+        const verticalBlocker =
+          obstacleAtPosition(
+            player.x,
+            targetY,
+          );
+        const verticalEscapes =
+          verticalBlocker &&
+          verticalBlocker.id ===
+            blocker.id &&
+          worldDistance(
+            {
+              x: player.x,
+              y: targetY,
+            },
+            blocker,
+          ) >
+            blockerDistance + 0.001;
+        if (
+          !verticalBlocker ||
+          verticalEscapes
+        ) {
           player.y = targetY;
         }
       }
@@ -4956,7 +5268,11 @@
     }
 
     if (initialBlocker) {
-      state.hole.blockedTimer = 0.55;
+      const newContact =
+        state.hole.blockedObstacle !==
+          initialBlocker.id ||
+        state.hole.blockedTimer <= 0.12;
+      state.hole.blockedTimer = 1.15;
       state.hole.blockedObstacle = initialBlocker.id;
       state.hole.blockedDirection =
         Math.abs(deltaX) > Math.abs(deltaY)
@@ -4966,6 +5282,28 @@
           : deltaY > 0
             ? "FORWARD"
             : "BACK";
+      state.hole.blockedEscape =
+        collisionEscapeDirection(
+          initialBlocker,
+        );
+      state.hole.blockedLandmark =
+        initialBlocker.landmark;
+      state.hole.blockedWorldX =
+        initialBlocker.x;
+      state.hole.blockedWorldY =
+        initialBlocker.y;
+      state.hole.blockedRadius =
+        initialBlocker.radius;
+      if (
+        newContact &&
+        state.hole.blockedCueCooldown <= 0
+      ) {
+        playCollisionCue(
+          initialBlocker,
+        );
+        state.hole.blockedCueCooldown =
+          0.42;
+      }
     }
     state.hole.travelDistance += appliedDistance;
     state.hole.minimumPlayerClearance = Math.min(
@@ -7004,22 +7342,72 @@
       : null;
   }
 
-  function drawWorldMarker(worldX, worldY, label, color, glyph) {
+  function drawWorldMarker(
+    worldX,
+    worldY,
+    label,
+    color,
+    glyph,
+    interactionRadius = null,
+  ) {
     const point = worldToScreen(worldX, worldY);
     if (!point.visible || point.x < -180 || point.x > WIDTH + 180) {
       return;
     }
-    const markerX = clamp(point.x, 82, WIDTH - 82);
+    const markerPadding =
+      interactionRadius !== null
+        ? 106
+        : 82;
+    const markerX = clamp(
+      point.x,
+      markerPadding,
+      WIDTH - markerPadding,
+    );
+    const markerY =
+      interactionRadius !== null &&
+      point.x < 490 &&
+      point.y < 370
+        ? 414
+        : interactionRadius !== null &&
+            point.x > WIDTH - 304 &&
+            point.y < 430
+          ? 454
+          : point.y;
     const edgeDirection =
-      point.x < 82
+      point.x < markerPadding
         ? "◀ "
-        : point.x > WIDTH - 82
+        : point.x >
+              WIDTH - markerPadding
           ? " ▶"
           : "";
+    const distance = worldDistance(
+      state.player,
+      { x: worldX, y: worldY },
+    );
+    const inReach =
+      interactionRadius !== null &&
+      distance < interactionRadius;
+    if (interactionRadius !== null) {
+      drawInteractionGroundRing(
+        {
+          x: worldX,
+          y: worldY,
+          radius: interactionRadius,
+        },
+        color,
+        inReach,
+      );
+    }
+    const distanceLabel =
+      interactionRadius !== null
+        ? `  //  ${Math.ceil(
+            distance,
+          )}m`
+        : "";
     const markerLabel =
-      point.x < 82
-        ? `${edgeDirection}${label}`
-        : `${label}${edgeDirection}`;
+      point.x < markerPadding
+        ? `${edgeDirection}${label}${distanceLabel}`
+        : `${label}${distanceLabel}${edgeDirection}`;
     const markerScale = clamp(point.scale, 0.58, 1.35);
     const joePoint =
       state.mode === "first_hole"
@@ -7029,8 +7417,8 @@
       joePoint && joePoint.visible
         ? JOE_SOURCE.heightMeters * joePoint.pixelsPerMeter
         : 0;
-    const markerTop = point.y - 70 * markerScale;
-    const markerBottom = point.y - 12 * markerScale;
+    const markerTop = markerY - 70 * markerScale;
+    const markerBottom = markerY - 12 * markerScale;
     const joeOverlapsMarker =
       joePoint &&
       joePoint.visible &&
@@ -7046,10 +7434,427 @@
       clamp(1.25 - Math.abs(point.forwardDistance) / 120, 0.28, 1) *
       (joeGuardingMarker || joeOverlapsMarker ? 0.22 : 1);
     ctx.fillStyle = "rgba(2,8,4,0.82)";
-    ctx.fillRect(markerX - 74, point.y - 50 * markerScale, 148, 34);
-    strokeRect(markerX - 74, point.y - 50 * markerScale, 148, 34, color, 2);
-    drawText(glyph, markerX, point.y - 58 * markerScale, Math.round(24 * markerScale + 10), color, "center", true);
-    drawText(markerLabel, markerX, point.y - 28 * markerScale, 12, "#f0ead1", "center", true);
+    const markerWidth =
+      interactionRadius !== null
+        ? 196
+        : 148;
+    const markerHeight =
+      inReach ? 51 : 34;
+    ctx.fillRect(
+      markerX - markerWidth * 0.5,
+      markerY - 50 * markerScale,
+      markerWidth,
+      markerHeight,
+    );
+    strokeRect(
+      markerX - markerWidth * 0.5,
+      markerY - 50 * markerScale,
+      markerWidth,
+      markerHeight,
+      color,
+      inReach ? 3 : 2,
+    );
+    drawText(glyph, markerX, markerY - 58 * markerScale, Math.round(24 * markerScale + 10), color, "center", true);
+    drawText(markerLabel, markerX, markerY - 28 * markerScale, 12, "#f0ead1", "center", true);
+    if (inReach) {
+      drawText(
+        inputCopy(
+          `${keyboardBindingLabel(
+            "interact",
+          )} USE  //  IN REACH`,
+          "A USE  //  IN REACH",
+          "TAP USE  //  IN REACH",
+        ),
+        markerX,
+        markerY -
+          10 * markerScale,
+        10,
+        color,
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawInteractionGroundRing(
+    target,
+    color,
+    inReach,
+  ) {
+    const footprint =
+      projectedGroundRadius(
+        target,
+        target.radius,
+      );
+    if (!footprint.point.visible) {
+      return;
+    }
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(state.time * 5.2) *
+        (inReach ? 0.08 : 0.035);
+    ctx.save();
+    ctx.globalAlpha =
+      inReach ? 0.92 : 0.5;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = inReach ? 3 : 1.5;
+    if (!inReach) {
+      ctx.setLineDash([6, 5]);
+    }
+    ctx.beginPath();
+    ctx.ellipse(
+      footprint.point.x,
+      footprint.point.y,
+      footprint.radiusX *
+        (1 + pulse),
+      footprint.radiusY *
+        (1 + pulse),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = inReach
+      ? "rgba(231,189,88,0.09)"
+      : "rgba(4,12,7,0.08)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWorldInteractable(
+    target,
+    iconIndex,
+    label,
+    color,
+  ) {
+    const point = worldToScreen(
+      target.x,
+      target.y,
+    );
+    if (!point.visible) {
+      return;
+    }
+    if (
+      point.x < 76 ||
+      point.x > WIDTH - 76 ||
+      (point.x < 490 &&
+        point.y < 370) ||
+      (point.x > WIDTH - 304 &&
+        point.y < 430)
+    ) {
+      drawWorldMarker(
+        target.x,
+        target.y,
+        label,
+        color,
+        "!",
+        target.radius,
+      );
+      return;
+    }
+    const distance =
+      worldDistance(
+        state.player,
+        target,
+      );
+    const inReach =
+      distance < target.radius;
+    const size = clamp(
+      48 * point.scale,
+      38,
+      92,
+    );
+    const bob = state.reducedMotion
+      ? 0
+      : Math.sin(
+          state.time * 3.8 +
+            target.x * 0.1,
+        ) *
+        Math.min(3, point.scale * 2);
+    const imageY =
+      point.y -
+      size * 0.56 +
+      bob;
+    drawInteractionGroundRing(
+      target,
+      color,
+      inReach,
+    );
+    ctx.save();
+    ctx.fillStyle =
+      "rgba(0,2,1,0.58)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      size * 0.32,
+      size * 0.09,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = inReach
+      ? 19
+      : 9;
+    drawFieldIcon(
+      iconIndex,
+      point.x,
+      imageY,
+      size,
+    );
+    ctx.restore();
+
+    const panelWidth = inReach
+      ? 184
+      : 146;
+    const panelY =
+      imageY -
+      size * 0.58 -
+      (inReach ? 28 : 0);
+    ctx.fillStyle = inReach
+      ? "rgba(18,31,16,0.94)"
+      : "rgba(2,8,4,0.84)";
+    ctx.fillRect(
+      point.x - panelWidth * 0.5,
+      panelY - 16,
+      panelWidth,
+      inReach ? 43 : 25,
+    );
+    strokeRect(
+      point.x - panelWidth * 0.5,
+      panelY - 16,
+      panelWidth,
+      inReach ? 43 : 25,
+      color,
+      inReach ? 3 : 1.5,
+    );
+    drawText(
+      `${label}  //  ${Math.ceil(
+        distance,
+      )}m`,
+      point.x,
+      panelY,
+      11,
+      "#f1ead4",
+      "center",
+      true,
+    );
+    if (inReach) {
+      drawText(
+        inputCopy(
+          `${keyboardBindingLabel(
+            "interact",
+          )} USE  //  IN REACH`,
+          "A USE  //  IN REACH",
+          "TAP USE  //  IN REACH",
+        ),
+        point.x,
+        panelY + 18,
+        10,
+        color,
+        "center",
+        true,
+      );
+    }
+  }
+
+  function drawCourseCollisionFootprints() {
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (!obstacle.blocks) {
+        continue;
+      }
+      const active =
+        state.hole.blockedTimer > 0 &&
+        state.hole.blockedObstacle ===
+          obstacle.id;
+      const nearby =
+        state.hole.focus &&
+        worldDistance(
+          state.player,
+          obstacle,
+        ) <
+          obstacle.radius + 30;
+      if (!active && !nearby) {
+        continue;
+      }
+      const footprint =
+        projectedGroundRadius(
+          obstacle,
+          obstacle.radius +
+            PLAYER_COLLISION_RADIUS,
+        );
+      if (
+        !footprint.point.visible ||
+        footprint.point.x < -180 ||
+        footprint.point.x >
+          WIDTH + 180
+      ) {
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = active
+        ? 0.95
+        : 0.36;
+      ctx.strokeStyle = active
+        ? "#ef7e45"
+        : "#b8c58c";
+      ctx.lineWidth = active ? 3 : 1.5;
+      if (!active) {
+        ctx.setLineDash([5, 6]);
+      }
+      ctx.beginPath();
+      ctx.ellipse(
+        footprint.point.x,
+        footprint.point.y,
+        footprint.radiusX,
+        footprint.radiusY,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = active
+        ? "rgba(153,44,16,0.13)"
+        : "rgba(79,100,51,0.06)";
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawCollisionContactOverlay() {
+    if (state.hole.blockedTimer <= 0) {
+      return;
+    }
+    const obstacle =
+      COURSE_OBSTACLES.find(
+        (candidate) =>
+          candidate.id ===
+          state.hole.blockedObstacle,
+      ) || {
+        id: state.hole.blockedObstacle,
+        x: state.hole.blockedWorldX,
+        y: state.hole.blockedWorldY,
+        radius:
+          state.hole.blockedRadius,
+        landmark:
+          state.hole.blockedLandmark,
+      };
+    const footprint =
+      projectedGroundRadius(
+        obstacle,
+        obstacle.radius +
+          PLAYER_COLLISION_RADIUS,
+      );
+    const alpha = clamp(
+      state.hole.blockedTimer * 1.65,
+      0,
+      1,
+    );
+    const targetX = clamp(
+      footprint.point.x,
+      108,
+      WIDTH - 108,
+    );
+    const targetY = clamp(
+      footprint.point.y,
+      COURSE_CAMERA.horizonY + 52,
+      HEIGHT - 190,
+    );
+    const labelY = clamp(
+      targetY - 76,
+      COURSE_CAMERA.horizonY + 18,
+      HEIGHT - 252,
+    );
+    const blockedName = (
+      obstacle.landmark ||
+      obstacle.id ||
+      "boundary"
+    ).toUpperCase();
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle =
+      "rgba(105,28,10,0.12)";
+    ctx.fillRect(
+      0,
+      HEIGHT * 0.48,
+      WIDTH,
+      HEIGHT * 0.52,
+    );
+    ctx.strokeStyle = "#ef7e45";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(
+      targetX,
+      targetY,
+      Math.max(
+        12,
+        footprint.radiusX,
+      ),
+      Math.max(
+        5,
+        footprint.radiusY,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(
+      targetX,
+      labelY + 36,
+    );
+    ctx.lineTo(
+      targetX,
+      targetY - 8,
+    );
+    ctx.stroke();
+    ctx.fillStyle =
+      "rgba(15,6,3,0.94)";
+    ctx.fillRect(
+      targetX - 118,
+      labelY - 18,
+      236,
+      54,
+    );
+    strokeRect(
+      targetX - 118,
+      labelY - 18,
+      236,
+      54,
+      "#ef7e45",
+      2,
+    );
+    drawText(
+      `BLOCKED BY  //  ${blockedName}`,
+      targetX,
+      labelY,
+      11,
+      "#f4d1a7",
+      "center",
+      true,
+    );
+    drawText(
+      state.hole.blockedEscape ||
+        "MOVE AROUND",
+      targetX,
+      labelY + 20,
+      12,
+      "#ef8b54",
+      "center",
+      true,
+    );
     ctx.restore();
   }
 
@@ -8064,6 +8869,8 @@
         state.player,
         request,
       );
+    const inReach =
+      distance < request.radius;
     const scale = clamp(
       point.scale,
       0.48,
@@ -8086,6 +8893,11 @@
             request.y,
         ) *
         0.055;
+    drawInteractionGroundRing(
+      request,
+      "#ef7136",
+      inReach,
+    );
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.52)";
     ctx.beginPath();
@@ -8202,6 +9014,23 @@
           9,
           "#e9d29b",
           "center",
+        );
+      }
+      if (inReach) {
+        drawText(
+          inputCopy(
+            `${keyboardBindingLabel(
+              "interact",
+            )} USE  //  IN REACH`,
+            "A USE  //  IN REACH",
+            "TAP USE  //  IN REACH",
+          ),
+          point.x,
+          point.y + 24,
+          10,
+          "#ef9a62",
+          "center",
+          true,
         );
       }
     }
@@ -8868,6 +9697,75 @@
     const mapScaleY =
       (mapBottom - mapTop) /
       COURSE_LENGTH;
+    const mapBoundsLeft =
+      mapPoint(-COURSE_MAX_X, 0);
+    const mapBoundsRight =
+      mapPoint(
+        COURSE_MAX_X,
+        COURSE_LENGTH,
+      );
+    ctx.strokeStyle =
+      "rgba(188,202,150,0.58)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(
+      mapBoundsLeft.x,
+      mapBoundsRight.y,
+      mapBoundsRight.x -
+        mapBoundsLeft.x,
+      mapBoundsLeft.y -
+        mapBoundsRight.y,
+    );
+    ctx.setLineDash([]);
+    const drawMapInteractionRange = (
+      target,
+      color,
+      available,
+    ) => {
+      if (!available) {
+        return;
+      }
+      const point = mapPoint(
+        target.x,
+        target.y,
+      );
+      const inReach =
+        worldDistance(
+          state.player,
+          target,
+        ) < target.radius;
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = inReach
+        ? 0.95
+        : 0.4;
+      ctx.lineWidth = inReach
+        ? 2
+        : 1;
+      ctx.setLineDash(
+        inReach ? [] : [3, 3],
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        Math.max(
+          3,
+          target.radius *
+            mapScaleX,
+        ),
+        Math.max(
+          2,
+          target.radius *
+            mapScaleY,
+        ),
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    };
     for (
       let index = 0;
       index < BUNKER_SAND_ZONES.length;
@@ -8968,15 +9866,55 @@
         true,
       );
     }
-    ctx.fillStyle = "#101c12";
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
-      if (COURSE_OBSTACLES[index].draw === false) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (!obstacle.blocks) {
         continue;
       }
-      const obstaclePoint = mapPoint(COURSE_OBSTACLES[index].x, COURSE_OBSTACLES[index].y);
+      const obstaclePoint = mapPoint(
+        obstacle.x,
+        obstacle.y,
+      );
+      const blocked =
+        state.hole.blockedTimer > 0 &&
+        state.hole.blockedObstacle ===
+          obstacle.id;
+      ctx.fillStyle = blocked
+        ? "rgba(180,65,29,0.68)"
+        : obstacle.draw === false
+          ? "rgba(58,78,46,0.3)"
+          : "rgba(11,21,13,0.48)";
+      ctx.strokeStyle = blocked
+        ? "#f28b53"
+        : obstacle.draw === false
+          ? "#89976c"
+          : "#526346";
+      ctx.lineWidth = blocked
+        ? 2
+        : 1;
       ctx.beginPath();
-      ctx.arc(obstaclePoint.x, obstaclePoint.y, 2.4, 0, Math.PI * 2);
+      ctx.ellipse(
+        obstaclePoint.x,
+        obstaclePoint.y,
+        Math.max(
+          2.5,
+          (obstacle.radius +
+            PLAYER_COLLISION_RADIUS) *
+            mapScaleX,
+        ),
+        Math.max(
+          1.8,
+          (obstacle.radius +
+            PLAYER_COLLISION_RADIUS) *
+            mapScaleY,
+        ),
+        0,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
+      ctx.stroke();
     }
     ctx.fillStyle = "rgba(161,145,61,0.55)";
     for (
@@ -9054,6 +9992,31 @@
       ctx.lineWidth = 1;
       ctx.stroke();
     }
+    drawMapInteractionRange(
+      SHED_EXIT,
+      "#d0a95b",
+      true,
+    );
+    drawMapInteractionRange(
+      DRAIN_EXIT,
+      "#74c9ac",
+      true,
+    );
+    drawMapInteractionRange(
+      key,
+      "#f0bd4f",
+      !state.hole.keyCollected,
+    );
+    drawMapInteractionRange(
+      sprinkler,
+      "#6fc0bb",
+      !state.hole.sprinklerUsed,
+    );
+    drawMapInteractionRange(
+      changeRequest,
+      "#e37842",
+      !state.hole.changeRequestCollected,
+    );
     ctx.fillStyle = "#d0a95b";
     ctx.fillRect(shedPoint.x - 6, shedPoint.y - 5, 12, 10);
     ctx.strokeStyle = state.hole.drainUnlocked ? "#74c9ac" : "#687268";
@@ -9278,6 +10241,15 @@
       [playerPoint.x + 6, playerPoint.y + 6],
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
+    drawText(
+      "RINGS = BLOCKERS  •  GLOW = USE RANGE",
+      panel.x + panel.width * 0.5,
+      panel.y + panel.height - 4,
+      8,
+      "#9eaa88",
+      "center",
+      true,
+    );
   }
 
   function drawMovementFeedback(walkBob) {
@@ -12049,29 +13021,24 @@
     }
 
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
+    drawCourseCollisionFootprints();
     drawLayeredCourseEntities();
     drawWorldEffects();
 
-    if (
-      !state.hole.keyCollected &&
-      (!state.hole.drainUnlocked ||
-        worldDistance(state.player, key) < 42)
-    ) {
-      drawWorldMarker(
-        key.x,
-        key.y,
+    if (!state.hole.keyCollected) {
+      drawWorldInteractable(
+        key,
+        0,
         "SHED KEY",
         "#e7bd58",
-        "◆",
       );
     }
     if (!state.hole.sprinklerUsed) {
-      drawWorldMarker(
-        sprinkler.x,
-        sprinkler.y,
+      drawWorldInteractable(
+        sprinkler,
+        2,
         "SPRINKLER",
         "#6aa8a0",
-        "◉",
       );
     }
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
@@ -12107,9 +13074,17 @@
       state.hole.drainUnlocked ? "DRAIN EXIT — OPEN" : "DRAIN — SEALED",
       state.hole.drainUnlocked ? "#73c9aa" : "#778178",
       state.hole.drainUnlocked ? "⇩" : "×",
+      DRAIN_EXIT.radius,
     );
     if (!state.hole.drainUnlocked || state.hole.keyCollected) {
-      drawWorldMarker(SHED_EXIT.x, SHED_EXIT.y, "MAINTENANCE SHED", "#d8b46b", "⌂");
+      drawWorldMarker(
+        SHED_EXIT.x,
+        SHED_EXIT.y,
+        "MAINTENANCE SHED",
+        "#d8b46b",
+        "⌂",
+        SHED_EXIT.radius,
+      );
     }
 
     const openingForeground = drawForegroundFringe(walkBob);
@@ -12139,36 +13114,7 @@
       }
     }
 
-    if (state.hole.blockedTimer > 0) {
-      const blockAlpha = clamp(state.hole.blockedTimer * 2, 0, 0.72);
-      const blockedObstacle = COURSE_OBSTACLES.find(
-        (obstacle) =>
-          obstacle.id === state.hole.blockedObstacle,
-      );
-      const blockedName = (
-        blockedObstacle?.landmark ||
-        state.hole.blockedObstacle ||
-        "boundary"
-      ).toUpperCase();
-      const escapeHint =
-        state.hole.blockedDirection === "FORWARD" ||
-        state.hole.blockedDirection === "BACK"
-          ? "TRY LEFT OR RIGHT"
-          : "SLIDE FORWARD OR BACK";
-      ctx.fillStyle = `rgba(96,22,9,${blockAlpha * 0.2})`;
-      ctx.fillRect(0, HEIGHT * 0.42, WIDTH, HEIGHT * 0.58);
-      ctx.globalAlpha = blockAlpha;
-      drawText(
-        `CONTACT: ${blockedName} — ${escapeHint}`,
-        WIDTH * 0.5,
-        HEIGHT - 142,
-        13,
-        "#e89a63",
-        "center",
-        true,
-      );
-      ctx.globalAlpha = 1;
-    }
+    drawCollisionContactOverlay();
 
     drawSuspenseEffects();
     drawPursuitEffects();
@@ -12966,6 +13912,10 @@
         }
       }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
+      hole.blockedCueCooldown = Math.max(
+        0,
+        hole.blockedCueCooldown - dt,
+      );
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
       hole.stateBannerLockTimer = Math.max(
         0,
@@ -14272,6 +15222,31 @@
     playTransientTone(392, 784, 0.24, 0.055, "triangle");
     playTransientTone(587, 1174, 0.3, 0.038, "sine", 0.08);
     playNoiseBurst(0.12, 0.018, 2400, "highpass");
+  }
+
+  function playCollisionCue(obstacle) {
+    const pan = clamp(
+      (obstacle.x - state.player.x) /
+        34,
+      -0.72,
+      0.72,
+    );
+    playTransientTone(
+      86,
+      49,
+      0.16,
+      0.035,
+      "triangle",
+    );
+    playNoiseBurst(
+      0.2,
+      0.035,
+      obstacle.sight
+        ? 760
+        : 420,
+      "lowpass",
+      pan,
+    );
   }
 
   function playChangeRequestCue() {
@@ -16787,9 +17762,62 @@
               : null,
           prompt: state.hole.prompt || null,
           blockedBy: state.hole.blockedTimer > 0 ? state.hole.blockedObstacle : null,
+          collisionContact:
+            state.hole.blockedTimer > 0
+              ? {
+                  id:
+                    state.hole
+                      .blockedObstacle,
+                  landmark:
+                    state.hole
+                      .blockedLandmark,
+                  worldX: Number(
+                    state.hole
+                      .blockedWorldX.toFixed(
+                        2,
+                      ),
+                  ),
+                  worldY: Number(
+                    state.hole
+                      .blockedWorldY.toFixed(
+                        2,
+                      ),
+                  ),
+                  radius:
+                    state.hole
+                      .blockedRadius,
+                  inputDirection:
+                    state.hole
+                      .blockedDirection,
+                  escapeDirection:
+                    state.hole
+                      .blockedEscape,
+                  feedbackSeconds:
+                    Number(
+                      state.hole
+                        .blockedTimer.toFixed(
+                          2,
+                        ),
+                    ),
+                }
+              : null,
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
           activeEffects: state.hole.worldEffects.map((effect) => effect.kind),
           visibleObstacles: visibleObstacleState(),
+          interactables:
+            interactableWorldState(),
+          navigationReadability: {
+            mapShowsCourseBoundary:
+              true,
+            mapShowsCollisionFootprints:
+              true,
+            mapIncludesHiddenBlockers:
+              true,
+            mapShowsInteractionRanges:
+              true,
+            focusShowsNearbyFootprints:
+              true,
+          },
           deadGreenLayers: {
             groundAnchored: true,
             scenery: visibleDeadGreenSceneryState(),
