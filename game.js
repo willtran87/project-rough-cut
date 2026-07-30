@@ -216,7 +216,26 @@
     cameraHeightMeters: 1.65,
     worldUnitMeters: 0.12,
     referencePixelsPerMeter: 50,
+    lateralWalkPixels: 42,
+    lateralSprintPixels: 56,
+    lateralCrouchPixels: 27,
+    lateralFocusPixels: 20,
+    lateralResponse: 10.5,
+    lateralReturnResponse: 7.5,
+    maxRollRadians: 0.009,
+    sprintRollRadians: 0.012,
   };
+
+  function freshCourseCameraMotion() {
+    return {
+      lateralInput: 0,
+      offsetX: 0,
+      targetOffsetX: 0,
+      roll: 0,
+      targetRoll: 0,
+      response: 0,
+    };
+  }
   const JOE_SOURCE = { x: 265, y: 70, width: 478, height: 1420, heightMeters: 1.95 };
   const JOE_ANIMATION_FRAME_SIZE = 192;
   const JOE_ANIMATIONS = {
@@ -1579,6 +1598,8 @@
       quickRematch: false,
       rematchTarget: null,
       hasMoved: false,
+      cameraMotion:
+        freshCourseCameraMotion(),
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
       controlHintTimer: 12,
@@ -3380,10 +3401,14 @@
     progress,
     walkBob,
   ) {
+    const cameraShift =
+      courseCameraMotion()
+        .offsetX;
     const panX = clamp(
-      -state.player.x * 0.5,
-      -60,
-      60,
+      -state.player.x * 0.5 +
+        cameraShift * 0.72,
+      -96,
+      96,
     );
     const zoom =
       1.08 +
@@ -5398,6 +5423,8 @@
       quickRematch: false,
       rematchTarget: null,
       hasMoved: false,
+      cameraMotion:
+        freshCourseCameraMotion(),
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
       controlHintTimer: 12,
@@ -6296,6 +6323,245 @@
     return null;
   }
 
+  function courseCameraMotion() {
+    if (
+      !state.hole.cameraMotion
+    ) {
+      state.hole.cameraMotion =
+        freshCourseCameraMotion();
+    }
+    return state.hole.cameraMotion;
+  }
+
+  function updateCourseCameraMotion(
+    dt,
+    lateralInput,
+    sprinting,
+  ) {
+    const motion =
+      courseCameraMotion();
+    const input =
+      Math.abs(lateralInput) < 0.04
+        ? 0
+        : clamp(
+            lateralInput,
+            -1,
+            1,
+          );
+    let amplitude =
+      state.hole.focus
+        ? COURSE_CAMERA
+            .lateralFocusPixels
+        : state.hole.crouched
+          ? COURSE_CAMERA
+              .lateralCrouchPixels
+          : sprinting
+            ? COURSE_CAMERA
+                .lateralSprintPixels
+            : COURSE_CAMERA
+                .lateralWalkPixels;
+    if (state.reducedMotion) {
+      amplitude *= 0.34;
+    }
+    motion.lateralInput =
+      input;
+    motion.targetOffsetX =
+      -input *
+      amplitude;
+    motion.targetRoll =
+      state.reducedMotion
+        ? 0
+        : -input *
+          (
+            sprinting
+              ? COURSE_CAMERA
+                  .sprintRollRadians
+              : COURSE_CAMERA
+                  .maxRollRadians
+          );
+    const response =
+      input === 0
+        ? COURSE_CAMERA
+            .lateralReturnResponse
+        : COURSE_CAMERA
+            .lateralResponse;
+    const blend =
+      1 -
+      Math.exp(
+        -dt * response,
+      );
+    motion.offsetX = lerp(
+      motion.offsetX,
+      motion.targetOffsetX,
+      blend,
+    );
+    motion.roll = lerp(
+      motion.roll,
+      motion.targetRoll,
+      blend,
+    );
+    motion.response = blend;
+    if (
+      input === 0 &&
+      Math.abs(motion.offsetX) <
+        0.03
+    ) {
+      motion.offsetX = 0;
+    }
+    if (
+      input === 0 &&
+      Math.abs(motion.roll) <
+        0.00002
+    ) {
+      motion.roll = 0;
+    }
+  }
+
+  function applyCourseCameraTransform() {
+    const motion =
+      courseCameraMotion();
+    const strength =
+      clamp(
+        Math.abs(
+          motion.offsetX,
+        ) /
+          COURSE_CAMERA
+            .lateralSprintPixels,
+        0,
+        1,
+      );
+    const scale =
+      state.reducedMotion
+        ? 1
+        : 1 +
+          strength *
+            0.024;
+    ctx.translate(
+      WIDTH * 0.5,
+      HEIGHT * 0.5,
+    );
+    ctx.rotate(
+      motion.roll,
+    );
+    ctx.scale(
+      scale,
+      scale,
+    );
+    ctx.translate(
+      -WIDTH * 0.5,
+      -HEIGHT * 0.5,
+    );
+  }
+
+  function drawLateralCameraFeedback() {
+    const motion =
+      courseCameraMotion();
+    const strength =
+      clamp(
+        Math.abs(
+          motion.offsetX,
+        ) /
+          COURSE_CAMERA
+            .lateralSprintPixels,
+        0,
+        1,
+      );
+    if (
+      strength < 0.06
+    ) {
+      return;
+    }
+    const movingRight =
+      motion.lateralInput > 0;
+    const edgeX =
+      movingRight
+        ? WIDTH
+        : 0;
+    const innerX =
+      movingRight
+        ? WIDTH - 88
+        : 88;
+    const edgeFade =
+      ctx.createLinearGradient(
+        edgeX,
+        0,
+        innerX,
+        0,
+      );
+    edgeFade.addColorStop(
+      0,
+      `rgba(128,158,119,${
+        strength *
+        (
+          state.reducedMotion
+            ? 0.055
+            : 0.12
+        )
+      })`,
+    );
+    edgeFade.addColorStop(
+      1,
+      "rgba(128,158,119,0)",
+    );
+    ctx.fillStyle =
+      edgeFade;
+    ctx.fillRect(
+      Math.min(
+        edgeX,
+        innerX,
+      ),
+      COURSE_CAMERA.horizonY,
+      Math.abs(
+        edgeX - innerX,
+      ),
+      HEIGHT -
+        COURSE_CAMERA.horizonY,
+    );
+    if (
+      state.reducedMotion
+    ) {
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha =
+      strength * 0.24;
+    ctx.strokeStyle =
+      "#a6bd88";
+    ctx.lineWidth = 1.5;
+    for (
+      let index = 0;
+      index < 5;
+      index += 1
+    ) {
+      const y =
+        HEIGHT -
+        72 -
+        index * 43;
+      const length =
+        16 +
+        index * 7;
+      ctx.beginPath();
+      ctx.moveTo(
+        movingRight
+          ? WIDTH - 8
+          : 8,
+        y,
+      );
+      ctx.lineTo(
+        movingRight
+          ? WIDTH -
+              8 -
+              length
+          : 8 + length,
+        y -
+          3 -
+          index,
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function worldToScreen(x, y) {
     const forwardDistance = y - state.player.y;
     const positiveDistance = Math.max(0, forwardDistance);
@@ -6308,7 +6574,9 @@
         WIDTH * 0.5 +
         (x - state.player.x) *
           COURSE_CAMERA.worldUnitMeters *
-          pixelsPerMeter,
+          pixelsPerMeter +
+        courseCameraMotion()
+          .offsetX,
       y:
         COURSE_CAMERA.horizonY +
         COURSE_CAMERA.cameraHeightMeters *
@@ -11329,7 +11597,11 @@
 
   function drawPerspectiveCourse(progress, walkBob) {
     const horizonY = COURSE_CAMERA.horizonY;
-    const cameraOffset = -state.player.x * 3.1;
+    const cameraOffset =
+      -state.player.x * 3.1 +
+      courseCameraMotion()
+        .offsetX *
+        1.18;
 
     ctx.save();
     ctx.globalAlpha = 0.2;
@@ -13549,7 +13821,14 @@
     const scale = 1 + departure * 0.5;
     const width = 1380 * scale;
     const height = 580 * scale;
-    const lateralParallax = clamp(-state.player.x * 12.5, -820, 820);
+    const lateralParallax = clamp(
+      -state.player.x * 12.5 +
+        courseCameraMotion()
+          .offsetX *
+          2.1,
+      -820,
+      820,
+    );
     return {
       departure,
       visibility: fade,
@@ -18696,6 +18975,8 @@
 
     ctx.fillStyle = "#07120c";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.save();
+    applyCourseCameraTransform();
     drawCourseBackdrop(
       progress,
       walkBob,
@@ -18863,6 +19144,8 @@
       }
     }
 
+    ctx.restore();
+    drawLateralCameraFeedback();
     drawCollisionContactOverlay();
 
     drawSuspenseEffects();
@@ -19890,6 +20173,11 @@
         !hole.crouched &&
         !hole.focus &&
         sprintHeld();
+      updateCourseCameraMotion(
+        dt,
+        moving ? movement.x : 0,
+        sprinting,
+      );
       if (moving && hole.crouched) {
         hole.crouchedSeconds += dt;
       }
@@ -23210,6 +23498,37 @@
             cameraTravel: Number(getOpeningForegroundTransform().cameraTravel.toFixed(2)),
             screenX: Math.round(getOpeningForegroundTransform().x),
             screenY: Math.round(getOpeningForegroundTransform().y),
+          },
+          cameraMotion: {
+            lateralInput: Number(
+              courseCameraMotion().lateralInput.toFixed(2),
+            ),
+            screenShiftPixels: Number(
+              courseCameraMotion().offsetX.toFixed(2),
+            ),
+            targetShiftPixels: Number(
+              courseCameraMotion().targetOffsetX.toFixed(2),
+            ),
+            rollDegrees: Number(
+              (
+                courseCameraMotion().roll *
+                180 /
+                Math.PI
+              ).toFixed(3),
+            ),
+            targetRollDegrees: Number(
+              (
+                courseCameraMotion().targetRoll *
+                180 /
+                Math.PI
+              ).toFixed(3),
+            ),
+            mode: state.reducedMotion
+              ? "reduced_shift_no_roll"
+              : "eased_shift_with_counter_roll",
+            hudAnchoring: "screen_fixed",
+            worldResponse:
+              "backdrop_parallax_projection_and_foreground",
           },
         }
       : null,
