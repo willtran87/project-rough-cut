@@ -540,3 +540,27 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Run longer organic pursuit sessions to tune the 30m-to-10m premium curve against human risk perception.
 - Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.
+
+## Four-Zone Reactive Horror Score — July 29, 2026
+
+- Expanded the previous single static danger drone into a restrained procedural score with persistent root, uneasy-fifth, and tension voices plus sparse transient motif notes.
+- Authored a distinct harmonic center for each course zone: D Minor at The Tee, C# Phrygian through Audit Row, C Diminished at the Water Hazard, and a low B Tritone on the Dead Green.
+- Made intensity deterministic from zone depth, attention, Joe's patrol/investigate/search/chase mode, Dead Green dread, and Overtime status.
+- Scaled tempo from a 45-BPM tee floor to a capped 109-BPM pursuit ostinato, keeping the mower and heartbeat louder and more informational than the score.
+- Added a floodlight-power hush that reduces the Water Hazard score to 30–65% during the power sag before smoothly restoring it.
+- Ducked the full score to 38% during Listening Focus so Joe's spatial mower remains the primary directional cue.
+- Routed all continuous voices and motif notes through Course Ambience; muting that bus prevents new motif-node allocation while preserving visual danger information.
+- Added a subtle zone-colored lower-horizon pulse synchronized to score beats, with reduced-motion intensity lowered by more than half.
+- Silenced the score target on pause, pause-settings, victory, defeat, menu, and tutorial presentation while allowing short smoothing tails instead of clicks.
+- Extended `render_game_to_text` with score activity, zone/key/root, intensity, BPM, target gain, blackout/focus multipliers, beat/step state, notes played, active layers, routing, and node readiness.
+- Verified the full state matrix: Tee Patrol 0.08/45 BPM, Audit Investigate 0.44/66 BPM, Water Search 0.73/82 BPM with power hush, and Dead Green Overtime Chase 1.00/109 BPM.
+- Verified Listening Focus reduces target gain from 0.0130 to 0.00494, pause and victory target zero, and a two-second paused advance freezes beat, step, and note counts.
+- Verified four audible Audit Row seconds emitted five sparse motif notes, four subsequent muted seconds emitted none, and resume continued from the frozen musical phase.
+- Re-ran the exact project Playwright client for first-hole baseline and movement regression, inspected both screenshots and score diagnostics, and found no console or page errors.
+- Visually inspected the maximum-intensity synchronized chase frame without compromising HUD, message, map, or contact-break readability.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Conduct human listening tests on laptop speakers and headphones before raising any score-layer gain.
+- Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
