@@ -47,6 +47,44 @@
   const PORTFOLIO_CARD_WIDTH = 190;
   const PORTFOLIO_CARD_HEIGHT = 286;
   const PORTFOLIO_CARD_GAP = 16;
+  const PERFORMANCE_STAMPS = [
+    {
+      id: "clean_file",
+      code: "C",
+      shortName: "CLEAN",
+      name: "CLEAN FILE",
+      hint: "Escape without pursuit",
+      qualifies: (result) =>
+        result.cleanRun,
+    },
+    {
+      id: "field_recovery",
+      code: "R",
+      shortName: "RECLAIM",
+      name: "FIELD RECOVERY",
+      hint: "Reclaim a thrown ball and escape",
+      qualifies: (result) =>
+        result.ballsRecovered > 0,
+    },
+    {
+      id: "bunker_clause",
+      code: "B",
+      shortName: "BAIT",
+      name: "BUNKER CLAUSE",
+      hint: "Bait Joe into two bunkers",
+      qualifies: (result) =>
+        result.sandTrapCount >= 2,
+    },
+    {
+      id: "echo_breaker",
+      code: "E",
+      shortName: "ECHO",
+      name: "ECHO BREAKER",
+      hint: "Beat a compatible Course Echo",
+      qualifies: (result) =>
+        result.echoOvertaken,
+    },
+  ];
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
   const CAREER_STORAGE_KEY = "rough-cut.career.v1";
   const SETTINGS_ROWS = [
@@ -608,6 +646,59 @@
     };
   }
 
+  function emptyPerformanceStamps() {
+    const stamps = {};
+    for (
+      let index = 0;
+      index < RUN_VARIANTS.length;
+      index += 1
+    ) {
+      stamps[
+        RUN_VARIANTS[index].id
+      ] = [];
+    }
+    return stamps;
+  }
+
+  function validPerformanceStamps(
+    savedStamps,
+  ) {
+    const stamps =
+      emptyPerformanceStamps();
+    if (
+      !savedStamps ||
+      typeof savedStamps !== "object"
+    ) {
+      return stamps;
+    }
+    const validIds = new Set(
+      PERFORMANCE_STAMPS.map(
+        (stamp) => stamp.id,
+      ),
+    );
+    for (
+      let index = 0;
+      index < RUN_VARIANTS.length;
+      index += 1
+    ) {
+      const variantId =
+        RUN_VARIANTS[index].id;
+      const saved =
+        savedStamps[variantId];
+      if (!Array.isArray(saved)) {
+        continue;
+      }
+      stamps[variantId] = [
+        ...new Set(
+          saved.filter((id) =>
+            validIds.has(id),
+          ),
+        ),
+      ];
+    }
+    return stamps;
+  }
+
   function readSavedCareer() {
     try {
       const parsed = JSON.parse(
@@ -660,6 +751,10 @@
           )
             ? parsed.selectedVariantId
             : null,
+        performanceStamps:
+          validPerformanceStamps(
+            parsed.performanceStamps,
+          ),
         overtimeEnabled:
           parsed.overtimeEnabled === true,
         overtimeEscapes: Number.isFinite(
@@ -694,6 +789,8 @@
         completedVariants: [],
         filedChangeRequests: [],
         selectedVariantId: null,
+        performanceStamps:
+          emptyPerformanceStamps(),
         overtimeEnabled: false,
         overtimeEscapes: 0,
         overtimeCaptures: 0,
@@ -974,6 +1071,97 @@
       state.career.filedChangeRequests.length >=
       RUN_VARIANTS.length
     );
+  }
+
+  function performanceStampsFor(
+    variantId,
+  ) {
+    return (
+      state.career.performanceStamps[
+        variantId
+      ] || []
+    );
+  }
+
+  function totalPerformanceStamps() {
+    let total = 0;
+    for (
+      let index = 0;
+      index < RUN_VARIANTS.length;
+      index += 1
+    ) {
+      total +=
+        performanceStampsFor(
+          RUN_VARIANTS[index].id,
+        ).length;
+    }
+    return total;
+  }
+
+  function dossierPerfected(
+    variantId,
+  ) {
+    return (
+      performanceStampsFor(
+        variantId,
+      ).length >=
+      PERFORMANCE_STAMPS.length
+    );
+  }
+
+  function masterAdjusterUnlocked() {
+    return (
+      totalPerformanceStamps() >=
+      PERFORMANCE_STAMPS.length *
+        RUN_VARIANTS.length
+    );
+  }
+
+  function awardPerformanceStamps(
+    result,
+  ) {
+    const stamps =
+      performanceStampsFor(
+        result.variantId,
+      );
+    const totalBefore =
+      totalPerformanceStamps();
+    const perfectedBefore =
+      stamps.length >=
+      PERFORMANCE_STAMPS.length;
+    const newStampIds = [];
+    for (
+      let index = 0;
+      index < PERFORMANCE_STAMPS.length;
+      index += 1
+    ) {
+      const definition =
+        PERFORMANCE_STAMPS[index];
+      if (
+        !stamps.includes(
+          definition.id,
+        ) &&
+        definition.qualifies(result)
+      ) {
+        stamps.push(definition.id);
+        newStampIds.push(
+          definition.id,
+        );
+      }
+    }
+    result.newPerformanceStamps =
+      newStampIds;
+    result.performanceStampProgress =
+      stamps.length;
+    result.dossierPerfected =
+      !perfectedBefore &&
+      stamps.length >=
+        PERFORMANCE_STAMPS.length;
+    result.masterAdjusterUnlocked =
+      totalBefore <
+        PERFORMANCE_STAMPS.length *
+          RUN_VARIANTS.length &&
+      masterAdjusterUnlocked();
   }
 
   function portfolioVariant() {
@@ -1391,6 +1579,13 @@
       masteryUnlocked: false,
       newChangeRequestFiled: false,
       portfolioUnlocked: false,
+      newPerformanceStamps: [],
+      performanceStampProgress:
+        performanceStampsFor(
+          variant.id,
+        ).length,
+      dossierPerfected: false,
+      masterAdjusterUnlocked: false,
       echoRoute: null,
       echoScore: null,
       echoTimeDelta: null,
@@ -1434,6 +1629,7 @@
             echoRecord.timeSeconds
         );
     }
+    awardPerformanceStamps(result);
     const masteredBefore =
       overtimeUnlocked();
     const portfolioBefore =
@@ -1894,11 +2090,15 @@
   function drawPortfolioBoard() {
     const unlocked =
       portfolioUnlocked();
+    const masterAdjuster =
+      masterAdjusterUnlocked();
     const selected =
       selectedMenuVariant();
     const panel = PORTFOLIO_PANEL;
     ctx.fillStyle = unlocked
-      ? "rgba(5,18,10,0.94)"
+      ? masterAdjuster
+        ? "rgba(24,20,7,0.95)"
+        : "rgba(5,18,10,0.94)"
       : "rgba(3,13,8,0.9)";
     ctx.fillRect(
       panel.x,
@@ -1911,7 +2111,11 @@
       panel.y,
       panel.width,
       panel.height,
-      unlocked ? "#92763d" : "#394637",
+      masterAdjuster
+        ? "#e0bc59"
+        : unlocked
+          ? "#92763d"
+          : "#394637",
       unlocked ? 3 : 2,
     );
     drawText(
@@ -1919,23 +2123,33 @@
       panel.x + 24,
       panel.y + 34,
       19,
-      unlocked ? "#ead58e" : "#9aa590",
+      masterAdjuster
+        ? "#f4dc82"
+        : unlocked
+          ? "#ead58e"
+          : "#9aa590",
       "left",
       true,
     );
     drawText(
-      unlocked
+      masterAdjuster
+        ? "MASTER ADJUSTER // 12 STAMPS"
+        : unlocked
         ? "RED-PEN AUTHORIZATION"
         : "AUTHORIZATION PENDING",
       panel.x + panel.width - 24,
       panel.y + 32,
       11,
-      unlocked ? "#e5723a" : "#6f7b6d",
+      masterAdjuster
+        ? "#f0c75d"
+        : unlocked
+          ? "#e5723a"
+          : "#6f7b6d",
       "right",
       true,
     );
     drawText(
-      `FILED CHANGES  ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}  //  CLEARED ORDERS  ${state.career.completedVariants.length}/${RUN_VARIANTS.length}`,
+      `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}  //  ORDERS ${state.career.completedVariants.length}/${RUN_VARIANTS.length}  //  PERFORMANCE STAMPS ${totalPerformanceStamps()}/${PERFORMANCE_STAMPS.length * RUN_VARIANTS.length}`,
       panel.x + 24,
       panel.y + 57,
       10,
@@ -1969,12 +2183,21 @@
         state.career.filedChangeRequests.includes(
           variant.id,
         );
+      const earnedStamps =
+        performanceStampsFor(
+          variant.id,
+        );
+      const perfected =
+        earnedStamps.length >=
+        PERFORMANCE_STAMPS.length;
       const record =
         bestRecordForVariant(
           variant.id,
         );
       ctx.fillStyle = selectedCard
-        ? "rgba(43,39,16,0.94)"
+        ? perfected
+          ? "rgba(54,43,10,0.96)"
+          : "rgba(43,39,16,0.94)"
         : "rgba(8,25,13,0.9)";
       ctx.fillRect(
         x,
@@ -1988,7 +2211,11 @@
         PORTFOLIO_CARD_WIDTH,
         PORTFOLIO_CARD_HEIGHT,
         selectedCard
-          ? "#e66f31"
+          ? perfected
+            ? "#e9c45f"
+            : "#e66f31"
+          : perfected
+            ? "#b89a4f"
           : filed
             ? variant.accent
             : "#344733",
@@ -1996,7 +2223,11 @@
       );
       ctx.fillStyle =
         selectedCard
-          ? "#e66f31"
+          ? perfected
+            ? "#e9c45f"
+            : "#e66f31"
+          : perfected
+            ? "#b89a4f"
           : filed
             ? variant.accent
             : "#53604f";
@@ -2017,6 +2248,19 @@
         "left",
         true,
       );
+      if (perfected) {
+        drawText(
+          "PERFECT",
+          x +
+            PORTFOLIO_CARD_WIDTH -
+            16,
+          PORTFOLIO_CARD_Y + 79,
+          9,
+          "#e8c768",
+          "right",
+          true,
+        );
+      }
       drawText(
         variant.name,
         x + 16,
@@ -2106,10 +2350,76 @@
         "left",
         filed,
       );
+      for (
+        let stampIndex = 0;
+        stampIndex <
+        PERFORMANCE_STAMPS.length;
+        stampIndex += 1
+      ) {
+        const stamp =
+          PERFORMANCE_STAMPS[
+            stampIndex
+          ];
+        const earned =
+          earnedStamps.includes(
+            stamp.id,
+          );
+        const stampX =
+          x +
+          26 +
+          stampIndex * 45;
+        const stampY =
+          PORTFOLIO_CARD_Y + 184;
+        ctx.fillStyle = earned
+          ? perfected
+            ? "#5c4a13"
+            : stamp.id ===
+                "echo_breaker"
+              ? "#17483f"
+              : "#582919"
+          : "#142019";
+        ctx.beginPath();
+        ctx.arc(
+          stampX,
+          stampY,
+          11,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.strokeStyle = earned
+          ? perfected
+            ? "#f0d16a"
+            : stamp.id ===
+                "echo_breaker"
+              ? "#85ddc5"
+              : "#e9854e"
+          : "#435044";
+        ctx.lineWidth = earned
+          ? 2
+          : 1;
+        ctx.stroke();
+        drawText(
+          stamp.code,
+          stampX,
+          stampY + 4,
+          9,
+          earned
+            ? perfected
+              ? "#ffe69a"
+              : stamp.id ===
+                  "echo_breaker"
+                ? "#b9f1df"
+                : "#ffd29b"
+            : "#637063",
+          "center",
+          true,
+        );
+      }
       drawText(
         variant.keyHint,
         x + 16,
-        PORTFOLIO_CARD_Y + 190,
+        PORTFOLIO_CARD_Y + 211,
         9,
         "#899783",
         "left",
@@ -2118,7 +2428,7 @@
         "rgba(2,9,5,0.72)";
       ctx.fillRect(
         x + 14,
-        PORTFOLIO_CARD_Y + 211,
+        PORTFOLIO_CARD_Y + 224,
         PORTFOLIO_CARD_WIDTH - 28,
         48,
       );
@@ -2127,7 +2437,7 @@
           ? `BEST ${record.grade} // ${record.score.toLocaleString()}`
           : "BEST // UNFILED",
         x + 24,
-        PORTFOLIO_CARD_Y + 233,
+        PORTFOLIO_CARD_Y + 246,
         10,
         record
           ? gradeColor(record.grade)
@@ -2140,7 +2450,7 @@
           ? `${record.route.toUpperCase()} // ${formatRunTime(record.timeSeconds)}`
           : "NO COURSE ECHO",
         x + 24,
-        PORTFOLIO_CARD_Y + 250,
+        PORTFOLIO_CARD_Y + 263,
         9,
         "#7e8c79",
         "left",
@@ -2166,11 +2476,11 @@
     drawText(
       unlocked
         ? inputCopy(
-            "← → SELECT ORDER  //  OVERRIDE PERSISTS",
-            "D-PAD ← → SELECT ORDER  //  OVERRIDE PERSISTS",
-            "TAP A DOSSIER  //  OVERRIDE PERSISTS",
+            "← → SELECT ORDER  //  C CLEAN  R RECLAIM  B BAIT  E ECHO",
+            "D-PAD ← → SELECT  //  C CLEAN  R RECLAIM  B BAIT  E ECHO",
+            "TAP A DOSSIER  //  C CLEAN  R RECLAIM  B BAIT  E ECHO",
           )
-        : "FILE ALL THREE CHANGE REQUESTS TO SELECT ANY NIGHT ORDER.",
+        : "FILE ALL CHANGES TO SELECT ORDERS  //  STAMPS TRACK ESCAPE STYLES.",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 18,
       11,
@@ -5599,6 +5909,8 @@
     if (!echo?.position) {
       return;
     }
+    const masterAdjuster =
+      masterAdjusterUnlocked();
     const samples =
       echo.record.ghostPath;
     const trailStart =
@@ -5661,9 +5973,13 @@
         life *
         (state.hole.focus ? 0.9 : 0.58);
       ctx.fillStyle =
-        index % 2 === 0
-          ? "#79d6bf"
-          : "#b1ead7";
+        masterAdjuster
+          ? index % 2 === 0
+            ? "#d8b654"
+            : "#f1dc8e"
+          : index % 2 === 0
+            ? "#79d6bf"
+            : "#b1ead7";
       ctx.fillRect(
         -size * 0.55,
         -size * 0.25,
@@ -5757,7 +6073,7 @@
         ) < 55
       ) {
         drawText(
-          `COURSE ECHO // ${echo.record.route.toUpperCase()}`,
+          `${masterAdjuster ? "MASTER ECHO" : "COURSE ECHO"} // ${echo.record.route.toUpperCase()}`,
           point.x,
           point.y - radius - 10,
           10,
@@ -6933,7 +7249,9 @@
         );
       if (echoSamples.length > 1) {
         ctx.strokeStyle =
-          courseEcho.ahead
+          masterAdjusterUnlocked()
+            ? "rgba(225,190,91,0.82)"
+          : courseEcho.ahead
             ? "rgba(121,214,191,0.72)"
             : "rgba(216,170,98,0.72)";
         ctx.lineWidth = 1.5;
@@ -6962,7 +7280,9 @@
         courseEcho.position.y,
       );
       ctx.fillStyle =
-        courseEcho.ahead
+        masterAdjusterUnlocked()
+          ? "#e4c25f"
+        : courseEcho.ahead
           ? "#85dec7"
           : "#dfb368";
       ctx.beginPath();
@@ -8187,6 +8507,10 @@
   function drawTutorialBriefing() {
     const variant = activeRunVariant();
     const overtime = state.hole.overtime;
+    const stampCount =
+      performanceStampsFor(
+        variant.id,
+      ).length;
     ctx.fillStyle = "rgba(0,3,1,0.78)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 164, y: 76, width: 952, height: 568 };
@@ -8216,9 +8540,13 @@
     );
     drawText(
       overtime
-        ? "AFTER-HOURS TERMS ARE VOLUNTARY. JOE'S ESCALATION IS NOT."
+        ? `AFTER-HOURS TERMS ARE VOLUNTARY. JOE'S ESCALATION IS NOT.  //  DOSSIER ${stampCount}/${PERFORMANCE_STAMPS.length}`
+        : masterAdjusterUnlocked()
+          ? "MASTER ADJUSTER SEAL ACTIVE — ALL ORDERS PERFECTED."
         : portfolioUnlocked()
-          ? "PORTFOLIO OVERRIDE ACTIVE — THIS NIGHT ORDER WAS SELECTED FROM THE MASTER LEDGER."
+          ? `PORTFOLIO OVERRIDE  //  DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
+          : stampCount > 0
+            ? `DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
         : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
       WIDTH * 0.5,
       184,
@@ -9013,10 +9341,22 @@
             ? "RETURN TO THE SHED"
             : "FIND KEY OR RELEASE DRAIN";
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
+    const activeStampCount =
+      performanceStampsFor(
+        variant.id,
+      ).length;
     const changeRequestStatus =
       hole.changeRequestCollected
         ? "CR ✓ BANKED"
         : `CR ◇ +${CHANGE_REQUEST_BONUS}`;
+    const masteryStatus =
+      hole.overtime
+        ? "OVERTIME"
+        : masterAdjusterUnlocked()
+          ? "MASTER"
+          : portfolioUnlocked()
+            ? "OVERRIDE"
+            : "";
 
     const waterStatus =
       hole.sprinklerSoakTimer > 0
@@ -9024,7 +9364,7 @@
         : "";
     const terrainStatus =
       expandedHud
-        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}`
+        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  STAMPS ${activeStampCount}/${PERFORMANCE_STAMPS.length}`
         : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}`;
     const terrainColor =
       environment.sand
@@ -9046,10 +9386,10 @@
       ctx.fillRect(36, 34, 430, 224);
       strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
       drawText(
-        `HOLE 1 — ${variant.shortName}${hole.overtime ? " // OVERTIME" : portfolioUnlocked() ? " // OVERRIDE" : ""}`,
+        `HOLE 1 — ${variant.shortName}`,
         62,
         76,
-        hole.overtime ? 23 : 29,
+        29,
         "#efebcd",
         "left",
         true,
@@ -9110,7 +9450,7 @@
         2,
       );
       drawText(
-        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}${hole.overtime ? "  //  OVERTIME" : portfolioUnlocked() ? "  //  OVERRIDE" : ""}`,
+        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
         56,
         65,
         16,
@@ -9131,7 +9471,7 @@
       );
       drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
       drawText(
-        `${terrainStatus}  •  ${hole.golfBalls} BALLS${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}`,
+        `${terrainStatus}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  ${hole.golfBalls} BALLS${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}`,
         56,
         120,
         11,
@@ -9682,6 +10022,26 @@
         color: "#e69759",
       });
     }
+    if (
+      result.newPerformanceStamps.length >
+      0
+    ) {
+      const stampNames =
+        result.newPerformanceStamps.map(
+          (id) =>
+            PERFORMANCE_STAMPS.find(
+              (stamp) =>
+                stamp.id === id,
+            )?.shortName || id,
+        );
+      scoreNotes.push({
+        text: `STAMP${stampNames.length === 1 ? "" : "S"} FILED // ${stampNames.join(" • ")}`,
+        color:
+          result.dossierPerfected
+            ? "#f1ce69"
+            : "#84c9a8",
+      });
+    }
     for (
       let index = 0;
       index < scoreNotes.length;
@@ -9730,11 +10090,18 @@
     ) {
       const statStart =
         scoreNotes.length > 0
-          ? 348
+          ? 348 +
+            Math.max(
+              0,
+              scoreNotes.length - 3,
+            ) *
+              14
           : 324;
       const statSpacing =
-        scoreNotes.length > 0
-          ? 28
+        scoreNotes.length > 3
+          ? 25
+          : scoreNotes.length > 0
+            ? 28
           : 33;
       const y =
         statStart +
@@ -9779,13 +10146,20 @@
       true,
     );
     drawText(
-      result.masteryUnlocked &&
+      result.masterAdjusterUnlocked
+        ? "MASTER ADJUSTER AUTHORIZED — ALL TWELVE PERFORMANCE STAMPS FILED."
+        : result.masteryUnlocked &&
       result.portfolioUnlocked
         ? "FULL MASTER FILE — OVERTIME AND PORTFOLIO OVERRIDE AUTHORIZED."
         : result.portfolioUnlocked
           ? "ALL CHANGES FILED — NIGHT ORDER PORTFOLIO OVERRIDE AUTHORIZED."
       : result.masteryUnlocked
         ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
+        : result.dossierPerfected
+          ? `ORDER ${String(result.variantNumber).padStart(2, "0")} DOSSIER PERFECTED — ALL FOUR PERFORMANCE STAMPS FILED.`
+        : result.newPerformanceStamps.length >
+            0
+          ? `PERFORMANCE STAMP FILED — DOSSIER ${result.performanceStampProgress}/${PERFORMANCE_STAMPS.length}.`
         : result.newChangeRequestFiled
           ? `${activeChangeRequest().code} FILED. CHANGE REQUESTS ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} SECURED.`
         : result.echoOvertaken
@@ -9800,6 +10174,10 @@
       13,
       result.masteryUnlocked ||
         result.portfolioUnlocked ||
+        result.masterAdjusterUnlocked ||
+        result.dossierPerfected ||
+        result.newPerformanceStamps.length >
+          0 ||
         result.newChangeRequestFiled ||
         result.echoOvertaken ||
         result.newBest
@@ -12082,6 +12460,24 @@
       persistsSelection:
         portfolioUnlocked(),
       balanceEffect: "none",
+      performanceStamps: {
+        earned:
+          totalPerformanceStamps(),
+        available:
+          PERFORMANCE_STAMPS.length *
+          RUN_VARIANTS.length,
+        masterAdjuster:
+          masterAdjusterUnlocked(),
+        definitions:
+          PERFORMANCE_STAMPS.map(
+            (stamp) => ({
+              id: stamp.id,
+              code: stamp.code,
+              name: stamp.name,
+              hint: stamp.hint,
+            }),
+          ),
+      },
     },
     dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
@@ -12151,6 +12547,24 @@
         state.career.filedChangeRequests.slice(),
       selectedVariantId:
         state.career.selectedVariantId,
+      performanceStamps:
+        Object.fromEntries(
+          RUN_VARIANTS.map(
+            (variant) => [
+              variant.id,
+              performanceStampsFor(
+                variant.id,
+              ).slice(),
+            ],
+          ),
+        ),
+      perfectedVariants:
+        RUN_VARIANTS.filter(
+          (variant) =>
+            dossierPerfected(
+              variant.id,
+            ),
+        ).map((variant) => variant.id),
       bestOverall: careerRecordSummary(
         bestCareerRecord(),
       ),
@@ -12396,6 +12810,44 @@
                   recordedSamples:
                     state.hole.courseEchoSamples.length,
                 },
+          performanceStamps: {
+            earned:
+              performanceStampsFor(
+                activeRunVariant().id,
+              ).slice(),
+            progress:
+              performanceStampsFor(
+                activeRunVariant().id,
+              ).length,
+            available:
+              PERFORMANCE_STAMPS.length,
+            perfected:
+              dossierPerfected(
+                activeRunVariant().id,
+              ),
+            currentRunCriteria: {
+              cleanFile:
+                state.hole.chaseCount ===
+                0,
+              fieldRecovery:
+                state.hole.ballsRecovered >
+                0,
+              bunkerClause:
+                state.hole.sandTrapCount >=
+                2,
+              echoBreakerPotential:
+                currentCourseEcho()
+                  ? (
+                      calculateRunResult(
+                        state.hole.escapeRoute ||
+                          "shed",
+                      ).score >
+                        currentCourseEcho()
+                          .record.score
+                    )
+                  : false,
+            },
+          },
           performance: {
             elapsedSeconds: Number(
               state.hole.elapsed.toFixed(2),
