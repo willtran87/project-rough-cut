@@ -21,6 +21,7 @@ The browser build includes:
 - First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
 - A persistent course mini-map with true blocker footprints—including hidden tunnel and shed-wall collision sides—interaction ranges, maintained-course limits, and active-contact highlighting.
 - Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, projected from the same footprints used for collision and line-of-sight cover.
+- A decomposed living horizon: the golf course remains the grounding plate while clouds, distant trees, clubhouse lights, and drifting mist move independently at restrained parallax depths.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
@@ -29,6 +30,7 @@ The browser build includes:
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
 - A live letter-only File Projection that reacts to time, attention, resources, optional filings, and recovery plays without exposing exact score optimization during the chase.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
+- Joe-specific character writing throughout the pursuit, plus 30 rotating capture lines paired with six expression portraits on the Claim Denied screen; all dialogue remains subtitle-only.
 - An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
@@ -80,6 +82,6 @@ Build a single 10-15 minute course hole with one fairway, one rough area, a bunk
 
 ## Working title
 
-**Rough Cut: A Joe Mower Horror Game**
+**Rough Cut: A Joe Horror Game**
 
 Tagline: **The course closes at dusk. Joe does not.**

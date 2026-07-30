@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="Rough Cut"
-config/description="A Joe Mower Horror Game"
+config/description="A Joe Horror Game"
 run/main_scene="res://cinematics/opening/opening.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 
@@ -29,4 +29,3 @@ textures/canvas_textures/default_texture_filter=0
 [audio]
 
 driver/enable_input=false
-

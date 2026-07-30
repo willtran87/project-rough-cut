@@ -106,7 +106,10 @@ This loop is the foundation for the larger game: **enter a course, read its gras
 - His lawn mower is simultaneously a threat, an audio beacon, a source of dark comedy, and a moving terrain modifier.
 - His erratic arm and head movements should occur in short, irregular bursts, especially during investigation and close pursuit.
 - Joe must remain readable enough that animation never hides a state change, strike, detection cue, or escape opportunity.
-- Future dialogue should be sparse, subtitle-supported, and performable by a human actor. Do not reintroduce a robot voice.
+- Use **Joe** as the character's player-facing name. “Mower” describes his machine or a terrain interaction, not his name or brand.
+- Joe's short pursuit barks should reveal his product-owner certainty, golf etiquette, and grass obsession without turning every encounter into a joke.
+- [x] The capture screen selects from 30 original lines across six expression portraits, avoids an immediate repeat, and treats each failure as a fresh Joe performance.
+- Dialogue is subtitle-only in the current build. If spoken dialogue is added later, it should be sparse and human-performed; do not reintroduce a robot voice.
 
 ## Image Generation for Asset Creation and Polish
 
@@ -123,6 +126,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Layered course obstacles, foreground fringe, a true prop-free clean background, and dedicated shed/hedge/stone/cart landmark assets used to create measurable motion and authored boundaries.
 - [x] Drainage culvert prop used as a complete alternate escape route.
 - [x] Dedicated Joe capture tableau used by the defeat transition.
+- [x] Six-expression Joe portrait atlas used to vary the capture-screen performance.
+- [x] Separate cloud bank, distant tree line, clubhouse, and clean course/sky grounding plate used as independently moving horizon layers.
 - [x] Dedicated Dead Green scenery atlas and world-anchored dry-ground treatment used to give the final approach its own silhouette, depth, and optical flow.
 - [x] Versioned canonical generated assets stored under the project’s character and environment asset folders.
 
@@ -148,8 +153,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Maintenance-shed exterior with a readable lit doorway, terrain foundation, matched wall collision, and hiding cover.
 - [ ] Maintenance-shed interior, including several readable entry routes and hiding opportunities.
 - [x] First production course-prop family: flags, carts, sprinklers, signs, mower debris, reeds, hedges, bunker walls, and maintenance landmarks. Additional hole-specific families remain future work.
-- [ ] Golf-course vistas for additional holes, weather states, and time-of-night transitions.
-- [ ] Defeat stills, chapter cards, loading art, and restrained menu flourishes.
+- [ ] Golf-course vistas for additional holes, weather states, and time-of-night transitions, authored as reusable depth layers rather than single flattened paintings.
+- [x] First defeat still and six-expression capture portrait family. Additional defeat stills, chapter cards, loading art, and restrained menu flourishes remain future work.
 - [ ] UI icon families that match the world art without sacrificing immediate readability.
 - [ ] Marketing key art only after the playable game’s final Joe design and environment palette are locked.
 
@@ -165,11 +170,11 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 
 - **Mini-map knowledge:** Joe is now shown live only at close range or during active pursuit; lost contact decays to a temporary last-signal marker. A full game should extend this with sound direction, disturbed grass, camera coverage, or a valid tracking source. Exact live tracking may remain as an accessibility option.
 - **Objective markers:** The key and sprinkler use image-generated world props, distance labels, projected interaction rings, and explicit keyboard/gamepad/touch in-reach states; the clipboard, shed, and drain use the same range language. Obstacle-aware gold/teal ground reflectors, fairway-edge stakes, physical zone signs, and a left/ahead/right field bearing make the active route readable from the first-person scene. The full course map remains persistent as a planning and accessibility tool without replacing those world cues.
-- **Spatial model:** The slice has authored collision, projected boundaries, line-of-sight occlusion, hiding terrain, multiple traversable routes, obstacle-aware Joe navigation, and first-person route guidance generated from the same collision model. The image-generated shed, hedge hides, stone cover, and grounds cart now have broad terrain bases and projected ground sockets matched to their gameplay footprints. Nearby solid props reveal their footprint and name before contact; contact feedback points to the blocker and recommends a physically valid escape direction. Production work still needs richer authored path choices and multi-area navigation.
+- **Spatial model:** The slice has authored collision, projected boundaries, line-of-sight occlusion, hiding terrain, multiple traversable routes, obstacle-aware Joe navigation, and first-person route guidance generated from the same collision model. The image-generated shed, hedge hides, stone cover, and grounds cart now have broad terrain bases and projected ground sockets matched to their gameplay footprints. Nearby solid props reveal their footprint and name before contact; contact feedback points to the blocker and recommends a physically valid escape direction. The distant scene is decomposed into course/sky, cloud, clubhouse, tree-line, and mist layers with different motion ratios, keeping the golf course visually grounded while the horizon feels alive. Production work still needs richer authored path choices and multi-area navigation.
 - **Boundary contract:** The maintained-course limits are explicitly outlined on the persistent mini-map and report named edge contact instead of silently clamping movement. World art, terrain socket, collision radius, cover radius, use radius, and mini-map geometry share one coordinate source so a decorative prop cannot quietly disagree with traversal.
 - **Golf depth:** The current golf mechanic now supports pressure-based charge, lateral aim, readable trajectory, delayed impact, and Joe redirection. It still stops short of the planned club choice, lie, spin, bounce, roll, wind, and deeper ball-physics system.
 - **Grass depth:** Fairway, concealment-bearing rough, persistent mower-cut strips, temporary player trails, and golf divots now form a readable information system. The larger turf taxonomy, samples, player-operated cutting, recovery, and environmental reactions remain future work.
-- **Audio:** Current sound is procedural and functional. It still needs authored ambience, spatial layering, stronger mower-state transitions, human-performed Joe material if dialogue is added, and a proper mix.
+- **Audio:** Current sound is procedural and functional. Joe's new state barks and capture lines are delivered through scalable subtitles only. The full game still needs authored ambience, spatial layering, stronger mower-state transitions, and a proper mix; any future Joe voice should be human-performed.
 - **Input:** Keyboard, pointer, and standard gamepad play are implemented with automatic prompt switching and controller-navigable settings. Touch controls, rebinding, non-standard controller glyph sets, and remapping accessibility remain future work.
 - **Campaign systems:** Persistent route records, rotating-order mastery, and an unlockable Overtime Audit challenge are implemented. Saves/checkpoints, multiple holes, broader progression, additional difficulty modes, and the larger narrative arc remain future work.
 

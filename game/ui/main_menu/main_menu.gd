@@ -71,7 +71,7 @@ func _build_primary_menu() -> void:
 	margin.add_child(stack)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "A JOE MOWER HORROR GAME"
+	eyebrow.text = "A JOE HORROR GAME"
 	eyebrow.add_theme_font_size_override("font_size", 15)
 	eyebrow.add_theme_color_override("font_color", Color(0.72, 0.79, 0.57))
 	stack.add_child(eyebrow)
@@ -155,7 +155,7 @@ func _build_settings_panel() -> void:
 	stack.add_child(heading)
 
 	var volume_label := Label.new()
-	volume_label.text = "MOWER VOLUME"
+	volume_label.text = "JOE VOLUME"
 	stack.add_child(volume_label)
 
 	var volume_slider := HSlider.new()

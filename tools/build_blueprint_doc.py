@@ -357,7 +357,7 @@ def add_cover(doc):
     subtitle = doc.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
     subtitle.paragraph_format.space_after = Pt(5)
-    run = subtitle.add_run("A JOE MOWER HORROR GAME")
+    run = subtitle.add_run("A JOE HORROR GAME")
     set_run_font(run, size=15, bold=True, color=DEEP_BROWN)
 
     tagline = doc.add_paragraph()
@@ -759,7 +759,7 @@ def add_names(doc):
     add_callout(
         doc,
         "Selected working title",
-        "Rough Cut: A Joe Mower Horror Game. The name connects tall grass, mower blades, a violent threat, and the product-owner idea of an unfinished release. It is short, distinctive, and supports both dread and dry comedy.",
+        "Rough Cut: A Joe Horror Game. The name keeps Joe at the center while the title connects tall grass, mower blades, a violent threat, and the product-owner idea of an unfinished release. It is short, distinctive, and supports both dread and dry comedy.",
     )
     add_data_table(
         doc,
