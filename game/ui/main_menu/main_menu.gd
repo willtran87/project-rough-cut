@@ -101,7 +101,7 @@ func _build_primary_menu() -> void:
 	var settings_button := _add_menu_button(stack, "ACCEPTANCE CRITERIA")
 	settings_button.pressed.connect(_show_settings)
 
-	var claim_button := _add_menu_button(stack, "FILE A CLAIM")
+	var claim_button := _add_menu_button(stack, "SUBMIT CHANGE REQUEST")
 	claim_button.pressed.connect(_show_claim_message)
 
 	var replay_button := _add_menu_button(stack, "REPLAY INCIDENT")
@@ -248,7 +248,7 @@ func _hide_settings() -> void:
 
 
 func _show_claim_message() -> void:
-	_status_label.text = "COVERAGE DENIED: unauthorized presence in the rough."
+	_status_label.text = "CHANGE REJECTED: unauthorized scope in the rough."
 
 
 func _on_volume_changed(value: float) -> void:

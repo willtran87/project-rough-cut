@@ -21,7 +21,7 @@ The intro can be skipped with Space, Enter, Escape, or a mouse click.
 
 - **Begin the Round** — loads the first-hole handoff scene.
 - **Acceptance Criteria** — opens volume, subtitle, and reduced-motion settings.
-- **File a Claim** — displays an in-world coverage response.
+- **Submit Change Request** — displays Joe's in-world scope-rejection response.
 - **Replay Incident** — restarts the cutscene.
 - **Clock Out** — exits the game.
 

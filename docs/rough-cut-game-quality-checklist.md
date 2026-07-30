@@ -10,14 +10,14 @@
 - `[ ]` means the item is planned, incomplete, or still needs production-level validation.
 - “Prototype constraint” identifies a deliberate simplification that should not silently become the final design.
 - The detailed quality checklist below is primarily a **full-game acceptance checklist**. An unchecked item does not necessarily mean the vertical slice is broken.
-- Every new mechanic should be evaluated against the design hierarchy: **horror and readable pursuit first; grass and golf second; insurance-product satire third**.
+- Every new mechanic should be evaluated against the design hierarchy: **horror and readable pursuit first; grass and golf second; software-product and Agile satire third**. Insurance remains Joe's industry and the organization's setting, not his job function.
 
 ## Confirmed Creative Direction
 
 - [x] Use **high-resolution, high-detail cinematic pixel art** as the defining visual language.
 - [x] Frame the experience as first-person or first-person-adjacent golf-course horror, with strong depth layers, dramatic lighting, and readable 2D gameplay space.
-- [x] Make Joe an insurance-company **product owner** whose obsession with immaculate grass and golf has become predatory.
-- [x] Keep the horror credible. Comedy should come from Joe applying calm corporate and insurance logic to absurdly threatening situations.
+- [x] Make Joe a software **Product Owner employed by an insurance company**, explicitly not an adjuster, whose obsession with immaculate grass and golf has become predatory.
+- [x] Keep the horror credible. Comedy should come from Joe applying calm backlog, roadmap, acceptance, sprint, stakeholder, and delivery logic to absurdly threatening situations.
 - [x] Use a beautiful, uncanny golf course as the primary contrast: inviting moonlit scenery in tension with noise, machinery, empty facilities, and pursuit.
 - [x] Make grass and golf mechanically important rather than decorative. Terrain affects concealment and noise; golf balls create tactical distractions.
 - [x] Avoid turning the player into an action hero. Survival depends on route choice, timing, attention management, and environmental knowledge.
@@ -58,7 +58,7 @@
 - [x] Provide a live mini-map and readable objective display for prototype orientation.
 - [x] Trigger victory when the player reaches and unlocks the shed with the key.
 - [x] Trigger a distinct alternate victory when the player releases pressure and reaches the drainage culvert.
-- [x] Trigger defeat as a darkly comic “claim denied” outcome when Joe catches the player.
+- [x] Trigger defeat as a darkly comic “Sprint Terminated” outcome when Joe catches the player.
 - [x] Support immediate same-order rematch that skips the redundant briefing and exposes the next Stamp target, plus direct next-order play, fully briefed manual reset, and return-to-Clubhouse flows from both victory and defeat.
 - [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
 - [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
@@ -93,23 +93,25 @@ The intended first-session flow is:
 4. The player enters the moonlit course, reads the mini-map and terrain, and begins moving before Joe closes in.
 5. The player reads the current Night Order, then chooses between its relocated shed key or sprinkler controls.
 6. Golf balls redirect Joe with diminishing effectiveness; sight blockers and deep rough let the player break pursuit and survive a search.
-7. Unlocking the shed or entering the opened drain ends the slice with route-specific success; being caught ends it with a claim-denied screen.
+7. Unlocking the shed or entering the opened drain ends the slice with route-specific success; being caught ends it with a Sprint Terminated acceptance-review screen.
 8. The result screen converts records and Performance Stamps into a clear next target, then lets the player immediately rematch the file, advance to the next authored Night Order, or return to the Clubhouse.
 
 This loop is the foundation for the larger game: **enter a course, read its grass and hazards, discover an escape requirement, manipulate Joe’s attention, and survive a final route to safety**.
 
 ## Joe: Character and Performance Direction
 
-- Joe is an insurance-company product owner, not a supernatural monster with arbitrary powers.
-- His professional composure should make him more disturbing: he treats pursuit as prioritization, risk control, scope enforcement, and claim resolution.
+- Joe is a software Product Owner at an insurance company, not an adjuster and not a supernatural monster with arbitrary powers.
+- His professional composure should make him more disturbing: he treats pursuit as backlog ordering, dependency management, scope enforcement, acceptance review, stakeholder alignment, and release control.
 - His fixation on grass, mowing patterns, course standards, and golf etiquette should shape his routes and reactions.
 - His lawn mower is simultaneously a threat, an audio beacon, a source of dark comedy, and a moving terrain modifier.
 - His erratic arm and head movements should occur in short, irregular bursts, especially during investigation and close pursuit.
 - Joe must remain readable enough that animation never hides a state change, strike, detection cue, or escape opportunity.
 - Use **Joe** as the character's player-facing name. “Mower” describes his machine or a terrain interaction, not his name or brand.
 - Joe's short pursuit barks should reveal his product-owner certainty, golf etiquette, and grass obsession without turning every encounter into a joke.
-- [x] The capture screen selects from 30 original lines across six expression portraits, avoids an immediate repeat, and treats each failure as a fresh Joe performance.
+- [x] The capture screen selects from 50 original lines across six expression portraits, avoids an immediate repeat, and treats each failure as a fresh Joe performance.
 - Dialogue is subtitle-only in the current build. If spoken dialogue is added later, it should be sparse and human-performed; do not reintroduce a robot voice.
+- [x] Reward linked smart play with a 14-second Delivery Chain: progress, recoveries, bunker baits, optional Change Requests, and contact breaks raise a capped score multiplier without weakening Joe.
+- [x] Surface the Delivery Chain through a live timer, event award, File Projection, text-state contract, and post-run peak so it is legible without forcing score play.
 
 ## Image Generation for Asset Creation and Polish
 
@@ -124,6 +126,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Field-kit icons for the shed key, golf ball, and sprinkler valve.
 - [x] Transparent in-game derivatives produced through local chroma-key/alpha cleanup where needed.
 - [x] Layered course obstacles, foreground fringe, a true prop-free clean background, and dedicated shed/hedge/stone/cart landmark assets used to create measurable motion and authored boundaries.
+- [x] Moonless sky, independent moon, far ridge, distant villas, signage atlas, and three-sprite bunker atlas, all composed as dedicated runtime layers rather than a single flat plate.
+- [x] Procedural two-depth horizon fog and five-depth ground fog used for atmosphere while preserving obstacle and interaction readability.
 - [x] Drainage culvert prop used as a complete alternate escape route.
 - [x] Dedicated Joe capture tableau used by the defeat transition.
 - [x] Six-expression Joe portrait atlas used to vary the capture-screen performance.
@@ -231,9 +235,9 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Keyboard behavior remains intact, and future controller/touch implications are documented.
 - [ ] The comprehensive quality checklist below is updated when the feature changes the intended final design.
 
-> **Working premise:** The player is trapped across uncanny golf courses, turf facilities, clubhouses, and insurance-controlled properties. To escape, they must complete golf- and grass-related objectives while **Joe—an insurance-company product owner—systematically hunts them**. Joe turns backlog priorities, status requests, risk registers, scope controls, coverage rules, acceptance criteria, and stakeholder escalation into instruments of pursuit.
+> **Working premise:** The player is trapped across uncanny golf courses, turf facilities, clubhouses, and properties owned by an insurance company. To escape, they must complete golf- and grass-related objectives while **Joe—a software Product Owner employed by that insurer—systematically hunts them**. Joe turns product goals, backlog priorities, refinement, sprint pressure, dependencies, scope controls, acceptance criteria, stakeholder escalation, and release gates into instruments of pursuit.
 >
-> **Design hierarchy:** Horror and pursuit come first. Golf and grass shape the objectives, terrain, stealth, tools, and scares. Insurance and project-management satire should deepen the unease rather than reduce Joe to comic relief.
+> **Design hierarchy:** Horror and pursuit come first. Golf and grass shape the objectives, terrain, stealth, tools, and scares. Software-product, Agile, and project-delivery satire should deepen the unease rather than reduce Joe to comic relief; insurance supplies organizational context and world texture.
 
 ## Creative North Star
 
@@ -363,7 +367,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 ## Joe: Identity and Horror Presence
 
 - [ ] Make Joe immediately recognizable by silhouette, posture, clothing, movement, tools, and sound.
-- [ ] Make Joe visibly read as an insurance product owner rather than a generic groundskeeper, golfer, or slasher.
+- [ ] Make Joe visibly read as a software Product Owner working inside an insurer rather than an adjuster, generic groundskeeper, golfer, or slasher.
 - [ ] Give Joe recurring objects such as a clipboard, tablet, headset, lanyard, risk register, folder, or project bag that reinforce his role.
 - [ ] Make Joe's calm professional behavior more disturbing as the situation becomes more dangerous.
 - [ ] Give Joe a controlled vocal style that can shift from courteous status requests to procedural certainty and open threat.
@@ -442,19 +446,19 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make failure and restart fast enough that the player remains willing to experiment.
 - [ ] Preserve meaningful consequences for capture without requiring excessive replay of solved content.
 
-## Joe's Insurance and Project-Management Tactics
+## Joe's Software-Product and Agile Tactics
 
-- [ ] Turn project-management and insurance concepts into spatial, systemic, and threatening mechanics.
+- [ ] Turn backlog ownership, product goals, sprint commitments, dependencies, stakeholder pressure, and acceptance criteria into spatial, systemic, and threatening mechanics.
 - [ ] Use **scope lock** to close, redefine, or constrain routes in ways the player can anticipate and counter.
 - [ ] Use **action items** to mark objectives, locations, or player obligations that increase danger when ignored.
 - [ ] Use **status requests** to create timed responses, audible devices, forced choices, or escalating searches.
 - [ ] Use **risk registers** to reveal, distort, prioritize, or weaponize hazards across the course.
 - [ ] Use **change requests** to alter objectives, access rules, or route requirements after the player has committed.
 - [ ] Use **stakeholder escalation** to activate cameras, staff, gates, lights, announcements, or additional surveillance.
-- [ ] Use **coverage boundaries** as physical or procedural zones with clear rules and consequences.
-- [ ] Use **policy exclusions** to temporarily disable expected protections or safe routes, with fair warning.
+- [ ] Use **scope boundaries** as physical or procedural zones with clear rules and consequences.
+- [ ] Use **acceptance exceptions** to temporarily disable expected protections or safe routes, with fair warning.
 - [ ] Use **deductibles** as explicit costs paid in resources, time, exposure, or objective progress.
-- [ ] Use **claim denial** to revoke an apparent solution and force a dangerous appeal or alternate route.
+- [ ] Use **change rejection** to revoke an apparent solution and force dangerous refinement or an alternate route.
 - [ ] Use **appeals** as high-risk opportunities to reverse Joe's control or recover a lost option.
 - [ ] Use **incident reports** to preserve evidence of the player's mistakes and change later searches.
 - [ ] Use **dependency blockers** to connect course machinery, keys, permissions, and objectives in understandable ways.
@@ -517,7 +521,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make wedges useful for clearing obstacles, reaching elevation, escaping bunkers, or placing precise distractions.
 - [ ] Make the putter quiet, precise, and useful for close-range lures, switches, and confined spaces.
 - [ ] Make specialty clubs or improvised corporate tools sidegrades with distinct risks rather than direct power upgrades.
-- [ ] Consider unsettling thematic tools such as an Adjuster, Red-Tape Putter, Risk Wedge, or Claims Driver only when their mechanics remain clear.
+- [ ] Consider unsettling thematic tools such as a Backlog Putter, Scope Wedge, Dependency Driver, or Release Rake only when their mechanics remain clear.
 - [ ] Give every club a recognizable silhouette, handling feel, strike sound, flight profile, and environmental use.
 - [ ] Keep the carried selection limited enough that changing tools remains fast under pressure.
 - [ ] Let players organize quick slots, favorites, and controller shortcuts.
@@ -1311,4 +1315,4 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Do not require grinding, daily engagement, artificial wait timers, paid power, loot boxes, or fear-of-missing-out systems.
 - [ ] Do not prioritize backend architecture, creator tooling, analytics, or speculative extensibility over the quality of the playable campaign.
 - [ ] Do not claim an item is complete until its player-facing behavior has been tested in the actual game.
-- [ ] Keep the final design centered on one promise: **the player must cross beautiful, uncanny grass and use golf intelligently while insurance product owner Joe hunts them.**
+- [ ] Keep the final design centered on one promise: **the player must cross beautiful, uncanny grass and use golf intelligently while software Product Owner Joe hunts them through his employer's course.**

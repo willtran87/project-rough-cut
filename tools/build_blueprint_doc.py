@@ -391,7 +391,7 @@ def add_snapshot(doc):
     add_callout(
         doc,
         "Logline",
-        "After an insurance-company golf outing becomes Joe's unauthorized 'course optimization pilot,' a stranded coworker must cross nine increasingly hostile holes while the product owner—obsessed with grass, golf, and measurable outcomes—mows away hiding places and treats the player as an uncontrolled risk.",
+        "After an insurance-company golf outing becomes Joe's unauthorized 'course optimization pilot,' a stranded coworker must cross nine increasingly hostile holes while the software Product Owner—obsessed with grass, golf, and measurable outcomes—mows away hiding places and treats the player as unplanned scope.",
     )
     add_data_table(
         doc,
@@ -402,7 +402,7 @@ def add_snapshot(doc):
             ("Player fantasy", "Outthink an apparently chaotic pursuer by reading the course, controlling sound, and exploiting momentum."),
             ("Narrative setup", "A company golf outing runs past dusk. Joe takes control of the course's maintenance systems to finish an obsessive optimization plan, trapping one coworker inside."),
             ("Target session", "A 2-3 hour first campaign; 10-20 minute replayable hole scenarios."),
-            ("Primary antagonist", "Joe, an insurance product owner whose grass-and-golf obsession turns backlog discipline, risk language, and a lawn mower into a terrifying pursuit system."),
+            ("Primary antagonist", "Joe, a software Product Owner employed by an insurance company—not an adjuster—whose grass-and-golf obsession turns backlog ownership, sprint goals, acceptance criteria, and a lawn mower into a terrifying pursuit system."),
             ("Recommended engine", "Godot for a lightweight 3D world, billboard sprites, data-driven AI, and rapid vertical-slice iteration."),
         ],
         [2700, 6660],
@@ -425,6 +425,7 @@ def add_snapshot(doc):
         ("Sound is gameplay", "The mower engine, grass movement, golf impacts, and PA system are navigation and deception tools."),
         ("Comedy stays diegetic", "The course behaves professionally and politely while something impossible is happening."),
         ("Short pursuit, long dread", "Chases are intense and decisive; anticipation, investigation, and aftermath occupy more time."),
+        ("Mastery compounds", "Recoveries, bait plays, progress, and clean contact breaks can be linked into a short Delivery Chain that rewards expressive play without reducing danger."),
     ]
     for label, detail in pillars:
         add_body(doc, f"{label}. {detail}", bold_lead=f"{label}.")
@@ -453,6 +454,7 @@ def add_format_and_loop(doc):
         "Read the terrain, mower sound, and available tools.",
         "Complete two or three noisy objectives while managing concealment.",
         "Redirect or evade Joe as he permanently changes the route.",
+        "Link smart plays inside the Delivery Chain window for optional score mastery.",
         "Attempt an optional golf challenge for an upgrade or story fragment.",
         "Reach the next tee, maintenance passage, or clubhouse checkpoint.",
     )
@@ -573,12 +575,12 @@ def add_tone_audio(doc):
     add_heading(doc, "Comedy rules", 2)
     add_body(
         doc,
-        "Joe never acknowledges that the situation is funny. Humor comes from his absolute sincerity, insurance and product-management language applied to mortal danger, course etiquette, machinery, and the player's desperate use of ordinary golf equipment.",
+        "Joe never acknowledges that the situation is funny. Humor comes from his absolute sincerity: software-product, Agile, Scrum, and delivery language applied to mortal danger, course etiquette, machinery, and the player's desperate use of ordinary golf equipment. Insurance is his industry context, not his profession.",
     )
     comedy_examples = (
         "A speaker announces, 'Your current route is outside agreed scope,' as Joe charges.",
         "Joe shouts, 'Acceptance criteria require a uniform cut height!' while mowing through the player's cover.",
-        "A failure screen reads, 'COVERAGE DENIED: unauthorized presence in the rough.'",
+        "A failure screen reads, 'SPRINT TERMINATED: failed Joe's acceptance review.'",
         "A course map has been converted into a product roadmap with every hiding place marked as technical debt.",
         "Joe pauses to repair a divot and update a clipboard, then resumes the chase without comment.",
     )
@@ -588,13 +590,16 @@ def add_tone_audio(doc):
     add_heading(doc, "Joe's backstory", 2)
     add_body(
         doc,
-        "Joe is a product owner at an insurance company. At work he translates ambiguity into prioritized backlogs, acceptance criteria, risk registers, and measurable outcomes. Away from work he applies that same intensity to grass and golf: mowing patterns are roadmaps, divots are defects, and an imperfect fairway is an unresolved incident.",
+        "Joe is a software Product Owner employed by an insurance company. He is not an adjuster, does not investigate losses, and does not decide claims. He owns value, ordering, and clarity for an internal software backlog: translating stakeholder ambiguity into product goals, prioritized user stories, acceptance criteria, release increments, dependency decisions, and measurable outcomes. Away from work he applies that same intensity to grass and golf: mowing patterns are roadmaps, divots are defects, bunkers are blockers, weather is a dependency, and an imperfect fairway is an increment that cannot be accepted.",
     )
     for item in (
-        "Joe persuaded the company to sponsor an after-hours golf outing and a supposedly harmless 'course optimization pilot.'",
-        "When the course fails his standards, Joe refuses to end the work. He commandeers a mower and the maintenance controls to complete the plan before morning.",
-        "The player is a coworker left behind when the gates lock. To Joe, they are no longer a colleague; they are an uncontrolled exposure producing unauthorized variance.",
-        "Joe's product-owner habits make him frighteningly methodical beneath his erratic movements: he observes, prioritizes, tests, and removes obstacles.",
+        "Joe began in the insurer's software division by owning a policy-platform roadmap. He became valued for ruthless backlog clarity, calm stakeholder alignment, and an unnerving ability to turn vague requests into testable outcomes.",
+        "He persuaded facilities, workplace technology, and leadership to sponsor an after-hours golf outing around a supposedly harmless 'course optimization pilot'—a sensor-and-operations product experiment measuring turf consistency, pace of play, and employee engagement.",
+        "When the pilot produces irregular data and the course fails his standards, Joe refuses to close the increment. He commandeers a mower and the maintenance controls to complete the sprint goal before morning.",
+        "The player is a coworker left behind when the gates lock. To Joe, they are no longer a colleague; they are unplanned scope, an unmanaged dependency, and the last blocker between him and release acceptance.",
+        "Joe's Product Owner habits make him frighteningly methodical beneath his erratic movements: he observes behavior, reorders priorities, tests hypotheses, clarifies acceptance criteria, and removes blockers.",
+        "His mower stripes are a physical roadmap. Each cut lane is an accepted increment; each patch of rough is technical debt; every footprint is a defect report; every hiding place is a dependency he has not resolved.",
+        "Joe sincerely believes he is maximizing value for the course, the company, and every stakeholder. The horror deepens because he never sees himself as angry or cruel—only accountable for the product outcome.",
         "Keep Joe sincere and competent. The satire belongs in the collision between corporate process, golf etiquette, and the increasingly impossible course.",
     ):
         add_bullet(doc, item)
@@ -643,6 +648,7 @@ def add_vertical_slice(doc):
         "One fairway, one rough field, one bunker, one pond, one maintenance shed, and one tee checkpoint.",
         "A two-part objective: restore sprinkler pressure, then obtain the exit key.",
         "Golf-ball throwing, crouch, sprint, stamina, and one sprinkler control.",
+        "A 14-second Delivery Chain that scores linked progress, ball recoveries, bunker baits, optional Change Requests, and contact breaks without modifying survival difficulty.",
         "Persistent grass removal and one opened maintenance shortcut.",
         "Joe states: mowing, listening, investigating, watching, and charging.",
         "One optional par-three shot with a small reward.",
@@ -670,6 +676,7 @@ def add_vertical_slice(doc):
         "Persistent mowing changes the preferred route during the same attempt.",
         "The mower's direction and aggression are understandable without a minimap.",
         "The optional golf shot creates a meaningful risk rather than a detached minigame.",
+        "A player can explain what extended or ended a Delivery Chain and can ignore it without losing access to either exit.",
         "The slice produces at least one genuine scare and one unforced laugh.",
     )
     for criterion in criteria:

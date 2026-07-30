@@ -1,6 +1,6 @@
 # Rough Cut
 
-Working directory for a first-person 2.5D pixel-horror game about Joe, a product owner at an insurance company whose obsession with grass, golf, and measurable outcomes turns an after-hours company outing into a lethal course-optimization exercise.
+Working directory for a first-person 2.5D pixel-horror game about Joe, a software Product Owner employed by an insurance company—not an adjuster—whose obsession with grass, golf, prioritized backlogs, and measurable outcomes turns an after-hours company outing into a lethal course-optimization exercise.
 
 **Play the current vertical slice:** [willtran87.github.io/project-rough-cut](https://willtran87.github.io/project-rough-cut/)
 
@@ -21,16 +21,18 @@ The browser build includes:
 - First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
 - A persistent course mini-map with true blocker footprints—including hidden tunnel and shed-wall collision sides—interaction ranges, maintained-course limits, and active-contact highlighting.
 - Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, projected from the same footprints used for collision and line-of-sight cover.
-- A fully decomposed living horizon: an alpha-cut golf-course foreground sits over a dedicated star-and-moon sky while eight independently drifting cloud instances, distant trees, clubhouse lights, and mist move at restrained parallax depths.
+- A fully decomposed living horizon: an alpha-cut golf-course foreground sits over a moonless star field, with the moon, eight independent clouds, a far ridge, distant villas, clubhouse, tree line, and multiple fog bands moving at restrained parallax depths.
+- Dedicated image-generated signage and bunker atlases grounded into the same projected positions, interaction routes, and sand zones used by gameplay.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
 - Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
+- A 14-second Delivery Chain that rewards linking smart plays—course progress, risky ball recoveries, bunker baits, optional paperwork, and contact breaks—without changing survival difficulty.
 - A live letter-only File Projection that reacts to time, attention, resources, optional filings, and recovery plays without exposing exact score optimization during the chase.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
-- Joe-specific character writing throughout the pursuit, plus 30 rotating capture lines paired with six expression portraits on the Claim Denied screen; all dialogue remains subtitle-only.
+- Joe-specific character writing throughout the pursuit, plus 50 rotating capture lines paired with six expression portraits on the Sprint Terminated screen; all dialogue remains subtitle-only.
 - An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
@@ -39,7 +41,7 @@ The browser build includes:
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.
 - A post-mastery Night Order Portfolio: file all three optional Change Requests to permanently select any authored order for deliberate record and Course Echo rematches.
-- Twelve persistent Performance Stamps across the three dossiers—Clean File, Field Recovery, Bunker Clause, and Echo Breaker—reward distinct escape styles and culminate in a gold Master Adjuster presentation.
+- Twelve persistent Performance Stamps across the three dossiers—Clean File, Field Recovery, Bunker Clause, and Echo Breaker—reward distinct escape styles and culminate in a gold Master Product Owner presentation.
 - An unlockable Overtime Audit contract after all three Night Orders: fewer balls, faster pursuit, stronger evidence, a 1.30× score premium, and a separate persistent record.
 - A four-zone reactive horror score that moves from low sub-dread through dissonant search pulses to a pursuit ostinato while preserving spatial mower readability.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
