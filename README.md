@@ -17,12 +17,13 @@ The browser build includes:
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.
 - Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment, a route-colored release seal, and a clean handoff into the scorecard.
 - Precise stepped collision with object-specific authored ellipse footprints, contact callouts, guaranteed escape movement, hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
-- Image-generated key and sprinkler props rendered directly in the world with distance labels, projected use-range rings, explicit in-reach states, and matching mini-map symbols.
-- First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
+- Image-generated key, sprinkler, Change Request, and recoverable-ball props grounded directly into the world with distance labels, projected use-range rings, explicit in-reach states, and matching mini-map symbols.
+- First-person route communication through an obstacle-aware ground ribbon, four variants of image-generated fairway lanterns with projected amber light pools, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
 - A persistent course mini-map with the same player-inflated ellipse footprints used by world collision—including hidden tunnel and shed-wall sides—plus interaction ranges, maintained-course limits, and active-contact highlighting.
 - Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, alpha-cropped and projected so their visible ground contact matches the footprints used for collision and line-of-sight cover.
 - A fully decomposed living horizon: an alpha-cut golf-course foreground sits over a moonless star field, with the moon, eight independent clouds, a far ridge, distant villas, clubhouse, tree line, and multiple fog bands moving at restrained parallax depths.
 - Dedicated image-generated signage and bunker atlases grounded into the same projected positions, interaction routes, and sand zones used by gameplay.
+- A dedicated six-cell course-clutter atlas adds mossy yardage stones, abandoned golf bags, coiled irrigation hose, spilled range balls, rusted mower tools, and damp clipping piles along the course margins without creating dishonest collision.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.

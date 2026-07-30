@@ -893,3 +893,25 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest Joe's event reactions with subtitles enabled and tune bark duration only if rapid stacked events cause one reaction to replace another too quickly.
 - Add additional themed capture packs only when new game systems introduce genuinely new vocabulary; the current 1,490-outcome pool already makes ordinary repetition extremely unlikely.
+
+## Authored Lantern and World-Prop Art Pass - July 30, 2026
+
+- Audited the course renderer for remaining visual stand-ins and found procedural fairway-edge stakes, a canvas-drawn Change Request clipboard, floating treatment for the generated key and sprinkler icons, and a procedural recoverable golf ball.
+- Used built-in image generation to create three high-resolution pixel-art atlases: four weathered path lanterns, four grounded interactable props, and six low-profile course-clutter groups.
+- Removed the flat magenta generation backgrounds with soft alpha mattes and despill, confirmed transparent corners and intact subject silhouettes, and preserved both chroma sources and final alpha PNGs under `assets/environment/generated`.
+- Replaced fairway stakes with projected brass, copper, and iron lanterns that cast amber turf pools, carry tiny reduced-motion-aware insects, alternate damaged fixtures, and inherit the Water Hazard power sag.
+- Replaced the floating key and sprinkler presentation with grounded generated world sprites while preserving range rings, distance labels, reach prompts, interaction geometry, and mini-map behavior.
+- Replaced the procedural Change Request clipboard and recoverable golf ball with generated physical props.
+- Added twelve depth-sorted margin details from the new clutter atlas: yardage stones, abandoned bags, hose, spilled balls, mower tools, and clipping piles.
+- Kept the new clutter low-profile, off the playable route, and explicitly step-over so richer scenery does not introduce invisible collision or invalidate navigation.
+- Extended `render_game_to_text` with visible path-lantern counts, generated asset coverage, the replaced-stand-in list, clutter placement count, and the non-blocking dressing contract.
+- Passed the exact project Playwright client with ten visible opening lanterns and no page or console errors.
+- Visually inspected Audit Row and the sprinkler approach at 1280x720; the authored lanterns read clearly at multiple depths, the valve sits directly on the turf, and the new clutter remains subordinate to gameplay landmarks.
+- Verified the complete stage at 2560x1600: the responsive canvas remained 2508x1403.75 at x=26 and y=98.125 with no document overflow, clipping, page errors, or console errors.
+- Verified the compact 800x600 stage: the canvas remained 769.625x428.016 at x=15.188 and y=85.984 with no overflow, layer drift, page errors, or console errors.
+- Re-ran a pursuit through capture after the visual integration and reached Sprint Terminated normally, confirming that the decorative art pass did not interfere with Joe's chase or defeat transition.
+
+### Next production priorities
+
+- Human-playtest the Water Hazard power sag with the new lantern network and tune only glow strength if the route becomes too bright during blackout.
+- Human-playtest the twelve clutter placements during a full run and move only pieces that compete with moment-to-moment obstacle silhouettes.
