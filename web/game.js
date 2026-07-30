@@ -1094,6 +1094,8 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      liveProjectionTimer: 0,
+      liveProjection: null,
       scorePhase: 0,
       scoreStepIndex: -1,
       scoreBeatPulse: 0,
@@ -1773,6 +1775,218 @@
       echoTimeDelta: null,
       echoOvertaken: false,
     };
+  }
+
+  function projectionGradeRank(grade) {
+    return {
+      D: 0,
+      C: 1,
+      B: 2,
+      A: 3,
+      S: 4,
+    }[grade] ?? 0;
+  }
+
+  function projectionChangeReason(
+    previousBreakdown,
+    nextBreakdown,
+    direction,
+  ) {
+    if (!previousBreakdown) {
+      return "INITIAL FILE";
+    }
+    const labels = {
+      time: "TIME COST",
+      stealth: "ATTENTION COST",
+      resources: "BALL COMMITTED",
+      composure: "COMPOSURE",
+      recovery: "RISK BANKED",
+      changeRequest: "CHANGE REQUEST",
+      bunker: "BUNKER BAIT",
+      overtime: "OVERTIME PREMIUM",
+    };
+    const preferred =
+      direction === "up"
+        ? [
+            "changeRequest",
+            "recovery",
+            "bunker",
+            "resources",
+            "composure",
+            "overtime",
+          ]
+        : [
+            "stealth",
+            "resources",
+            "time",
+            "composure",
+            "overtime",
+          ];
+    let bestKey =
+      direction === "up"
+        ? "composure"
+        : "time";
+    let bestMagnitude = -1;
+    for (const key of preferred) {
+      const delta =
+        (nextBreakdown[key] || 0) -
+        (previousBreakdown[key] || 0);
+      const magnitude =
+        direction === "up"
+          ? delta
+          : -delta;
+      if (magnitude > bestMagnitude) {
+        bestKey = key;
+        bestMagnitude = magnitude;
+      }
+    }
+    if (bestKey === "resources") {
+      return direction === "up"
+        ? "BALL RECOVERED"
+        : "BALL COMMITTED";
+    }
+    return (
+      labels[bestKey] ||
+      "FILE UPDATED"
+    );
+  }
+
+  function syncLiveProjection(
+    result,
+    announce = true,
+  ) {
+    const hole = state.hole;
+    if (!hole || !result) {
+      return;
+    }
+    const previousGrade =
+      hole.liveProjection?.grade || null;
+    const previousBreakdown =
+      hole.liveProjection?.breakdown ||
+      null;
+    const nextRank =
+      projectionGradeRank(
+        result.grade,
+      );
+    const previousRank =
+      previousGrade
+        ? projectionGradeRank(
+            previousGrade,
+          )
+        : nextRank;
+    const gradeDirection =
+      nextRank > previousRank
+        ? "up"
+        : nextRank < previousRank
+          ? "down"
+          : "steady";
+    const changeActive =
+      (
+        hole.liveProjection
+          ?.changeTimer || 0
+      ) > 0 &&
+      hole.liveProjection
+        ?.direction !== "steady";
+    const direction =
+      gradeDirection !== "steady"
+        ? gradeDirection
+        : changeActive
+          ? hole.liveProjection
+              .direction
+          : "steady";
+    hole.liveProjection = {
+      route:
+        result.route || "shed",
+      score: result.score,
+      grade: result.grade,
+      gradeLabel:
+        result.gradeLabel,
+      breakdown: {
+        ...result.breakdown,
+      },
+      direction,
+      reason:
+        gradeDirection !== "steady"
+          ? projectionChangeReason(
+              previousBreakdown,
+              result.breakdown,
+              gradeDirection,
+            )
+          : changeActive
+            ? hole.liveProjection
+                .reason
+            : "FILE HOLDING",
+      changeTimer:
+        announce &&
+        previousGrade &&
+        gradeDirection !== "steady"
+          ? 2.8
+          : Math.max(
+              0,
+              hole.liveProjection
+                ?.changeTimer || 0,
+            ),
+    };
+    if (
+      announce &&
+      previousGrade &&
+      gradeDirection !== "steady"
+    ) {
+      playUiTone(
+        gradeDirection === "up"
+          ? 410
+          : 154,
+        0.085,
+        gradeDirection === "up"
+          ? 0.022
+          : 0.016,
+      );
+    }
+  }
+
+  function updateLiveProjection(dt) {
+    const hole = state.hole;
+    if (!hole) {
+      return;
+    }
+    if (hole.liveProjection) {
+      const previousTimer =
+        hole.liveProjection.changeTimer;
+      hole.liveProjection.changeTimer =
+        Math.max(
+          0,
+          hole.liveProjection
+            .changeTimer - dt,
+        );
+      if (
+        previousTimer > 0 &&
+        hole.liveProjection
+          .changeTimer === 0
+      ) {
+        hole.liveProjection.direction =
+          "steady";
+        hole.liveProjection.reason =
+          "FILE HOLDING";
+      }
+    }
+    hole.liveProjectionTimer -= dt;
+    if (
+      hole.liveProjectionTimer > 0
+    ) {
+      return;
+    }
+    hole.liveProjectionTimer = 0.2;
+    const route =
+      hole.keyCollected
+        ? "shed"
+        : hole.drainUnlocked
+          ? "drain"
+          : hole.liveProjection
+              ?.route || "shed";
+    syncLiveProjection(
+      calculateRunResult(route),
+      true,
+    );
   }
 
   function recordRoundStart() {
@@ -3894,6 +4108,8 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      liveProjectionTimer: 0,
+      liveProjection: null,
       scorePhase: 0,
       scoreStepIndex: -1,
       scoreBeatPulse: 0,
@@ -3901,6 +4117,10 @@
       closestJoeDistance: Infinity,
       chaseClosestDistance: Infinity,
     };
+    syncLiveProjection(
+      calculateRunResult("shed"),
+      false,
+    );
   }
 
   function worldDistance(a, b) {
@@ -4945,6 +5165,10 @@
   function completeHole(route) {
     state.hole.escapeRoute = route;
     state.hole.result = recordVictory(route);
+    syncLiveProjection(
+      state.hole.result,
+      false,
+    );
     state.mode = "victory";
     state.time = 0;
     state.transitionAlpha = 0.75;
@@ -10666,10 +10890,83 @@
     }
 
     const meterX = WIDTH - 304;
+    const liveProjection =
+      hole.liveProjection ||
+      calculateRunResult(
+        hole.keyCollected
+          ? "shed"
+          : hole.drainUnlocked
+            ? "drain"
+            : "shed",
+      );
+    const projectionColor =
+      gradeColor(
+        liveProjection.grade,
+      );
+    const projectionChanging =
+      liveProjection.changeTimer > 0 &&
+      liveProjection.direction !==
+        "steady";
     ctx.fillStyle = "rgba(2,8,5,0.82)";
-    ctx.fillRect(meterX, 36, 264, 124);
-    strokeRect(meterX, 36, 264, 124, hole.joe.mode === "chase" ? "#c84627" : "#536642", 2);
+    ctx.fillRect(meterX, 36, 264, 140);
+    strokeRect(
+      meterX,
+      36,
+      264,
+      140,
+      hole.joe.mode === "chase"
+        ? "#c84627"
+        : projectionChanging
+          ? projectionColor
+          : "#536642",
+      2,
+    );
     drawText("JOE ATTENTION", meterX + 18, 65, 13, "#d7deca", "left");
+    const projectionPulse =
+      state.reducedMotion ||
+      !projectionChanging
+        ? 1
+        : 0.82 +
+          (
+            Math.sin(
+              state.time * 13,
+            ) +
+            1
+          ) *
+            0.09;
+    ctx.save();
+    ctx.globalAlpha =
+      projectionPulse;
+    ctx.fillStyle =
+      projectionChanging
+        ? "rgba(34,48,23,0.96)"
+        : "rgba(18,34,20,0.82)";
+    ctx.fillRect(
+      meterX + 151,
+      48,
+      95,
+      23,
+    );
+    strokeRect(
+      meterX + 151,
+      48,
+      95,
+      23,
+      projectionColor,
+      projectionChanging
+        ? 2
+        : 1,
+    );
+    drawText(
+      `FILE // ${liveProjection.grade}`,
+      meterX + 198,
+      64,
+      10,
+      projectionColor,
+      "center",
+      true,
+    );
+    ctx.restore();
     ctx.fillStyle = "#17231a";
     ctx.fillRect(meterX + 18, 79, 228, 18);
     const attention =
@@ -10720,6 +11017,19 @@
       11,
       playerDistance < 42 ? "#e8a55d" : "#899985",
       "right",
+    );
+    drawText(
+      projectionChanging
+        ? `GRADE ${liveProjection.direction === "up" ? "UP" : "DOWN"} // ${liveProjection.reason}`
+        : "PROJECTED IF FILED NOW",
+      meterX + 132,
+      168,
+      9,
+      projectionChanging
+        ? projectionColor
+        : "#647461",
+      "center",
+      projectionChanging,
     );
     drawCourseMiniMap();
 
@@ -11956,6 +12266,7 @@
           hole.heartbeatTimer = lerp(1.15, 0.42, heartbeatStrength);
         }
         updateReactiveScore(dt);
+        updateLiveProjection(dt);
       }
     }
 
@@ -14796,6 +15107,51 @@
             closeCalls: state.hole.closeCalls,
             razorCuts:
               state.hole.razorCuts,
+            fileProjection:
+              state.hole.liveProjection
+                ? {
+                    score:
+                      state.hole
+                        .liveProjection
+                        .score,
+                    grade:
+                      state.hole
+                        .liveProjection
+                        .grade,
+                    gradeLabel:
+                      state.hole
+                        .liveProjection
+                        .gradeLabel,
+                    routeAssumption:
+                      state.hole
+                        .liveProjection
+                        .route,
+                    direction:
+                      state.hole
+                        .liveProjection
+                        .direction,
+                    reason:
+                      state.hole
+                        .liveProjection
+                        .reason,
+                    changeSeconds:
+                      Number(
+                        state.hole
+                          .liveProjection
+                          .changeTimer
+                          .toFixed(2),
+                      ),
+                    breakdown: {
+                      ...state.hole
+                        .liveProjection
+                        .breakdown,
+                    },
+                    scoringEffect:
+                      "none",
+                    meaning:
+                      "exact result if a valid exit were filed now",
+                  }
+                : null,
             riskPremium: {
               banked:
                 state.hole.riskPremiumBanked,

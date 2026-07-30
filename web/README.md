@@ -32,6 +32,8 @@ Joe's attention is now telegraphed before pursuit locks: sight and sound build t
 
 Pursuit escapes now bank a visible Risk Premium. The live contact-break panel previews the award and raises it smoothly as Joe's closest mower distance falls: a routine break is worth at least 150, a Razor Cut can reach 400, and only the first three breaks score. This preserves the previous 1,200-point recovery ceiling while making the risk/reward legible during play. A reduced-motion-aware bank animation, attention-panel ledger, distinct audio flourish, scorecard breakdown, close-cut count, and Razor Cut recognition carry the result through the full feedback loop.
 
+The attention panel now carries a restrained File Projection using the exact S–D calculation that will be filed on escape. Only the letter class is shown during play; exact points remain in the after-action review so the horror sequence does not become a constant score chase. When the class changes, a short reduced-motion-aware line identifies the dominant cause—time, attention, a committed or recovered ball, an optional Change Request, banked Risk Premium, or Bunker Bait. The projection never alters scoring and synchronizes to the authoritative final result before victory is recorded.
+
 The capture sequence uses the generated `rough-cut-joe-capture-v1.png` tableau and keeps all defeat copy in the renderer so timing, accessibility, and visual grading remain editable.
 
 ## Start locally

@@ -23,6 +23,7 @@ The browser build includes:
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
 - Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
+- A live letter-only File Projection that reacts to time, attention, resources, optional filings, and recovery plays without exposing exact score optimization during the chase.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.

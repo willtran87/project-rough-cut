@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent settings, course grading, personal records, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -62,7 +62,7 @@
 - [x] Support retry, reset, and return-to-menu flows.
 - [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
 - [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
-- [x] Grade completed runs without exposing a constant live score during the horror sequence.
+- [x] Grade completed runs without exposing a constant live score during the horror sequence; the in-run File Projection shows only a letter class and brief cause, while exact points remain in the after-action review.
 - [x] Reward a balanced mix of speed, stealth, saved golf balls, careful movement, and successful pursuit recovery.
 - [x] Persist separate shed- and drain-route personal records plus rounds, escapes, and captures.
 - [x] Rotate three curated objective-and-patrol layouts, identify the upcoming Night Order in the menu, and persist which orders the player has cleared.
