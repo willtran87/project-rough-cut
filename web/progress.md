@@ -716,3 +716,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct short human sessions to compare immediate rematch retention against the former briefing-gated loop.
 - Consider adding a record-gap target only after the active dossier has all four Performance Stamps.
 - Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
+
+## Navigation and Interaction Readability Pass - July 29, 2026
+
+- Replaced the detached half-second collision warning with a 1.15-second object-specific contact treatment that names the blocker, connects the label to its projected world footprint, highlights the same footprint on the mini-map, and gives a concrete escape direction.
+- Fixed the underlying depenetration trap: movement that increases clearance is now accepted even when the player stopped fractionally inside a swept collision radius, so the displayed escape instruction is physically actionable.
+- Added named contact feedback for the west, east, clubhouse, and far-course limits instead of silently clamping the player at an unexplained edge.
+- Reused the image-generated field-kit atlas for full world-space shed-key and sprinkler-valve props, with grounded shadows, restrained glow, distance labels, projected interaction rings, and explicit keyboard/gamepad/touch `IN REACH` states.
+- Brought the existing Unfiled Change clipboard, maintenance shed, and drainage culvert into the same visible interaction-range language.
+- Rebuilt the mini-map blocker layer from real collision radii rather than uniform dots, included the previously omitted hedge-tunnel collision halves, outlined the maintained-course boundary, and added matching use-range rings plus a concise legend.
+- Added nearby blocker footprints to Listening Focus without permanently outlining the whole world; direct collision feedback remains visible regardless of focus.
+- Extended `render_game_to_text` with obstacle landmarks, radii, clearances, exact collision-contact state, every interactable's availability/distance/reach/image contract, and explicit navigation-readability guarantees.
+- Reproduced a service-cart collision, verified the displayed `MOVE RIGHT AWAY` route clears the overlap, visually inspected the connected world and map highlights, reached the generated shed-key image organically, confirmed its exact 10.05-unit in-reach state, and collected it successfully.
+- Re-ran the exact project Playwright client, inspected the latest screenshot and text state, and found no client-reported errors.
+- Verified the compact 800x900 and high-resolution 2560x1440 presentations have no document overflow; production smoke verification remains part of release publishing.
+
+### Next production priorities
+
+- Conduct human route-reading sessions with Listening Focus both used and ignored, then tune how much of each blocker footprint should remain visible outside direct contact.
+- Add an interaction-highlight strength option if players want either subtler horror presentation or stronger low-vision guidance.
+- Replace any future decorative boundary with authored collision and map geometry in the same data definition before it enters a playable route.
