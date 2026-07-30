@@ -937,3 +937,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest the final Service Maze route at normal movement speed and tune only obstacle positions that force map consultation after their first visible reveal.
 - Evaluate whether a unique generated Sprint Review sign atlas is warranted after the reused authored signage has been tested for recognition across all three Night Orders.
+
+## Lateral Camera Movement Pass - July 30, 2026
+
+- Added a stateful lateral camera response driven directly by left/right movement input rather than the player's absolute course position.
+- A sustained walking strafe now eases the rendered world to 42 pixels in the opposite direction and applies a restrained 0.515-degree counter-lean, making the player's body movement legible without destabilizing aiming.
+- Sprinting can increase the response to 56 pixels and 0.688 degrees, while crouching and Listening Focus deliberately use smaller shifts.
+- Applied the motion to the sky, moon, clouds, horizon scenery, playable ground, obstacles, Joe, world effects, and opening foreground grass, with different parallax strengths for near and far layers.
+- Kept the crosshair, objective stack, threat panel, course map, subtitles, prompts, controls, and pause affordance screen fixed.
+- Added a faint leading-edge turf grade and five near-ground speed accents that become visible only during committed lateral movement.
+- Added exponential acceleration and recentering so tapping a direction nudges the view, sustained movement settles cleanly, and releasing input returns the scene to neutral without snapping.
+- Integrated Reduced Camera Motion: lateral translation is limited to 14.28 pixels, counter-roll is disabled, and the speed accents are removed while the positional cue remains readable.
+- Extended `render_game_to_text` with live lateral input, current and target screen shift, current and target roll, reduced-motion mode, HUD anchoring, and world-response contracts.
+- Passed JavaScript syntax and whitespace validation and the exact project Playwright gameplay client with no page or console errors.
+- Deterministically verified right movement at -41.98 pixels/-0.515 degrees, left movement at +41.95 pixels/+0.515 degrees, and a return to -0.07 pixels/0 degrees after release.
+- Verified the reduced-motion path at +/-14.27 pixels and exactly 0 degrees of roll.
+- Visually inspected both movement directions at 1280x720 and the complete stage at 2560x1600 and 800x600; the scene has no exposed corners or world-layer clipping, and the HUD/map remain stable at every size.
+
+### Next production priorities
+
+- Human-playtest walking, sprinting, crouching, and Listening Focus back-to-back; tune the four shift amplitudes only if one stance feels disconnected from its actual speed.
+- Consider a very small forward/back camera pitch response after lateral movement has been accepted, keeping the stable crosshair and Reduced Camera Motion contract intact.
