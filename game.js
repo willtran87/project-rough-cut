@@ -13,14 +13,14 @@
   const MENU_ITEMS = [
     "BEGIN THE ROUND",
     "HOW TO PLAY / SETTINGS",
-    "FILE A CLAIM",
+    "SUBMIT CHANGE REQUEST",
     "REPLAY INCIDENT",
     "CLOCK OUT",
   ];
   const MENU_DESCRIPTIONS = [
     "Enter Hole 1: The Pilot.",
     "Tune audio, captions, and camera motion.",
-    "Report an incident in the rough.",
+    "Request a scope exception from Joe.",
     "Rewatch the opening incident.",
     "End the shift. The course remembers.",
   ];
@@ -145,7 +145,9 @@
   const grassArt = new Image();
   grassArt.src = "./assets/rough-cut-grass-curtain.png";
   const nightSkyArt = new Image();
-  nightSkyArt.src = "./assets/rough-cut-night-sky-v1.png";
+  nightSkyArt.src = "./assets/rough-cut-night-sky-v2.png";
+  const moonArt = new Image();
+  moonArt.src = "./assets/rough-cut-moon-v1.png";
   const holeArt = new Image();
   holeArt.src = "./assets/rough-cut-course-ground-v4.png";
   const cloudAtlasArt = new Image();
@@ -154,6 +156,14 @@
   distantTreeLineArt.src = "./assets/rough-cut-distant-treeline-v1.png";
   const distantClubhouseArt = new Image();
   distantClubhouseArt.src = "./assets/rough-cut-distant-clubhouse-v1.png";
+  const farRidgeArt = new Image();
+  farRidgeArt.src = "./assets/rough-cut-far-ridge-v1.png";
+  const distantVillasArt = new Image();
+  distantVillasArt.src = "./assets/rough-cut-distant-villas-v1.png";
+  const signageAtlasArt = new Image();
+  signageAtlasArt.src = "./assets/rough-cut-signage-atlas-v1.png";
+  const bunkerAtlasArt = new Image();
+  bunkerAtlasArt.src = "./assets/rough-cut-bunker-atlas-v1.png";
   const joeMowerArt = new Image();
   joeMowerArt.src = "./assets/joe-mower-v1.png";
   const joeMowerAnimatedArt = new Image();
@@ -229,16 +239,16 @@
     { id: "acceptance", expression: 1, tone: "DISAPPOINTED", lines: ["You missed the acceptance criteria.", "I did not."] },
     { id: "grass_compliance", expression: 5, tone: "FINAL", lines: ["The grass is compliant.", "You are not."] },
     { id: "stakeholder", expression: 0, tone: "PROFESSIONAL", lines: ["Consider this your final", "stakeholder review."] },
-    { id: "consistent_cut", expression: 1, tone: "CRITICAL", lines: ["I said the cut", "had to be consistent."] },
+    { id: "consistent_cut", expression: 1, tone: "CRITICAL", lines: ["The sprint goal was", "a consistent cut."] },
     { id: "alignment", expression: 3, tone: "COACHING", lines: ["Good effort.", "Terrible alignment."] },
     { id: "edge_case", expression: 4, tone: "DELIGHTED", lines: ["You found the edge case.", "I found you."] },
     { id: "sprint", expression: 5, tone: "FINAL", lines: ["This sprint", "ends here."] },
     { id: "backlog", expression: 0, tone: "SATISFIED", lines: ["The backlog had", "one item left: you."] },
     { id: "circle_back", expression: 3, tone: "HELPFUL", lines: ["We can circle back", "after I finish this row."] },
-    { id: "map", expression: 1, tone: "DISAPPOINTED", lines: ["You treated the map", "like a suggestion."] },
-    { id: "accounted", expression: 5, tone: "METHODICAL", lines: ["Every blade accounted for.", "Every trespasser too."] },
-    { id: "approved", expression: 1, tone: "REJECTED", lines: ["That route", "was never approved."] },
-    { id: "pattern", expression: 0, tone: "SATISFIED", lines: ["You should have stayed", "inside the mowing pattern."] },
+    { id: "roadmap", expression: 1, tone: "DISAPPOINTED", lines: ["You treated my roadmap", "like a suggestion."] },
+    { id: "accounted", expression: 5, tone: "METHODICAL", lines: ["Every blade accounted for.", "Every dependency too."] },
+    { id: "approved", expression: 1, tone: "REJECTED", lines: ["That route", "was never prioritized."] },
+    { id: "pattern", expression: 0, tone: "SATISFIED", lines: ["You should have stayed", "inside the delivery plan."] },
     { id: "quiet", expression: 5, tone: "CALM", lines: ["The course is quiet", "when everyone follows process."] },
     { id: "variance", expression: 2, tone: "ENTHUSIASTIC", lines: ["I love golf.", "I tolerate variance."] },
     { id: "under_par", expression: 3, tone: "AMUSED", lines: ["You're under par", "and out of options."] },
@@ -248,13 +258,33 @@
     { id: "retrospective", expression: 3, tone: "COACHING", lines: ["Let's put this miss", "in the retrospective."] },
     { id: "stakeholders", expression: 2, tone: "DELIGHTED", lines: ["The stakeholders", "are going to love this."] },
     { id: "grass_told", expression: 0, tone: "KNOWING", lines: ["I knew the grass", "would tell me."] },
-    { id: "footprints", expression: 1, tone: "OFFENDED", lines: ["You left footprints", "in my best work."] },
-    { id: "change_request", expression: 3, tone: "HELPFUL", lines: ["Next time,", "bring a change request."] },
+    { id: "footprints", expression: 1, tone: "OFFENDED", lines: ["You left defects", "in my best increment."] },
+    { id: "change_request", expression: 3, tone: "HELPFUL", lines: ["Next time,", "submit the change request."] },
     { id: "improvement", expression: 5, tone: "FINAL", lines: ["There is always room for improvement.", "Just not tonight."] },
-    { id: "escalated", expression: 4, tone: "EXCITED", lines: ["You ran.", "The course escalated."] },
-    { id: "owner", expression: 0, tone: "CERTAIN", lines: ["One course.", "One owner."] },
-    { id: "remembers", expression: 5, tone: "QUIET", lines: ["The fairway", "remembers."] },
-    { id: "par", expression: 2, tone: "GOLF LOGIC", lines: ["Par is a target.", "Compliance is mandatory."] },
+    { id: "escalated", expression: 4, tone: "EXCITED", lines: ["You ran.", "The priority escalated."] },
+    { id: "owner", expression: 0, tone: "CERTAIN", lines: ["One product.", "One owner."] },
+    { id: "remembers", expression: 5, tone: "QUIET", lines: ["The fairway", "remembers every increment."] },
+    { id: "par", expression: 2, tone: "GOLF LOGIC", lines: ["Par is a target.", "Done is non-negotiable."] },
+    { id: "refinement", expression: 3, tone: "HELPFUL", lines: ["We refined this route.", "You were not invited."] },
+    { id: "velocity", expression: 4, tone: "IMPRESSED", lines: ["Excellent velocity.", "Wrong direction."] },
+    { id: "capacity", expression: 1, tone: "CRITICAL", lines: ["You exceeded capacity.", "I corrected it."] },
+    { id: "dependency", expression: 0, tone: "PROFESSIONAL", lines: ["Your escape had", "an unmanaged dependency."] },
+    { id: "story_points", expression: 2, tone: "DELIGHTED", lines: ["I gave that chase", "thirteen story points."] },
+    { id: "standup", expression: 3, tone: "COACHING", lines: ["Save it for standup.", "You are still blocked."] },
+    { id: "ready", expression: 1, tone: "REJECTED", lines: ["You were never", "definition-of-ready."] },
+    { id: "increment", expression: 5, tone: "FINAL", lines: ["This is the final", "course increment."] },
+    { id: "demo", expression: 2, tone: "ENTHUSIASTIC", lines: ["Perfect timing.", "The demo starts now."] },
+    { id: "priority", expression: 0, tone: "CERTAIN", lines: ["I reordered the backlog.", "You came first."] },
+    { id: "technical_debt", expression: 4, tone: "DELIGHTED", lines: ["I found the technical debt.", "It was hiding in the rough."] },
+    { id: "scope_creep", expression: 1, tone: "OFFENDED", lines: ["You call it escape.", "I call it scope creep."] },
+    { id: "release", expression: 5, tone: "FINAL", lines: ["The release is locked.", "So are the gates."] },
+    { id: "epic", expression: 2, tone: "AMUSED", lines: ["That was an epic.", "This is the closeout."] },
+    { id: "user_story", expression: 3, tone: "COACHING", lines: ["As a trespasser,", "you should have stayed home."] },
+    { id: "mvp", expression: 0, tone: "SATISFIED", lines: ["Minimum viable escape.", "Maximum visible failure."] },
+    { id: "backlog_hygiene", expression: 1, tone: "CRITICAL", lines: ["I maintain backlog hygiene.", "And fairway hygiene."] },
+    { id: "release_train", expression: 4, tone: "EXCITED", lines: ["You missed the release train.", "The mower was on time."] },
+    { id: "value", expression: 0, tone: "PROFESSIONAL", lines: ["I maximize value.", "You reduced the cut quality."] },
+    { id: "product_goal", expression: 5, tone: "FINAL", lines: ["The product goal is simple:", "leave no rough behind."] },
   ];
   const JOE_STATE_BARKS = {
     patrol: [
@@ -262,6 +292,12 @@
       "Variance resolved.",
       "Every blade in scope.",
       "The course is behaving again.",
+      "The backlog is healthy.",
+      "Increment accepted.",
+      "Velocity restored.",
+      "Roadmap remains intact.",
+      "Definition of done: immaculate.",
+      "No stakeholder surprises.",
     ],
     investigate: [
       "That was not in the plan.",
@@ -270,6 +306,12 @@
       "This course has standards.",
       "That sound needs an owner.",
       "I can see the variance.",
+      "New dependency identified.",
+      "That was not definition-of-ready.",
+      "I did not prioritize that noise.",
+      "Unplanned work detected.",
+      "This needs refinement.",
+      "Who changed the acceptance criteria?",
     ],
     search: [
       "Let's circle back.",
@@ -278,6 +320,12 @@
       "I have time for follow-up.",
       "The fairway always tells me.",
       "This is still in review.",
+      "You are blocking the sprint goal.",
+      "I am updating the roadmap.",
+      "We will resolve this in standup.",
+      "The backlog does not forget.",
+      "Technical debt hides everywhere.",
+      "I own the next decision.",
     ],
     chase: [
       "Stop moving the goalposts!",
@@ -288,6 +336,12 @@
       "I own this fairway!",
       "Let's close this action item!",
       "You skipped the review!",
+      "You are unplanned scope!",
+      "Acceptance criteria are not optional!",
+      "I just raised the priority!",
+      "This release has no rollback!",
+      "You are blocking delivery!",
+      "We are closing this epic!",
     ],
   };
   const CLOUD_ATLAS_CELL = 512;
@@ -303,6 +357,11 @@
   ];
   const TREE_LINE_SOURCE = { x: 9, y: 373, width: 1650, height: 347 };
   const CLUBHOUSE_SOURCE = { x: 87, y: 289, width: 1516, height: 449 };
+  const MOON_SOURCE = { x: 218, y: 192, width: 830, height: 840 };
+  const FAR_RIDGE_SOURCE = { x: 0, y: 600, width: 1672, height: 341 };
+  const DISTANT_VILLAS_SOURCE = { x: 0, y: 490, width: 1672, height: 210 };
+  const SIGNAGE_ATLAS_CELL = 512;
+  const BUNKER_ATLAS_CELL = 724;
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
   const COURSE_LENGTH = 360;
@@ -319,6 +378,15 @@
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
   const CHANGE_REQUEST_BONUS = 650;
   const BUNKER_TRAP_BONUS = 175;
+  const DELIVERY_CHAIN_WINDOW = 14;
+  const DELIVERY_CHAIN_MAX = 5;
+  const DELIVERY_FAMILY_CAPS = {
+    zone: 3,
+    recovery: 3,
+    bunker: 2,
+    contact: 3,
+    change: 1,
+  };
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
@@ -1272,6 +1340,13 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      deliveryChain: 0,
+      deliveryPeak: 0,
+      deliveryTimer: 0,
+      deliveryBonus: 0,
+      deliveryEvents: [],
+      deliveryFamilyCounts: {},
+      deliveryAward: null,
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -1426,7 +1501,7 @@
     );
   }
 
-  function masterAdjusterUnlocked() {
+  function masterProductOwnerUnlocked() {
     return (
       totalPerformanceStamps() >=
       PERFORMANCE_STAMPS.length *
@@ -1474,11 +1549,11 @@
       !perfectedBefore &&
       stamps.length >=
         PERFORMANCE_STAMPS.length;
-    result.masterAdjusterUnlocked =
+    result.masterProductOwnerUnlocked =
       totalBefore <
         PERFORMANCE_STAMPS.length *
           RUN_VARIANTS.length &&
-      masterAdjusterUnlocked();
+      masterProductOwnerUnlocked();
   }
 
   function portfolioVariant() {
@@ -1572,16 +1647,16 @@
   }
 
   function gradeForScore(score) {
-    if (score >= 6700) {
+    if (score >= 8000) {
       return "S";
     }
-    if (score >= 6000) {
+    if (score >= 7100) {
       return "A";
     }
-    if (score >= 5000) {
+    if (score >= 6200) {
       return "B";
     }
-    if (score >= 4200) {
+    if (score >= 5300) {
       return "C";
     }
     return "D";
@@ -1820,7 +1895,116 @@
       age: 0,
       duration: 2.45,
     };
+    awardDeliveryBeat(
+      tier === "razor"
+        ? "RAZOR CONTACT BREAK"
+        : tier === "close"
+          ? "CLOSE CONTACT BREAK"
+          : "CONTACT BROKEN",
+      tier === "razor"
+        ? 170
+        : tier === "close"
+          ? 140
+          : 110,
+    );
     return hole.riskAward;
+  }
+
+  function deliveryMultiplier(
+    chain,
+  ) {
+    return (
+      1 +
+      Math.max(
+        0,
+        chain - 1,
+      ) *
+        0.3
+    );
+  }
+
+  function awardDeliveryBeat(
+    label,
+    baseAmount,
+  ) {
+    const hole = state.hole;
+    if (
+      !hole ||
+      state.mode !== "first_hole"
+    ) {
+      return null;
+    }
+    const family =
+      label.includes("REACHED")
+        ? "zone"
+        : label.includes("RECOVERY") ||
+            label.includes("BALL RECOVERED")
+          ? "recovery"
+          : label.includes("BUNKER")
+            ? "bunker"
+            : label.includes("CONTACT")
+              ? "contact"
+              : label.includes("CHANGE REQUEST")
+                ? "change"
+                : "other";
+    const familyCap =
+      DELIVERY_FAMILY_CAPS[
+        family
+      ] ?? 1;
+    const familyCount =
+      hole.deliveryFamilyCounts[
+        family
+      ] || 0;
+    if (
+      familyCount >=
+      familyCap
+    ) {
+      return null;
+    }
+    hole.deliveryFamilyCounts[
+      family
+    ] =
+      familyCount + 1;
+    hole.deliveryChain =
+      hole.deliveryTimer > 0
+        ? Math.min(
+            DELIVERY_CHAIN_MAX,
+            hole.deliveryChain + 1,
+          )
+        : 1;
+    hole.deliveryPeak =
+      Math.max(
+        hole.deliveryPeak,
+        hole.deliveryChain,
+      );
+    hole.deliveryTimer =
+      DELIVERY_CHAIN_WINDOW;
+    const multiplier =
+      deliveryMultiplier(
+        hole.deliveryChain,
+      );
+    const amount =
+      Math.round(
+        baseAmount * multiplier,
+      );
+    hole.deliveryBonus += amount;
+    hole.deliveryEvents.push({
+      label,
+      amount,
+      chain:
+        hole.deliveryChain,
+      family,
+    });
+    hole.deliveryAward = {
+      label,
+      amount,
+      chain:
+        hole.deliveryChain,
+      multiplier,
+      age: 0,
+      duration: 2.15,
+    };
+    return hole.deliveryAward;
   }
 
   function calculateRunResult(route) {
@@ -1858,6 +2042,12 @@
         hole.sandTrapCount,
       ) *
       BUNKER_TRAP_BONUS;
+    const deliveryBonus =
+      Number.isFinite(
+        hole.deliveryBonus,
+      )
+        ? hole.deliveryBonus
+        : 0;
     const baseScore =
       3000 +
       timeBonus +
@@ -1867,6 +2057,7 @@
       recoveryBonus +
       changeRequestBonus +
       bunkerTrapBonus +
+      deliveryBonus +
       routeBonus;
     const overtimeBonus = hole.overtime
       ? Math.round(
@@ -1878,11 +2069,11 @@
       baseScore + overtimeBonus;
     const grade = gradeForScore(score);
     const gradeLabels = {
-      S: "UNMANAGEABLE EXPOSURE",
-      A: "OUT OF SCOPE",
-      B: "CONDITIONALLY COVERED",
-      C: "MITIGATION REQUIRED",
-      D: "HIGH-RISK ASSET",
+      S: "SPRINT GOAL EXCEEDED",
+      A: "ACCEPTED INCREMENT",
+      B: "CONDITIONAL ACCEPTANCE",
+      C: "REFINEMENT REQUIRED",
+      D: "RETURNED TO BACKLOG",
     };
     return {
       route,
@@ -1916,6 +2107,11 @@
       riskPremiumBanked: recoveryBonus,
       riskBreakBonuses:
         hole.riskBreakBonuses?.slice() || [],
+      deliveryBonus,
+      deliveryPeak:
+        hole.deliveryPeak || 0,
+      deliveryEvents:
+        hole.deliveryEvents?.slice() || [],
       closestJoeDistance: Number.isFinite(
         hole.closestJoeDistance,
       )
@@ -1929,6 +2125,7 @@
         resources: resourceBonus,
         composure: composureBonus,
         recovery: recoveryBonus,
+        delivery: deliveryBonus,
         changeRequest:
           changeRequestBonus,
         bunker:
@@ -1947,7 +2144,7 @@
           variant.id,
         ).length,
       dossierPerfected: false,
-      masterAdjusterUnlocked: false,
+      masterProductOwnerUnlocked: false,
       echoRoute: null,
       echoScore: null,
       echoTimeDelta: null,
@@ -1979,6 +2176,7 @@
       resources: "BALL COMMITTED",
       composure: "COMPOSURE",
       recovery: "RISK BANKED",
+      delivery: "DELIVERY CHAIN",
       changeRequest: "CHANGE REQUEST",
       bunker: "BUNKER BAIT",
       overtime: "OVERTIME PREMIUM",
@@ -1987,6 +2185,7 @@
       direction === "up"
         ? [
             "changeRequest",
+            "delivery",
             "recovery",
             "bunker",
             "resources",
@@ -2659,6 +2858,202 @@
     }
   }
 
+  function drawMoonLayer(
+    progress,
+    panX,
+    walkBob,
+  ) {
+    const moonSize =
+      126 +
+      progress * 7;
+    const moonX =
+      814 +
+      panX * 0.02 -
+      progress * 3;
+    const moonY =
+      42 -
+      progress * 2 +
+      walkBob * 0.008;
+    const centerX =
+      moonX + moonSize * 0.5;
+    const centerY =
+      moonY + moonSize * 0.5;
+    const pulse =
+      state.reducedMotion
+        ? 0.12
+        : 0.105 +
+          Math.sin(
+            state.hole.elapsed *
+              0.16,
+          ) *
+            0.012;
+    const halo =
+      ctx.createRadialGradient(
+        centerX,
+        centerY,
+        moonSize * 0.2,
+        centerX,
+        centerY,
+        moonSize * 1.35,
+      );
+    halo.addColorStop(
+      0,
+      `rgba(191,218,222,${pulse})`,
+    );
+    halo.addColorStop(
+      0.38,
+      `rgba(116,158,172,${pulse * 0.52})`,
+    );
+    halo.addColorStop(
+      1,
+      "rgba(80,122,143,0)",
+    );
+    ctx.fillStyle = halo;
+    ctx.fillRect(
+      centerX -
+        moonSize * 1.5,
+      centerY -
+        moonSize * 1.5,
+      moonSize * 3,
+      moonSize * 3,
+    );
+    drawParallaxAsset(
+      moonArt,
+      MOON_SOURCE,
+      moonX,
+      moonY,
+      moonSize,
+      moonSize,
+      0.9,
+    );
+  }
+
+  function drawAtmosphericFogBand(
+    y,
+    height,
+    alpha,
+    speed,
+    phase,
+    panX,
+  ) {
+    const drift =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              speed +
+              phase,
+          ) *
+            74;
+    const fog =
+      ctx.createLinearGradient(
+        0,
+        y,
+        0,
+        y + height,
+      );
+    fog.addColorStop(
+      0,
+      "rgba(151,176,174,0)",
+    );
+    fog.addColorStop(
+      0.44,
+      `rgba(151,176,174,${alpha})`,
+    );
+    fog.addColorStop(
+      0.7,
+      `rgba(94,127,125,${alpha * 0.72})`,
+    );
+    fog.addColorStop(
+      1,
+      "rgba(94,127,125,0)",
+    );
+    ctx.fillStyle = fog;
+    ctx.fillRect(
+      -180 +
+        drift +
+        panX * 0.08,
+      y,
+      WIDTH + 360,
+      height,
+    );
+    for (
+      let wisp = 0;
+      wisp < 4;
+      wisp += 1
+    ) {
+      const seed =
+        phase * 41 +
+        wisp * 29;
+      const wispX =
+        (
+          hash(seed) *
+            (WIDTH + 420) +
+          drift *
+            (
+              0.42 +
+              wisp * 0.11
+            )
+        ) %
+          (WIDTH + 420) -
+        210;
+      const wispY =
+        y +
+        height *
+          (
+            0.32 +
+            hash(seed + 7) *
+              0.36
+          );
+      const radiusX =
+        120 +
+        hash(seed + 13) *
+          210;
+      const radiusY =
+        height *
+        (
+          0.11 +
+          hash(seed + 19) *
+            0.13
+        );
+      const haze =
+        ctx.createRadialGradient(
+          wispX,
+          wispY,
+          0,
+          wispX,
+          wispY,
+          radiusX,
+        );
+      haze.addColorStop(
+        0,
+        `rgba(179,195,187,${alpha * 0.56})`,
+      );
+      haze.addColorStop(
+        1,
+        "rgba(179,195,187,0)",
+      );
+      ctx.save();
+      ctx.translate(
+        wispX,
+        wispY,
+      );
+      ctx.scale(
+        1,
+        radiusY /
+          radiusX,
+      );
+      ctx.fillStyle = haze;
+      ctx.fillRect(
+        -radiusX,
+        -radiusX,
+        radiusX * 2,
+        radiusX * 2,
+      );
+      ctx.restore();
+    }
+  }
+
   function drawCourseBackdrop(
     progress,
     walkBob,
@@ -2690,10 +3085,87 @@
       HEIGHT,
     );
 
+    drawMoonLayer(
+      progress,
+      panX,
+      walkBob,
+    );
     drawIndependentClouds(
       progress,
       panX,
       walkBob,
+    );
+
+    const ridgeWidth =
+      1440 *
+      (
+        1 +
+        progress * 0.025
+      );
+    const ridgeHeight =
+      ridgeWidth *
+      FAR_RIDGE_SOURCE.height /
+      FAR_RIDGE_SOURCE.width;
+    const ridgeDrift =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              0.045,
+          ) *
+            2.2;
+    drawParallaxAsset(
+      farRidgeArt,
+      FAR_RIDGE_SOURCE,
+      (
+        WIDTH -
+        ridgeWidth
+      ) *
+        0.5 +
+        panX * 0.075 +
+        ridgeDrift,
+      154 +
+        progress * 1.5,
+      ridgeWidth,
+      ridgeHeight,
+      0.67,
+    );
+
+    const villasWidth =
+      1190 *
+      (
+        1 +
+        progress * 0.032
+      );
+    const villasHeight =
+      villasWidth *
+      DISTANT_VILLAS_SOURCE.height /
+      DISTANT_VILLAS_SOURCE.width;
+    drawParallaxAsset(
+      distantVillasArt,
+      DISTANT_VILLAS_SOURCE,
+      (
+        WIDTH -
+        villasWidth
+      ) *
+        0.5 +
+        panX * 0.115 -
+        progress * 3,
+      184 +
+        progress * 2 +
+        walkBob * 0.02,
+      villasWidth,
+      villasHeight,
+      0.62,
+    );
+
+    drawAtmosphericFogBand(
+      204,
+      112,
+      0.09,
+      0.055,
+      0.8,
+      panX,
     );
 
     const clubhouseWidth =
@@ -2804,6 +3276,15 @@
       treeWidth,
       treeHeight,
       0.58,
+    );
+
+    drawAtmosphericFogBand(
+      244,
+      126,
+      0.075,
+      0.072,
+      2.4,
+      panX,
     );
 
     drawImageCover(
@@ -3202,13 +3683,13 @@
   function drawPortfolioBoard() {
     const unlocked =
       portfolioUnlocked();
-    const masterAdjuster =
-      masterAdjusterUnlocked();
+    const masterProductOwner =
+      masterProductOwnerUnlocked();
     const selected =
       selectedMenuVariant();
     const panel = PORTFOLIO_PANEL;
     ctx.fillStyle = unlocked
-      ? masterAdjuster
+      ? masterProductOwner
         ? "rgba(24,20,7,0.95)"
         : "rgba(5,18,10,0.94)"
       : "rgba(3,13,8,0.9)";
@@ -3223,7 +3704,7 @@
       panel.y,
       panel.width,
       panel.height,
-      masterAdjuster
+      masterProductOwner
         ? "#e0bc59"
         : unlocked
           ? "#92763d"
@@ -3235,7 +3716,7 @@
       panel.x + 24,
       panel.y + 34,
       19,
-      masterAdjuster
+      masterProductOwner
         ? "#f4dc82"
         : unlocked
           ? "#ead58e"
@@ -3244,15 +3725,15 @@
       true,
     );
     drawText(
-      masterAdjuster
-        ? "MASTER ADJUSTER // 12 STAMPS"
+      masterProductOwner
+        ? "MASTER PRODUCT OWNER // 12 STAMPS"
         : unlocked
         ? "RED-PEN AUTHORIZATION"
         : "AUTHORIZATION PENDING",
       panel.x + panel.width - 24,
       panel.y + 32,
       11,
-      masterAdjuster
+      masterProductOwner
         ? "#f0c75d"
         : unlocked
           ? "#e5723a"
@@ -3756,8 +4237,8 @@
       Boolean(state.career.overtimeBest),
     );
 
-    if (state.status.startsWith("COVERAGE DENIED:")) {
-      drawText("COVERAGE DENIED:", 91, 622, 13, "#db8041", "left");
+    if (state.status.startsWith("CHANGE REJECTED:")) {
+      drawText("CHANGE REJECTED:", 91, 622, 13, "#db8041", "left");
       drawText("unauthorized presence in the rough.", 91, 643, 12, "#a7b29e", "left");
     } else {
       drawText(MENU_DESCRIPTIONS[state.menuIndex], 91, 621, 13, "#d0d8bf", "left");
@@ -4144,7 +4625,7 @@
             ? "Hold LB near hard cover or in rough."
             : "Hold C near hard cover or in rough.",
         subdetail:
-          "Closer escapes bank a larger Risk Premium.",
+          "Link breaks, baits, progress, and recoveries for Delivery bonuses.",
       },
     ];
     for (const step of steps) {
@@ -4652,6 +5133,13 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      deliveryChain: 0,
+      deliveryPeak: 0,
+      deliveryTimer: 0,
+      deliveryBonus: 0,
+      deliveryEvents: [],
+      deliveryFamilyCounts: {},
+      deliveryAward: null,
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -6489,6 +6977,10 @@
       `UNFILED CHANGE SECURED // +${CHANGE_REQUEST_BONUS} IF YOU ESCAPE`;
     hole.stateBannerTimer = 3;
     hole.stateBannerLockTimer = 3;
+    awardDeliveryBeat(
+      "CHANGE REQUEST SECURED",
+      180,
+    );
     setHoleMessage(
       `${request.code} SECURED — Joe heard the paperwork. The bonus files only if you escape.`,
       3.7,
@@ -6868,6 +7360,14 @@
       );
     hole.golfBalls += 1;
     hole.ballsRecovered += 1;
+    awardDeliveryBeat(
+      danger.dangerous
+        ? "PRESSURE RECOVERY"
+        : "BALL RECOVERED",
+      danger.dangerous
+        ? 140
+        : 90,
+    );
     hole.noise = Math.max(
       hole.noise,
       danger.dangerous ? 0.32 : 0.18,
@@ -7226,6 +7726,10 @@
       !joe.sand
     ) {
       hole.sandTrapCount += 1;
+      awardDeliveryBeat(
+        "JOE BAITED INTO BUNKER",
+        125,
+      );
       sandTrapTriggered = true;
       addWorldEffect(
         "sand_churn",
@@ -9140,30 +9644,53 @@
         0.28,
         0.9,
       );
-      ctx.fillStyle = "#25331e";
-      ctx.fillRect(
-        point.x - width * 0.5,
-        point.y - height,
-        width,
-        height * 0.48,
-      );
-      strokeRect(
-        point.x - width * 0.5,
-        point.y - height,
-        width,
-        height * 0.48,
-        "#b79557",
-        Math.max(
-          1,
-          point.scale,
-        ),
-      );
+      if (
+        signageAtlasArt.complete &&
+        signageAtlasArt.naturalWidth >
+          0
+      ) {
+        ctx.drawImage(
+          signageAtlasArt,
+          0,
+          0,
+          SIGNAGE_ATLAS_CELL,
+          SIGNAGE_ATLAS_CELL,
+          point.x -
+            width * 0.56,
+          point.y -
+            height * 1.46,
+          width * 1.12,
+          height * 1.46,
+        );
+      } else {
+        ctx.fillStyle =
+          "#25331e";
+        ctx.fillRect(
+          point.x -
+            width * 0.5,
+          point.y - height,
+          width,
+          height * 0.48,
+        );
+        strokeRect(
+          point.x -
+            width * 0.5,
+          point.y - height,
+          width,
+          height * 0.48,
+          "#b79557",
+          Math.max(
+            1,
+            point.scale,
+          ),
+        );
+      }
       if (height > 24) {
         drawText(
           zone.name,
           point.x,
           point.y -
-            height * 0.68,
+            height * 0.93,
           clamp(
             height * 0.14,
             8,
@@ -9174,15 +9701,6 @@
           true,
         );
       }
-      ctx.fillStyle = "#172016";
-      ctx.fillRect(
-        point.x -
-          height * 0.05,
-        point.y -
-          height * 0.52,
-        height * 0.1,
-        height * 0.52,
-      );
     }
     ctx.restore();
   }
@@ -9363,30 +9881,83 @@
         0.72,
       );
       ctx.save();
-      const sand =
-        ctx.createRadialGradient(
-          point.x -
-            horizontalRadius * 0.18,
-          point.y -
-            verticalRadius * 0.16,
+      if (
+        bunkerAtlasArt.complete &&
+        bunkerAtlasArt.naturalWidth >
+          0
+      ) {
+        const atlasIndex =
+          Math.max(
+            0,
+            BUNKER_SAND_ZONES.findIndex(
+              (candidate) =>
+                candidate.id ===
+                zone.id,
+            ),
+          );
+        ctx.globalAlpha = clamp(
+          alpha * 1.35,
+          0.46,
+          0.94,
+        );
+        ctx.drawImage(
+          bunkerAtlasArt,
+          atlasIndex *
+            BUNKER_ATLAS_CELL,
           0,
+          BUNKER_ATLAS_CELL,
+          BUNKER_ATLAS_CELL,
+          point.x -
+            horizontalRadius *
+              1.13,
+          point.y -
+            verticalRadius *
+              3.5,
+          horizontalRadius *
+            2.26,
+          verticalRadius *
+            5.2,
+        );
+        ctx.globalAlpha = 1;
+      } else {
+        const sand =
+          ctx.createRadialGradient(
+            point.x -
+              horizontalRadius *
+                0.18,
+            point.y -
+              verticalRadius *
+                0.16,
+            0,
+            point.x,
+            point.y,
+            horizontalRadius,
+          );
+        sand.addColorStop(
+          0,
+          `rgba(184,145,82,${alpha})`,
+        );
+        sand.addColorStop(
+          0.58,
+          `rgba(125,91,47,${alpha * 0.9})`,
+        );
+        sand.addColorStop(
+          1,
+          `rgba(55,44,27,${alpha * 0.34})`,
+        );
+        ctx.fillStyle = sand;
+        ctx.beginPath();
+        ctx.ellipse(
           point.x,
           point.y,
           horizontalRadius,
+          verticalRadius,
+          zone.rakeAngle,
+          0,
+          Math.PI * 2,
         );
-      sand.addColorStop(
-        0,
-        `rgba(184,145,82,${alpha})`,
-      );
-      sand.addColorStop(
-        0.58,
-        `rgba(125,91,47,${alpha * 0.9})`,
-      );
-      sand.addColorStop(
-        1,
-        `rgba(55,44,27,${alpha * 0.34})`,
-      );
-      ctx.fillStyle = sand;
+        ctx.fill();
+      }
       ctx.beginPath();
       ctx.ellipse(
         point.x,
@@ -9397,7 +9968,6 @@
         0,
         Math.PI * 2,
       );
-      ctx.fill();
       ctx.strokeStyle =
         `rgba(220,181,108,${alpha * 0.66})`;
       ctx.lineWidth = Math.max(
@@ -9704,8 +10274,8 @@
     if (!echo?.position) {
       return;
     }
-    const masterAdjuster =
-      masterAdjusterUnlocked();
+    const masterProductOwner =
+      masterProductOwnerUnlocked();
     const samples =
       echo.record.ghostPath;
     const trailStart =
@@ -9768,7 +10338,7 @@
         life *
         (state.hole.focus ? 0.9 : 0.58);
       ctx.fillStyle =
-        masterAdjuster
+        masterProductOwner
           ? index % 2 === 0
             ? "#d8b654"
             : "#f1dc8e"
@@ -9868,7 +10438,7 @@
         ) < 55
       ) {
         drawText(
-          `${masterAdjuster ? "MASTER ECHO" : "COURSE ECHO"} // ${echo.record.route.toUpperCase()}`,
+          `${masterProductOwner ? "MASTER ECHO" : "COURSE ECHO"} // ${echo.record.route.toUpperCase()}`,
           point.x,
           point.y - radius - 10,
           10,
@@ -11416,7 +11986,7 @@
   }
 
   function drawCourseMiniMap() {
-    const panel = { x: WIDTH - 274, y: 176, width: 234, height: 260 };
+    const panel = { x: WIDTH - 274, y: 210, width: 234, height: 260 };
     const courseEcho =
       currentCourseEcho();
     const guide =
@@ -11758,7 +12328,7 @@
         );
       if (echoSamples.length > 1) {
         ctx.strokeStyle =
-          masterAdjusterUnlocked()
+          masterProductOwnerUnlocked()
             ? "rgba(225,190,91,0.82)"
           : courseEcho.ahead
             ? "rgba(121,214,191,0.72)"
@@ -11789,7 +12359,7 @@
         courseEcho.position.y,
       );
       ctx.fillStyle =
-        masterAdjusterUnlocked()
+        masterProductOwnerUnlocked()
           ? "#e4c25f"
         : courseEcho.ahead
           ? "#85dec7"
@@ -13165,13 +13735,13 @@
     drawText(
       overtime
         ? `AFTER-HOURS TERMS ARE VOLUNTARY. JOE'S ESCALATION IS NOT.  //  DOSSIER ${stampCount}/${PERFORMANCE_STAMPS.length}`
-        : masterAdjusterUnlocked()
-          ? "MASTER ADJUSTER SEAL ACTIVE — ALL ORDERS PERFECTED."
+        : masterProductOwnerUnlocked()
+          ? "MASTER PRODUCT OWNER SEAL ACTIVE — ALL ORDERS PERFECTED."
         : portfolioUnlocked()
           ? `PORTFOLIO OVERRIDE  //  DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
           : stampCount > 0
             ? `DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
-        : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND BANKED RISK PREMIUM.",
+        : "LINK RECOVERIES, BAITS, COURSE PROGRESS, AND CONTACT BREAKS INTO A DELIVERY CHAIN.",
       WIDTH * 0.5,
       184,
       10,
@@ -13217,7 +13787,7 @@
             ? "LB CROUCH  •  LT LISTEN"
             : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN`,
         subdetail:
-          "CLOSER ESCAPES BANK MORE RISK PREMIUM",
+          "SMART PLAYS LINK FOR 14s // CLOSER BREAKS PAY MORE",
       },
     ];
     for (const card of cards) {
@@ -13890,6 +14460,102 @@
     ctx.restore();
   }
 
+  function drawDeliveryAward() {
+    const award =
+      state.hole.deliveryAward;
+    if (!award) {
+      return;
+    }
+    const remaining =
+      award.duration -
+      award.age;
+    const alpha = clamp(
+      Math.min(
+        award.age / 0.14,
+        remaining / 0.34,
+      ),
+      0,
+      1,
+    );
+    const entrance =
+      state.reducedMotion
+        ? 0
+        : (1 -
+            smoothstep(
+              award.age / 0.24,
+            )) *
+          14;
+    const centerX =
+      WIDTH * 0.5;
+    const centerY =
+      334 - entrance;
+    const color =
+      award.chain >=
+      DELIVERY_CHAIN_MAX
+        ? "#f1ca5f"
+        : award.chain >= 3
+          ? "#8fd3a5"
+          : "#79b9a0";
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle =
+      "rgba(2,12,8,0.9)";
+    ctx.fillRect(
+      centerX - 142,
+      centerY - 34,
+      284,
+      58,
+    );
+    strokeRect(
+      centerX - 142,
+      centerY - 34,
+      284,
+      58,
+      color,
+      award.chain >= 4
+        ? 2
+        : 1,
+    );
+    drawText(
+      `${award.label} // DELIVERY ×${award.multiplier.toFixed(1)}`,
+      centerX,
+      centerY - 12,
+      10,
+      color,
+      "center",
+      true,
+    );
+    drawText(
+      `+${award.amount}`,
+      centerX,
+      centerY + 14,
+      23,
+      "#f0ead1",
+      "center",
+      true,
+    );
+    for (
+      let index = 0;
+      index <
+      DELIVERY_CHAIN_MAX;
+      index += 1
+    ) {
+      ctx.fillStyle =
+        index < award.chain
+          ? color
+          : "#26372b";
+      ctx.fillRect(
+        centerX -
+          42 +
+          index * 21,
+        centerY + 18,
+        13,
+        3,
+      );
+    }
+    ctx.restore();
+  }
+
   function drawTouchButton(
     control,
     label,
@@ -14122,7 +14788,7 @@
     const masteryStatus =
       hole.overtime
         ? "OVERTIME"
-        : masterAdjusterUnlocked()
+        : masterProductOwnerUnlocked()
           ? "MASTER"
           : portfolioUnlocked()
             ? "OVERRIDE"
@@ -14283,12 +14949,12 @@
       liveProjection.direction !==
         "steady";
     ctx.fillStyle = "rgba(2,8,5,0.82)";
-    ctx.fillRect(meterX, 36, 264, 140);
+    ctx.fillRect(meterX, 36, 264, 170);
     strokeRect(
       meterX,
       36,
       264,
-      140,
+      170,
       hole.joe.mode === "chase"
         ? "#c84627"
         : projectionChanging
@@ -14393,12 +15059,66 @@
       playerDistance < 42 ? "#e8a55d" : "#899985",
       "right",
     );
+    const deliveryActive =
+      hole.deliveryTimer > 0 &&
+      hole.deliveryChain > 0;
+    const deliveryColor =
+      hole.deliveryChain >=
+      DELIVERY_CHAIN_MAX
+        ? "#efc95e"
+        : deliveryActive
+          ? "#84c9a2"
+          : "#586a59";
+    drawText(
+      deliveryActive
+        ? `DELIVERY ×${deliveryMultiplier(hole.deliveryChain).toFixed(1)}`
+        : "DELIVERY CHAIN",
+      meterX + 18,
+      170,
+      9,
+      deliveryColor,
+      "left",
+      deliveryActive,
+    );
+    drawText(
+      deliveryActive
+        ? `${Math.ceil(hole.deliveryTimer)}s  +${hole.deliveryBonus}`
+        : "LINK SMART PLAYS",
+      meterX + 246,
+      170,
+      9,
+      deliveryColor,
+      "right",
+      deliveryActive,
+    );
+    ctx.fillStyle =
+      "#17251b";
+    ctx.fillRect(
+      meterX + 18,
+      178,
+      228,
+      5,
+    );
+    ctx.fillStyle =
+      deliveryColor;
+    ctx.fillRect(
+      meterX + 18,
+      178,
+      228 *
+        clamp(
+          hole.deliveryTimer /
+            DELIVERY_CHAIN_WINDOW,
+          0,
+          1,
+        ),
+      5,
+    );
     drawText(
       projectionChanging
         ? `GRADE ${liveProjection.direction === "up" ? "UP" : "DOWN"} // ${liveProjection.reason}`
         : "PROJECTED IF FILED NOW",
       meterX + 132,
-      168,
+      199,
       9,
       projectionChanging
         ? projectionColor
@@ -14754,6 +15474,149 @@
     ctx.restore();
   }
 
+  function drawGroundFog(
+    progress,
+    walkBob,
+  ) {
+    for (
+      let layer = 0;
+      layer < 5;
+      layer += 1
+    ) {
+      const depth =
+        layer / 4;
+      const fogY =
+        272 +
+        layer * 84 +
+        progress *
+          (
+            8 +
+            depth * 24
+          ) +
+        walkBob *
+          (
+            0.05 +
+            depth * 0.16
+          );
+      const fogX =
+        state.reducedMotion
+          ? -110
+          : -130 +
+            Math.sin(
+              state.hole.elapsed *
+                (
+                  0.1 +
+                  layer * 0.026
+                ) +
+                layer * 1.7,
+            ) *
+              (
+                54 +
+                layer * 18
+              ) -
+            state.player.x *
+              (
+                0.06 +
+                depth * 0.13
+              );
+      const fog =
+        ctx.createLinearGradient(
+          0,
+          fogY - 34,
+          0,
+          fogY + 78,
+        );
+      fog.addColorStop(
+        0,
+        "rgba(151,170,151,0)",
+      );
+      fog.addColorStop(
+        0.45,
+        `rgba(151,170,151,${0.042 + layer * 0.012})`,
+      );
+      fog.addColorStop(
+        0.72,
+        `rgba(102,130,115,${0.026 + layer * 0.008})`,
+      );
+      fog.addColorStop(
+        1,
+        "rgba(151,170,151,0)",
+      );
+      ctx.fillStyle = fog;
+      ctx.fillRect(
+        fogX,
+        fogY - 34,
+        WIDTH + 280,
+        112,
+      );
+      for (
+        let wisp = 0;
+        wisp < 3;
+        wisp += 1
+      ) {
+        const seed =
+          layer * 43 +
+          wisp * 71;
+        const localX =
+          (
+            hash(seed) *
+              (WIDTH + 360) +
+            fogX *
+              (
+                0.22 +
+                wisp * 0.09
+              )
+          ) %
+            (WIDTH + 360) -
+          180;
+        const radiusX =
+          100 +
+          hash(seed + 9) *
+            180;
+        const radiusY =
+          10 +
+          depth * 15 +
+          hash(seed + 17) *
+            9;
+        const mist =
+          ctx.createRadialGradient(
+            localX,
+            fogY,
+            0,
+            localX,
+            fogY,
+            radiusX,
+          );
+        mist.addColorStop(
+          0,
+          `rgba(177,191,177,${0.024 + depth * 0.025})`,
+        );
+        mist.addColorStop(
+          1,
+          "rgba(177,191,177,0)",
+        );
+        ctx.save();
+        ctx.translate(
+          localX,
+          fogY,
+        );
+        ctx.scale(
+          1,
+          radiusY /
+            radiusX,
+        );
+        ctx.fillStyle = mist;
+        ctx.fillRect(
+          -radiusX,
+          -radiusX,
+          radiusX * 2,
+          radiusX * 2,
+        );
+        ctx.restore();
+      }
+    }
+  }
+
   function drawFirstHole() {
     const key = activeKeyPoint();
     const sprinkler = activeSprinklerPoint();
@@ -14823,18 +15686,10 @@
     drawRecoverableGolfBalls();
     drawChangeRequest();
 
-    for (let layer = 0; layer < 3; layer += 1) {
-      const fogY = 280 + layer * 105;
-      const fogX = state.reducedMotion
-        ? -80
-        : -100 + Math.sin(state.time * (0.13 + layer * 0.04) + layer) * 70;
-      const fog = ctx.createLinearGradient(0, fogY - 30, 0, fogY + 85);
-      fog.addColorStop(0, "rgba(151,170,151,0)");
-      fog.addColorStop(0.5, `rgba(151,170,151,${0.055 + layer * 0.018})`);
-      fog.addColorStop(1, "rgba(151,170,151,0)");
-      ctx.fillStyle = fog;
-      ctx.fillRect(fogX, fogY - 30, WIDTH + 200, 115);
-    }
+    drawGroundFog(
+      progress,
+      walkBob,
+    );
 
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
     drawCourseWayfindingStakes();
@@ -14944,6 +15799,7 @@
     drawFirstHoleOverlay();
     drawEscapeFiling();
     drawJoeStateBanner();
+    drawDeliveryAward();
     drawRiskPremiumAward();
     drawThreatCaptions();
     drawJoeBark();
@@ -14966,7 +15822,7 @@
     ctx.fillStyle = "#010302";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     drawText("SHIFT ENDED", WIDTH * 0.5, HEIGHT * 0.46, 58, "#e9ead1", "center", true);
-    drawText("Your coverage resumes at dawn.", WIDTH * 0.5, HEIGHT * 0.54, 21, "#d57b39", "center");
+    drawText("The release window reopens at dawn.", WIDTH * 0.5, HEIGHT * 0.54, 21, "#d57b39", "center");
     drawText(
       inputCopy(
         "ENTER — RETURN TO MENU",
@@ -15380,6 +16236,18 @@
             : "#d99a5e",
       });
     }
+    if (
+      result.breakdown.delivery > 0
+    ) {
+      scoreNotes.push({
+        text: `+${result.breakdown.delivery.toLocaleString()} DELIVERY CHAIN // PEAK ×${deliveryMultiplier(result.deliveryPeak).toFixed(1)}`,
+        color:
+          result.deliveryPeak >=
+          DELIVERY_CHAIN_MAX
+            ? "#f1ce69"
+            : "#84c9a8",
+      });
+    }
     if (result.overtime) {
       scoreNotes.push({
         text: `+${result.breakdown.overtime.toLocaleString()} OVERTIME PREMIUM`,
@@ -15510,8 +16378,8 @@
       true,
     );
     drawText(
-      result.masterAdjusterUnlocked
-        ? "MASTER ADJUSTER AUTHORIZED — ALL TWELVE PERFORMANCE STAMPS FILED."
+      result.masterProductOwnerUnlocked
+        ? "MASTER PRODUCT OWNER AUTHORIZED — ALL TWELVE PERFORMANCE STAMPS FILED."
         : result.masteryUnlocked &&
       result.portfolioUnlocked
         ? "FULL MASTER FILE — OVERTIME AND PORTFOLIO OVERRIDE AUTHORIZED."
@@ -15538,7 +16406,7 @@
       13,
       result.masteryUnlocked ||
         result.portfolioUnlocked ||
-        result.masterAdjusterUnlocked ||
+        result.masterProductOwnerUnlocked ||
         result.dossierPerfected ||
         result.newPerformanceStamps.length >
           0 ||
@@ -15636,7 +16504,7 @@
     ctx.fillStyle = "#c64626";
     ctx.fillRect(0, panelY, WIDTH, 3);
     drawText(
-      "CLAIM DENIED",
+      "SPRINT TERMINATED",
       WIDTH * 0.5,
       panelY + 44,
       42,
@@ -15645,7 +16513,7 @@
       true,
     );
     drawText(
-      "CAUSE OF LOSS: FAILED TO ESCAPE JOE'S REVIEW",
+      "DELIVERY BLOCKED: FAILED JOE'S ACCEPTANCE REVIEW",
       WIDTH * 0.5,
       panelY + 68,
       12,
@@ -15725,7 +16593,7 @@
       true,
     );
     drawText(
-      "ADJUSTER: JOE  //  STATUS: FINAL",
+      "PRODUCT OWNER: JOE  //  STATUS: BLOCKED",
       dialogueX +
         dialogueWidth -
         14,
@@ -15868,6 +16736,26 @@
           hole.riskAward = null;
         }
       }
+      hole.deliveryTimer =
+        Math.max(
+          0,
+          hole.deliveryTimer - dt,
+        );
+      if (
+        hole.deliveryTimer <= 0
+      ) {
+        hole.deliveryChain = 0;
+      }
+      if (hole.deliveryAward) {
+        hole.deliveryAward.age +=
+          dt;
+        if (
+          hole.deliveryAward.age >=
+          hole.deliveryAward.duration
+        ) {
+          hole.deliveryAward = null;
+        }
+      }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.blockedCueCooldown = Math.max(
         0,
@@ -16001,6 +16889,10 @@
           hole.zoneVisits[zoneIndex] === 1;
         hole.zoneBannerTimer = firstVisit ? 3.4 : 1.45;
         if (firstVisit) {
+          awardDeliveryBeat(
+            `${COURSE_ZONES[zoneIndex].name} REACHED`,
+            70,
+          );
           setHoleMessage(COURSE_ZONES[zoneIndex].cue, 3.4);
           playThreatCue(zoneIndex >= 2 ? "search" : "investigate");
           if (zoneIndex === 2) {
@@ -16386,7 +17278,7 @@
         break;
       case 2:
         state.mode = "claim";
-        state.status = "COVERAGE DENIED: unauthorized presence in the rough.";
+        state.status = "CHANGE REJECTED: unauthorized scope in the rough.";
         break;
       case 3:
         startIntro();
@@ -18829,8 +19721,8 @@
         available:
           PERFORMANCE_STAMPS.length *
           RUN_VARIANTS.length,
-        masterAdjuster:
-          masterAdjusterUnlocked(),
+        masterProductOwner:
+          masterProductOwnerUnlocked(),
         definitions:
           PERFORMANCE_STAMPS.map(
             (stamp) => ({
@@ -19478,6 +20370,38 @@
                     }
                   : null,
             },
+            deliveryChain: {
+              chain:
+                state.hole.deliveryChain,
+              peak:
+                state.hole.deliveryPeak,
+              multiplier:
+                Number(
+                  deliveryMultiplier(
+                    state.hole.deliveryChain,
+                  ).toFixed(1),
+                ),
+              remainingSeconds:
+                Number(
+                  state.hole.deliveryTimer.toFixed(
+                    2,
+                  ),
+                ),
+              windowSeconds:
+                DELIVERY_CHAIN_WINDOW,
+              bonus:
+                state.hole.deliveryBonus,
+              events:
+                state.hole.deliveryEvents.slice(),
+              familyCounts: {
+                ...state.hole.deliveryFamilyCounts,
+              },
+              familyCaps: {
+                ...DELIVERY_FAMILY_CAPS,
+              },
+              rule:
+                "Link smart plays before the timer expires; the chain increases score but never changes survival difficulty.",
+            },
             closestJoeDistance: Number.isFinite(
               state.hole.closestJoeDistance,
             )
@@ -19900,8 +20824,19 @@
             groundingTransparency:
               "alpha_silhouette",
             dedicatedSkyLayer:
-              "night_sky",
+              "moonless_night_sky",
+            moonOwnLayer: true,
             animatedLayers: [
+              {
+                id:
+                  "moon",
+                depth:
+                  "celestial",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "subtle_parallax_and_halo_pulse",
+              },
               {
                 id:
                   "individual_clouds",
@@ -19914,6 +20849,26 @@
                   state.reducedMotion
                     ? "static"
                     : "independent_drift_wrap_bob_and_parallax",
+              },
+              {
+                id:
+                  "far_ridge",
+                depth:
+                  "far_horizon",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "micro_parallax",
+              },
+              {
+                id:
+                  "distant_villas",
+                depth:
+                  "horizon_architecture",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "independent_parallax",
               },
               {
                 id:
@@ -19937,15 +20892,21 @@
               },
               {
                 id:
-                  "horizon_mist",
+                  "layered_fog",
                 depth:
-                  "horizon",
+                  "horizon_and_ground",
                 motion:
                   state.reducedMotion
                     ? "static"
-                    : "slow_drift",
+                    : "multi_speed_drift_and_player_parallax",
               },
             ],
+            groundedFeatureArt: {
+              courseSigns:
+                "dedicated_six_cell_pixel_art_atlas_with_runtime_labels",
+              sandTraps:
+                "dedicated_three_cell_pixel_art_atlas_projected_to_authoritative_terrain_zones",
+            },
           },
           deadGreenLayers: {
             groundAnchored: true,
@@ -20147,12 +21108,18 @@
             },
             character: {
               role:
-                "insurance_product_owner",
+                "software_product_owner_at_an_insurance_company",
+              notAnAdjuster: true,
+              background:
+                "Joe owns the roadmap and prioritized backlog for insurance software. He turned an after-hours course optimization pilot into a literal product increment, treating mowing lines as roadmaps, divots as defects, bunkers as blockers, and the player as unplanned scope.",
               obsessions: [
                 "grass",
                 "golf",
-                "process",
-                "scope",
+                "product_backlogs",
+                "acceptance_criteria",
+                "sprint_goals",
+                "roadmaps",
+                "stakeholder_alignment",
               ],
               activeBark:
                 state.hole
@@ -20234,10 +21201,15 @@
   art.addEventListener("load", render);
   grassArt.addEventListener("load", render);
   nightSkyArt.addEventListener("load", render);
+  moonArt.addEventListener("load", render);
   holeArt.addEventListener("load", render);
   cloudAtlasArt.addEventListener("load", render);
   distantTreeLineArt.addEventListener("load", render);
   distantClubhouseArt.addEventListener("load", render);
+  farRidgeArt.addEventListener("load", render);
+  distantVillasArt.addEventListener("load", render);
+  signageAtlasArt.addEventListener("load", render);
+  bunkerAtlasArt.addEventListener("load", render);
   joeMowerArt.addEventListener("load", render);
   joeMowerAnimatedArt.addEventListener("load", render);
   joeMowerErraticHeadArt.addEventListener("load", render);

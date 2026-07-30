@@ -480,17 +480,17 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Awarded stamps only inside successful result filing, after the authoritative outcome metrics and Echo comparison are known; capture, restart, and pause cannot grant progress.
 - Kept stamps completely outside the score calculation and gameplay modifiers. A maximally qualifying test result retained the exact same 6,950 score before and after stamp filing.
 - Added strict save validation for all three variant buckets, including unknown-ID removal, duplicate suppression, safe empty defaults, and compatibility with career saves that predate stamps.
-- Added dossier perfection at 4/4 and a 12/12 Master Adjuster state without requiring all four behaviors in one run.
-- Expanded every Portfolio dossier with four stamped seals, earned/unearned contrast, a PERFECT mark, total 0/12 progress, and a gold Master Adjuster ledger treatment.
+- Added dossier perfection at 4/4 and a 12/12 Master Product Owner state without requiring all four behaviors in one run.
+- Expanded every Portfolio dossier with four stamped seals, earned/unearned contrast, a PERFECT mark, total 0/12 progress, and a gold Master Product Owner ledger treatment.
 - Added a gold Master Echo cosmetic trail and map marker at 12/12 while preserving the existing ahead/behind pace read.
 - Added stamp counts to survival briefings plus expanded and compact HUD states without turning the four behaviors into mandatory in-run objectives.
-- Added scorecard stamp filing, dossier perfection, and Master Adjuster payoff copy, including a collision-free dense layout with Change Request, bunker, Overtime, and four new stamps in one result.
+- Added scorecard stamp filing, dossier perfection, and Master Product Owner payoff copy, including a collision-free dense layout with Change Request, bunker, Overtime, and four new stamps in one result.
 - Extended `render_game_to_text` with definitions, per-order arrays, total progress, perfected variants, active-run criteria, and the explicit no-balance-effect Portfolio contract.
-- Proved all four qualifying stamps can file together, duplicate results add none, a chased escape does not earn Clean File, an Overtime recovery earns exactly Field Recovery, and the twelfth seal triggers both dossier perfection and Master Adjuster.
+- Proved all four qualifying stamps can file together, duplicate results add none, a chased escape does not earn Clean File, an Overtime recovery earns exactly Field Recovery, and the twelfth seal triggers both dossier perfection and Master Product Owner.
 - Proved capture with qualifying intermediate metrics increments denial history but leaves all stamp arrays empty.
 - Verified pause and Restart retain 12/12 progress and the selected authored order without mutation.
 - Re-ran the exact project Playwright client for clubhouse and first-hole flows, inspected both screenshots and diagnostics, and found no console/page errors.
-- Visually inspected empty, partial, perfected, Master Adjuster, dense scorecard, Master Echo, expanded HUD, compact HUD, and 800×600 / 1280×720 / 2560×1440 layouts with no overflow.
+- Visually inspected empty, partial, perfected, Master Product Owner, dense scorecard, Master Echo, expanded HUD, compact HUD, and 800×600 / 1280×720 / 2560×1440 layouts with no overflow.
 
 ### Next production priorities
 
@@ -781,14 +781,14 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Standardized player-facing naming around **Joe**; “mower” now describes the machine or a terrain interaction instead of functioning as part of Joe's name.
 - Updated and regenerated the project blueprint under the Joe-only naming, and removed the redundant legacy blueprint whose filename still treated “Mower” as part of the character name.
-- Added 30 original capture lines spanning calm, critical, delighted, offended, coaching, and procedural tones, with deterministic variation and immediate-repeat protection.
-- Used built-in image generation to create a six-expression Joe portrait atlas, then paired each capture line with an authored expression on the Claim Denied screen.
+- Added 50 original capture lines spanning calm, critical, delighted, offended, coaching, Agile, Scrum, and software-product tones, with deterministic variation and immediate-repeat protection.
+- Used built-in image generation to create a six-expression Joe portrait atlas, then paired each capture line with an authored expression on the Sprint Terminated screen.
 - Kept all new Joe dialogue subtitle-only, preserving the existing no-synthetic-voice direction.
 - Added concise state-driven barks for patrol, investigate, search, and chase so Joe's insurance product-owner logic, golf etiquette, and grass obsession appear during play without constant chatter.
 - Used built-in image generation to split the distant course into a clean golf-course/sky grounding plate, drifting cloud band, softly glowing clubhouse, independent tree line, and moving horizon mist.
 - Applied separate parallax ratios, scale changes, sway, and restrained light modulation to the layers so forward and lateral movement read in the first-person scene while the world remains visually grounded.
 - Extended `render_game_to_text` with active Joe dialogue, expression and pool metadata, subtitle-only delivery, character traits, and the complete scene-decomposition contract.
-- Verified two consecutive captures select different Joe lines and expressions, inspected the full Claim Denied composition, and confirmed no page or console errors.
+- Verified two consecutive captures select different Joe lines and expressions, inspected the full Sprint Terminated composition, and confirmed no page or console errors.
 
 ## Alpha Ground and Independent Sky Pass - July 30, 2026
 
@@ -805,3 +805,29 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Tune cloud opacity only after human play sessions establish whether the stronger sky motion aids atmosphere without distracting from threat silhouettes.
 - Consider a low-frequency moonlight shift on the turf after the current layer separation is proven comfortable during pursuit.
+
+## Living Course, Product Owner, and Delivery Chain Pass - July 30, 2026
+
+- Replaced the baked celestial composition with a moonless generated sky and a separately composited high-detail moon, including its own subtle parallax and procedural halo.
+- Added generated far-ridge and distant-villa planes behind the existing clubhouse and tree line, with distinct scale, horizontal response, and restrained motion.
+- Expanded the atmosphere into two horizon-fog depths and five ground-fog depths whose drift, bob, and lateral response separate the landscape without hiding navigation or interaction cues.
+- Generated and alpha-cleaned a six-cell wooden/brass course-sign atlas and a three-cell bunker atlas.
+- Replaced procedural zone boards with grounded sign art while preserving runtime labels, and projected the bunker art into the same authoritative terrain zones used by speed, noise, tracks, Joe slowdown, score, and the mini-map.
+- Moved the persistent course map below the expanded attention ledger so the new Delivery Chain display and File Projection remain unobscured.
+- Added a 14-second Delivery Chain that links zone progress, ball recoveries, optional Change Requests, bunker baits, and contact breaks. The chain scales event score from ×1.0 to a capped ×2.2 without altering Joe, stealth, routes, or escape requirements.
+- Bounded every Delivery event family to its authored opportunities—three course transitions, three recoveries, two bunker baits, three contact breaks, and one Change Request—so repeated ball or bunker loops cannot farm unlimited score.
+- Added a live chain timer, five-step meter, reduced-motion-aware event popup, exact File Projection integration, text-state contract, accumulated bonus, peak multiplier, and post-run scorecard entry.
+- Rebalanced S-D thresholds around the new mastery ceiling: a clean opening projection now begins at B, while A and S require meaningful execution rather than appearing automatically before the player makes a decision.
+- Expanded Joe from 30 to 50 capture lines and from small state-bark sets to broad patrol, investigate, search, and chase pools centered on backlog ownership, product goals, refinement, sprint goals, acceptance criteria, dependencies, velocity, stakeholders, releases, and scope.
+- Removed player-facing adjuster, claim-denied, coverage-denied, and Master Adjuster framing. Joe is explicitly a software Product Owner employed by an insurer, not an adjuster; the capture screen now reports `SPRINT TERMINATED` and `PRODUCT OWNER: JOE`.
+- Deepened Joe's canonical background in the blueprint: he owns an internal software roadmap, turned a turf sensor/operations experiment into a course-optimization pilot, and treats mowing lines as roadmaps, rough as technical debt, footprints as defects, bunkers as blockers, weather as a dependency, and the player as unplanned scope.
+- Regenerated the canonical Word blueprint and structurally confirmed the Product Owner correction, Sprint Terminated language, and Delivery Chain content. PNG rendering was unavailable because LibreOffice is not installed in this environment.
+- Passed `node --check`, `git diff --check`, the exact project Playwright client, and dedicated browser validation for a first chain beat, a two-beat ×1.3 chain, 14-second expiry, and retained banked score with no page or console errors.
+- Visually inspected the opening course, active chain HUD, Audit Row transition, generated bunker, zone signage, map/attention layout, independent moon, ridge, villas, and fog layers at the native 1280×720 canvas.
+- Verified the complete composition at 2560×1600 and 800×600: the 1280×720 internal canvas remains stage-anchored, scales to 2508×1404 and 770×428 respectively, and introduces no horizontal or vertical document overflow.
+
+### Next production priorities
+
+- Human-playtest whether 14 seconds encourages varied routing without pulling attention away from Joe; tune only the window and event values, not survival difficulty.
+- Add unique generated art for the pond edge and final hedge tunnel after their collision footprints are proven comfortable under pursuit.
+- Consider a subtle full-chain audio flourish if it remains readable with the mower and threat-caption mix.
