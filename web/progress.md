@@ -851,3 +851,25 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Human-playtest the two hedge tunnels and shed doorway during active pursuit; their openings now have explicit clearance, but chase comfort remains a feel decision.
 - Author ellipse footprints alongside every future generated prop so art, map, player collision, Joe routing, and cover cannot drift apart.
 - Consider a subtle footprint-edit debug overlay for future level-authoring builds, kept out of the player-facing production UI.
+
+## Mower Debris and Horror Effects Pass - July 30, 2026
+
+- Replaced Joe's minimal line-only clipping spray with a capped 190-particle world-space mower-debris simulation.
+- Added physical height, velocity, gravity, drag, spin, bounce, landing, lifetime fading, camera parallax, and two-tone pixel shading to individual grass shavings.
+- Scaled emission density by Joe's patrol, investigate, search, and chase modes so the mower becomes visually more violent as pressure increases.
+- Added terrain variants: soaked turf throws heavier blue-green wet clumps, bunker travel throws granular sand shards, and tight dry routing around cover can produce short orange mower-scrape bursts.
+- Added a restrained grass-dust layer behind the mower deck plus close-pursuit debris and haze near the camera, giving Joe's approach a visible atmospheric wake even before capture distance.
+- Added mower-driven fog shear and a long moon-cast Joe shadow that scales with his threat state.
+- Added independently orbiting floodlight moths whose spread reacts to the Water Hazard power sag.
+- Integrated Reduced Motion across the system: 58% particle density, smaller burst caps, steadier fog and moth movement, and reduced near-camera motion while retaining directional danger information.
+- Extended `render_game_to_text` with live/peak particle counts, the hard cap, total emitted clippings, per-material counts, scrape bursts, fog wake, shadow, lens-debris, floodlight-moth, and reduced-density contracts.
+- Added `mower_effects.json` for deterministic project-client validation.
+- Passed `node --check`, `git diff --check`, the exact project Playwright client, a manually stepped live chase at 26 units, and a Reduced Motion chase with no page or console errors.
+- Visually inspected normal patrol emission and close-pursuit grass rain, dust, fog, long-shadow, vignette, and camera-debris composition at 1280x720.
+- Verified the complete live-chase stage at 2560x1600 and 800x600 with no document overflow or stage drift; the 2560-wide canvas remains 2508x1403.75 and the compact canvas remains 769.625x428.016.
+
+### Next production priorities
+
+- Human-playtest close pursuit with subtitles on and off; tune only near-camera debris opacity if it competes with Joe's directional captions.
+- Consider a player-facing effects-density slider only if Reduced Motion is too large a tradeoff for players who want full camera motion but fewer particles.
+- Add unique audio ticks for rare mower-scrape sparks only after confirming they are not confused with golf-ball impacts or interactable cues.

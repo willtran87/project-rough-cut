@@ -26,6 +26,8 @@ The browser build includes:
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
+- A capped world-space mower-effects system: Joe throws spinning grass shavings with gravity, drag, landing, and camera parallax; soaked turf produces heavy wet clumps, bunkers produce grit, close cover can throw sparks, and pursuit pushes debris toward the camera.
+- Gameplay-linked horror atmosphere including Joe's moving moon shadow, mower-driven fog shear, reactive floodlight moths, grass dust, near-camera debris, and reduced-motion-aware effect density.
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
 - Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.

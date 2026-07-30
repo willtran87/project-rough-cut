@@ -391,6 +391,7 @@
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
   const MAX_PLAYER_TRACKS = 72;
+  const MAX_MOWER_WORLD_PARTICLES = 190;
   const COURSE_ECHO_SAMPLE_SECONDS = 0.4;
   const MAX_COURSE_ECHO_SAMPLES = 260;
   const SPRINKLER_SOAK_SECONDS = 24;
@@ -1216,6 +1217,14 @@
         repathTimer: 0,
         minimumObstacleClearance: 99,
         lastCutPoint: { x: 44, y: 185 },
+        effectLastX: 44,
+        effectLastY: 185,
+        effectHeading: Math.PI * 0.5,
+        effectSpeed: 0,
+        clippingCarry: 0,
+        clippingsEmitted: 0,
+        scrapeCooldown: 0,
+        scrapeBursts: 0,
         wet: false,
         sand: false,
       },
@@ -1305,6 +1314,9 @@
       lastKnownJoeTimer: 0,
       captions: [],
       worldEffects: [],
+      worldParticles: [],
+      nextWorldParticleId: 1,
+      peakWorldParticles: 0,
       screenParticles: [],
       turfMarks: [],
       nextTurfMarkId: 1,
@@ -5009,6 +5021,17 @@
           x: variant.joeStart.x,
           y: variant.joeStart.y,
         },
+        effectLastX:
+          variant.joeStart.x,
+        effectLastY:
+          variant.joeStart.y,
+        effectHeading:
+          Math.PI * 0.5,
+        effectSpeed: 0,
+        clippingCarry: 0,
+        clippingsEmitted: 0,
+        scrapeCooldown: 0,
+        scrapeBursts: 0,
         wet: false,
         sand: false,
       },
@@ -5100,6 +5123,9 @@
       lastKnownJoeTimer: 0,
       captions: [],
       worldEffects: [],
+      worldParticles: [],
+      nextWorldParticleId: 1,
+      peakWorldParticles: 0,
       screenParticles: [],
       turfMarks: [],
       nextTurfMarkId: 1,
@@ -6640,6 +6666,366 @@
     });
   }
 
+  function addMowerWorldParticle(
+    kind,
+    x,
+    y,
+    heading,
+    seed,
+  ) {
+    const hole = state.hole;
+    const forwardX =
+      Math.cos(heading);
+    const forwardY =
+      Math.sin(heading);
+    const sideX = -forwardY;
+    const sideY = forwardX;
+    const serial =
+      hole.nextWorldParticleId;
+    const sideDirection =
+      serial % 2 === 0 ? -1 : 1;
+    const lateral =
+      sideDirection *
+      (
+        2.4 +
+        hash(seed + 3.7) * 4.8
+      );
+    const rear =
+      1.6 +
+      hash(seed + 8.3) * 2.2;
+    const backward =
+      3 +
+      hash(seed + 17.9) * 8;
+    const palette =
+      kind === "wet_clipping"
+        ? [
+            "#79b3a3",
+            "#4c8978",
+            "#b0d6b8",
+          ]
+        : kind === "sand_shard"
+          ? [
+              "#d7bb78",
+              "#a57a42",
+              "#efd79a",
+            ]
+          : kind === "mower_spark"
+            ? [
+                "#fff1a5",
+                "#f2a13e",
+                "#d85a21",
+              ]
+            : [
+                "#b6bb63",
+                "#788b42",
+                "#d0c778",
+                "#4d6f37",
+              ];
+    const color =
+      palette[
+        Math.floor(
+          hash(seed + 22.7) *
+            palette.length,
+        ) %
+          palette.length
+      ];
+    const dust =
+      kind === "grass_dust";
+    const spark =
+      kind === "mower_spark";
+    const wet =
+      kind === "wet_clipping";
+    const sand =
+      kind === "sand_shard";
+    hole.nextWorldParticleId += 1;
+    hole.worldParticles.push({
+      id: serial,
+      kind,
+      layer:
+        dust ? "behind" : "front",
+      x:
+        x -
+        forwardX * rear +
+        sideX *
+          lateral *
+          0.38,
+      y:
+        y -
+        forwardY * rear +
+        sideY *
+          lateral *
+          0.38,
+      z:
+        spark
+          ? 0.2
+          : wet
+            ? 0.1
+            : 0.06,
+      vx:
+        -forwardX * backward +
+        sideX * lateral *
+          (
+            spark
+              ? 2.1
+              : 1.25
+          ),
+      vy:
+        -forwardY * backward +
+        sideY * lateral *
+          (
+            spark
+              ? 2.1
+              : 1.25
+          ),
+      vz:
+        spark
+          ? 1.4 +
+            hash(seed + 29.3) *
+              2.3
+          : dust
+            ? 0.18 +
+              hash(seed + 31.1) *
+                0.34
+            : wet
+              ? 0.75 +
+                hash(seed + 33.7) *
+                  1.25
+              : 0.65 +
+                hash(seed + 35.9) *
+                  1.6,
+      age: 0,
+      duration:
+        spark
+          ? 0.32 +
+            hash(seed + 38.1) *
+              0.22
+          : dust
+            ? 1.25 +
+              hash(seed + 41.3) *
+                0.75
+            : wet
+              ? 0.72 +
+                hash(seed + 43.9) *
+                  0.46
+              : sand
+                ? 0.66 +
+                  hash(seed + 47.1) *
+                    0.5
+                : 0.78 +
+                  hash(seed + 49.7) *
+                    0.72,
+      gravity:
+        spark
+          ? 5.8
+          : dust
+            ? -0.04
+            : wet
+              ? 3.4
+              : 2.45,
+      drag:
+        dust
+          ? 1.75
+          : wet
+            ? 1.15
+            : 0.72,
+      bounce:
+        spark
+          ? 0.34
+          : sand
+            ? 0.18
+            : 0.08,
+      landed: false,
+      rotation:
+        hash(seed + 53.3) *
+        Math.PI *
+        2,
+      spin:
+        (
+          hash(seed + 59.9) -
+          0.5
+        ) *
+        (
+          spark
+            ? 22
+            : 13
+        ),
+      sizeMeters:
+        dust
+          ? 0.18 +
+            hash(seed + 61.7) *
+              0.16
+          : spark
+            ? 0.025 +
+              hash(seed + 67.1) *
+                0.025
+            : wet
+              ? 0.028 +
+                hash(seed + 71.3) *
+                  0.034
+              : 0.024 +
+                hash(seed + 71.3) *
+                  0.038,
+      length:
+        dust
+          ? 1
+          : spark
+            ? 4.5
+            : 1.8 +
+              hash(seed + 73.7) *
+                1.8,
+      color,
+      seed,
+    });
+    if (
+      hole.worldParticles.length >
+      MAX_MOWER_WORLD_PARTICLES
+    ) {
+      hole.worldParticles.splice(
+        0,
+        hole.worldParticles.length -
+          MAX_MOWER_WORLD_PARTICLES,
+      );
+    }
+    hole.peakWorldParticles =
+      Math.max(
+        hole.peakWorldParticles,
+        hole.worldParticles.length,
+      );
+  }
+
+  function updateJoeMowerEffects(dt) {
+    const hole = state.hole;
+    const joe = hole.joe;
+    const deltaX =
+      joe.x - joe.effectLastX;
+    const deltaY =
+      joe.y - joe.effectLastY;
+    const movementDistance =
+      worldDistance(
+        joe,
+        {
+          x: joe.effectLastX,
+          y: joe.effectLastY,
+        },
+      );
+    const movementSpeed =
+      movementDistance /
+      Math.max(0.001, dt);
+    joe.effectSpeed =
+      movementSpeed;
+    if (movementDistance > 0.015) {
+      joe.effectHeading =
+        Math.atan2(
+          deltaY,
+          deltaX,
+        );
+    }
+    joe.effectLastX = joe.x;
+    joe.effectLastY = joe.y;
+    joe.scrapeCooldown =
+      Math.max(
+        0,
+        joe.scrapeCooldown - dt,
+      );
+    if (movementSpeed < 0.4) {
+      return;
+    }
+    const modeMultiplier =
+      joe.mode === "chase"
+        ? 1.58
+        : joe.mode === "search"
+          ? 1.18
+          : joe.mode ===
+              "investigate"
+            ? 1.05
+            : 0.76;
+    const motionScale =
+      state.reducedMotion
+        ? 0.58
+        : 1;
+    joe.clippingCarry +=
+      movementDistance *
+      1.7 *
+      modeMultiplier *
+      motionScale;
+    let quantity = Math.min(
+      state.reducedMotion ? 3 : 7,
+      Math.floor(
+        joe.clippingCarry,
+      ),
+    );
+    joe.clippingCarry -=
+      quantity;
+    while (quantity > 0) {
+      const serial =
+        joe.clippingsEmitted +
+        quantity;
+      const seed =
+        hash(
+          hole.elapsed * 71 +
+            serial * 37 +
+            joe.x * 11 +
+            joe.y * 17,
+        ) *
+        997;
+      const terrainKind =
+        joe.wet
+          ? "wet_clipping"
+          : joe.sand
+            ? "sand_shard"
+            : serial % 6 === 0
+              ? "grass_dust"
+              : "grass_shaving";
+      addMowerWorldParticle(
+        terrainKind,
+        joe.x,
+        joe.y,
+        joe.effectHeading,
+        seed,
+      );
+      joe.clippingsEmitted += 1;
+      quantity -= 1;
+    }
+    const obstacleClearance =
+      joeObstacleClearanceAt(joe);
+    if (
+      joe.routeObstacle &&
+      obstacleClearance < 4.4 &&
+      joe.scrapeCooldown <= 0 &&
+      !joe.wet &&
+      !joe.sand
+    ) {
+      const sparkCount =
+        state.reducedMotion
+          ? 2
+          : joe.mode === "chase"
+            ? 7
+            : 4;
+      for (
+        let index = 0;
+        index < sparkCount;
+        index += 1
+      ) {
+        addMowerWorldParticle(
+          "mower_spark",
+          joe.x,
+          joe.y,
+          joe.effectHeading,
+          hash(
+            hole.elapsed * 127 +
+              index * 43,
+          ) *
+            997,
+        );
+      }
+      joe.scrapeCooldown =
+        joe.mode === "chase"
+          ? 0.46
+          : 0.78;
+      joe.scrapeBursts += 1;
+    }
+  }
+
   function addStepParticles(
     inRough,
     sprinting,
@@ -6753,6 +7139,69 @@
       particle.vy += 118 * dt;
       if (particle.age >= particle.duration) {
         hole.screenParticles.splice(index, 1);
+      }
+    }
+    for (
+      let index =
+        hole.worldParticles.length -
+        1;
+      index >= 0;
+      index -= 1
+    ) {
+      const particle =
+        hole.worldParticles[index];
+      particle.age += dt;
+      const drag =
+        Math.exp(
+          -particle.drag * dt,
+        );
+      particle.vx *= drag;
+      particle.vy *= drag;
+      particle.x +=
+        particle.vx * dt;
+      particle.y +=
+        particle.vy * dt;
+      particle.vz -=
+        particle.gravity * dt;
+      particle.z +=
+        particle.vz * dt;
+      particle.rotation +=
+        particle.spin * dt;
+      if (particle.z <= 0) {
+        particle.z = 0;
+        if (
+          !particle.landed &&
+          particle.bounce > 0.1 &&
+          Math.abs(particle.vz) >
+            0.45
+        ) {
+          particle.vz =
+            -particle.vz *
+            particle.bounce;
+        } else {
+          particle.vz = 0;
+          particle.landed = true;
+          particle.vx *=
+            particle.kind ===
+            "grass_dust"
+              ? 0.94
+              : 0.55;
+          particle.vy *=
+            particle.kind ===
+            "grass_dust"
+              ? 0.94
+              : 0.55;
+          particle.spin *= 0.72;
+        }
+      }
+      if (
+        particle.age >=
+        particle.duration
+      ) {
+        hole.worldParticles.splice(
+          index,
+          1,
+        );
       }
     }
   }
@@ -7999,6 +8448,7 @@
     }
     joe.wet = joeWet;
     joe.sand = joeSand;
+    updateJoeMowerEffects(dt);
     recordJoeCut();
     joe.minimumObstacleClearance = Math.min(
       joe.minimumObstacleClearance,
@@ -11863,6 +12313,280 @@
     ctx.restore();
   }
 
+  function drawJoeFogWake(
+    point,
+    spriteHeight,
+  ) {
+    const joe =
+      state.hole.joe;
+    if (
+      joe.effectSpeed < 0.4
+    ) {
+      return;
+    }
+    const threat =
+      joe.mode === "chase"
+        ? 1
+        : joe.mode === "search"
+          ? 0.64
+          : joe.mode ===
+              "investigate"
+            ? 0.46
+            : 0.3;
+    const wakeCount =
+      state.reducedMotion
+        ? 2
+        : 4;
+    const headingSide =
+      clamp(
+        Math.cos(
+          joe.effectHeading,
+        ),
+        -1,
+        1,
+      );
+    ctx.save();
+    ctx.globalCompositeOperation =
+      "screen";
+    for (
+      let index = 0;
+      index < wakeCount;
+      index += 1
+    ) {
+      const phase =
+        state.reducedMotion
+          ? (index + 0.5) /
+            wakeCount
+          : (
+              state.hole.elapsed *
+                (
+                  0.52 +
+                  index * 0.07
+                ) +
+              index * 0.24
+            ) %
+            1;
+      const spread =
+        (
+          16 +
+          phase *
+            (
+              72 +
+              threat * 46
+            )
+        ) *
+        clamp(
+          point.scale,
+          0.55,
+          1.7,
+        );
+      const wakeX =
+        point.x -
+        headingSide *
+          spread *
+          0.46 +
+        (
+          hash(
+            index * 37 +
+              4,
+          ) -
+          0.5
+        ) *
+          spread *
+          0.42;
+      const wakeY =
+        point.y +
+        2 +
+        phase *
+          Math.min(
+            24,
+            spriteHeight * 0.08,
+          );
+      const radiusX =
+        spread *
+        (
+          0.42 +
+          threat * 0.18
+        );
+      const radiusY =
+        Math.max(
+          3,
+          radiusX *
+            (
+              0.1 +
+              phase * 0.05
+            ),
+        );
+      const wake =
+        ctx.createRadialGradient(
+          wakeX,
+          wakeY,
+          0,
+          wakeX,
+          wakeY,
+          radiusX,
+        );
+      wake.addColorStop(
+        0,
+        `rgba(174,192,165,${
+          (
+            1 -
+            smoothstep(phase)
+          ) *
+          (
+            0.08 +
+            threat * 0.09
+          )
+        })`,
+      );
+      wake.addColorStop(
+        0.5,
+        `rgba(99,125,101,${
+          (
+            1 -
+            smoothstep(phase)
+          ) *
+          (
+            0.035 +
+            threat * 0.05
+          )
+        })`,
+      );
+      wake.addColorStop(
+        1,
+        "rgba(99,125,101,0)",
+      );
+      ctx.save();
+      ctx.translate(
+        wakeX,
+        wakeY,
+      );
+      ctx.scale(
+        1,
+        radiusY /
+          radiusX,
+      );
+      ctx.fillStyle = wake;
+      ctx.beginPath();
+      ctx.arc(
+        0,
+        0,
+        radiusX,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawJoeLongShadow(
+    point,
+    spriteHeight,
+  ) {
+    const joe =
+      state.hole.joe;
+    const threat =
+      joe.mode === "chase"
+        ? 1
+        : joe.mode === "search"
+          ? 0.68
+          : joe.mode ===
+              "investigate"
+            ? 0.48
+            : 0.3;
+    const shadowLength =
+      clamp(
+        spriteHeight *
+          (
+            0.34 +
+            threat * 0.26
+          ),
+        16,
+        150,
+      );
+    const shadowWidth =
+      clamp(
+        spriteHeight * 0.23,
+        7,
+        46,
+      );
+    const moonDirection =
+      -0.72 +
+      clamp(
+        (
+          state.player.x -
+          joe.x
+        ) /
+          280,
+        -0.12,
+        0.12,
+      );
+    const alpha =
+      clamp(
+        0.15 +
+          threat * 0.15 -
+          (
+            state.hole.environment
+              ?.wet
+              ? 0.03
+              : 0
+          ),
+        0.12,
+        0.32,
+      );
+    ctx.save();
+    ctx.translate(
+      point.x,
+      point.y + 2,
+    );
+    ctx.rotate(
+      moonDirection,
+    );
+    const shadow =
+      ctx.createLinearGradient(
+        0,
+        0,
+        shadowLength,
+        0,
+      );
+    shadow.addColorStop(
+      0,
+      `rgba(0,3,1,${alpha})`,
+    );
+    shadow.addColorStop(
+      0.58,
+      `rgba(8,4,3,${
+        alpha * 0.62
+      })`,
+    );
+    shadow.addColorStop(
+      1,
+      "rgba(8,4,3,0)",
+    );
+    ctx.fillStyle = shadow;
+    ctx.beginPath();
+    ctx.moveTo(
+      -shadowWidth,
+      0,
+    );
+    ctx.quadraticCurveTo(
+      shadowLength * 0.5,
+      -shadowWidth * 0.46,
+      shadowLength,
+      0,
+    );
+    ctx.quadraticCurveTo(
+      shadowLength * 0.5,
+      shadowWidth * 0.46,
+      -shadowWidth,
+      0,
+    );
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawJoeRouteWake(point, spriteHeight) {
     const joe = state.hole.joe;
     if (!joe.routeObstacle) {
@@ -11949,6 +12673,14 @@
       ? animatedSpriteWidth
       : staticSpriteWidth;
 
+    drawJoeLongShadow(
+      point,
+      spriteHeight,
+    );
+    drawJoeFogWake(
+      point,
+      spriteHeight,
+    );
     drawJoeRouteWake(point, spriteHeight);
     drawJoeMowerClippings(point, spriteHeight, animation);
 
@@ -12942,6 +13674,333 @@
     drawText(motionLabel, centerX, centerY + 68, 12, "#dfd29c", "center", true);
   }
 
+  function drawMowerWorldParticles(
+    layer,
+  ) {
+    const particles =
+      state.hole.worldParticles;
+    for (
+      let index = 0;
+      index < particles.length;
+      index += 1
+    ) {
+      const particle =
+        particles[index];
+      if (
+        particle.layer !== layer
+      ) {
+        continue;
+      }
+      const point =
+        worldToScreen(
+          particle.x,
+          particle.y,
+        );
+      if (
+        !point.visible ||
+        point.x < -180 ||
+        point.x >
+          WIDTH + 180
+      ) {
+        continue;
+      }
+      const progress = clamp(
+        particle.age /
+          particle.duration,
+        0,
+        1,
+      );
+      const fadeIn =
+        smoothstep(
+          clamp(
+            particle.age /
+              0.08,
+            0,
+            1,
+          ),
+        );
+      const alpha =
+        fadeIn *
+        (
+          1 -
+          smoothstep(progress)
+        );
+      const screenX =
+        point.x;
+      const screenY =
+        point.y -
+        particle.z *
+          point.pixelsPerMeter;
+      const size = clamp(
+        particle.sizeMeters *
+          point.pixelsPerMeter,
+        particle.kind ===
+          "grass_dust"
+          ? 3
+          : 1,
+        particle.kind ===
+          "grass_dust"
+          ? 34
+          : 8,
+      );
+      ctx.save();
+      ctx.translate(
+        Math.round(screenX),
+        Math.round(screenY),
+      );
+      if (
+        particle.kind ===
+        "grass_dust"
+      ) {
+        ctx.globalCompositeOperation =
+          "screen";
+        const puff =
+          ctx.createRadialGradient(
+            0,
+            0,
+            0,
+            0,
+            0,
+            size,
+          );
+        puff.addColorStop(
+          0,
+          `rgba(169,176,111,${
+            alpha * 0.18
+          })`,
+        );
+        puff.addColorStop(
+          0.48,
+          `rgba(91,108,62,${
+            alpha * 0.1
+          })`,
+        );
+        puff.addColorStop(
+          1,
+          "rgba(55,75,43,0)",
+        );
+        ctx.scale(
+          1.45,
+          0.58,
+        );
+        ctx.fillStyle = puff;
+        ctx.beginPath();
+        ctx.arc(
+          0,
+          0,
+          size,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      } else if (
+        particle.kind ===
+        "mower_spark"
+      ) {
+        ctx.rotate(
+          particle.rotation,
+        );
+        ctx.globalCompositeOperation =
+          "screen";
+        ctx.strokeStyle =
+          `rgba(255,117,38,${
+            alpha * 0.36
+          })`;
+        ctx.lineWidth =
+          Math.max(
+            2,
+            size * 2.2,
+          );
+        ctx.beginPath();
+        ctx.moveTo(
+          -size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.lineTo(
+          size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.stroke();
+        ctx.strokeStyle =
+          `${particle.color}${Math.round(
+            alpha * 255,
+          )
+            .toString(16)
+            .padStart(2, "0")}`;
+        ctx.lineWidth =
+          Math.max(1, size);
+        ctx.beginPath();
+        ctx.moveTo(
+          -size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.lineTo(
+          size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.stroke();
+      } else if (
+        particle.kind ===
+        "wet_clipping"
+      ) {
+        ctx.rotate(
+          particle.rotation,
+        );
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle =
+          particle.color;
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          Math.max(
+            1,
+            size * 0.72,
+          ),
+          Math.max(
+            1,
+            size * 1.55,
+          ),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.fillStyle =
+          `rgba(226,244,220,${
+            alpha * 0.72
+          })`;
+        ctx.fillRect(
+          -1,
+          -size * 0.75,
+          1,
+          Math.max(
+            1,
+            size * 0.6,
+          ),
+        );
+      } else if (
+        particle.kind ===
+        "sand_shard"
+      ) {
+        ctx.rotate(
+          particle.rotation,
+        );
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle =
+          particle.color;
+        ctx.fillRect(
+          -size,
+          -size * 0.45,
+          size * 2,
+          Math.max(
+            1,
+            size * 0.9,
+          ),
+        );
+        ctx.fillStyle =
+          `rgba(241,213,151,${
+            alpha * 0.46
+          })`;
+        ctx.fillRect(
+          -size * 0.45,
+          -size * 0.45,
+          size * 0.72,
+          1,
+        );
+      } else {
+        ctx.rotate(
+          particle.landed
+            ? particle.rotation *
+              0.2
+            : particle.rotation,
+        );
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle =
+          "rgba(24,38,15,0.72)";
+        ctx.lineWidth =
+          Math.max(
+            2,
+            size * 1.8,
+          );
+        ctx.beginPath();
+        ctx.moveTo(
+          -size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.quadraticCurveTo(
+          0,
+          -size *
+            (
+              particle.landed
+                ? 0.2
+                : 0.75
+            ),
+          size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.stroke();
+        ctx.strokeStyle =
+          particle.color;
+        ctx.lineWidth =
+          Math.max(1, size);
+        ctx.beginPath();
+        ctx.moveTo(
+          -size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.quadraticCurveTo(
+          0,
+          -size *
+            (
+              particle.landed
+                ? 0.2
+                : 0.75
+            ),
+          size *
+            particle.length *
+            0.5,
+          0,
+        );
+        ctx.stroke();
+        ctx.strokeStyle =
+          `rgba(229,221,137,${
+            alpha * 0.46
+          })`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(
+          -size *
+            particle.length *
+            0.18,
+          -1,
+        );
+        ctx.lineTo(
+          size *
+            particle.length *
+            0.28,
+          -1,
+        );
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   function drawWorldEffects() {
     const hole = state.hole;
     for (const effect of hole.worldEffects) {
@@ -13847,6 +14906,204 @@
       ctx.fillStyle = dread;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
+  }
+
+  function drawNearMowerDebris() {
+    const hole = state.hole;
+    const joeDistance =
+      worldDistance(
+        hole.joe,
+        state.player,
+      );
+    const chase =
+      hole.joe.mode === "chase";
+    const intensity = clamp(
+      (
+        58 -
+        joeDistance
+      ) /
+        42 +
+        (
+          chase
+            ? 0.24
+            : 0
+        ),
+      0,
+      1,
+    );
+    if (intensity <= 0.04) {
+      return;
+    }
+    const count =
+      state.reducedMotion
+        ? 4
+        : Math.round(
+            6 +
+              intensity * 13,
+          );
+    const joeDirection =
+      clamp(
+        (
+          hole.joe.x -
+          state.player.x
+        ) /
+          58,
+        -1,
+        1,
+      );
+    ctx.save();
+    for (
+      let index = 0;
+      index < count;
+      index += 1
+    ) {
+      const seed =
+        hash(index * 67 + 11);
+      const phase =
+        state.reducedMotion
+          ? seed
+          : (
+              state.time *
+                (
+                  0.24 +
+                  seed * 0.48
+                ) +
+              seed * 3.1
+            ) %
+            1;
+      const edge =
+        index % 3;
+      const x =
+        edge === 0
+          ? 18 +
+            seed *
+              (
+                154 +
+                intensity * 42
+              )
+          : edge === 1
+            ? WIDTH -
+              18 -
+              seed *
+                (
+                  154 +
+                  intensity * 42
+                )
+            : WIDTH *
+                (
+                  0.18 +
+                  seed * 0.64
+                ) +
+              joeDirection *
+                intensity *
+                54;
+      const y =
+        edge === 2
+          ? HEIGHT -
+            36 -
+            phase * 176
+          : HEIGHT *
+            (
+              0.34 +
+              phase * 0.56
+            );
+      const size =
+        2 +
+        seed * 4 +
+        intensity * 3;
+      const alpha =
+        (
+          0.12 +
+          intensity * 0.34
+        ) *
+        (
+          1 -
+          smoothstep(phase)
+        );
+      const rotation =
+        seed *
+          Math.PI *
+          2 +
+        (
+          state.reducedMotion
+            ? 0
+            : state.time *
+              (
+                0.7 +
+                seed * 2.4
+              )
+        );
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.strokeStyle =
+        `rgba(8,18,7,${
+          alpha * 0.78
+        })`;
+      ctx.lineWidth =
+        Math.max(
+          2,
+          size * 1.8,
+        );
+      ctx.beginPath();
+      ctx.moveTo(
+        -size * 2.4,
+        0,
+      );
+      ctx.quadraticCurveTo(
+        0,
+        -size * 0.8,
+        size * 2.4,
+        0,
+      );
+      ctx.stroke();
+      ctx.strokeStyle =
+        index % 4 === 0
+          ? `rgba(206,190,93,${alpha})`
+          : `rgba(101,126,57,${alpha})`;
+      ctx.lineWidth =
+        Math.max(1, size);
+      ctx.beginPath();
+      ctx.moveTo(
+        -size * 2.4,
+        0,
+      );
+      ctx.quadraticCurveTo(
+        0,
+        -size * 0.8,
+        size * 2.4,
+        0,
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (chase) {
+      const haze =
+        ctx.createLinearGradient(
+          0,
+          HEIGHT * 0.62,
+          0,
+          HEIGHT,
+        );
+      haze.addColorStop(
+        0,
+        "rgba(88,91,45,0)",
+      );
+      haze.addColorStop(
+        1,
+        `rgba(69,71,32,${
+          intensity * 0.1
+        })`,
+      );
+      ctx.fillStyle = haze;
+      ctx.fillRect(
+        0,
+        HEIGHT * 0.62,
+        WIDTH,
+        HEIGHT * 0.38,
+      );
+    }
+    ctx.restore();
   }
 
   function drawConcealmentEffects() {
@@ -15857,6 +17114,179 @@
     }
   }
 
+  function drawFloodlightMoths() {
+    const floodlight =
+      COURSE_OBSTACLES.find(
+        (obstacle) =>
+          obstacle.id ===
+          "floodlight",
+      );
+    if (!floodlight) {
+      return;
+    }
+    const point = worldToScreen(
+      floodlight.x,
+      floodlight.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -160 ||
+      point.x > WIDTH + 160
+    ) {
+      return;
+    }
+    const power =
+      floodlightPower();
+    const blackout =
+      state.hole.blackoutTimer > 1.2;
+    const insectCount =
+      state.reducedMotion
+        ? 7
+        : 15;
+    const lightY =
+      point.y -
+      clamp(
+        5 *
+          point.pixelsPerMeter,
+        48,
+        210,
+      );
+    ctx.save();
+    ctx.globalCompositeOperation =
+      "screen";
+    for (
+      let index = 0;
+      index < insectCount;
+      index += 1
+    ) {
+      const seed =
+        hash(index * 47 + 8);
+      const orbit =
+        state.reducedMotion
+          ? index *
+            0.71
+          : state.hole.elapsed *
+              (
+                1.4 +
+                seed * 2.8
+              ) *
+              (
+                index % 2 === 0
+                  ? 1
+                  : -1
+              ) +
+            index * 1.91;
+      const scatter =
+        blackout
+          ? 1.6
+          : 1;
+      const radiusX =
+        (
+          12 +
+          seed * 62
+        ) *
+        point.scale *
+        scatter;
+      const radiusY =
+        (
+          7 +
+          hash(index * 31 + 5) *
+            38
+        ) *
+        point.scale *
+        scatter;
+      const mothX =
+        point.x +
+        Math.cos(orbit) *
+          radiusX;
+      const mothY =
+        lightY +
+        Math.sin(
+          orbit *
+            (
+              1.4 +
+              seed * 0.7
+            ),
+        ) *
+          radiusY;
+      const wing =
+        Math.max(
+          1,
+          Math.round(
+            clamp(
+              point.scale *
+                (
+                  1.1 +
+                  seed * 1.7
+                ),
+              1,
+              4,
+            ),
+          ),
+        );
+      const flicker =
+        state.reducedMotion
+          ? 0.62
+          : 0.44 +
+            Math.abs(
+              Math.sin(
+                state.hole.elapsed *
+                  11 +
+                  index * 2.7,
+              ),
+            ) *
+              0.48;
+      ctx.fillStyle =
+        `rgba(255,208,116,${
+          (
+            0.18 +
+            power * 0.58
+          ) *
+          flicker
+        })`;
+      ctx.fillRect(
+        Math.round(
+          mothX - wing * 1.5,
+        ),
+        Math.round(mothY),
+        wing,
+        Math.max(
+          1,
+          Math.round(wing * 0.65),
+        ),
+      );
+      ctx.fillRect(
+        Math.round(
+          mothX + wing * 0.5,
+        ),
+        Math.round(mothY),
+        wing,
+        Math.max(
+          1,
+          Math.round(wing * 0.65),
+        ),
+      );
+      ctx.fillStyle =
+        `rgba(231,234,183,${
+          (
+            0.24 +
+            power * 0.54
+          ) *
+          flicker
+        })`;
+      ctx.fillRect(
+        Math.round(mothX),
+        Math.round(
+          mothY -
+            wing * 0.5,
+        ),
+        1,
+        Math.max(2, wing),
+      );
+    }
+    ctx.restore();
+  }
+
   function drawFirstHole() {
     const key = activeKeyPoint();
     const sprinkler = activeSprinklerPoint();
@@ -15935,7 +17365,14 @@
     drawCourseWayfindingStakes();
     drawWorldNavigationRibbon();
     drawCourseCollisionFootprints();
+    drawMowerWorldParticles(
+      "behind",
+    );
     drawLayeredCourseEntities();
+    drawMowerWorldParticles(
+      "front",
+    );
+    drawFloodlightMoths();
     drawWorldEffects();
     drawNearbyBlockerCallouts();
 
@@ -16032,6 +17469,7 @@
 
     drawSuspenseEffects();
     drawPursuitEffects();
+    drawNearMowerDebris();
     drawConcealmentEffects();
     drawListeningFocus();
     drawContactBreakFeedback();
@@ -20991,7 +22429,22 @@
                 }
               : null,
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
-          activeEffects: state.hole.worldEffects.map((effect) => effect.kind),
+          activeEffects: [
+            ...state.hole
+              .worldEffects
+              .map(
+                (effect) =>
+                  effect.kind,
+              ),
+            ...new Set(
+              state.hole
+                .worldParticles
+                .map(
+                  (particle) =>
+                    particle.kind,
+                ),
+            ),
+          ],
           visibleObstacles: visibleObstacleState(),
           interactables:
             interactableWorldState(),
@@ -21357,6 +22810,82 @@
               frame: joeAnimationState().frame,
               sequenceIndex: joeAnimationState().sequenceIndex,
               fps: joeAnimationState().fps,
+            },
+            effects: {
+              system:
+                "world_space_mower_debris",
+              alive:
+                state.hole
+                  .worldParticles
+                  .length,
+              peakAlive:
+                state.hole
+                  .peakWorldParticles,
+              cap:
+                MAX_MOWER_WORLD_PARTICLES,
+              totalClippingsEmitted:
+                state.hole.joe
+                  .clippingsEmitted,
+              grassShavingsAlive:
+                state.hole
+                  .worldParticles
+                  .filter(
+                    (particle) =>
+                      particle.kind ===
+                      "grass_shaving",
+                  ).length,
+              driftingDustAlive:
+                state.hole
+                  .worldParticles
+                  .filter(
+                    (particle) =>
+                      particle.kind ===
+                      "grass_dust",
+                  ).length,
+              wetClippingsAlive:
+                state.hole
+                  .worldParticles
+                  .filter(
+                    (particle) =>
+                      particle.kind ===
+                      "wet_clipping",
+                  ).length,
+              sandShardsAlive:
+                state.hole
+                  .worldParticles
+                  .filter(
+                    (particle) =>
+                      particle.kind ===
+                      "sand_shard",
+                  ).length,
+              sparksAlive:
+                state.hole
+                  .worldParticles
+                  .filter(
+                    (particle) =>
+                      particle.kind ===
+                      "mower_spark",
+                  ).length,
+              scrapeBursts:
+                state.hole.joe
+                  .scrapeBursts,
+              fogWake:
+                state.hole.joe
+                  .effectSpeed >
+                0.4,
+              longMoonShadow:
+                true,
+              nearCameraDebris:
+                worldDistance(
+                  state.hole.joe,
+                  state.player,
+                ) < 58,
+              floodlightMoths:
+                true,
+              reducedMotionDensity:
+                state.reducedMotion
+                  ? 0.58
+                  : 1,
             },
             character: {
               role:
