@@ -676,3 +676,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human play sessions to tune the 0.48-second seal against the final audio chord and result-screen reveal.
 - Run longer organic pursuit sessions to tune the 30m-to-10m Risk Premium curve against human risk perception.
 - Consider an authored route-specific camera nudge only if the static release seal still feels underpowered in real play.
+
+## After-Action One-More-Run Hub - July 29, 2026
+
+- Audited the existing replay loop and found that records, Course Echoes, Night Orders, and Performance Stamps were all tracked, but victory and defeat collapsed those motivations into one generic retry action.
+- Rebuilt both result screens around three immediate choices: Rematch File keeps the current authored dossier, Next Order advances directly to the next curated layout, and Clubhouse returns to records, contracts, settings, and accessibility.
+- Added a dynamic next-action recommendation that finds the first unearned Performance Stamp for the current Night Order and makes it the visible rematch target; perfected dossiers instead invite the player to defend the complete file and improve its record.
+- Preserved fast failure recovery: the selected action defaults to Rematch File, so Enter/A still restarts immediately without an extra menu or delay.
+- Added keyboard left/right plus Enter, gamepad D-pad plus A, pointer hover/click, and expanded synthetic-touch hit regions, with input-specific help copy and a direct Escape/B Clubhouse path.
+- Added a route-compatible Next Order handoff that advances by authored variant index even when a persistent Portfolio Override exists, without mutating that saved Clubhouse selection.
+- Added selected-state pulse, top-edge accent, target subtitles, route/defeat color treatment, and concise explanatory copy while keeping the underlying victory scorecard and Joe capture tableau readable.
+- Extended `render_game_to_text` with the selected result action, all three labels/details/descriptions, the next Performance Stamp target, the next Night Order, and complete keyboard/gamepad/touch contracts.
+- Proved keyboard Rematch preserves the current dossier, keyboard Next Order advances to the expected layout, pointer hover and click return to Clubhouse, touch Next Order advances correctly, and a simulated standard gamepad selects and confirms Next Order.
+- Visually inspected settled victory, selected defeat, and compact 800x900 result presentations; verified 1280x720 and 2560x1440 layouts with no document overflow or page/console errors.
+- Re-ran the exact project Playwright client, inspected its screenshot and text state, and found no client-reported errors.
+
+### Next production priorities
+
+- Conduct short human “one more run” sessions to tune whether Performance Stamp targets or personal-record gaps are the stronger default rematch motivator.
+- Consider surfacing a record-gap target only when the active dossier has already earned all four stamps.
+- Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.

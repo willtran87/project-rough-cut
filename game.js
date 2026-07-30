@@ -37,6 +37,11 @@
     "Reset Hole 1 and begin again from the tee.",
     "Abandon this attempt and return to the main menu.",
   ];
+  const RESULT_ACTION_IDS = [
+    "rematch",
+    "next_order",
+    "clubhouse",
+  ];
   const PORTFOLIO_PANEL = {
     x: 558,
     y: 78,
@@ -938,6 +943,7 @@
     time: 0,
     menuIndex: 0,
     pauseIndex: 0,
+    resultIndex: 0,
     stingerPlayed: false,
     subtitles: savedPreferences.subtitles,
     subtitleSize: savedPreferences.subtitleSize,
@@ -5522,6 +5528,7 @@
       state.hole.result,
       false,
     );
+    state.resultIndex = 0;
     state.mode = "victory";
     state.time = 0;
     state.transitionAlpha = 0.75;
@@ -6452,6 +6459,7 @@
           "CAPTURED";
       }
       recordCapture();
+      state.resultIndex = 0;
       state.mode = "defeat";
       state.time = 0;
       state.transitionAlpha = 0.6;
@@ -12203,6 +12211,256 @@
     );
   }
 
+  function nextNightOrderVariant() {
+    return RUN_VARIANTS[
+      (
+        state.hole.variantIndex +
+        1
+      ) %
+        RUN_VARIANTS.length
+    ];
+  }
+
+  function nextPerformanceTarget() {
+    const variant =
+      activeRunVariant();
+    const earned =
+      performanceStampsFor(
+        variant.id,
+      );
+    const target =
+      PERFORMANCE_STAMPS.find(
+        (stamp) =>
+          !earned.includes(
+            stamp.id,
+          ),
+      );
+    if (target) {
+      return {
+        id: target.id,
+        name: target.name,
+        shortName:
+          target.shortName,
+        hint: target.hint,
+        complete: false,
+      };
+    }
+    return {
+      id: "perfect_file",
+      name: "PERFECT FILE",
+      shortName: "PERFECT",
+      hint:
+        "Defend all four stamps and improve the record",
+      complete: true,
+    };
+  }
+
+  function resultActionPresentations(
+    outcome,
+  ) {
+    const target =
+      nextPerformanceTarget();
+    const nextVariant =
+      nextNightOrderVariant();
+    return [
+      {
+        id: "rematch",
+        label:
+          outcome === "defeat"
+            ? "RETRY FILE"
+            : "REMATCH FILE",
+        detail:
+          `TARGET // ${target.shortName}`,
+        description:
+          `${target.name} — ${target.hint}.`,
+      },
+      {
+        id: "next_order",
+        label: "NEXT ORDER",
+        detail:
+          `ORDER ${String(nextVariant.number).padStart(2, "0")} // ${nextVariant.shortName}`,
+        description:
+          `Advance to Night Order ${String(nextVariant.number).padStart(2, "0")}: ${nextVariant.name}.`,
+      },
+      {
+        id: "clubhouse",
+        label: "CLUBHOUSE",
+        detail:
+          "RECORDS // SETTINGS",
+        description:
+          "Review records, contracts, accessibility, and audio.",
+      },
+    ];
+  }
+
+  function resultActionGeometry(
+    index,
+  ) {
+    return {
+      x: 260 + index * 260,
+      y: 600,
+      width: 240,
+      height: 62,
+    };
+  }
+
+  function resultActionIndexAt(
+    point,
+  ) {
+    if (
+      state.mode !== "victory" &&
+      state.mode !== "defeat"
+    ) {
+      return -1;
+    }
+    for (
+      let index = 0;
+      index <
+      RESULT_ACTION_IDS.length;
+      index += 1
+    ) {
+      const geometry =
+        resultActionGeometry(
+          index,
+        );
+      if (
+        point.x >=
+          geometry.x - 8 &&
+        point.x <=
+          geometry.x +
+            geometry.width +
+            8 &&
+        point.y >= 580 &&
+        point.y <= 694
+      ) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function drawResultActions(
+    outcome,
+    accent,
+  ) {
+    const actions =
+      resultActionPresentations(
+        outcome,
+      );
+    const selected =
+      actions[state.resultIndex];
+    const pulse =
+      state.reducedMotion
+        ? 1
+        : 0.86 +
+          Math.sin(state.time * 5.2) *
+            0.14;
+    drawText(
+      `NEXT ACTION // ${selected.description}`,
+      WIDTH * 0.5,
+      588,
+      11,
+      "#c8d1bd",
+      "center",
+    );
+    for (
+      let index = 0;
+      index < actions.length;
+      index += 1
+    ) {
+      const action =
+        actions[index];
+      const geometry =
+        resultActionGeometry(
+          index,
+        );
+      const isSelected =
+        index === state.resultIndex;
+      ctx.fillStyle =
+        isSelected
+          ? outcome === "defeat"
+            ? `rgba(100,20,8,${0.52 + pulse * 0.16})`
+            : `rgba(46,73,39,${0.5 + pulse * 0.15})`
+          : "rgba(7,18,10,0.82)";
+      ctx.fillRect(
+        geometry.x,
+        geometry.y,
+        geometry.width,
+        geometry.height,
+      );
+      strokeRect(
+        geometry.x,
+        geometry.y,
+        geometry.width,
+        geometry.height,
+        isSelected
+          ? accent
+          : "#3b4b38",
+        isSelected ? 2 : 1,
+      );
+      if (isSelected) {
+        ctx.fillStyle = accent;
+        ctx.fillRect(
+          geometry.x,
+          geometry.y,
+          geometry.width,
+          3,
+        );
+        polygon([
+          [
+            geometry.x + 15,
+            geometry.y + 23,
+          ],
+          [
+            geometry.x + 24,
+            geometry.y + 31,
+          ],
+          [
+            geometry.x + 15,
+            geometry.y + 39,
+          ],
+        ]);
+      }
+      drawText(
+        action.label,
+        geometry.x +
+          geometry.width * 0.5,
+        geometry.y + 27,
+        15,
+        isSelected
+          ? "#f3ebcf"
+          : "#aeb9a5",
+        "center",
+        isSelected,
+      );
+      drawText(
+        action.detail,
+        geometry.x +
+          geometry.width * 0.5,
+        geometry.y + 49,
+        10,
+        isSelected
+          ? accent
+          : "#758373",
+        "center",
+        isSelected,
+      );
+    }
+    drawText(
+      inputCopy(
+        "← → SELECT  •  ENTER CONFIRM  •  ESC CLUBHOUSE",
+        "D-PAD SELECT  •  A CONFIRM  •  B CLUBHOUSE",
+        "TAP AN ACTION",
+      ),
+      WIDTH * 0.5,
+      688,
+      10,
+      "#8e9b88",
+      "center",
+      true,
+    );
+  }
+
   function drawVictory() {
     const reveal = smoothstep(state.time / 0.48);
     const usedDrain = state.hole.escapeRoute === "drain";
@@ -12230,7 +12488,7 @@
       HEIGHT * 0.12,
     );
 
-    const panel = { x: 220, y: 82, width: 840, height: 556 };
+    const panel = { x: 220, y: 70, width: 840, height: 632 };
     ctx.save();
     ctx.globalAlpha = reveal;
     ctx.translate(0, (1 - reveal) * 28);
@@ -12521,18 +12779,9 @@
         : "#d69a5c",
       "center",
     );
-    drawText(
-      inputCopy(
-        "ENTER — PLAY AGAIN     ESC — MAIN MENU",
-        "A — PLAY AGAIN     B — MAIN MENU",
-        "TAP — PLAY AGAIN",
-      ),
-      WIDTH * 0.5,
-      610,
-      15,
-      "#e7e4ca",
-      "center",
-      true,
+    drawResultActions(
+      "victory",
+      routeAccent,
     );
     ctx.restore();
 
@@ -12581,19 +12830,10 @@
       "#e6ad84",
       "center",
     );
-    drawText("ADJUSTER: JOE  •  STATUS: FINAL", WIDTH * 0.5, panelY + 143, 13, "#bda99b", "center");
-    drawText(
-      inputCopy(
-        "ENTER — RETRY HOLE 1     ESC — MAIN MENU",
-        "A — RETRY HOLE 1     B — MAIN MENU",
-        "TAP — RETRY HOLE 1",
-      ),
-      WIDTH * 0.5,
-      panelY + 203,
-      15,
-      "#f1e8d0",
-      "center",
-      true,
+    drawText("ADJUSTER: JOE  •  STATUS: FINAL", WIDTH * 0.5, panelY + 132, 13, "#bda99b", "center");
+    drawResultActions(
+      "defeat",
+      "#c64626",
     );
     ctx.restore();
   }
@@ -14665,7 +14905,13 @@
     } else if (state.mode === "clocked_out") {
       enterMenu();
     } else if (state.mode === "victory" || state.mode === "defeat") {
-      retryFirstHole();
+      const resultIndex =
+        resultActionIndexAt(point);
+      if (resultIndex >= 0) {
+        state.resultIndex =
+          resultIndex;
+        activateResultAction();
+      }
     }
   }
 
@@ -14685,7 +14931,9 @@
       state.mode !== "menu" &&
       state.mode !== "claim" &&
       state.mode !== "paused" &&
-      state.mode !== "settings"
+      state.mode !== "settings" &&
+      state.mode !== "victory" &&
+      state.mode !== "defeat"
     ) {
       return;
     }
@@ -14733,6 +14981,25 @@
       if (index >= 0 && index !== state.pauseIndex) {
         state.pauseIndex = index;
         playUiTone(190 + index * 14, 0.045, 0.016);
+      }
+    } else if (
+      state.mode === "victory" ||
+      state.mode === "defeat"
+    ) {
+      const index =
+        resultActionIndexAt(
+          canvasPoint(event),
+        );
+      if (
+        index >= 0 &&
+        index !== state.resultIndex
+      ) {
+        state.resultIndex = index;
+        playUiTone(
+          190 + index * 42,
+          0.045,
+          0.016,
+        );
       }
     } else {
       const index = menuIndexAt(canvasPoint(event));
@@ -14838,6 +15105,59 @@
     state.transitionAlpha = 0.8;
   }
 
+  function startNextNightOrder() {
+    const nextVariant =
+      nextNightOrderVariant();
+    state.mode = "first_hole";
+    state.time = 0;
+    resetFirstHole(
+      nextVariant,
+    );
+    state.transitionAlpha = 0.88;
+    state.status =
+      `Night Order ${String(nextVariant.number).padStart(2, "0")}: ${nextVariant.name}.`;
+  }
+
+  function selectResultAction(
+    direction,
+  ) {
+    state.resultIndex =
+      (
+        state.resultIndex +
+        direction +
+        RESULT_ACTION_IDS.length
+      ) %
+      RESULT_ACTION_IDS.length;
+    playUiTone(
+      206 +
+        state.resultIndex * 48,
+      0.055,
+      0.02,
+    );
+  }
+
+  function activateResultAction() {
+    const action =
+      RESULT_ACTION_IDS[
+        state.resultIndex
+      ];
+    playUiTone(
+      286 +
+        state.resultIndex * 46,
+      0.075,
+      0.026,
+    );
+    if (action === "rematch") {
+      retryFirstHole();
+    } else if (
+      action === "next_order"
+    ) {
+      startNextNightOrder();
+    } else {
+      enterMenu();
+    }
+  }
+
   function selectSettings(direction) {
     state.settingsIndex =
       (state.settingsIndex + direction + SETTINGS_ROWS.length) %
@@ -14905,7 +15225,7 @@
         interactWithCourse();
       }
     } else if (state.mode === "victory" || state.mode === "defeat") {
-      retryFirstHole();
+      activateResultAction();
     } else if (state.mode === "clocked_out") {
       enterMenu();
     }
@@ -15087,6 +15407,17 @@
         state.pauseIndex =
           (state.pauseIndex + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length;
         playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
+      }
+    } else if (
+      state.mode === "victory" ||
+      state.mode === "defeat"
+    ) {
+      if (directionPressed("left")) {
+        selectResultAction(-1);
+      } else if (
+        directionPressed("right")
+      ) {
+        selectResultAction(1);
       }
     } else if (
       state.mode === "first_hole" &&
@@ -15363,8 +15694,24 @@
       if (event.code === "Escape") {
         enterMenu();
         event.preventDefault();
-      } else if ((event.code === "Enter" || event.code === "Space") && !event.repeat) {
-        retryFirstHole();
+      } else if (
+        event.code === "ArrowLeft"
+      ) {
+        selectResultAction(-1);
+        event.preventDefault();
+      } else if (
+        event.code === "ArrowRight"
+      ) {
+        selectResultAction(1);
+        event.preventDefault();
+      } else if (
+        (
+          event.code === "Enter" ||
+          event.code === "Space"
+        ) &&
+        !event.repeat
+      ) {
+        activateResultAction();
         event.preventDefault();
       }
     } else if (state.mode === "clocked_out" && (event.code === "Enter" || event.code === "Space")) {
@@ -15416,6 +15763,40 @@
     selectedPauseItem:
       state.mode === "paused"
         ? PAUSE_ITEMS[state.pauseIndex]
+        : null,
+    resultActions:
+      state.mode === "victory" ||
+      state.mode === "defeat"
+        ? {
+            selected:
+              RESULT_ACTION_IDS[
+                state.resultIndex
+              ],
+            options:
+              resultActionPresentations(
+                state.mode,
+              ).map(
+                (action) => ({
+                  id: action.id,
+                  label:
+                    action.label,
+                  detail:
+                    action.detail,
+                  description:
+                    action.description,
+                }),
+              ),
+            nextPerformanceTarget:
+              nextPerformanceTarget(),
+            nextNightOrder: {
+              id:
+                nextNightOrderVariant().id,
+              number:
+                nextNightOrderVariant().number,
+              name:
+                nextNightOrderVariant().name,
+            },
+          }
         : null,
     nextNightOrder:
       state.mode === "menu" || state.mode === "claim"
@@ -16570,6 +16951,7 @@
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
       firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
+      result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
@@ -16577,11 +16959,13 @@
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
         firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
+        result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
         firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
+        result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
       },
       touch: {
         gate: "Tap to begin",
@@ -16589,6 +16973,7 @@
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
         firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact, reclaim a ball, or start Final Filing at an open exit; movement aborts filing; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
+        result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
     },
   });
