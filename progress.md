@@ -776,3 +776,16 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human route runs around both shed-wall halves and tune their clearance only if the door feels too narrow under chase pressure.
 - Add unique generated art for the bunker wall, pond edge, and final hedge tunnel after their current collision volumes are play-tested.
 - Consider a lower-detail map symbol atlas if landmark silhouettes become too dense at compact browser sizes.
+
+## Joe Character and Living Horizon Pass - July 30, 2026
+
+- Standardized player-facing naming around **Joe**; “mower” now describes the machine or a terrain interaction instead of functioning as part of Joe's name.
+- Updated and regenerated the project blueprint under the Joe-only naming, and removed the redundant legacy blueprint whose filename still treated “Mower” as part of the character name.
+- Added 30 original capture lines spanning calm, critical, delighted, offended, coaching, and procedural tones, with deterministic variation and immediate-repeat protection.
+- Used built-in image generation to create a six-expression Joe portrait atlas, then paired each capture line with an authored expression on the Claim Denied screen.
+- Kept all new Joe dialogue subtitle-only, preserving the existing no-synthetic-voice direction.
+- Added concise state-driven barks for patrol, investigate, search, and chase so Joe's insurance product-owner logic, golf etiquette, and grass obsession appear during play without constant chatter.
+- Used built-in image generation to split the distant course into a clean golf-course/sky grounding plate, drifting cloud band, softly glowing clubhouse, independent tree line, and moving horizon mist.
+- Applied separate parallax ratios, scale changes, sway, and restrained light modulation to the layers so forward and lateral movement read in the first-person scene while the world remains visually grounded.
+- Extended `render_game_to_text` with active Joe dialogue, expression and pool metadata, subtitle-only delivery, character traits, and the complete scene-decomposition contract.
+- Verified two consecutive captures select different Joe lines and expressions, inspected the full Claim Denied composition, and confirmed no page or console errors.

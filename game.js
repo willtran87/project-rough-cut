@@ -95,7 +95,7 @@
   const SETTINGS_ROWS = [
     { id: "master", group: "audio", label: "MASTER MIX", key: "volume", type: "slider", min: 0, max: 1, step: 0.05 },
     { id: "ambience", group: "audio", label: "COURSE AMBIENCE", key: "ambienceVolume", type: "slider", min: 0, max: 1, step: 0.05 },
-    { id: "mower", group: "audio", label: "JOE'S MOWER", key: "mowerVolume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "mower", group: "audio", label: "JOE", key: "mowerVolume", type: "slider", min: 0, max: 1, step: 0.05 },
     { id: "effects", group: "audio", label: "GAMEPLAY EFFECTS", key: "effectsVolume", type: "slider", min: 0, max: 1, step: 0.05 },
     { id: "danger", group: "audio", label: "DANGER PULSE", key: "dangerVolume", type: "slider", min: 0, max: 1, step: 0.05 },
     { id: "subtitles", group: "presentation", label: "DIALOGUE SUBTITLES", key: "subtitles", type: "toggle" },
@@ -145,7 +145,13 @@
   const grassArt = new Image();
   grassArt.src = "./assets/rough-cut-grass-curtain.png";
   const holeArt = new Image();
-  holeArt.src = "./assets/rough-cut-hole-1-clean-world-v2.png";
+  holeArt.src = "./assets/rough-cut-course-ground-sky-v3.png";
+  const cloudBandArt = new Image();
+  cloudBandArt.src = "./assets/rough-cut-cloud-band-v1.png";
+  const distantTreeLineArt = new Image();
+  distantTreeLineArt.src = "./assets/rough-cut-distant-treeline-v1.png";
+  const distantClubhouseArt = new Image();
+  distantClubhouseArt.src = "./assets/rough-cut-distant-clubhouse-v1.png";
   const joeMowerArt = new Image();
   joeMowerArt.src = "./assets/joe-mower-v1.png";
   const joeMowerAnimatedArt = new Image();
@@ -172,6 +178,8 @@
   foregroundFringeArt.src = "./assets/rough-cut-foreground-fringe-v1.png";
   const defeatArt = new Image();
   defeatArt.src = "./assets/rough-cut-joe-capture-v1.png";
+  const joeExpressionArt = new Image();
+  joeExpressionArt.src = "./assets/rough-cut-joe-expressions-v1.png";
   const drainArt = new Image();
   drainArt.src = "./assets/rough-cut-drain-culvert-v1.png";
   const grassBuffer = document.createElement("canvas");
@@ -214,6 +222,76 @@
       name: "scope_escalation",
     },
   };
+  const JOE_CAPTURE_LINES = [
+    { id: "scope", expression: 0, tone: "SATISFIED", lines: ["I moved this course into scope.", "You moved into my path."] },
+    { id: "acceptance", expression: 1, tone: "DISAPPOINTED", lines: ["You missed the acceptance criteria.", "I did not."] },
+    { id: "grass_compliance", expression: 5, tone: "FINAL", lines: ["The grass is compliant.", "You are not."] },
+    { id: "stakeholder", expression: 0, tone: "PROFESSIONAL", lines: ["Consider this your final", "stakeholder review."] },
+    { id: "consistent_cut", expression: 1, tone: "CRITICAL", lines: ["I said the cut", "had to be consistent."] },
+    { id: "alignment", expression: 3, tone: "COACHING", lines: ["Good effort.", "Terrible alignment."] },
+    { id: "edge_case", expression: 4, tone: "DELIGHTED", lines: ["You found the edge case.", "I found you."] },
+    { id: "sprint", expression: 5, tone: "FINAL", lines: ["This sprint", "ends here."] },
+    { id: "backlog", expression: 0, tone: "SATISFIED", lines: ["The backlog had", "one item left: you."] },
+    { id: "circle_back", expression: 3, tone: "HELPFUL", lines: ["We can circle back", "after I finish this row."] },
+    { id: "map", expression: 1, tone: "DISAPPOINTED", lines: ["You treated the map", "like a suggestion."] },
+    { id: "accounted", expression: 5, tone: "METHODICAL", lines: ["Every blade accounted for.", "Every trespasser too."] },
+    { id: "approved", expression: 1, tone: "REJECTED", lines: ["That route", "was never approved."] },
+    { id: "pattern", expression: 0, tone: "SATISFIED", lines: ["You should have stayed", "inside the mowing pattern."] },
+    { id: "quiet", expression: 5, tone: "CALM", lines: ["The course is quiet", "when everyone follows process."] },
+    { id: "variance", expression: 2, tone: "ENTHUSIASTIC", lines: ["I love golf.", "I tolerate variance."] },
+    { id: "under_par", expression: 3, tone: "AMUSED", lines: ["You're under par", "and out of options."] },
+    { id: "handoff", expression: 0, tone: "SATISFIED", lines: ["I call that", "a clean handoff."] },
+    { id: "blockers", expression: 4, tone: "DELIGHTED", lines: ["No blockers now.", "Excellent."] },
+    { id: "definition", expression: 1, tone: "DISAPPOINTED", lines: ["Your escape lacked", "a definition of done."] },
+    { id: "retrospective", expression: 3, tone: "COACHING", lines: ["Let's put this miss", "in the retrospective."] },
+    { id: "stakeholders", expression: 2, tone: "DELIGHTED", lines: ["The stakeholders", "are going to love this."] },
+    { id: "grass_told", expression: 0, tone: "KNOWING", lines: ["I knew the grass", "would tell me."] },
+    { id: "footprints", expression: 1, tone: "OFFENDED", lines: ["You left footprints", "in my best work."] },
+    { id: "change_request", expression: 3, tone: "HELPFUL", lines: ["Next time,", "bring a change request."] },
+    { id: "improvement", expression: 5, tone: "FINAL", lines: ["There is always room for improvement.", "Just not tonight."] },
+    { id: "escalated", expression: 4, tone: "EXCITED", lines: ["You ran.", "The course escalated."] },
+    { id: "owner", expression: 0, tone: "CERTAIN", lines: ["One course.", "One owner."] },
+    { id: "remembers", expression: 5, tone: "QUIET", lines: ["The fairway", "remembers."] },
+    { id: "par", expression: 2, tone: "GOLF LOGIC", lines: ["Par is a target.", "Compliance is mandatory."] },
+  ];
+  const JOE_STATE_BARKS = {
+    patrol: [
+      "Back to the plan.",
+      "Variance resolved.",
+      "Every blade in scope.",
+      "The course is behaving again.",
+    ],
+    investigate: [
+      "That was not in the plan.",
+      "I heard a scope change.",
+      "Someone moved my grass.",
+      "This course has standards.",
+      "That sound needs an owner.",
+      "I can see the variance.",
+    ],
+    search: [
+      "Let's circle back.",
+      "The rough keeps receipts.",
+      "You missed a patch.",
+      "I have time for follow-up.",
+      "The fairway always tells me.",
+      "This is still in review.",
+    ],
+    chase: [
+      "Stop moving the goalposts!",
+      "This sprint is mine!",
+      "You are off course!",
+      "No unapproved shortcuts!",
+      "Your variance is escalating!",
+      "I own this fairway!",
+      "Let's close this action item!",
+      "You skipped the review!",
+    ],
+  };
+  const CLOUD_LAYER_SOURCE = { x: 26, y: 273, width: 1623, height: 374 };
+  const TREE_LINE_SOURCE = { x: 9, y: 373, width: 1650, height: 347 };
+  const CLUBHOUSE_SOURCE = { x: 87, y: 289, width: 1516, height: 449 };
+  const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
   const COURSE_LENGTH = 360;
   const COURSE_MIN_Y = 0;
@@ -1000,6 +1078,7 @@
       savedCareer.completedVariants.length ===
         RUN_VARIANTS.length,
     status: "Every blade is in scope.",
+    lastJoeCaptureLineId: null,
     manualTime: false,
     transitionAlpha: 0,
     shedReached: false,
@@ -1130,6 +1209,10 @@
       navigationGuide:
         freshNavigationGuide(),
       previousJoeMode: "patrol",
+      joeBark: null,
+      joeBarkTimer: 0,
+      joeBarkSerial: 0,
+      captureDialogue: null,
       stateBanner: "",
       stateBannerTimer: 0,
       stateBannerLockTimer: 0,
@@ -2421,6 +2504,247 @@
     return true;
   }
 
+  function drawParallaxAsset(
+    image,
+    source,
+    x,
+    y,
+    width,
+    height,
+    alpha = 1,
+  ) {
+    if (
+      !image.complete ||
+      image.naturalWidth === 0
+    ) {
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(
+      image,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      x,
+      y,
+      width,
+      height,
+    );
+    ctx.restore();
+  }
+
+  function drawCourseBackdrop(
+    progress,
+    walkBob,
+  ) {
+    const panX = clamp(
+      -state.player.x * 0.5,
+      -60,
+      60,
+    );
+    const zoom =
+      1.08 +
+      progress * 0.16;
+    drawImageCover(
+      ctx,
+      holeArt,
+      panX * 0.58,
+      walkBob +
+        progress * 10,
+      zoom,
+    );
+
+    const cloudWidth =
+      1450 *
+      (
+        1 +
+        progress * 0.025
+      );
+    const cloudHeight =
+      cloudWidth *
+      CLOUD_LAYER_SOURCE.height /
+      CLOUD_LAYER_SOURCE.width;
+    const cloudDrift =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              0.045,
+          ) *
+            58 +
+          Math.sin(
+            state.hole.elapsed *
+              0.013 +
+              1.7,
+          ) *
+            24;
+    drawParallaxAsset(
+      cloudBandArt,
+      CLOUD_LAYER_SOURCE,
+      (
+        WIDTH -
+        cloudWidth
+      ) *
+        0.5 +
+        panX * 0.07 +
+        cloudDrift,
+      -20 -
+        progress * 5 +
+        walkBob * 0.05,
+      cloudWidth,
+      cloudHeight,
+      0.34,
+    );
+
+    const clubhouseWidth =
+      400 *
+      (
+        1 +
+        progress * 0.035
+      );
+    const clubhouseHeight =
+      clubhouseWidth *
+      CLUBHOUSE_SOURCE.height /
+      CLUBHOUSE_SOURCE.width;
+    const clubhouseX =
+      172 +
+      panX * 0.24 -
+      progress * 8;
+    const clubhouseY =
+      180 +
+      progress * 2 +
+      walkBob * 0.04;
+    const clubhouseGlow =
+      state.reducedMotion
+        ? 0.16
+        : 0.14 +
+          Math.sin(
+            state.hole.elapsed *
+              1.13,
+          ) *
+            0.025;
+    const windowGlow =
+      ctx.createRadialGradient(
+        clubhouseX +
+          clubhouseWidth *
+            0.5,
+        clubhouseY +
+          clubhouseHeight *
+            0.52,
+        4,
+        clubhouseX +
+          clubhouseWidth *
+            0.5,
+        clubhouseY +
+          clubhouseHeight *
+            0.52,
+        clubhouseWidth *
+          0.46,
+      );
+    windowGlow.addColorStop(
+      0,
+      `rgba(217,145,62,${clubhouseGlow})`,
+    );
+    windowGlow.addColorStop(
+      1,
+      "rgba(217,145,62,0)",
+    );
+    ctx.fillStyle = windowGlow;
+    ctx.fillRect(
+      clubhouseX -
+        34,
+      clubhouseY -
+        18,
+      clubhouseWidth +
+        68,
+      clubhouseHeight +
+        36,
+    );
+    drawParallaxAsset(
+      distantClubhouseArt,
+      CLUBHOUSE_SOURCE,
+      clubhouseX,
+      clubhouseY,
+      clubhouseWidth,
+      clubhouseHeight,
+      0.72,
+    );
+
+    const treeWidth =
+      1450 *
+      (
+        1 +
+        progress * 0.025
+      );
+    const treeHeight =
+      treeWidth *
+      TREE_LINE_SOURCE.height /
+      TREE_LINE_SOURCE.width;
+    const treeSway =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              0.16,
+          ) *
+            2.5;
+    drawParallaxAsset(
+      distantTreeLineArt,
+      TREE_LINE_SOURCE,
+      (
+        WIDTH -
+        treeWidth
+      ) *
+        0.5 +
+        panX * 0.17 +
+        treeSway,
+      42 +
+        progress * 3 +
+        walkBob * 0.08,
+      treeWidth,
+      treeHeight,
+      0.58,
+    );
+
+    const horizonMist =
+      ctx.createLinearGradient(
+        0,
+        238,
+        0,
+        332,
+      );
+    horizonMist.addColorStop(
+      0,
+      "rgba(127,153,154,0)",
+    );
+    horizonMist.addColorStop(
+      0.52,
+      "rgba(127,153,154,0.12)",
+    );
+    horizonMist.addColorStop(
+      1,
+      "rgba(127,153,154,0)",
+    );
+    ctx.fillStyle = horizonMist;
+    ctx.fillRect(
+      -30 +
+        (
+          state.reducedMotion
+            ? 0
+            : Math.sin(
+                state.hole.elapsed *
+                  0.07,
+              ) *
+              24
+        ),
+      238,
+      WIDTH + 60,
+      94,
+    );
+  }
+
   function traceCutPath(target, centerX, centerY, radiusX, radiusY, time) {
     target.beginPath();
     for (let index = 0; index <= 96; index += 1) {
@@ -3182,7 +3506,7 @@
     ctx.fillStyle = "rgba(4,15,8,0.9)";
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#617c3c", 2);
-    drawText("A JOE MOWER HORROR GAME", 92, 84, 17, "#b4c489", "left");
+    drawText("A JOE HORROR GAME", 92, 84, 17, "#b4c489", "left");
     drawText("ROUGH CUT", 90, 166, 65, "#f0f0d4", "left", true);
     drawText("THE COURSE CLOSES AT DUSK.", 92, 215, 18, "#ea8740", "left");
     drawText("JOE DOES NOT.", 92, 240, 18, "#ea8740", "left");
@@ -3856,7 +4180,7 @@
     drawText("CAPTION PREVIEW", 688, 497, 9, "#819277", "left", true);
     if (state.threatCaptions) {
       drawSubtitleCard(
-        "[ MOWER APPROACHING — RIGHT ]",
+        "[ JOE APPROACHING — RIGHT ]",
         886,
         526,
         12,
@@ -4170,6 +4494,10 @@
       navigationGuide:
         freshNavigationGuide(),
       previousJoeMode: "patrol",
+      joeBark: null,
+      joeBarkTimer: 0,
+      joeBarkSerial: 0,
+      captureDialogue: null,
       stateBanner: "",
       stateBannerTimer: 0,
       stateBannerLockTimer: 0,
@@ -5444,6 +5772,44 @@
     }
   }
 
+  function drawJoeBark() {
+    const hole = state.hole;
+    if (
+      !state.subtitles ||
+      !hole.joeBark ||
+      hole.joeBarkTimer <= 0 ||
+      hole.tutorialVisible
+    ) {
+      return;
+    }
+    const fade = clamp(
+      Math.min(
+        (
+          3.2 -
+          hole.joeBarkTimer
+        ) /
+          0.14,
+        hole.joeBarkTimer /
+          0.34,
+      ),
+      0,
+      1,
+    );
+    ctx.save();
+    ctx.globalAlpha = fade;
+    drawSubtitleCard(
+      `JOE // "${hole.joeBark}"`,
+      WIDTH * 0.5,
+      454,
+      14 *
+        state.subtitleSize,
+      hole.joe.mode === "chase"
+        ? "#f2ad7d"
+        : "#d9cf9b",
+    );
+    ctx.restore();
+  }
+
   function addWorldEffect(kind, x, y, duration = 1.4) {
     state.hole.worldEffects.push({
       kind,
@@ -5572,6 +5938,89 @@
     }
   }
 
+  function triggerJoeBark(mode) {
+    const options =
+      JOE_STATE_BARKS[mode];
+    if (
+      !options ||
+      options.length === 0
+    ) {
+      return;
+    }
+    state.hole.joeBarkSerial +=
+      1;
+    const seed =
+      state.hole
+        .joeBarkSerial *
+        41 +
+      state.hole.variantIndex *
+        17 +
+      Math.floor(
+        state.hole.elapsed *
+          3,
+      );
+    const index =
+      Math.floor(
+        hash(seed) *
+          options.length,
+      ) %
+      options.length;
+    state.hole.joeBark =
+      options[index];
+    state.hole.joeBarkTimer =
+      mode === "chase"
+        ? 3.2
+        : 2.65;
+  }
+
+  function selectJoeCaptureDialogue() {
+    const hole = state.hole;
+    const seed =
+      state.career.captures *
+        97 +
+      hole.variantIndex *
+        43 +
+      Math.floor(
+        hole.elapsed *
+          10,
+      ) +
+      hole.ballThrowsUsed *
+        29 +
+      Math.round(
+        hole.maxDetection *
+          100,
+      );
+    let index =
+      Math.floor(
+        hash(seed) *
+          JOE_CAPTURE_LINES.length,
+      ) %
+      JOE_CAPTURE_LINES.length;
+    if (
+      JOE_CAPTURE_LINES[index].id ===
+      state.lastJoeCaptureLineId
+    ) {
+      index =
+        (
+          index +
+          7
+        ) %
+        JOE_CAPTURE_LINES.length;
+    }
+    const dialogue =
+      JOE_CAPTURE_LINES[index];
+    state.lastJoeCaptureLineId =
+      dialogue.id;
+    return {
+      id: dialogue.id,
+      expression:
+        dialogue.expression,
+      tone: dialogue.tone,
+      lines:
+        dialogue.lines.slice(),
+    };
+  }
+
   function announceJoeState(mode) {
     const labels = {
       patrol: "STATUS: ROUTINE WALKTHROUGH",
@@ -5603,14 +6052,15 @@
         2.4,
       );
     }
+    triggerJoeBark(mode);
     const captionLabels = {
-      patrol: "MOWER RECEDING",
-      investigate: "MOWER TURNS TOWARD A SOUND",
-      search: "MOWER SEARCHING",
-      chase: "MOWER SURGING CLOSER",
+      patrol: "JOE RECEDING",
+      investigate: "JOE TURNS TOWARD A SOUND",
+      search: "JOE SEARCHING",
+      chase: "JOE SURGING CLOSER",
     };
     pushThreatCaption(
-      captionLabels[mode] || "MOWER CHANGES COURSE",
+      captionLabels[mode] || "JOE CHANGES COURSE",
       state.hole.joe,
       mode === "chase" ? "danger" : "mower",
       mode === "chase" ? 2.8 : 2.1,
@@ -6829,11 +7279,13 @@
           "CAPTURED";
       }
       recordCapture();
+      hole.captureDialogue =
+        selectJoeCaptureDialogue();
       state.resultIndex = 0;
       state.mode = "defeat";
       state.time = 0;
       state.transitionAlpha = 0.6;
-      state.status = "Claim denied by mower.";
+      state.status = "Caught by Joe.";
       setMotorLevel(0.14, 92);
       playCaptureCue();
     }
@@ -12875,7 +13327,7 @@
       direction = "BEHIND";
     }
     drawText(
-      `MOWER ${direction}  •  ${Math.round(joeDistance)}m`,
+      `JOE ${direction}  •  ${Math.round(joeDistance)}m`,
       centerX,
       centerY + radius + 34,
       13,
@@ -13827,7 +14279,7 @@
       hole.joe.mode === "chase",
     );
     drawText(
-      `MOWER ${Math.round(playerDistance)}m`,
+      `JOE ${Math.round(playerDistance)}m`,
       meterX + 246,
       145,
       11,
@@ -14200,15 +14652,16 @@
     const sprinkler = activeSprinklerPoint();
     const progress = clamp(state.player.y / COURSE_LENGTH, 0, 1);
     const zone = courseZoneAt(state.player.y);
-    const zoom = 1.08 + progress * 0.16;
-    const panX = clamp(-state.player.x * 0.5, -60, 60);
     const walkBob = state.reducedMotion
       ? 0
       : Math.sin(state.time * 8.5) * (playerIsMoving() ? 3.4 : 0.7);
 
     ctx.fillStyle = "#07120c";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    drawImageCover(ctx, holeArt, panX, walkBob + progress * 10, zoom);
+    drawCourseBackdrop(
+      progress,
+      walkBob,
+    );
 
     const dangerTint = ctx.createLinearGradient(0, 0, 0, HEIGHT);
     dangerTint.addColorStop(0, "rgba(3,12,10,0.08)");
@@ -14386,6 +14839,7 @@
     drawJoeStateBanner();
     drawRiskPremiumAward();
     drawThreatCaptions();
+    drawJoeBark();
     if (!state.hole.ballAim.active) {
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
       if (
@@ -14971,7 +15425,7 @@
           ? result.overtime
             ? "OVERTIME RECORD FILED. JOE REQUESTED A RETROSPECTIVE."
             : `PERSONAL RECORD FILED. ${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED.`
-          : "PAR IS NOT A SAFETY STANDARD. JOE'S MOWER DID NOT STOP.",
+          : "PAR IS NOT A SAFETY STANDARD. JOE DID NOT STOP.",
       WIDTH * 0.5,
       570,
       13,
@@ -15000,6 +15454,47 @@
     ctx.fillRect(0, HEIGHT - barHeight, WIDTH, barHeight);
   }
 
+  function drawJoeExpressionPortrait(
+    expression,
+    x,
+    y,
+    width,
+    height,
+  ) {
+    if (
+      !joeExpressionArt.complete ||
+      joeExpressionArt
+        .naturalWidth === 0
+    ) {
+      return false;
+    }
+    const column =
+      expression % 3;
+    const row =
+      Math.floor(
+        expression / 3,
+      );
+    const gutter = 5;
+    ctx.drawImage(
+      joeExpressionArt,
+      column *
+        JOE_EXPRESSION_CELL +
+        gutter,
+      row *
+        JOE_EXPRESSION_CELL +
+        gutter,
+      JOE_EXPRESSION_CELL -
+        gutter * 2,
+      JOE_EXPRESSION_CELL -
+        gutter * 2,
+      x,
+      y,
+      width,
+      height,
+    );
+    return true;
+  }
+
   function drawDefeat() {
     const impact = smoothstep(state.time / 0.48);
     const jitterStrength = state.reducedMotion ? 0 : (1 - Math.min(1, state.time / 1.2)) * 15;
@@ -15023,23 +15518,115 @@
     }
 
     const textReveal = smoothstep((state.time - 0.18) / 0.38);
-    const panelY = lerp(504, 432, textReveal);
+    const panelY = lerp(504, 418, textReveal);
+    const captureDialogue =
+      state.hole.captureDialogue ||
+      JOE_CAPTURE_LINES[0];
     ctx.save();
     ctx.globalAlpha = textReveal;
     ctx.fillStyle = "rgba(10,2,1,0.9)";
     ctx.fillRect(0, panelY, WIDTH, HEIGHT - panelY);
     ctx.fillStyle = "#c64626";
     ctx.fillRect(0, panelY, WIDTH, 3);
-    drawText("CLAIM DENIED", WIDTH * 0.5, panelY + 70, 58, "#f2ead3", "center", true);
     drawText(
-      "CAUSE OF LOSS: FAILED TO MAINTAIN A SAFE MOWING DISTANCE",
+      "CLAIM DENIED",
       WIDTH * 0.5,
-      panelY + 110,
-      16,
+      panelY + 44,
+      42,
+      "#f2ead3",
+      "center",
+      true,
+    );
+    drawText(
+      "CAUSE OF LOSS: FAILED TO ESCAPE JOE'S REVIEW",
+      WIDTH * 0.5,
+      panelY + 68,
+      12,
       "#e6ad84",
       "center",
     );
-    drawText("ADJUSTER: JOE  •  STATUS: FINAL", WIDTH * 0.5, panelY + 132, 13, "#bda99b", "center");
+    const dialogueX = 232;
+    const dialogueY =
+      panelY + 76;
+    const dialogueWidth = 816;
+    const dialogueHeight = 88;
+    ctx.fillStyle =
+      "rgba(26,7,3,0.94)";
+    ctx.fillRect(
+      dialogueX,
+      dialogueY,
+      dialogueWidth,
+      dialogueHeight,
+    );
+    strokeRect(
+      dialogueX,
+      dialogueY,
+      dialogueWidth,
+      dialogueHeight,
+      "#8f432d",
+      2,
+    );
+    ctx.fillStyle =
+      "rgba(4,9,7,0.92)";
+    ctx.fillRect(
+      dialogueX + 8,
+      dialogueY + 8,
+      72,
+      72,
+    );
+    strokeRect(
+      dialogueX + 8,
+      dialogueY + 8,
+      72,
+      72,
+      "#c46a45",
+      1,
+    );
+    drawJoeExpressionPortrait(
+      captureDialogue
+        .expression,
+      dialogueX + 8,
+      dialogueY + 8,
+      72,
+      72,
+    );
+    drawText(
+      `JOE // ${captureDialogue.tone}`,
+      dialogueX + 98,
+      dialogueY + 23,
+      11,
+      "#dd8255",
+      "left",
+      true,
+    );
+    drawText(
+      `"${captureDialogue.lines[0]}`,
+      dialogueX + 98,
+      dialogueY + 49,
+      15,
+      "#f3e8cd",
+      "left",
+      true,
+    );
+    drawText(
+      `${captureDialogue.lines[1]}"`,
+      dialogueX + 98,
+      dialogueY + 70,
+      15,
+      "#f3e8cd",
+      "left",
+      true,
+    );
+    drawText(
+      "ADJUSTER: JOE  //  STATUS: FINAL",
+      dialogueX +
+        dialogueWidth -
+        14,
+      dialogueY + 23,
+      10,
+      "#a99688",
+      "right",
+    );
     drawResultActions(
       "defeat",
       "#c64626",
@@ -15160,6 +15747,10 @@
         hole.controlHintTimer - dt,
       );
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
+      hole.joeBarkTimer = Math.max(
+        0,
+        hole.joeBarkTimer - dt,
+      );
       updateThreatCaptions(dt);
       if (hole.riskAward) {
         hole.riskAward.age += dt;
@@ -18144,9 +18735,68 @@
           ),
       },
     },
-    dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
-      ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
-      : null,
+    dialogue:
+      state.mode === "intro" &&
+      state.time >= LINE_START &&
+      state.time <= LINE_END
+        ? {
+            speaker: "JOE",
+            text: "HERE'S JOEY!",
+            delivery:
+              "subtitle_only",
+          }
+        : state.mode === "defeat"
+          ? {
+              speaker: "JOE",
+              id:
+                state.hole
+                  .captureDialogue
+                  ?.id ||
+                JOE_CAPTURE_LINES[0]
+                  .id,
+              tone:
+                state.hole
+                  .captureDialogue
+                  ?.tone ||
+                JOE_CAPTURE_LINES[0]
+                  .tone,
+              expression:
+                state.hole
+                  .captureDialogue
+                  ?.expression ??
+                JOE_CAPTURE_LINES[0]
+                  .expression,
+              text:
+                (
+                  state.hole
+                    .captureDialogue
+                    ?.lines ||
+                  JOE_CAPTURE_LINES[0]
+                    .lines
+                ).join(" "),
+              poolSize:
+                JOE_CAPTURE_LINES.length,
+              delivery:
+                "subtitle_only",
+            }
+          : state.mode ===
+                "first_hole" &&
+              state.hole
+                .joeBarkTimer >
+                0 &&
+              state.hole.joeBark
+            ? {
+                speaker: "JOE",
+                text:
+                  state.hole
+                    .joeBark,
+                context:
+                  state.hole
+                    .joe.mode,
+                delivery:
+                  "subtitle_only",
+              }
+            : null,
     status: state.status,
     course: {
       length: COURSE_LENGTH,
@@ -19137,6 +19787,52 @@
                 playerFieldPositionLabel(),
             },
           },
+          sceneDecomposition: {
+            groundingLayer:
+              "golf_course",
+            animatedLayers: [
+              {
+                id:
+                  "cloud_band",
+                depth:
+                  "sky",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "slow_drift",
+              },
+              {
+                id:
+                  "clubhouse",
+                depth:
+                  "far_landmark",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "subtle_parallax_and_window_glow",
+              },
+              {
+                id:
+                  "tree_line",
+                depth:
+                  "horizon",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "subtle_parallax",
+              },
+              {
+                id:
+                  "horizon_mist",
+                depth:
+                  "horizon",
+                motion:
+                  state.reducedMotion
+                    ? "static"
+                    : "slow_drift",
+              },
+            ],
+          },
           deadGreenLayers: {
             groundAnchored: true,
             scenery: visibleDeadGreenSceneryState(),
@@ -19335,6 +20031,28 @@
               sequenceIndex: joeAnimationState().sequenceIndex,
               fps: joeAnimationState().fps,
             },
+            character: {
+              role:
+                "insurance_product_owner",
+              obsessions: [
+                "grass",
+                "golf",
+                "process",
+                "scope",
+              ],
+              activeBark:
+                state.hole
+                  .joeBarkTimer >
+                  0
+                  ? state.hole
+                      .joeBark
+                  : null,
+              captureDialoguePool:
+                JOE_CAPTURE_LINES.length,
+              expressionCount: 6,
+              voice:
+                "subtitle_only",
+            },
             mapVisibility:
               state.hole.joe.mode === "chase" ||
               worldDistance(state.hole.joe, state.player) < 42
@@ -19402,6 +20120,9 @@
   art.addEventListener("load", render);
   grassArt.addEventListener("load", render);
   holeArt.addEventListener("load", render);
+  cloudBandArt.addEventListener("load", render);
+  distantTreeLineArt.addEventListener("load", render);
+  distantClubhouseArt.addEventListener("load", render);
   joeMowerArt.addEventListener("load", render);
   joeMowerAnimatedArt.addEventListener("load", render);
   joeMowerErraticHeadArt.addEventListener("load", render);
@@ -19415,6 +20136,7 @@
   deadGreenSceneryArt.addEventListener("load", render);
   foregroundFringeArt.addEventListener("load", render);
   defeatArt.addEventListener("load", render);
+  joeExpressionArt.addEventListener("load", render);
   drainArt.addEventListener("load", render);
   requestAnimationFrame(frame);
 })();
