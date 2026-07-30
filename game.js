@@ -153,6 +153,8 @@
   courseObstacleArt.src = "./assets/rough-cut-course-obstacle-kit-v1.png";
   const expandedCourseArt = new Image();
   expandedCourseArt.src = "./assets/rough-cut-expanded-course-kit-v1.png";
+  const deadGreenSceneryArt = new Image();
+  deadGreenSceneryArt.src = "./assets/rough-cut-dead-green-kit-v1.png";
   const foregroundFringeArt = new Image();
   foregroundFringeArt.src = "./assets/rough-cut-foreground-fringe-v1.png";
   const defeatArt = new Image();
@@ -342,6 +344,26 @@
     { x: 50, y: 565, width: 520, height: 325, heightMeters: 1.25 },
     { x: 620, y: 495, width: 480, height: 380, heightMeters: 3.15 },
     { x: 1180, y: 465, width: 285, height: 415, heightMeters: 5 },
+  ];
+  const DEAD_GREEN_SCENERY_CELLS = [
+    { x: 45, y: 50, width: 570, height: 410, heightMeters: 1.65 },
+    { x: 650, y: 25, width: 390, height: 450, heightMeters: 2.45 },
+    { x: 1110, y: 90, width: 430, height: 390, heightMeters: 0.95 },
+    { x: 100, y: 485, width: 460, height: 425, heightMeters: 2.6 },
+    { x: 635, y: 520, width: 430, height: 390, heightMeters: 1.65 },
+    { x: 1050, y: 570, width: 520, height: 350, heightMeters: 1 },
+  ];
+  const DEAD_GREEN_SCENERY = [
+    { id: "dead-grass-west", type: 0, x: -103, y: 286, scale: 1.08, landmark: "withered rough" },
+    { id: "warning-flag", type: 1, x: 46, y: 298, scale: 0.96, landmark: "torn warning flag" },
+    { id: "burst-sprinkler", type: 2, x: -28, y: 316, scale: 1.05, landmark: "burst sprinkler" },
+    { id: "dead-grass-east", type: 0, x: 104, y: 322, scale: 1.14, landmark: "dead boundary grass" },
+    { id: "dead-topiary", type: 3, x: -58, y: 333, scale: 1.02, landmark: "dead topiary" },
+    { id: "finish-flag", type: 1, x: 16, y: 335, scale: 0.82, landmark: "final warning flag" },
+    { id: "snapped-sign", type: 4, x: -34, y: 344, scale: 0.96, landmark: "snapped course sign" },
+    { id: "mower-wreck", type: 5, x: 71, y: 346, scale: 1.08, landmark: "mower wreck" },
+    { id: "dead-grass-left-finish", type: 0, x: -86, y: 355, scale: 0.92, landmark: "withered rough" },
+    { id: "dead-grass-finish", type: 0, x: 106, y: 357, scale: 0.98, landmark: "withered rough" },
   ];
   const COURSE_OBSTACLES = [
     { id: "start-hedge", kit: "base", type: 0, x: -42, y: 28, radius: 15, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "clipped hedge" },
@@ -4830,6 +4852,28 @@
     return visible.slice(0, 6);
   }
 
+  function visibleDeadGreenSceneryState() {
+    const visible = [];
+    for (let index = 0; index < DEAD_GREEN_SCENERY.length; index += 1) {
+      const scenery = DEAD_GREEN_SCENERY[index];
+      const point = worldToScreen(scenery.x, scenery.y);
+      if (point.visible && point.x > -180 && point.x < WIDTH + 180) {
+        visible.push({
+          id: scenery.id,
+          landmark: scenery.landmark,
+          x: scenery.x,
+          y: scenery.y,
+          forwardDistance: Math.round(point.forwardDistance),
+          projectedScale: Number(point.scale.toFixed(2)),
+          screenX: Math.round(point.x),
+          screenY: Math.round(point.y),
+        });
+      }
+    }
+    visible.sort((a, b) => a.forwardDistance - b.forwardDistance);
+    return visible;
+  }
+
   function movePlayerBy(deltaX, deltaY) {
     const player = state.player;
     const requestedDistance = Math.hypot(deltaX, deltaY);
@@ -6722,6 +6766,76 @@
     ctx.restore();
   }
 
+  function drawDeadGreenGround() {
+    if (state.player.y < COURSE_ZONES[3].start - 44) {
+      return;
+    }
+    const zoneStart = COURSE_ZONES[3].start + 2;
+    ctx.save();
+    for (let row = 0; row < 9; row += 1) {
+      const worldY = zoneStart + row * 10;
+      for (let column = -4; column <= 4; column += 1) {
+        const seed = hash(row * 71.3 + column * 29.7);
+        if (seed < 0.18) {
+          continue;
+        }
+        const worldX =
+          column * 25 +
+          (hash(seed * 83) - 0.5) * 15;
+        const point = worldToScreen(worldX, worldY);
+        if (
+          !point.visible ||
+          point.x < -180 ||
+          point.x > WIDTH + 180
+        ) {
+          continue;
+        }
+        const radiusX = clamp(
+          (5 + hash(seed * 47) * 8) *
+            COURSE_CAMERA.worldUnitMeters *
+            point.pixelsPerMeter,
+          3,
+          135,
+        );
+        const radiusY = Math.max(1, radiusX * 0.12);
+        const alpha = clamp(
+          0.08 + point.scale * 0.12,
+          0.07,
+          0.26,
+        );
+        ctx.fillStyle =
+          row % 2 === 0
+            ? `rgba(75,35,17,${alpha})`
+            : `rgba(126,77,35,${alpha * 0.74})`;
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y,
+          radiusX,
+          radiusY,
+          (seed - 0.5) * 0.2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.strokeStyle =
+          `rgba(211,145,69,${alpha * 0.58})`;
+        ctx.lineWidth = Math.max(1, point.scale * 0.55);
+        ctx.beginPath();
+        ctx.moveTo(
+          point.x - radiusX * 0.7,
+          point.y - radiusY * 0.12,
+        );
+        ctx.lineTo(
+          point.x + radiusX * 0.63,
+          point.y + radiusY * 0.12,
+        );
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawBunkerSand() {
     const zones =
       BUNKER_SAND_ZONES
@@ -7849,6 +7963,91 @@
     ctx.restore();
   }
 
+  function drawDeadGreenScenery(scenery) {
+    if (
+      !deadGreenSceneryArt.complete ||
+      deadGreenSceneryArt.naturalWidth === 0
+    ) {
+      return;
+    }
+    const point = worldToScreen(scenery.x, scenery.y);
+    if (!point.visible || point.x < -460 || point.x > WIDTH + 460) {
+      return;
+    }
+    const cell = DEAD_GREEN_SCENERY_CELLS[scenery.type];
+    if (!cell) {
+      return;
+    }
+    const drawHeight =
+      cell.heightMeters *
+      scenery.scale *
+      point.pixelsPerMeter;
+    const drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    const wind =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.time * 0.82 +
+            scenery.x * 0.08 +
+            scenery.y * 0.03,
+          ) *
+          Math.min(
+            scenery.type === 1 ? 3.8 : 1.8,
+            point.scale * 2.4,
+          );
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.58 + point.scale * 0.5,
+      0.52,
+      1,
+    );
+    ctx.fillStyle =
+      `rgba(12,3,1,${clamp(point.scale * 0.3, 0.08, 0.34)})`;
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y - 1,
+      drawWidth * 0.3,
+      Math.max(2, drawHeight * 0.035),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.drawImage(
+      deadGreenSceneryArt,
+      cell.x,
+      cell.y,
+      cell.width,
+      cell.height,
+      point.x - drawWidth * 0.5 + wind,
+      point.y - drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    if (scenery.type === 2) {
+      const pulse =
+        state.reducedMotion
+          ? 0.46
+          : 0.36 + Math.sin(state.time * 4.1) * 0.12;
+      ctx.strokeStyle = `rgba(127,190,196,${pulse})`;
+      ctx.lineWidth = Math.max(1, point.scale);
+      ctx.beginPath();
+      ctx.arc(
+        point.x,
+        point.y - drawHeight * 0.55,
+        Math.max(4, drawWidth * 0.12),
+        Math.PI * 1.08,
+        Math.PI * 1.92,
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawDrainExit() {
     const point = worldToScreen(DRAIN_EXIT.x, DRAIN_EXIT.y);
     if (!point.visible || point.x < -340 || point.x > WIDTH + 340) {
@@ -7924,6 +8123,16 @@
         entities.push({
           y: point.y,
           draw: () => drawCourseObstacle(obstacle),
+        });
+      }
+    }
+    for (let index = 0; index < DEAD_GREEN_SCENERY.length; index += 1) {
+      const scenery = DEAD_GREEN_SCENERY[index];
+      const point = worldToScreen(scenery.x, scenery.y);
+      if (point.visible) {
+        entities.push({
+          y: point.y,
+          draw: () => drawDeadGreenScenery(scenery),
         });
       }
     }
@@ -11207,6 +11416,7 @@
     }
 
     drawPerspectiveCourse(progress, walkBob);
+    drawDeadGreenGround();
     drawBunkerSand();
     drawWetTurf();
     drawTurfMarks();
@@ -15487,6 +15697,10 @@
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
           activeEffects: state.hole.worldEffects.map((effect) => effect.kind),
           visibleObstacles: visibleObstacleState(),
+          deadGreenLayers: {
+            groundAnchored: true,
+            scenery: visibleDeadGreenSceneryState(),
+          },
           environment: state.hole.environment
             ? {
                 coverQuality: state.hole.environment.coverQuality,
@@ -15668,6 +15882,7 @@
   fieldKitArt.addEventListener("load", render);
   courseObstacleArt.addEventListener("load", render);
   expandedCourseArt.addEventListener("load", render);
+  deadGreenSceneryArt.addEventListener("load", render);
   foregroundFringeArt.addEventListener("load", render);
   defeatArt.addEventListener("load", render);
   drainArt.addEventListener("load", render);

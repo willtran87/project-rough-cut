@@ -613,3 +613,22 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human listening tests on laptop speakers and headphones before raising any procedural-score gain.
 - Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
 - Evaluate whether the letter-only projection should default off under a future Minimal HUD preference after real-player horror sessions.
+
+## Dead Green World-Layer Polish Pass - July 29, 2026
+
+- Audited the four course zones at fixed camera positions and identified the final Dead Green as the only zone whose identity depended mainly on color grading; it showed only two existing world objects at the comparison position.
+- Used built-in image generation, with the expanded obstacle atlas as a style reference, to author a dedicated six-cell Dead Green kit: dead boundary grass, torn warning flag, burst sprinkler, skeletal topiary, snapped sign, and mower wreck.
+- Removed the flat magenta background with the imagegen chroma helper, validated 32-bit RGBA output and four fully transparent corners, and preserved both the canonical chroma source and transparent master under `assets/environment/generated`.
+- Added ten hand-placed world-space scenery instances across the final approach without changing collision, sight, navigation, or escape-route balance.
+- Reused the course pinhole projection, authored physical heights, bottom pivots, depth sorting, contact shadows, restrained wind, and a small sprinkler shimmer so scenery grows and exits the frame naturally as the player advances.
+- Added deterministic, world-anchored dry turf scars across the Dead Green to create near-ground optical flow without another screen-fixed foreground overlay.
+- Extended `render_game_to_text` with every visible Dead Green scenery id, landmark, world position, forward distance, projected scale, and screen position.
+- Proved camera-relative movement over a seven-unit advance: every retained prop changed screen position and increased projected scale; the opening foreground remained fully departed.
+- Re-ran the exact project Playwright client for first-hole regression, visually inspected the result, and found no client-reported console or page errors.
+- Visually verified the final approach at 800x600 and 2560x1440 with document dimensions matching the viewport and no overflow.
+
+### Next production priorities
+
+- Conduct a longer human chase through the Dead Green to tune how often Joe, the warning flag, and the shed marker overlap under real steering.
+- Give Audit Row one secondary lateral landmark only if human navigation tests still confuse its two hedge arches.
+- Consider a restrained zone-specific sky or distant silhouette layer after all four world-space passes are complete.
