@@ -473,3 +473,27 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
 - Add a cosmetic reward layer for perfected dossiers—such as redacted Echo trails or stamped ball skins—only after the Portfolio selector has been playtested for repeat-run clarity.
+
+## Performance Stamp Dossier Mastery — July 29, 2026
+
+- Added four persistent, per-Night-Order escape-style seals: Clean File for no pursuit, Field Recovery for reclaiming a thrown ball, Bunker Clause for two successful mower sand traps, and Echo Breaker for beating a compatible personal-best replay.
+- Awarded stamps only inside successful result filing, after the authoritative outcome metrics and Echo comparison are known; capture, restart, and pause cannot grant progress.
+- Kept stamps completely outside the score calculation and gameplay modifiers. A maximally qualifying test result retained the exact same 6,950 score before and after stamp filing.
+- Added strict save validation for all three variant buckets, including unknown-ID removal, duplicate suppression, safe empty defaults, and compatibility with career saves that predate stamps.
+- Added dossier perfection at 4/4 and a 12/12 Master Adjuster state without requiring all four behaviors in one run.
+- Expanded every Portfolio dossier with four stamped seals, earned/unearned contrast, a PERFECT mark, total 0/12 progress, and a gold Master Adjuster ledger treatment.
+- Added a gold Master Echo cosmetic trail and map marker at 12/12 while preserving the existing ahead/behind pace read.
+- Added stamp counts to survival briefings plus expanded and compact HUD states without turning the four behaviors into mandatory in-run objectives.
+- Added scorecard stamp filing, dossier perfection, and Master Adjuster payoff copy, including a collision-free dense layout with Change Request, bunker, Overtime, and four new stamps in one result.
+- Extended `render_game_to_text` with definitions, per-order arrays, total progress, perfected variants, active-run criteria, and the explicit no-balance-effect Portfolio contract.
+- Proved all four qualifying stamps can file together, duplicate results add none, a chased escape does not earn Clean File, an Overtime recovery earns exactly Field Recovery, and the twelfth seal triggers both dossier perfection and Master Adjuster.
+- Proved capture with qualifying intermediate metrics increments denial history but leaves all stamp arrays empty.
+- Verified pause and Restart retain 12/12 progress and the selected authored order without mutation.
+- Re-ran the exact project Playwright client for clubhouse and first-hole flows, inspected both screenshots and diagnostics, and found no console/page errors.
+- Visually inspected empty, partial, perfected, Master Adjuster, dense scorecard, Master Echo, expanded HUD, compact HUD, and 800×600 / 1280×720 / 2560×1440 layouts with no overflow.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
+- Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.
