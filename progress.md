@@ -564,3 +564,28 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Conduct human listening tests on laptop speakers and headphones before raising any score-layer gain.
 - Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
+
+## Persistent Conflict-Safe Keyboard Binding Pass — July 29, 2026
+
+- Added a dedicated two-column Key Bindings ledger inside How to Survive / Settings for movement, sprint, crouch, Listening Focus, interaction, aimed chip shots, and the control recall.
+- Routed every keyboard gameplay action through the saved binding map while retaining arrow keys as a fixed movement fallback and preserving Escape pause/cancel plus F fullscreen behavior.
+- Made assignments conflict-safe: choosing an occupied key swaps the displaced action onto the previous key instead of leaving duplicate or unreachable controls.
+- Rejected browser, fullscreen, menu, function-key, and fixed-arrow assignments with an explicit status message while keeping capture active for a valid retry.
+- Added one-action default restoration plus strict load validation; duplicate, reserved, malformed, missing, and older saved maps fall back to the complete default layout.
+- Persisted the binding map inside the existing preferences record without changing career progression or older audio/presentation saves.
+- Replaced fixed keyboard copy throughout the survival briefing, How to Survive panel, expanded and compact HUD, aiming panel, world labels, interaction prompts, tutorial start prompt, and `render_game_to_text`.
+- Added pointer and touch hit targets, keyboard navigation/capture/cancel/reset, and controller view/select/back behavior; physical keyboard input remains required to choose the replacement key.
+- Extended `render_game_to_text` with the active settings page, selected/captured action, status feedback, every code/label pair, and the fixed arrow fallback contract.
+- Proved the primary conflict chain in the exact project Playwright client: Move Forward changed from W to A, Move Left automatically moved from A to W, and A advanced seven course units in a real round while the HUD displayed A/W/S/D.
+- Proved an interaction/chip conflict swap end to end: Interact moved to Space, Chip moved to Enter, the briefing updated immediately, held Enter reached full aim power, and release consumed exactly one ball and started flight.
+- Verified preferences serialization and reload persistence, rejected F without entering fullscreen, restored and persisted all defaults, and recovered safely from a deliberately corrupt duplicate/reserved save.
+- Verified opening the binding ledger from paused gameplay froze elapsed time at 1.55 seconds for a two-second deterministic advance, returned to Pause, and resumed cleanly.
+- Verified touch open/select/reset/back behavior and simulated standard-gamepad Y open, D-pad selection, A capture preparation, and B return without page or console errors.
+- Re-ran the exact client for binding conflict, remapped gameplay, and the existing settings-control regression; visually inspected each screenshot.
+- Visually verified the binding ledger at 800×600, 1280×720, and 2560×1440 with document dimensions matching the viewport and no overflow.
+
+### Next production priorities
+
+- Conduct human listening tests on laptop speakers and headphones before raising any procedural-score gain.
+- Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
+- Consider an optional controller-layout selector only after remapped keyboard telemetry confirms the new settings route is discoverable.

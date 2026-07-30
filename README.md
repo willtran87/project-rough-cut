@@ -20,11 +20,13 @@ Filing all three Change Requests now authorizes the Night Order Portfolio Overri
 
 Each dossier also carries four persistent Performance Stamps earned only on successful escapes: Clean File for avoiding pursuit, Field Recovery for reclaiming a thrown ball, Bunker Clause for baiting Joe into two sand traps, and Echo Breaker for beating a compatible personal-best replay. The seals can be earned across separate normal or Overtime runs, do not affect score or player power, and never award on capture. Four seals perfect one dossier; all twelve authorize the gold Master Adjuster ledger and Master Echo trail.
 
-Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
+Holding the Listening Focus binding (Q by default) slows movement, drops the ambience, makes the mower direction readable, and surfaces nearby cover, landmarks, and light exposure. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
 The course now carries a restrained procedural horror score with one authored harmonic identity per zone. Detection opens the filter and introduces dissonant layers, search adds a blade-like pulse, and pursuit reaches a sparse 109-BPM maximum ostinato. The Water Hazard power sag acoustically hollows the score before it recovers, while Listening Focus ducks the entire music layer to 38% so spatial mower information remains dominant. Continuous voices and short motif notes are routed only through Course Ambience; setting that channel to zero stops new motif allocation while all visual attention, contact-break, and threat-caption information remains available.
 
 The two-column audio/accessibility panel provides persistent, independent control over the master mix, course ambience, Joe's spatial mower, gameplay effects, and the danger pulse used by heartbeat, threat stingers, and the chase drone. It also provides scalable dialogue subtitles, adjustable caption-backdrop opacity, directional threat captions, and reduced camera motion. Threat captions identify important mower, impact, terrain, and course sounds with bounded left/right/ahead/behind direction, so lowering or muting a sound category does not hide useful chase information.
+
+The same panel opens a dedicated keyboard-binding ledger for movement, sprint, crouch, Listening Focus, interaction, chip shots, and the control recall. Selecting an action and pressing a key updates every briefing, HUD, aiming, and contextual prompt immediately. Assigning an occupied key swaps the conflicting action onto the displaced key instead of creating an ambiguous duplicate; Escape, fullscreen, browser keys, and the fixed arrow-key movement fallback remain reserved. Bindings persist with the existing preferences, reject corrupt or duplicate saved maps, and can be restored to defaults in one action.
 
 Joe's attention is now telegraphed before pursuit locks: sight and sound build the attention meter, stopping or crouching can clear a warning, and an active chase shows whether visual contact, audible movement, or neither is keeping the pursuit alive. When both are broken, a contact-break meter communicates exactly how long the player must remain undetected. The Water Hazard's first-entry power sag temporarily reduces actual floodlight exposure, and zone events only deliver their full stinger once instead of replaying during tactical backtracking.
 
@@ -44,12 +46,15 @@ Then open `http://127.0.0.1:4187/`.
 
 ## Controls
 
+Default keyboard controls:
+
 - Click, Enter, or Space — begin the incident.
 - Click, Enter, Space, or Escape — skip the opening.
 - Arrow keys and Enter — navigate the main menu.
 - After filing all three Change Requests, Left/Right — select a Night Order dossier.
 - R — toggle Overtime Audit after clearing all three Night Orders.
 - Pointer — select menu and settings controls.
+- Press B from How to Survive / Settings to open persistent keyboard remapping; Enter rebinds, conflicts swap, R restores defaults, and Escape returns.
 - WASD or arrow keys — move through Hole 1.
 - Shift — sprint, with more noise.
 - Hold C — crouch; hard cover conceals when it breaks Joe's sightline, while rough provides partial concealment.
@@ -82,6 +87,6 @@ Touch devices receive a dedicated in-game control layer:
 - Tap Pause to suspend the round; menus, unlocked Night Order dossiers, and settings use direct touch targets.
 - Landscape orientation is recommended. Portrait touch devices receive an explicit rotation prompt.
 
-The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Every audio and presentation setting is navigable with pointer, keyboard, controller, or touch and persists across sessions. Older saved preferences automatically receive readable caption defaults.
+The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Every audio, presentation, and keyboard-binding setting is navigable with pointer, keyboard, controller, or touch and persists across sessions. Older saved preferences automatically receive readable caption and binding defaults.
 
 Browser audio requires the initial click or key press. Joe's line is presented as an on-screen subtitle; no synthetic dialogue voice is used.
