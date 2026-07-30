@@ -230,6 +230,10 @@
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: 24, y: 350, radius: 13 };
   const DRAIN_EXIT = { x: -76, y: 339, radius: 15 };
+  const ESCAPE_FILING_DURATION = {
+    shed: 1.35,
+    drain: 1.7,
+  };
   const SPRINKLER_SOAK_ZONES = [
     { id: "west-tee", name: "WEST TEE", x: -82, y: 61, radius: 28 },
     { id: "east-relief", name: "EAST RELIEF", x: 78, y: 181, radius: 27 },
@@ -1040,6 +1044,19 @@
       activeSandZoneId: null,
       drainUnlocked: false,
       escapeRoute: null,
+      escapeFiling: {
+        active: false,
+        route: null,
+        progress: 0,
+        duration: 0,
+        stage: 0,
+        attempts: 0,
+        cancellations: 0,
+        completed: false,
+        capturedDuringFiling: false,
+        lastInterruption: null,
+        joeDistanceAtStart: null,
+      },
       crouched: false,
       concealment: 0,
       lostSightTimer: 0,
@@ -3623,8 +3640,8 @@
       {
         y: 260,
         icon: 0,
-        title: "1. CHOOSE AN EXIT",
-        detail: "Key opens shed. Sprinkler opens drain.",
+        title: "1. CHOOSE + FILE AN EXIT",
+        detail: "Key→shed; sprinkler→drain; movement aborts filing.",
         subdetail: "Optional change request adds +650 on escape.",
       },
       {
@@ -4052,6 +4069,19 @@
       activeSandZoneId: null,
       drainUnlocked: false,
       escapeRoute: null,
+      escapeFiling: {
+        active: false,
+        route: null,
+        progress: 0,
+        duration: 0,
+        stage: 0,
+        attempts: 0,
+        cancellations: 0,
+        completed: false,
+        capturedDuringFiling: false,
+        lastInterruption: null,
+        joeDistanceAtStart: null,
+      },
       crouched: false,
       concealment: 0,
       lostSightTimer: 0,
@@ -5206,6 +5236,199 @@
     playThreatCue(mode);
   }
 
+  function escapeRoutePoint(route) {
+    return route === "drain"
+      ? DRAIN_EXIT
+      : SHED_EXIT;
+  }
+
+  function escapeRouteLabel(route) {
+    return route === "drain"
+      ? "DRAIN RELEASE"
+      : "SHED RELEASE";
+  }
+
+  function playEscapeFilingCue(stage) {
+    const frequency = 174 + stage * 58;
+    playTransientTone(
+      frequency,
+      frequency * 0.74,
+      0.12,
+      0.038,
+      "square",
+    );
+    playNoiseBurst(
+      0.075,
+      0.018,
+      980 - stage * 110,
+      "bandpass",
+    );
+  }
+
+  function beginEscapeFiling(route) {
+    const hole = state.hole;
+    const filing = hole.escapeFiling;
+    const routeOpen =
+      route === "drain"
+        ? hole.drainUnlocked
+        : hole.keyCollected;
+    const routePoint =
+      escapeRoutePoint(route);
+    if (
+      !routeOpen ||
+      filing.active ||
+      worldDistance(
+        state.player,
+        routePoint,
+      ) >= routePoint.radius
+    ) {
+      return false;
+    }
+    filing.active = true;
+    filing.route = route;
+    filing.progress = 0;
+    filing.duration =
+      ESCAPE_FILING_DURATION[route];
+    filing.stage = 0;
+    filing.attempts += 1;
+    filing.completed = false;
+    filing.capturedDuringFiling = false;
+    filing.lastInterruption = null;
+    filing.joeDistanceAtStart =
+      worldDistance(
+        hole.joe,
+        state.player,
+      );
+    hole.noise = Math.max(
+      hole.noise,
+      route === "drain"
+        ? 0.52
+        : 0.44,
+    );
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.28,
+    );
+    hole.stateBanner =
+      `FINAL FILING // ${escapeRouteLabel(route)}`;
+    hole.stateBannerTimer =
+      filing.duration + 0.3;
+    hole.stateBannerLockTimer =
+      filing.duration + 0.3;
+    hole.messageTimer = 0;
+    addWorldEffect(
+      "filing_stamp",
+      routePoint.x,
+      routePoint.y,
+      0.8,
+    );
+    playEscapeFilingCue(0);
+    pushThreatCaption(
+      route === "drain"
+        ? "CULVERT RELEASE FORM CLACKS OPEN"
+        : "SHED RELEASE FORM HITS THE CLIPBOARD",
+      routePoint,
+      "world",
+      2.1,
+      `filing_${route}`,
+    );
+    return true;
+  }
+
+  function cancelEscapeFiling(reason) {
+    const hole = state.hole;
+    const filing = hole.escapeFiling;
+    if (!filing.active) {
+      return false;
+    }
+    const interruptedRoute =
+      filing.route;
+    filing.active = false;
+    filing.route = null;
+    filing.progress = 0;
+    filing.duration = 0;
+    filing.stage = 0;
+    filing.cancellations += 1;
+    filing.lastInterruption = reason;
+    hole.stateBanner =
+      "FILING WITHDRAWN // MOVEMENT DETECTED";
+    hole.stateBannerTimer = 1.8;
+    hole.stateBannerLockTimer = 1.8;
+    setHoleMessage(
+      `${escapeRouteLabel(interruptedRoute)} WITHDRAWN — return to the exit and file again.`,
+      2.5,
+    );
+    playTransientTone(
+      162,
+      82,
+      0.2,
+      0.045,
+      "sawtooth",
+    );
+    return true;
+  }
+
+  function updateEscapeFiling(dt) {
+    const hole = state.hole;
+    const filing = hole.escapeFiling;
+    if (!filing.active) {
+      return;
+    }
+    const routePoint =
+      escapeRoutePoint(
+        filing.route,
+      );
+    if (
+      worldDistance(
+        state.player,
+        routePoint,
+      ) >= routePoint.radius + 0.8
+    ) {
+      cancelEscapeFiling(
+        "LEFT_EXIT",
+      );
+      return;
+    }
+    filing.progress = Math.min(
+      filing.duration,
+      filing.progress + dt,
+    );
+    const nextStage = Math.min(
+      3,
+      Math.floor(
+        filing.progress /
+          filing.duration *
+          3,
+      ),
+    );
+    if (
+      nextStage > filing.stage &&
+      nextStage < 3
+    ) {
+      filing.stage = nextStage;
+      addWorldEffect(
+        "filing_stamp",
+        routePoint.x,
+        routePoint.y,
+        0.7,
+      );
+      playEscapeFilingCue(
+        nextStage,
+      );
+    }
+    if (
+      filing.progress >=
+      filing.duration
+    ) {
+      filing.stage = 3;
+      filing.completed = true;
+      filing.active = false;
+      completeHole(
+        filing.route,
+      );
+    }
+  }
+
   function completeHole(route) {
     state.hole.escapeRoute = route;
     state.hole.result = recordVictory(route);
@@ -5336,7 +5559,7 @@
       worldDistance(state.player, shed) <
         shed.radius
     ) {
-      completeHole("shed");
+      beginEscapeFiling("shed");
       return;
     }
 
@@ -5345,7 +5568,7 @@
       worldDistance(state.player, drain) <
         drain.radius
     ) {
-      completeHole("drain");
+      beginEscapeFiling("drain");
       return;
     }
 
@@ -6132,6 +6355,12 @@
     }
     hole.previousJoeMode = joe.mode;
     if (worldDistance(joe, state.player) < 8.2) {
+      if (hole.escapeFiling.active) {
+        hole.escapeFiling.active = false;
+        hole.escapeFiling.capturedDuringFiling = true;
+        hole.escapeFiling.lastInterruption =
+          "CAPTURED";
+      }
       recordCapture();
       state.mode = "defeat";
       state.time = 0;
@@ -9392,6 +9621,36 @@
             pageWidth * 0.72,
           );
         }
+      } else if (effect.kind === "filing_stamp") {
+        const stampScale =
+          scale *
+          (0.8 + progress * 0.45);
+        ctx.strokeStyle =
+          `rgba(232,173,79,${0.86 * alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          3 * scale,
+        );
+        for (
+          let stamp = 0;
+          stamp < 3;
+          stamp += 1
+        ) {
+          const inset =
+            stamp * 7 * stampScale;
+          ctx.strokeRect(
+            point.x -
+              30 * stampScale +
+              inset,
+            point.y -
+              26 * stampScale +
+              inset * 0.28,
+            60 * stampScale -
+              inset * 2,
+            28 * stampScale -
+              inset * 0.55,
+          );
+        }
       } else if (effect.kind === "pickup") {
         ctx.strokeStyle = `rgba(255,214,108,${alpha})`;
         ctx.lineWidth = 2;
@@ -10038,9 +10297,9 @@
         x: 220,
         icon: 0,
         number: "1",
-        title: "CHOOSE AN EXIT",
+        title: "CHOOSE + FILE EXIT",
         detail: "KEY → SHED  •  VALVE → DRAIN",
-        subdetail: `OPTIONAL ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS}`,
+        subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS}`,
       },
       {
         x: 500,
@@ -10951,13 +11210,15 @@
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.effectiveRough;
     const objective =
-      hole.keyCollected && hole.drainUnlocked
-        ? "CHOOSE SHED OR DRAIN EXIT"
-        : hole.drainUnlocked
-          ? "REACH THE OPEN DRAIN"
-          : hole.keyCollected
-            ? "RETURN TO THE SHED"
-            : "FIND KEY OR RELEASE DRAIN";
+      hole.escapeFiling.active
+        ? `FILE ${escapeRouteLabel(hole.escapeFiling.route)}`
+        : hole.keyCollected && hole.drainUnlocked
+          ? "CHOOSE SHED OR DRAIN EXIT"
+          : hole.drainUnlocked
+            ? "REACH DRAIN AND FILE RELEASE"
+            : hole.keyCollected
+              ? "RETURN TO SHED AND FILE RELEASE"
+              : "FIND KEY OR RELEASE DRAIN";
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
     const activeStampCount =
       performanceStampsFor(
@@ -11046,13 +11307,23 @@
       );
       drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
       drawText(
-        hole.drainUnlocked
-          ? `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  DRAIN EXIT OPEN`
+        hole.escapeFiling.active
+          ? `▣  FINAL FILING ${Math.round(
+              hole.escapeFiling.progress /
+                hole.escapeFiling.duration *
+                100,
+            )}%`
+          : hole.drainUnlocked
+          ? `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  DRAIN READY TO FILE`
           : `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  INTERACT / UNLOCK`,
         106,
         227,
         13,
-        hole.drainUnlocked ? "#87cba9" : "#e5d9b8",
+        hole.escapeFiling.active
+          ? "#e2cf9c"
+          : hole.drainUnlocked
+            ? "#87cba9"
+            : "#e5d9b8",
         "left",
       );
       drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
@@ -11301,7 +11572,10 @@
       ctx.restore();
     }
 
-    if (hole.messageTimer > 0) {
+    if (
+      !hole.escapeFiling.active &&
+      hole.messageTimer > 0
+    ) {
       const alpha = clamp(hole.messageTimer, 0, 1);
       const messageWidth = 720;
       ctx.globalAlpha = alpha;
@@ -11311,6 +11585,7 @@
       drawText(hole.message, WIDTH * 0.5, HEIGHT - 82, 15, "#f1e7c9", "center", true);
       ctx.globalAlpha = 1;
     } else if (
+      !hole.escapeFiling.active &&
       hole.prompt &&
       !hole.ballAim.active
     ) {
@@ -11354,6 +11629,121 @@
         true,
       );
     }
+  }
+
+  function drawEscapeFiling() {
+    const hole = state.hole;
+    const filing = hole.escapeFiling;
+    if (!filing.active) {
+      return;
+    }
+    const progress = clamp(
+      filing.progress /
+        filing.duration,
+      0,
+      1,
+    );
+    const joeDistance = worldDistance(
+      hole.joe,
+      state.player,
+    );
+    const danger =
+      joeDistance < 22 ||
+      hole.joe.mode === "chase";
+    const accent =
+      filing.route === "drain"
+        ? "#73c9aa"
+        : "#d7b35d";
+    const panel = {
+      x: WIDTH * 0.5 - 300,
+      y: HEIGHT - 150,
+      width: 600,
+      height: 82,
+    };
+    ctx.save();
+    ctx.fillStyle =
+      danger
+        ? "rgba(20,4,2,0.94)"
+        : "rgba(2,10,6,0.94)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      danger
+        ? "#dc6a38"
+        : accent,
+      2,
+    );
+    drawText(
+      `FINAL FILING // ${escapeRouteLabel(filing.route)}`,
+      WIDTH * 0.5,
+      panel.y + 24,
+      14,
+      "#f1e8ce",
+      "center",
+      true,
+    );
+    const bar = {
+      x: panel.x + 34,
+      y: panel.y + 34,
+      width: panel.width - 68,
+      height: 12,
+    };
+    ctx.fillStyle = "#121c13";
+    ctx.fillRect(
+      bar.x,
+      bar.y,
+      bar.width,
+      bar.height,
+    );
+    ctx.fillStyle =
+      danger
+        ? "#dc6a38"
+        : accent;
+    ctx.fillRect(
+      bar.x,
+      bar.y,
+      bar.width * progress,
+      bar.height,
+    );
+    for (
+      let division = 1;
+      division < 3;
+      division += 1
+    ) {
+      const divisionX =
+        bar.x +
+        bar.width *
+          division /
+          3;
+      ctx.fillStyle =
+        "rgba(2,7,4,0.88)";
+      ctx.fillRect(
+        divisionX - 1,
+        bar.y,
+        2,
+        bar.height,
+      );
+    }
+    drawText(
+      `STAY STILL  •  MOVE TO ABORT  •  JOE ${Math.round(joeDistance)}m`,
+      WIDTH * 0.5,
+      panel.y + 67,
+      11,
+      danger
+        ? "#f2a06f"
+        : "#b8c5af",
+      "center",
+      true,
+    );
+    ctx.restore();
   }
 
   function drawFirstHole() {
@@ -11566,12 +11956,15 @@
     drawContactBreakFeedback();
     drawGolfBallTactics();
     drawFirstHoleOverlay();
+    drawEscapeFiling();
     drawJoeStateBanner();
     drawRiskPremiumAward();
     drawThreatCaptions();
     if (!state.hole.ballAim.active) {
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
-      drawMovementFeedback(walkBob);
+      if (!state.hole.escapeFiling.active) {
+        drawMovementFeedback(walkBob);
+      }
     }
     drawTouchControls();
     if (state.hole.tutorialVisible) {
@@ -12138,6 +12531,14 @@
       const movement = movementInput();
       updateGolfBallTactics(dt, movement);
       const moving = playerIsMoving();
+      if (
+        hole.escapeFiling.active &&
+        moving
+      ) {
+        cancelEscapeFiling(
+          "MOVED",
+        );
+      }
       hole.crouched = crouchHeld();
       hole.focus = focusHeld();
       if (moving) {
@@ -12298,7 +12699,7 @@
         hole.activeSandZoneId =
           null;
       }
-      const targetNoise = moving
+      const movementNoise = moving
         ? hole.focus
           ? environment.sand
             ? 0.24
@@ -12337,6 +12738,17 @@
               ? 0.12
               : 0.26
         : 0;
+      const filingNoise =
+        hole.escapeFiling.active
+          ? hole.escapeFiling.route ===
+            "drain"
+            ? 0.52
+            : 0.44
+          : 0;
+      const targetNoise = Math.max(
+        movementNoise,
+        filingNoise,
+      );
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
       const targetConcealment =
         hole.crouched && environment.hardCover
@@ -12382,6 +12794,15 @@
         );
       } else if (hole.ballFlight) {
         hole.prompt = "BALL IN FLIGHT";
+      } else if (
+        hole.escapeFiling.active
+      ) {
+        hole.prompt =
+          `FINAL FILING ${Math.round(
+            hole.escapeFiling.progress /
+              hole.escapeFiling.duration *
+              100,
+          )}% // STAY STILL`;
       } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy(
           `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
@@ -12400,9 +12821,9 @@
           shed.radius
       ) {
         hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — UNLOCK SHED`,
-          "A — UNLOCK SHED",
-          "TAP USE — UNLOCK SHED",
+          `${keyboardBindingLabel("interact")} — FILE SHED RELEASE`,
+          "A — FILE SHED RELEASE",
+          "TAP USE — FILE SHED RELEASE",
         );
       } else if (
         hole.drainUnlocked &&
@@ -12410,9 +12831,9 @@
           drain.radius
       ) {
         hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — ESCAPE THROUGH DRAIN`,
-          "A — ESCAPE THROUGH DRAIN",
-          "TAP USE — ESCAPE THROUGH DRAIN",
+          `${keyboardBindingLabel("interact")} — FILE DRAIN RELEASE`,
+          "A — FILE DRAIN RELEASE",
+          "TAP USE — FILE DRAIN RELEASE",
         );
       } else if (
         !hole.changeRequestCollected &&
@@ -12463,6 +12884,9 @@
       }
 
       updateJoe(dt);
+      if (state.mode === "first_hole") {
+        updateEscapeFiling(dt);
+      }
       if (state.mode === "first_hole") {
         const joeDistance = worldDistance(hole.joe, state.player);
         const heartbeatStrength = clamp(
@@ -15701,6 +16125,60 @@
             groundAnchored: true,
             scenery: visibleDeadGreenSceneryState(),
           },
+          escapeFiling: {
+            active:
+              state.hole.escapeFiling.active,
+            route:
+              state.hole.escapeFiling.route,
+            progressSeconds:
+              Number(
+                state.hole.escapeFiling.progress.toFixed(
+                  2,
+                ),
+              ),
+            durationSeconds:
+              Number(
+                state.hole.escapeFiling.duration.toFixed(
+                  2,
+                ),
+              ),
+            progressPercent:
+              state.hole.escapeFiling.duration >
+              0
+                ? Math.round(
+                    state.hole.escapeFiling.progress /
+                      state.hole.escapeFiling.duration *
+                      100,
+                  )
+                : state.hole.escapeFiling.completed
+                  ? 100
+                  : 0,
+            stage:
+              state.hole.escapeFiling.stage,
+            attempts:
+              state.hole.escapeFiling.attempts,
+            cancellations:
+              state.hole.escapeFiling.cancellations,
+            completed:
+              state.hole.escapeFiling.completed,
+            capturedDuringFiling:
+              state.hole.escapeFiling.capturedDuringFiling,
+            lastInterruption:
+              state.hole.escapeFiling.lastInterruption,
+            joeDistanceAtStart:
+              state.hole.escapeFiling.joeDistanceAtStart ===
+              null
+                ? null
+                : Number(
+                    state.hole.escapeFiling.joeDistanceAtStart.toFixed(
+                      2,
+                    ),
+                  ),
+            movementAborts: true,
+            joeContinuesMoving: true,
+            scoringEffect:
+              "none_direct; elapsed time and final Joe distance use existing scoring",
+          },
           environment: state.hole.environment
             ? {
                 coverQuality: state.hole.environment.coverQuality,
@@ -15830,26 +16308,26 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, secures a change request, or reclaims a landed ball; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, secures a change request, or reclaims a landed ball; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, secures a change request, or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },
       touch: {
         gate: "Tap to begin",
         intro: "Tap to skip",
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
-        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact or reclaim a ball; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact, reclaim a ball, or start Final Filing at an open exit; movement aborts filing; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
       },
     },
