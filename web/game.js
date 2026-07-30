@@ -281,6 +281,28 @@
       cue: "THE DEAD GREEN — choose an exit before Joe closes the course.",
     },
   ];
+  const REACTIVE_SCORE_ZONES = [
+    {
+      key: "D MINOR",
+      rootHz: 36.71,
+      accent: "112,139,72",
+    },
+    {
+      key: "C# PHRYGIAN",
+      rootHz: 34.65,
+      accent: "136,112,58",
+    },
+    {
+      key: "C DIMINISHED",
+      rootHz: 32.7,
+      accent: "64,133,132",
+    },
+    {
+      key: "B TRITONE",
+      rootHz: 30.87,
+      accent: "153,70,39",
+    },
+  ];
   const COURSE_OBSTACLE_CELLS = [
     { x: 36, y: 134, width: 521, height: 326, heightMeters: 2.15 },
     { x: 557, y: 303, width: 531, height: 152, heightMeters: 1.05 },
@@ -1002,6 +1024,10 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      scorePhase: 0,
+      scoreStepIndex: -1,
+      scoreBeatPulse: 0,
+      scoreNotesPlayed: 0,
       closestJoeDistance: Infinity,
       chaseClosestDistance: Infinity,
     },
@@ -1025,6 +1051,14 @@
   let ambienceFilter = null;
   let ambienceDrone = null;
   let ambienceDroneGain = null;
+  let scoreGain = null;
+  let scoreFilter = null;
+  let scoreRootOscillator = null;
+  let scoreFifthOscillator = null;
+  let scoreTensionOscillator = null;
+  let scoreRootGain = null;
+  let scoreFifthGain = null;
+  let scoreTensionGain = null;
   let sharedNoiseBuffer = null;
 
   function clamp(value, low, high) {
@@ -3360,6 +3394,10 @@
       riskBreakBonuses: [],
       currentRiskPremium: 150,
       riskAward: null,
+      scorePhase: 0,
+      scoreStepIndex: -1,
+      scoreBeatPulse: 0,
+      scoreNotesPlayed: 0,
       closestJoeDistance: Infinity,
       chaseClosestDistance: Infinity,
     };
@@ -8789,6 +8827,57 @@
 
   function drawSuspenseEffects() {
     const hole = state.hole;
+    const reactiveScore =
+      reactiveScoreState();
+    if (
+      reactiveScore.active &&
+      reactiveScore.intensity > 0.22 &&
+      reactiveScore.beatPulse > 0.02
+    ) {
+      const pulseAlpha =
+        reactiveScore.beatPulse *
+        reactiveScore.intensity *
+        (
+          state.reducedMotion
+            ? 0.022
+            : 0.052
+        );
+      const pulseGlow =
+        ctx.createLinearGradient(
+          0,
+          HEIGHT * 0.46,
+          0,
+          HEIGHT,
+        );
+      pulseGlow.addColorStop(
+        0,
+        `rgba(${reactiveScore.accent},0)`,
+      );
+      pulseGlow.addColorStop(
+        1,
+        `rgba(${reactiveScore.accent},${pulseAlpha})`,
+      );
+      ctx.fillStyle = pulseGlow;
+      ctx.fillRect(
+        0,
+        HEIGHT * 0.46,
+        WIDTH,
+        HEIGHT * 0.54,
+      );
+      ctx.strokeStyle =
+        `rgba(${reactiveScore.accent},${pulseAlpha * 2.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(
+        WIDTH * 0.28,
+        HEIGHT - 58,
+      );
+      ctx.lineTo(
+        WIDTH * 0.72,
+        HEIGHT - 58,
+      );
+      ctx.stroke();
+    }
     if (hole.blackoutTimer > 0) {
       const power = floodlightPower();
       const blackout = 1 - power;
@@ -11287,6 +11376,7 @@
           playHeartbeat(heartbeatStrength);
           hole.heartbeatTimer = lerp(1.15, 0.42, heartbeatStrength);
         }
+        updateReactiveScore(dt);
       }
     }
 
@@ -11397,6 +11487,187 @@
     }
   }
 
+  function reactiveScoreState() {
+    const hole = state.hole;
+    const zoneIndex = clamp(
+      hole.zoneIndex || 0,
+      0,
+      REACTIVE_SCORE_ZONES.length - 1,
+    );
+    const zone =
+      REACTIVE_SCORE_ZONES[zoneIndex];
+    const courseActive =
+      state.mode === "first_hole" &&
+      !hole.tutorialVisible;
+    const modeWeight =
+      hole.joe.mode === "chase"
+        ? 0.5
+        : hole.joe.mode === "search"
+          ? 0.25
+          : hole.joe.mode === "investigate"
+            ? 0.14
+            : 0;
+    const intensity = clamp(
+      0.08 +
+        zoneIndex * 0.11 +
+        hole.detection * 0.32 +
+        modeWeight +
+        (hole.dreadTimer > 0 ? 0.1 : 0) +
+        (hole.overtime ? 0.06 : 0),
+      0,
+      1,
+    );
+    const blackoutHush =
+      hole.blackoutTimer > 0
+        ? clamp(
+            0.3 +
+              floodlightPower() * 0.35,
+            0.3,
+            0.65,
+          )
+        : 1;
+    const focusDuck =
+      hole.focus
+        ? 0.38
+        : 1;
+    const gain =
+      courseActive
+        ? (
+            0.0025 +
+            intensity * 0.0105
+          ) *
+          blackoutHush *
+          focusDuck
+        : 0;
+    const tempoBpm = Math.round(
+      42 +
+        zoneIndex * 5 +
+        intensity * 42 +
+        (hole.joe.mode === "chase"
+          ? 10
+          : 0),
+    );
+    const layers = [];
+    if (courseActive) {
+      layers.push("sub_dread");
+      if (intensity > 0.22) {
+        layers.push("uneasy_fifth");
+      }
+      if (intensity > 0.4) {
+        layers.push("blade_pulse");
+      }
+      if (hole.joe.mode === "chase") {
+        layers.push("pursuit_ostinato");
+      }
+      if (hole.blackoutTimer > 0) {
+        layers.push("power_hush");
+      }
+      if (hole.focus) {
+        layers.push("listening_duck");
+      }
+    }
+    return {
+      active: courseActive,
+      zoneIndex,
+      key: zone.key,
+      rootHz: zone.rootHz,
+      accent: zone.accent,
+      intensity,
+      tempoBpm,
+      gain,
+      blackoutHush,
+      focusDuck,
+      beatPulse:
+        hole.scoreBeatPulse || 0,
+      stepIndex:
+        hole.scoreStepIndex || 0,
+      layers,
+    };
+  }
+
+  function updateReactiveScore(dt) {
+    const hole = state.hole;
+    const score = reactiveScoreState();
+    hole.scoreBeatPulse = Math.max(
+      0,
+      hole.scoreBeatPulse -
+        dt *
+          (
+            hole.joe.mode === "chase"
+              ? 3.8
+              : 2.3
+          ),
+    );
+    if (!score.active) {
+      return;
+    }
+    hole.scorePhase +=
+      dt * score.tempoBpm / 60;
+    const subdivision = Math.floor(
+      hole.scorePhase * 2,
+    );
+    if (
+      subdivision ===
+      hole.scoreStepIndex
+    ) {
+      return;
+    }
+    hole.scoreStepIndex =
+      subdivision;
+    hole.scoreBeatPulse = 1;
+    const chasePattern =
+      [0, 1, 3, 6];
+    const suspensePattern =
+      [0, null, 3, null, 1, null, 6, null];
+    const pattern =
+      hole.joe.mode === "chase"
+        ? chasePattern
+        : suspensePattern;
+    const interval =
+      pattern[
+        subdivision % pattern.length
+      ];
+    if (
+      interval === null ||
+      score.intensity < 0.22 ||
+      score.blackoutHush < 0.45 ||
+      !audioContext ||
+      !ambienceBusGain ||
+      state.ambienceVolume <= 0
+    ) {
+      return;
+    }
+    const frequency =
+      score.rootHz *
+      4 *
+      Math.pow(
+        2,
+        interval / 12,
+      );
+    const volume =
+      (
+        0.0035 +
+        score.intensity * 0.0075
+      ) *
+      (
+        hole.focus
+          ? 0.28
+          : 1
+      );
+    playTransientTone(
+      frequency,
+      frequency * 0.72,
+      hole.joe.mode === "chase"
+        ? 0.12
+        : 0.18,
+      volume,
+      "triangle",
+      0,
+      ambienceBusGain,
+    );
+    hole.scoreNotesPlayed += 1;
+  }
+
   function ensureAudio() {
     if (audioContext) {
       if (audioContext.state === "suspended") {
@@ -11489,6 +11760,59 @@
     ambienceDrone.connect(ambienceDroneGain);
     ambienceDroneGain.connect(dangerBusGain);
     ambienceDrone.start();
+
+    scoreFilter =
+      audioContext.createBiquadFilter();
+    scoreFilter.type = "lowpass";
+    scoreFilter.frequency.value = 340;
+    scoreFilter.Q.value = 1.45;
+    scoreGain = audioContext.createGain();
+    scoreGain.gain.value = 0;
+    scoreFilter.connect(scoreGain);
+    scoreGain.connect(ambienceBusGain);
+
+    scoreRootGain =
+      audioContext.createGain();
+    scoreFifthGain =
+      audioContext.createGain();
+    scoreTensionGain =
+      audioContext.createGain();
+    scoreRootGain.gain.value = 0.68;
+    scoreFifthGain.gain.value = 0.2;
+    scoreTensionGain.gain.value = 0.04;
+    scoreRootGain.connect(scoreFilter);
+    scoreFifthGain.connect(scoreFilter);
+    scoreTensionGain.connect(scoreFilter);
+
+    scoreRootOscillator =
+      audioContext.createOscillator();
+    scoreFifthOscillator =
+      audioContext.createOscillator();
+    scoreTensionOscillator =
+      audioContext.createOscillator();
+    scoreRootOscillator.type = "triangle";
+    scoreFifthOscillator.type = "sine";
+    scoreTensionOscillator.type = "sawtooth";
+    scoreRootOscillator.frequency.value =
+      REACTIVE_SCORE_ZONES[0].rootHz;
+    scoreFifthOscillator.frequency.value =
+      REACTIVE_SCORE_ZONES[0].rootHz *
+      1.498;
+    scoreTensionOscillator.frequency.value =
+      REACTIVE_SCORE_ZONES[0].rootHz *
+      2.027;
+    scoreRootOscillator.connect(
+      scoreRootGain,
+    );
+    scoreFifthOscillator.connect(
+      scoreFifthGain,
+    );
+    scoreTensionOscillator.connect(
+      scoreTensionGain,
+    );
+    scoreRootOscillator.start();
+    scoreFifthOscillator.start();
+    scoreTensionOscillator.start();
   }
 
   function setMotorLevel(level, frequency) {
@@ -11539,6 +11863,83 @@
             ? 0.006
             : 0.002;
       ambienceDroneGain.gain.setTargetAtTime(dangerDrone, now, 0.28);
+    }
+    const reactiveScore =
+      reactiveScoreState();
+    if (scoreGain) {
+      scoreGain.gain.setTargetAtTime(
+        reactiveScore.gain,
+        now,
+        reactiveScore.active
+          ? 0.22
+          : 0.08,
+      );
+    }
+    if (scoreFilter) {
+      scoreFilter.frequency.setTargetAtTime(
+        (
+          260 +
+          reactiveScore.intensity * 960
+        ) *
+          reactiveScore.blackoutHush,
+        now,
+        0.3,
+      );
+      scoreFilter.Q.setTargetAtTime(
+        1.2 +
+          reactiveScore.intensity * 2.3,
+        now,
+        0.35,
+      );
+    }
+    if (scoreRootOscillator) {
+      scoreRootOscillator.frequency.setTargetAtTime(
+        reactiveScore.rootHz,
+        now,
+        0.65,
+      );
+    }
+    if (scoreFifthOscillator) {
+      scoreFifthOscillator.frequency.setTargetAtTime(
+        reactiveScore.rootHz *
+          (
+            1.498 +
+            reactiveScore.intensity *
+              0.008
+          ),
+        now,
+        0.58,
+      );
+    }
+    if (scoreTensionOscillator) {
+      scoreTensionOscillator.frequency.setTargetAtTime(
+        reactiveScore.rootHz *
+          (
+            2.012 +
+            reactiveScore.intensity *
+              0.052
+          ),
+        now,
+        0.4,
+      );
+    }
+    if (scoreFifthGain) {
+      scoreFifthGain.gain.setTargetAtTime(
+        0.12 +
+          reactiveScore.intensity *
+            0.2,
+        now,
+        0.28,
+      );
+    }
+    if (scoreTensionGain) {
+      scoreTensionGain.gain.setTargetAtTime(
+        0.015 +
+          reactiveScore.intensity *
+            0.11,
+        now,
+        0.24,
+      );
     }
     if (state.mode === "intro") {
       if (state.time < 0.95) {
@@ -13254,6 +13655,50 @@
       initialized: Boolean(audioContext),
       ambience: Boolean(ambienceGain),
       spatialMower: Boolean(motorPanNode),
+      reactiveScore: (() => {
+        const score =
+          reactiveScoreState();
+        return {
+          active: score.active,
+          zone:
+            COURSE_ZONES[
+              score.zoneIndex
+            ].id,
+          key: score.key,
+          rootHz: Number(
+            score.rootHz.toFixed(2),
+          ),
+          intensity: Number(
+            score.intensity.toFixed(2),
+          ),
+          tempoBpm: score.tempoBpm,
+          targetGain: Number(
+            score.gain.toFixed(4),
+          ),
+          blackoutHush: Number(
+            score.blackoutHush.toFixed(2),
+          ),
+          focusDuck: Number(
+            score.focusDuck.toFixed(2),
+          ),
+          beatPulse: Number(
+            score.beatPulse.toFixed(2),
+          ),
+          stepIndex:
+            score.stepIndex,
+          notesPlayed:
+            state.hole.scoreNotesPlayed,
+          layers:
+            score.layers.slice(),
+          routedTo: "course_ambience",
+          nodesReady: Boolean(
+            scoreGain &&
+            scoreRootOscillator &&
+            scoreFifthOscillator &&
+            scoreTensionOscillator
+          ),
+        };
+      })(),
       mix: {
         master: Number(state.volume.toFixed(2)),
         ambience: Number(state.ambienceVolume.toFixed(2)),

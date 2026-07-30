@@ -34,6 +34,7 @@ The browser build includes:
 - A post-mastery Night Order Portfolio: file all three optional Change Requests to permanently select any authored order for deliberate record and Course Echo rematches.
 - Twelve persistent Performance Stamps across the three dossiers—Clean File, Field Recovery, Bunker Clause, and Echo Breaker—reward distinct escape styles and culminate in a gold Master Adjuster presentation.
 - An unlockable Overtime Audit contract after all three Night Orders: fewer balls, faster pursuit, stronger evidence, a 1.30× score premium, and a separate persistent record.
+- A four-zone reactive horror score that moves from low sub-dread through dissonant search pulses to a pursuit ostinato while preserving spatial mower readability.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
 Run it locally from the project root:
