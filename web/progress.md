@@ -873,3 +873,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Human-playtest close pursuit with subtitles on and off; tune only near-camera debris opacity if it competes with Joe's directional captions.
 - Consider a player-facing effects-density slider only if Reduced Motion is too large a tradeoff for players who want full camera motion but fewer particles.
 - Add unique audio ticks for rare mower-scrape sparks only after confirming they are not confused with golf-ball impacts or interactable cues.
+
+## Massive Joe Dialogue Library Pass - July 30, 2026
+
+- Moved Joe's expandable writing into a dedicated `joe-dialogue.js` data library loaded before the game runtime.
+- Added ten coherent capture themes with combinatorial but theme-safe first and second lines: roadmap, backlog, sprint, acceptance, golf, grass, insurance software, stakeholders, delivery, and scope.
+- Expanded the Sprint Terminated rotation from 50 to 1,490 valid two-line capture outcomes while retaining six expression portraits and subtitle-only delivery.
+- Expanded the four pursuit-state pools to 176 barks and added 140 event-specific reactions for discovered trails, wet turf, bunkers, distractions, broken contact, close pursuit, Overtime Audit, Final Filing, shed keys, and sprinklers.
+- Joe now has 1,806 total dialogue variants without increasing routine chatter frequency.
+- Replaced single-line capture repeat protection with an 18-outcome rolling exclusion window and added a 12-bark rolling exclusion window.
+- Added state-aware context selection at pursuit transitions and direct event reactions when Joe finds a trail, enters wet turf or sand, hears a key, reacts to sprinklers, or catches a Final Filing attempt.
+- Extended `render_game_to_text` with active dialogue context, active pool size, capture/state/context counts, total variant count, authored pack count, and both repeat-window contracts.
+- Passed syntax and whitespace checks, then verified the exact project Playwright client loads the split dialogue library and reports all 1,806 variants without page or console errors.
+- Forced six captures in one live browser session and received six distinct outcome IDs across golf, stakeholder, scope, and acceptance themes, confirming the rolling exclusion window works across rematches.
+- Verified a live chase bark selected from the expanded 46-line chase pool, with the current context and pool size reflected by `render_game_to_text`.
+- Visually inspected the Sprint Terminated screen at 1280x720; the longest authored capture line is 41 characters, the longest bark is 39, and the generated dialogue remains cleanly inside the existing subtitle panel.
+
+### Next production priorities
+
+- Human-playtest Joe's event reactions with subtitles enabled and tune bark duration only if rapid stacked events cause one reaction to replace another too quickly.
+- Add additional themed capture packs only when new game systems introduce genuinely new vocabulary; the current 1,490-outcome pool already makes ordinary repetition extremely unlikely.

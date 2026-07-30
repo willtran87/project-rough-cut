@@ -34,7 +34,7 @@ The browser build includes:
 - A 14-second Delivery Chain that rewards linking smart plays—course progress, risky ball recoveries, bunker baits, optional paperwork, and contact breaks—without changing survival difficulty.
 - A live letter-only File Projection that reacts to time, attention, resources, optional filings, and recovery plays without exposing exact score optimization during the chase.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
-- Joe-specific character writing throughout the pursuit, plus 50 rotating capture lines paired with six expression portraits on the Sprint Terminated screen; all dialogue remains subtitle-only.
+- Joe-specific character writing throughout the pursuit, with 1,490 capture outcomes, 176 state barks, and 140 situation-specific reactions (1,806 total dialogue variants) paired with six expression portraits on the Sprint Terminated screen. Rolling repeat protection keeps recent captures and barks out of rotation; all dialogue remains subtitle-only.
 - An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
