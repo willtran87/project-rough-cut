@@ -655,3 +655,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human play sessions to tune whether 1.35/1.70 seconds creates the intended last-second hesitation at typical Joe distances.
 - Consider a short authored shed-interior transition only if Final Filing still feels too abrupt after human timing tests.
 - Audit victory reveal timing against the new final stamp so the transition lands on the strongest audio beat.
+
+## Final Filing Release Seal Pass - July 29, 2026
+
+- Replaced the same-frame 100%-to-scorecard cut with a 0.48-second, score-neutral release seal so the final commitment now has a readable payoff before the result screen.
+- Preserved the exact danger boundary: Joe receives the final pursuit update before filing reaches 100%, can still capture during that frame, and freezes only after the release is genuinely authorized.
+- Locked player movement and shot input during the seal while freezing elapsed time, Joe position, and final-score inputs; the reward beat cannot penalize the player or alter the authoritative result.
+- Added route-colored `FILE ACCEPTED // RELEASE AUTHORIZED` presentation across the world banner, objective HUD, filing panel, full-screen double-border stamp, threat caption, and final clipboard chord.
+- Kept shed gold and drain teal identities through the confirmation state, including route-specific release codes and complete 100% progress.
+- Made Pause freeze the seal timer exactly and Resume continue the same confirmation before entering victory.
+- Extended `render_game_to_text` with seal activity, progress, duration, player lock, Joe freeze, score-clock freeze, and the explicit 100% risk boundary.
+- Proved the shed seal freezes player, Joe, and elapsed time under held movement, then reaches victory with the exact score captured at authorization.
+- Proved the drain seal, paused seal, and resumed drain victory; the seal remained at 24% through an 800ms paused advance.
+- Proved the failure boundary remains intact: Joe starting 13m away in chase still captured the player during active filing and never entered the safe seal.
+- Visually verified the confirmation at 800x900, 1280x720, and 2560x1440 with no document overflow or page/console errors.
+- Re-ran the exact project Playwright client, inspected its baseline screenshot and text state, and found no client-reported errors.
+
+### Next production priorities
+
+- Conduct human play sessions to tune the 0.48-second seal against the final audio chord and result-screen reveal.
+- Run longer organic pursuit sessions to tune the 30m-to-10m Risk Premium curve against human risk perception.
+- Consider an authored route-specific camera nudge only if the static release seal still feels underpowered in real play.

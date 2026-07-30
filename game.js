@@ -234,6 +234,7 @@
     shed: 1.35,
     drain: 1.7,
   };
+  const ESCAPE_SEAL_DURATION = 0.48;
   const SPRINKLER_SOAK_ZONES = [
     { id: "west-tee", name: "WEST TEE", x: -82, y: 61, radius: 28 },
     { id: "east-relief", name: "EAST RELIEF", x: 78, y: 181, radius: 27 },
@@ -1046,9 +1047,12 @@
       escapeRoute: null,
       escapeFiling: {
         active: false,
+        sealing: false,
         route: null,
         progress: 0,
         duration: 0,
+        sealProgress: 0,
+        sealDuration: ESCAPE_SEAL_DURATION,
         stage: 0,
         attempts: 0,
         cancellations: 0,
@@ -4071,9 +4075,12 @@
       escapeRoute: null,
       escapeFiling: {
         active: false,
+        sealing: false,
         route: null,
         progress: 0,
         duration: 0,
+        sealProgress: 0,
+        sealDuration: ESCAPE_SEAL_DURATION,
         stage: 0,
         attempts: 0,
         cancellations: 0,
@@ -5263,6 +5270,29 @@
       980 - stage * 110,
       "bandpass",
     );
+    if (stage === 3) {
+      playTransientTone(
+        348,
+        232,
+        0.22,
+        0.055,
+        "square",
+      );
+      playTransientTone(
+        522,
+        392,
+        0.25,
+        0.032,
+        "sine",
+        0.04,
+      );
+      playNoiseBurst(
+        0.12,
+        0.03,
+        640,
+        "lowpass",
+      );
+    }
   }
 
   function beginEscapeFiling(route) {
@@ -5277,6 +5307,7 @@
     if (
       !routeOpen ||
       filing.active ||
+      filing.sealing ||
       worldDistance(
         state.player,
         routePoint,
@@ -5285,10 +5316,14 @@
       return false;
     }
     filing.active = true;
+    filing.sealing = false;
     filing.route = route;
     filing.progress = 0;
     filing.duration =
       ESCAPE_FILING_DURATION[route];
+    filing.sealProgress = 0;
+    filing.sealDuration =
+      ESCAPE_SEAL_DURATION;
     filing.stage = 0;
     filing.attempts += 1;
     filing.completed = false;
@@ -5335,6 +5370,46 @@
     return true;
   }
 
+  function beginEscapeSeal() {
+    const hole = state.hole;
+    const filing = hole.escapeFiling;
+    const routePoint =
+      escapeRoutePoint(
+        filing.route,
+      );
+    filing.stage = 3;
+    filing.completed = true;
+    filing.active = false;
+    filing.sealing = true;
+    filing.sealProgress = 0;
+    filing.sealDuration =
+      ESCAPE_SEAL_DURATION;
+    hole.ballAim =
+      freshBallAimState();
+    hole.prompt =
+      "RELEASE AUTHORIZED";
+    hole.stateBanner =
+      "FILE ACCEPTED // RELEASE AUTHORIZED";
+    hole.stateBannerTimer =
+      ESCAPE_SEAL_DURATION + 0.3;
+    hole.stateBannerLockTimer =
+      ESCAPE_SEAL_DURATION + 0.3;
+    addWorldEffect(
+      "filing_stamp",
+      routePoint.x,
+      routePoint.y,
+      1,
+    );
+    playEscapeFilingCue(3);
+    pushThreatCaption(
+      "FINAL RELEASE STAMPED",
+      routePoint,
+      "world",
+      1.2,
+      `filing_seal_${filing.route}`,
+    );
+  }
+
   function cancelEscapeFiling(reason) {
     const hole = state.hole;
     const filing = hole.escapeFiling;
@@ -5371,6 +5446,22 @@
   function updateEscapeFiling(dt) {
     const hole = state.hole;
     const filing = hole.escapeFiling;
+    if (filing.sealing) {
+      filing.sealProgress = Math.min(
+        filing.sealDuration,
+        filing.sealProgress + dt,
+      );
+      if (
+        filing.sealProgress >=
+        filing.sealDuration
+      ) {
+        filing.sealing = false;
+        completeHole(
+          filing.route,
+        );
+      }
+      return;
+    }
     if (!filing.active) {
       return;
     }
@@ -5420,12 +5511,7 @@
       filing.progress >=
       filing.duration
     ) {
-      filing.stage = 3;
-      filing.completed = true;
-      filing.active = false;
-      completeHole(
-        filing.route,
-      );
+      beginEscapeSeal();
     }
   }
 
@@ -5492,6 +5578,9 @@
 
   function interactWithCourse() {
     if (state.mode !== "first_hole") {
+      return;
+    }
+    if (state.hole.escapeFiling.sealing) {
       return;
     }
     const key = activeKeyPoint();
@@ -5649,7 +5738,8 @@
     if (
       state.mode !== "first_hole" ||
       state.hole.tutorialVisible ||
-      state.hole.ballAim.active
+      state.hole.ballAim.active ||
+      state.hole.escapeFiling.sealing
     ) {
       return;
     }
@@ -11210,7 +11300,9 @@
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.effectiveRough;
     const objective =
-      hole.escapeFiling.active
+      hole.escapeFiling.sealing
+        ? "RELEASE AUTHORIZED"
+        : hole.escapeFiling.active
         ? `FILE ${escapeRouteLabel(hole.escapeFiling.route)}`
         : hole.keyCollected && hole.drainUnlocked
           ? "CHOOSE SHED OR DRAIN EXIT"
@@ -11307,7 +11399,9 @@
       );
       drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
       drawText(
-        hole.escapeFiling.active
+        hole.escapeFiling.sealing
+          ? "✓  RELEASE AUTHORIZED"
+          : hole.escapeFiling.active
           ? `▣  FINAL FILING ${Math.round(
               hole.escapeFiling.progress /
                 hole.escapeFiling.duration *
@@ -11319,7 +11413,9 @@
         106,
         227,
         13,
-        hole.escapeFiling.active
+        hole.escapeFiling.sealing
+          ? "#92d5ae"
+          : hole.escapeFiling.active
           ? "#e2cf9c"
           : hole.drainUnlocked
             ? "#87cba9"
@@ -11574,6 +11670,7 @@
 
     if (
       !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
       hole.messageTimer > 0
     ) {
       const alpha = clamp(hole.messageTimer, 0, 1);
@@ -11586,6 +11683,7 @@
       ctx.globalAlpha = 1;
     } else if (
       !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
       hole.prompt &&
       !hole.ballAim.active
     ) {
@@ -11634,22 +11732,31 @@
   function drawEscapeFiling() {
     const hole = state.hole;
     const filing = hole.escapeFiling;
-    if (!filing.active) {
+    if (
+      !filing.active &&
+      !filing.sealing
+    ) {
       return;
     }
-    const progress = clamp(
-      filing.progress /
-        filing.duration,
-      0,
-      1,
-    );
+    const progress =
+      filing.sealing
+        ? 1
+        : clamp(
+            filing.progress /
+              filing.duration,
+            0,
+            1,
+          );
     const joeDistance = worldDistance(
       hole.joe,
       state.player,
     );
     const danger =
-      joeDistance < 22 ||
-      hole.joe.mode === "chase";
+      !filing.sealing &&
+      (
+        joeDistance < 22 ||
+        hole.joe.mode === "chase"
+      );
     const accent =
       filing.route === "drain"
         ? "#73c9aa"
@@ -11682,7 +11789,9 @@
       2,
     );
     drawText(
-      `FINAL FILING // ${escapeRouteLabel(filing.route)}`,
+      filing.sealing
+        ? "FILE ACCEPTED // RELEASE AUTHORIZED"
+        : `FINAL FILING // ${escapeRouteLabel(filing.route)}`,
       WIDTH * 0.5,
       panel.y + 24,
       14,
@@ -11733,7 +11842,9 @@
       );
     }
     drawText(
-      `STAY STILL  •  MOVE TO ABORT  •  JOE ${Math.round(joeDistance)}m`,
+      filing.sealing
+        ? `${escapeRouteLabel(filing.route)} SECURED  •  EXIT AUTHORIZED`
+        : `STAY STILL  •  MOVE TO ABORT  •  JOE ${Math.round(joeDistance)}m`,
       WIDTH * 0.5,
       panel.y + 67,
       11,
@@ -11743,6 +11854,104 @@
       "center",
       true,
     );
+    if (filing.sealing) {
+      const sealRatio = clamp(
+        filing.sealProgress /
+          Math.max(
+            0.001,
+            filing.sealDuration,
+          ),
+        0,
+        1,
+      );
+      const sealArrival =
+        state.reducedMotion
+          ? 1
+          : smoothstep(
+              clamp(
+                sealRatio / 0.32,
+                0,
+                1,
+              ),
+            );
+      const stampScale =
+        state.reducedMotion
+          ? 1
+          : lerp(
+              1.18,
+              1,
+              sealArrival,
+            );
+      const stampY =
+        HEIGHT * 0.49;
+      ctx.save();
+      ctx.translate(
+        WIDTH * 0.5,
+        stampY,
+      );
+      ctx.rotate(
+        state.reducedMotion
+          ? 0
+          : -0.025,
+      );
+      ctx.scale(
+        stampScale,
+        stampScale,
+      );
+      ctx.globalAlpha =
+        0.34 + sealArrival * 0.66;
+      ctx.fillStyle =
+        "rgba(1,10,6,0.84)";
+      ctx.fillRect(
+        -238,
+        -58,
+        476,
+        116,
+      );
+      strokeRect(
+        -238,
+        -58,
+        476,
+        116,
+        accent,
+        4,
+      );
+      strokeRect(
+        -228,
+        -48,
+        456,
+        96,
+        accent,
+        1,
+      );
+      drawText(
+        "FILE ACCEPTED",
+        0,
+        -17,
+        17,
+        "#e8dfc0",
+        "center",
+        true,
+      );
+      drawText(
+        "RELEASE AUTHORIZED",
+        0,
+        20,
+        29,
+        accent,
+        "center",
+        true,
+      );
+      drawText(
+        `RC-${filing.route === "drain" ? "DRN" : "SHD"}  //  FINAL`,
+        0,
+        43,
+        10,
+        "#aebba8",
+        "center",
+      );
+      ctx.restore();
+    }
     ctx.restore();
   }
 
@@ -11962,7 +12171,10 @@
     drawThreatCaptions();
     if (!state.hole.ballAim.active) {
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
-      if (!state.hole.escapeFiling.active) {
+      if (
+        !state.hole.escapeFiling.active &&
+        !state.hole.escapeFiling.sealing
+      ) {
         drawMovementFeedback(walkBob);
       }
     }
@@ -12491,7 +12703,9 @@
         updateAudio();
         return;
       }
-      hole.elapsed += dt;
+      if (!hole.escapeFiling.sealing) {
+        hole.elapsed += dt;
+      }
       hole.controlHintTimer = Math.max(
         0,
         hole.controlHintTimer - dt,
@@ -12529,8 +12743,15 @@
       updateCourseEffects(dt);
       updateTurfMarks(dt);
       const movement = movementInput();
-      updateGolfBallTactics(dt, movement);
-      const moving = playerIsMoving();
+      if (!hole.escapeFiling.sealing) {
+        updateGolfBallTactics(
+          dt,
+          movement,
+        );
+      }
+      const moving =
+        !hole.escapeFiling.sealing &&
+        playerIsMoving();
       if (
         hole.escapeFiling.active &&
         moving
@@ -12795,6 +13016,11 @@
       } else if (hole.ballFlight) {
         hole.prompt = "BALL IN FLIGHT";
       } else if (
+        hole.escapeFiling.sealing
+      ) {
+        hole.prompt =
+          "RELEASE AUTHORIZED";
+      } else if (
         hole.escapeFiling.active
       ) {
         hole.prompt =
@@ -12883,9 +13109,15 @@
         hole.prompt = "";
       }
 
-      updateJoe(dt);
-      if (state.mode === "first_hole") {
+      if (
+        hole.escapeFiling.sealing
+      ) {
         updateEscapeFiling(dt);
+      } else {
+        updateJoe(dt);
+        if (state.mode === "first_hole") {
+          updateEscapeFiling(dt);
+        }
       }
       if (state.mode === "first_hole") {
         const joeDistance = worldDistance(hole.joe, state.player);
@@ -16128,6 +16360,8 @@
           escapeFiling: {
             active:
               state.hole.escapeFiling.active,
+            sealing:
+              state.hole.escapeFiling.sealing,
             route:
               state.hole.escapeFiling.route,
             progressSeconds:
@@ -16141,6 +16375,27 @@
                 state.hole.escapeFiling.duration.toFixed(
                   2,
                 ),
+              ),
+            sealProgressSeconds:
+              Number(
+                state.hole.escapeFiling.sealProgress.toFixed(
+                  2,
+                ),
+              ),
+            sealDurationSeconds:
+              Number(
+                state.hole.escapeFiling.sealDuration.toFixed(
+                  2,
+                ),
+              ),
+            sealProgressPercent:
+              Math.round(
+                state.hole.escapeFiling.sealProgress /
+                  Math.max(
+                    0.001,
+                    state.hole.escapeFiling.sealDuration,
+                  ) *
+                  100,
               ),
             progressPercent:
               state.hole.escapeFiling.duration >
@@ -16175,7 +16430,12 @@
                     ),
                   ),
             movementAborts: true,
-            joeContinuesMoving: true,
+            joeContinuesDuringFiling: true,
+            playerLockedDuringSeal: true,
+            joeFrozenDuringSeal: true,
+            scoreClockFrozenDuringSeal: true,
+            riskEndsAt:
+              "filing_100_percent",
             scoringEffect:
               "none_direct; elapsed time and final Joe distance use existing scoring",
           },
