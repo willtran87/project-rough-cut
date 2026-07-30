@@ -997,6 +997,11 @@
       chaseCount: 0,
       chaseBreaks: 0,
       closeCalls: 0,
+      razorCuts: 0,
+      riskPremiumBanked: 0,
+      riskBreakBonuses: [],
+      currentRiskPremium: 150,
+      riskAward: null,
       closestJoeDistance: Infinity,
       chaseClosestDistance: Infinity,
     },
@@ -1492,6 +1497,45 @@
     };
   }
 
+  function riskPremiumForDistance(distance) {
+    const exposure = smoothstep(
+      inverseLerp(30, 10, distance),
+    );
+    return 150 + Math.round(exposure * 250);
+  }
+
+  function riskTierForDistance(distance) {
+    if (distance < 12) {
+      return "razor";
+    }
+    if (distance < 18) {
+      return "close";
+    }
+    return "break";
+  }
+
+  function bankRiskPremium(distance) {
+    const hole = state.hole;
+    if (hole.riskBreakBonuses.length >= 3) {
+      hole.riskAward = null;
+      return null;
+    }
+    const amount =
+      riskPremiumForDistance(distance);
+    const tier =
+      riskTierForDistance(distance);
+    hole.riskPremiumBanked += amount;
+    hole.riskBreakBonuses.push(amount);
+    hole.currentRiskPremium = amount;
+    hole.riskAward = {
+      amount,
+      tier,
+      age: 0,
+      duration: 2.45,
+    };
+    return hole.riskAward;
+  }
+
   function calculateRunResult(route) {
     const hole = state.hole;
     const variant = activeRunVariant();
@@ -1512,8 +1556,10 @@
       Math.round(hole.crouchedSeconds * 4),
     );
     const recoveryBonus =
-      Math.min(3, hole.chaseBreaks) * 150 +
-      Math.min(3, hole.closeCalls) * 250;
+      Number.isFinite(hole.riskPremiumBanked)
+        ? hole.riskPremiumBanked
+        : Math.min(3, hole.chaseBreaks) * 150 +
+          Math.min(3, hole.closeCalls) * 250;
     const routeBonus = 250;
     const changeRequestBonus =
       hole.changeRequestCollected
@@ -1579,6 +1625,10 @@
       chaseCount: hole.chaseCount,
       chaseBreaks: hole.chaseBreaks,
       closeCalls: hole.closeCalls,
+      razorCuts: hole.razorCuts || 0,
+      riskPremiumBanked: recoveryBonus,
+      riskBreakBonuses:
+        hole.riskBreakBonuses?.slice() || [],
       closestJoeDistance: Number.isFinite(
         hole.closestJoeDistance,
       )
@@ -2848,7 +2898,7 @@
             ? "Hold LB near hard cover or in rough."
             : "Hold C near hard cover or in rough.",
         subdetail:
-          "Bunker sand slows both of you, but holds loud tracks.",
+          "Closer escapes bank a larger Risk Premium.",
       },
     ];
     for (const step of steps) {
@@ -3305,6 +3355,11 @@
       chaseCount: 0,
       chaseBreaks: 0,
       closeCalls: 0,
+      razorCuts: 0,
+      riskPremiumBanked: 0,
+      riskBreakBonuses: [],
+      currentRiskPremium: 150,
+      riskAward: null,
       closestJoeDistance: Infinity,
       chaseClosestDistance: Infinity,
     };
@@ -5142,6 +5197,11 @@
     ) {
       hole.chaseCount += 1;
       hole.chaseClosestDistance = playerDistance;
+      hole.currentRiskPremium =
+        riskPremiumForDistance(
+          hole.chaseClosestDistance,
+        );
+      hole.riskAward = null;
     }
     if (joe.mode === "chase") {
       hole.pursuitSeconds += dt;
@@ -5149,6 +5209,10 @@
         hole.chaseClosestDistance,
         worldDistance(joe, state.player),
       );
+      hole.currentRiskPremium =
+        riskPremiumForDistance(
+          hole.chaseClosestDistance,
+        );
     }
     const brokeContact =
       previousMode === "chase" &&
@@ -5158,6 +5222,12 @@
       if (hole.chaseClosestDistance < 18) {
         hole.closeCalls += 1;
       }
+      if (hole.chaseClosestDistance < 12) {
+        hole.razorCuts += 1;
+      }
+      bankRiskPremium(
+        hole.chaseClosestDistance,
+      );
     }
     if (joe.mode !== previousMode) {
       announceJoeState(joe.mode);
@@ -5173,6 +5243,33 @@
           2.15,
         );
         playUiTone(430, 0.09, 0.028);
+      }
+      if (brokeContact) {
+        const riskAward =
+          hole.riskAward;
+        const tierLabel =
+          riskAward?.tier === "razor"
+            ? "RAZOR CUT"
+            : riskAward?.tier === "close"
+              ? "CLOSE CUT"
+              : "CONTACT BROKEN";
+        hole.stateBanner =
+          riskAward
+            ? `${tierLabel} // +${riskAward.amount} RISK PREMIUM`
+            : "CONTACT BROKEN // PREMIUM CAP REACHED";
+        hole.stateBannerTimer = 2.35;
+        hole.stateBannerLockTimer = 2.35;
+        if (
+          hole.chaseClosestDistance < 12
+        ) {
+          setHoleMessage(
+            "RAZOR CUT — The mower nearly had you. Premium banked.",
+            2.35,
+          );
+        }
+        playRiskPremiumCue(
+          riskAward?.tier || "break",
+        );
       }
     }
     if (
@@ -8872,7 +8969,7 @@
           ? `PORTFOLIO OVERRIDE  //  DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
           : stampCount > 0
             ? `DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
-        : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
+        : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND BANKED RISK PREMIUM.",
       WIDTH * 0.5,
       184,
       10,
@@ -8918,7 +9015,7 @@
             ? "LB CROUCH  •  LT LISTEN"
             : "C CROUCH  •  Q LISTEN",
         subdetail:
-          "SAND SLOWS BOTH — YOUR TRACKS STAY",
+          "CLOSER ESCAPES BANK MORE RISK PREMIUM",
       },
     ];
     for (const card of cards) {
@@ -9391,6 +9488,10 @@
     const progress = breaking
       ? clamp(hole.lostSightTimer / 1.25, 0, 1)
       : 0;
+    const riskPreview =
+      hole.riskBreakBonuses.length < 3
+        ? hole.currentRiskPremium
+        : 0;
     const panel = {
       x: WIDTH * 0.5 - 176,
       y: HEIGHT * 0.67,
@@ -9433,10 +9534,10 @@
       9,
     );
     const label = breaking
-      ? `BREAKING CONTACT  ${Math.round(progress * 100)}%`
+      ? `BREAKING CONTACT  ${Math.round(progress * 100)}%  //  RISK +${riskPreview}`
       : visualContact
-        ? "VISUAL LOCK — PUT SOLID COVER BETWEEN YOU"
-        : "SIGHT BROKEN — YOUR MOVEMENT IS STILL AUDIBLE";
+        ? `VISUAL LOCK  //  RISK +${riskPreview}`
+        : `SIGHT BROKEN — STILL AUDIBLE  //  RISK +${riskPreview}`;
     drawText(
       label,
       WIDTH * 0.5,
@@ -9446,6 +9547,97 @@
       "center",
       true,
     );
+    ctx.restore();
+  }
+
+  function drawRiskPremiumAward() {
+    const award = state.hole.riskAward;
+    if (!award) {
+      return;
+    }
+    const remaining =
+      award.duration - award.age;
+    const alpha = clamp(
+      Math.min(
+        award.age / 0.16,
+        remaining / 0.38,
+      ),
+      0,
+      1,
+    );
+    const entrance =
+      state.reducedMotion
+        ? 0
+        : (1 - smoothstep(award.age / 0.3)) *
+          18;
+    const color =
+      award.tier === "razor"
+        ? "#f4c85c"
+        : award.tier === "close"
+          ? "#e99852"
+          : "#98c789";
+    const tierLabel =
+      award.tier === "razor"
+        ? "RAZOR CUT"
+        : award.tier === "close"
+          ? "CLOSE CUT"
+          : "CONTACT BROKEN";
+    const centerX = WIDTH * 0.5;
+    const centerY = 434 + entrance;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(3,12,6,0.92)";
+    ctx.fillRect(
+      centerX - 146,
+      centerY - 50,
+      292,
+      82,
+    );
+    strokeRect(
+      centerX - 146,
+      centerY - 50,
+      292,
+      82,
+      color,
+      award.tier === "razor" ? 3 : 2,
+    );
+    drawText(
+      `${tierLabel} // RISK PREMIUM`,
+      centerX,
+      centerY - 24,
+      11,
+      color,
+      "center",
+      true,
+    );
+    drawText(
+      `+${award.amount}`,
+      centerX,
+      centerY + 10,
+      30,
+      "#f3edcf",
+      "center",
+      true,
+    );
+    for (
+      let index = 0;
+      index < 3;
+      index += 1
+    ) {
+      const earned =
+        index <
+        state.hole.riskBreakBonuses.length;
+      ctx.fillStyle =
+        earned
+          ? color
+          : "#273426";
+      ctx.fillRect(
+        centerX - 27 + index * 24,
+        centerY + 19,
+        14,
+        3,
+      );
+    }
     ctx.restore();
   }
 
@@ -9841,6 +10033,19 @@
       true,
     );
     drawText(
+      hole.joe.mode === "chase"
+        ? `PREMIUM +${hole.riskPremiumBanked} // LIVE +${hole.riskBreakBonuses.length < 3 ? hole.currentRiskPremium : 0}`
+        : `RISK PREMIUM +${hole.riskPremiumBanked}`,
+      meterX + 18,
+      145,
+      9,
+      hole.riskPremiumBanked > 0
+        ? "#d9b369"
+        : "#71816e",
+      "left",
+      hole.joe.mode === "chase",
+    );
+    drawText(
       `MOWER ${Math.round(playerDistance)}m`,
       meterX + 246,
       145,
@@ -10174,6 +10379,7 @@
     drawGolfBallTactics();
     drawFirstHoleOverlay();
     drawJoeStateBanner();
+    drawRiskPremiumAward();
     drawThreatCaptions();
     if (!state.hole.ballAim.active) {
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
@@ -10342,6 +10548,17 @@
         color: "#e6b76a",
       });
     }
+    if (
+      result.breakdown.recovery > 0
+    ) {
+      scoreNotes.push({
+        text: `+${result.breakdown.recovery.toLocaleString()} RISK PREMIUM BANKED`,
+        color:
+          result.razorCuts > 0
+            ? "#f1c75d"
+            : "#d99a5e",
+      });
+    }
     if (result.overtime) {
       scoreNotes.push({
         text: `+${result.breakdown.overtime.toLocaleString()} OVERTIME PREMIUM`,
@@ -10401,8 +10618,8 @@
           : `${result.chaseCount} / ${Math.round(result.pursuitSeconds)}s`,
       ],
       [
-        "CLOSE CALLS",
-        String(result.closeCalls),
+        "RISK / CLOSE CUTS",
+        `+${result.riskPremiumBanked} / ${result.closeCalls}${result.razorCuts > 0 ? `  •  ${result.razorCuts} RAZOR` : ""}`,
       ],
       [
         "RESOURCES",
@@ -10449,7 +10666,7 @@
         818,
         y,
         13,
-        index === 3 && result.closeCalls > 0
+        index === 3 && result.riskPremiumBanked > 0
           ? "#efb158"
           : "#d8dfcd",
         "right",
@@ -10700,6 +10917,15 @@
       );
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
       updateThreatCaptions(dt);
+      if (hole.riskAward) {
+        hole.riskAward.age += dt;
+        if (
+          hole.riskAward.age >=
+          hole.riskAward.duration
+        ) {
+          hole.riskAward = null;
+        }
+      }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
       hole.stateBannerLockTimer = Math.max(
@@ -11600,6 +11826,40 @@
       playTransientTone(178, 92, 0.22, 0.038, "square", 0, dangerBusGain);
     } else {
       playTransientTone(82, 68, 0.16, 0.018, "sine", 0, dangerBusGain);
+    }
+  }
+
+  function playRiskPremiumCue(tier) {
+    const base =
+      tier === "razor"
+        ? 392
+        : tier === "close"
+          ? 330
+          : 262;
+    playTransientTone(
+      base,
+      base * 1.5,
+      0.18,
+      0.034,
+      "triangle",
+    );
+    playTransientTone(
+      base * 1.25,
+      base * 2,
+      0.24,
+      tier === "razor"
+        ? 0.042
+        : 0.028,
+      "sine",
+      0.09,
+    );
+    if (tier === "razor") {
+      playNoiseBurst(
+        0.15,
+        0.018,
+        2200,
+        "highpass",
+      );
     }
   }
 
@@ -13244,6 +13504,37 @@
             chaseCount: state.hole.chaseCount,
             chaseBreaks: state.hole.chaseBreaks,
             closeCalls: state.hole.closeCalls,
+            razorCuts:
+              state.hole.razorCuts,
+            riskPremium: {
+              banked:
+                state.hole.riskPremiumBanked,
+              current:
+                state.hole.joe.mode === "chase" &&
+                state.hole.riskBreakBonuses.length < 3
+                  ? state.hole.currentRiskPremium
+                  : 0,
+              capBreaks: 3,
+              breakBonuses:
+                state.hole.riskBreakBonuses.slice(),
+              activeAward:
+                state.hole.riskAward
+                  ? {
+                      amount:
+                        state.hole.riskAward.amount,
+                      tier:
+                        state.hole.riskAward.tier,
+                      remainingSeconds:
+                        Number(
+                          Math.max(
+                            0,
+                            state.hole.riskAward.duration -
+                              state.hole.riskAward.age,
+                          ).toFixed(2),
+                        ),
+                    }
+                  : null,
+            },
             closestJoeDistance: Number.isFinite(
               state.hole.closestJoeDistance,
             )

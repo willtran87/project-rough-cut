@@ -22,12 +22,12 @@ The browser build includes:
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
 - Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
 - Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
-- A sight-and-sound attention meter, explicit contact-break progress, and one-time zone suspense events.
+- A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
 - An adaptive HUD that recedes after onboarding and can be recalled with H or Y.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
-- A post-run course scorecard with S–D risk grades, close-call recognition, and route-specific personal records.
+- A post-run course scorecard with S–D risk grades, banked Risk Premium and Razor Cut recognition, and route-specific personal records.
 - A persistent Course Echo that replays the best compatible route as spectral world tracks and a live mini-map rival, with ahead/behind pacing on repeat attempts.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.

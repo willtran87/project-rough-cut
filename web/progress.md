@@ -517,3 +517,26 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Playtest caption frequency during long pursuit/search loops and tune only if real sessions show fatigue.
 - Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.
+
+## Risk Premium Pursuit Mastery — July 29, 2026
+
+- Converted the hidden chase-break recovery calculation into a live Risk Premium system that previews value during pursuit and banks the award when contact is broken.
+- Made the award continuous across Joe's closest mower distance: routine breaks begin at +150, tighter escapes rise smoothly, and sub-12-meter Razor Cuts approach the +400 maximum.
+- Preserved the existing three-break cap and exact +1,200 theoretical maximum, preventing score inflation or an exploitable permanent-power loop.
+- Extracted one authoritative banking function shared by chase transitions, score calculation, award presentation, diagnostics, and instrumented balance checks.
+- Added a compact live premium read to Joe's attention panel and integrated the current value into the contact-break progress panel.
+- Added reduced-motion-aware Contact Broken, Close Cut, and Razor Cut award cards with three bank-cap pips and a tiered non-dialogue sound flourish.
+- Updated the survival briefing and How to Survive panel to teach that closer escapes bank more Risk Premium without adding new controls.
+- Added a scorecard note plus a combined Risk / Close Cuts row with Razor Cut recognition.
+- Extended `render_game_to_text` with banked/current premium, the three-break cap, individual awards, Razor Cut count, and active award lifetime.
+- Proved the complete real chase-to-search transition banks a 398-point Razor Cut, increments chase break/close-call/Razor metrics, and produces the correct state banner.
+- Verified the balance curve from 34m through 6m, a three-award [400, 400, 400] cap, a rejected fourth award, and exact score-breakdown equality.
+- Verified pause freezes the active award at 2.45 seconds, resume advances it, Restart clears all premium state, and reduced motion removes positional entrance animation.
+- Re-ran the exact project Playwright client for the survival briefing and first-hole regression, inspected both screenshots and diagnostics, and found no console or page errors.
+- Visually inspected the live chase preview, Razor Cut bank animation, earned-risk scorecard, and scaled 800×600 award treatment.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Run longer organic pursuit sessions to tune the 30m-to-10m premium curve against human risk perception.
+- Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.
