@@ -2,7 +2,7 @@
 
 > **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, and automated browser verification.
+> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes with vulnerable Final Filing commitments, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, and automated browser verification.
 
 ## Status Legend and Use
 
@@ -183,7 +183,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Add collision geometry, occlusion, authored hiding spaces, and stable route boundaries.
 - [x] Create multiple viable paths and a second complete extraction route.
 - [ ] Randomize from curated key, resource, and Joe-start locations without producing unfair states.
-- [ ] Add a shed interior or connected second route so reaching the door creates a new tension beat rather than an immediate hard stop.
+- [x] Replace instant extraction with a vulnerable Final Filing commitment at both exits: Joe continues moving, filing makes noise, and movement safely aborts the attempt. A shed interior remains an optional future expansion.
 - [x] Improve Joe’s line of sight, hearing, search memory, and detection recovery.
 - [x] Add obstacle-aware Joe route selection with stuck recovery and state-specific patrol, investigate, search, and chase mower animation.
 - [x] Replace permanent live tracking with close-range/live-pursuit tracking and a decaying last-signal state.

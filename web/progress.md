@@ -632,3 +632,26 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct a longer human chase through the Dead Green to tune how often Joe, the warning flag, and the shed marker overlap under real steering.
 - Give Audit Row one secondary lateral landmark only if human navigation tests still confuse its two hedge arches.
 - Consider a restrained zone-specific sky or distant silhouette layer after all four world-space passes are complete.
+
+## Final Filing Extraction Commitment Pass - July 29, 2026
+
+- Audited the complete objective and pursuit loop and identified instantaneous extraction as the largest remaining pacing break: reaching an open exit immediately removed all danger from the final approach.
+- Replaced instant shed and drain victories with route-specific Final Filing commitments: 1.35 seconds for the shed release and 1.70 seconds for the culvert release.
+- Kept Joe, detection, elapsed time, the reactive score, and live File Projection running throughout filing so the final choice remains dangerous and existing close-escape Risk Premium scoring emerges naturally.
+- Made movement an immediate, non-punitive abort. The player moves on the same frame, keeps the route open, receives a clear withdrawal message, and can file again.
+- Added three-stage progress, clipboard/stamp audio, world-space stamp flashes, route-colored progress presentation, danger coloring, live Joe distance, directional threat captions, and explicit stay-still/move-to-abort guidance.
+- Updated the Survival Briefing, How to Survive panel, route objectives, contextual prompts, expanded HUD, keyboard contract, gamepad contract, and touch contract to explain the new commitment before punishment.
+- Extended `render_game_to_text` with route, progress, duration, stage, attempts, cancellations, completion, capture interruption, starting Joe distance, cancellation behavior, pursuit behavior, and scoring semantics.
+- Proved both route success chains: shed filing completed at exactly 1.35 seconds and drain filing at exactly 1.70 seconds, each reaching the authoritative victory result.
+- Proved the recovery chain: movement at 51% withdrew the first shed filing, advanced the player immediately, preserved the run, and a second filing completed successfully.
+- Proved the failure chain: Joe began a drain filing 13.4 meters away in chase, reached capture range after 0.13 filing seconds, and produced defeat with `CAPTURED` interruption state rather than a false active filing.
+- Proved Pause freezes filing progress exactly and Resume continues from the same percentage to victory.
+- Proved keyboard, synthetic multi-touch Use plus movement-pad cancellation, and standard-gamepad A plus analog-stick cancellation without page or console errors.
+- Re-ran the exact project Playwright client for the first-hole regression and visually inspected the screenshot and text state.
+- Visually verified the active Final Filing panel at 800x600, 1280x720, and 2560x1440 with no document overflow.
+
+### Next production priorities
+
+- Conduct human play sessions to tune whether 1.35/1.70 seconds creates the intended last-second hesitation at typical Joe distances.
+- Consider a short authored shed-interior transition only if Final Filing still feels too abrupt after human timing tests.
+- Audit victory reveal timing against the new final stamp so the transition lands on the strongest audio beat.
