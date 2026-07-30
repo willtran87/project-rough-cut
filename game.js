@@ -542,34 +542,34 @@
     { id: "dead-grass-finish", type: 0, x: 106, y: 357, scale: 0.98, landmark: "withered rough" },
   ];
   const COURSE_OBSTACLES = [
-    { id: "start-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -42, y: 28, radius: 15, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "hedge hide" },
-    { id: "start-boundary", asset: "stone-cover", kit: "base", type: 1, x: 75, y: 22, radius: 18, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "stone cover" },
-    { id: "service-cart", asset: "service-cart", kit: "base", type: 3, x: 28, y: 43, radius: 13, coverRadius: 21, scale: 1, blocks: true, sight: true, landmark: "grounds cart" },
-    { id: "east-pine", kit: "base", type: 2, x: 86, y: 49, radius: 18, coverRadius: 27, scale: 1, blocks: true, sight: true, landmark: "pine" },
-    { id: "bunker-rake", kit: "base", type: 5, x: -85, y: 64, radius: 16, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "bunker lip" },
-    { id: "course-sign", kit: "base", type: 4, x: -32, y: 68, radius: 9, coverRadius: 14, scale: 1, blocks: true, sight: false, landmark: "course sign" },
-    { id: "mid-boundary", asset: "stone-cover", kit: "base", type: 1, x: 55, y: 72, radius: 17, coverRadius: 24, scale: 0.94, blocks: true, sight: true, landmark: "stone cover" },
-    { id: "north-hedge", asset: "hedge-hide", kit: "base", type: 0, x: 86, y: 84, radius: 17, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge hide" },
-    { id: "north-pine", kit: "base", type: 2, x: -94, y: 90, radius: 19, coverRadius: 28, scale: 0.9, blocks: true, sight: true, landmark: "pine" },
+    { id: "start-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -42, y: 28, radius: 15, radiusX: 20, radiusY: 7, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "hedge hide" },
+    { id: "start-boundary", asset: "stone-cover", kit: "base", type: 1, x: 75, y: 22, radius: 18, radiusX: 19, radiusY: 8, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "stone cover" },
+    { id: "service-cart", asset: "service-cart", kit: "base", type: 3, x: 28, y: 43, radius: 13, radiusX: 16, radiusY: 7, coverRadius: 21, scale: 1, blocks: true, sight: true, landmark: "grounds cart" },
+    { id: "east-pine", kit: "base", type: 2, x: 86, y: 49, radius: 18, radiusX: 7.5, radiusY: 7.5, coverRadius: 27, scale: 1, blocks: true, sight: true, landmark: "pine" },
+    { id: "bunker-rake", kit: "base", type: 5, x: -85, y: 64, radius: 16, radiusX: 22, radiusY: 7, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "bunker lip" },
+    { id: "course-sign", kit: "base", type: 4, x: -32, y: 68, radius: 9, radiusX: 5, radiusY: 4, coverRadius: 14, scale: 1, blocks: true, sight: false, landmark: "course sign" },
+    { id: "mid-boundary", asset: "stone-cover", kit: "base", type: 1, x: 55, y: 72, radius: 17, radiusX: 18, radiusY: 8, coverRadius: 24, scale: 0.94, blocks: true, sight: true, landmark: "stone cover" },
+    { id: "north-hedge", asset: "hedge-hide", kit: "base", type: 0, x: 86, y: 84, radius: 17, radiusX: 20, radiusY: 7, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge hide" },
+    { id: "north-pine", kit: "base", type: 2, x: -94, y: 90, radius: 19, radiusX: 7, radiusY: 7, coverRadius: 28, scale: 0.9, blocks: true, sight: true, landmark: "pine" },
     { id: "audit-arch", kit: "expanded", type: 0, x: 0, y: 116, radius: 0, scale: 1.05, blocks: false, sight: false, landmark: "hedge tunnel" },
-    { id: "audit-arch-left", x: -35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
-    { id: "audit-arch-right", x: 35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
-    { id: "audit-cart", kit: "expanded", type: 1, x: -58, y: 145, radius: 18, coverRadius: 27, scale: 1.08, blocks: true, sight: true, landmark: "overturned cart" },
-    { id: "audit-board", kit: "expanded", type: 4, x: 72, y: 174, radius: 11, coverRadius: 19, scale: 0.94, blocks: true, sight: true, landmark: "audit board" },
-    { id: "audit-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -94, y: 174, radius: 18, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "hedge hide" },
-    { id: "pond-west", kit: "expanded", type: 2, x: -63, y: 215, radius: 22, coverRadius: 29, scale: 1.18, blocks: true, sight: true, landmark: "black-water reeds" },
-    { id: "water-pine", kit: "base", type: 2, x: 91, y: 207, radius: 19, coverRadius: 28, scale: 0.92, blocks: true, sight: true, landmark: "pine" },
-    { id: "floodlight", kit: "expanded", type: 5, x: 18, y: 242, radius: 6, coverRadius: 11, lightRadius: 57, scale: 1.04, blocks: true, sight: false, landmark: "maintenance floodlight" },
-    { id: "pond-east", kit: "expanded", type: 2, x: 70, y: 260, radius: 22, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "pond edge" },
-    { id: "bunker-wall", kit: "expanded", type: 3, x: -18, y: 274, radius: 19, coverRadius: 27, scale: 1.12, blocks: true, sight: true, landmark: "bunker wall" },
-    { id: "final-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
+    { id: "audit-arch-left", x: -35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-arch-right", x: 35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-cart", kit: "expanded", type: 1, x: -58, y: 145, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.08, blocks: true, sight: true, landmark: "overturned cart" },
+    { id: "audit-board", kit: "expanded", type: 4, x: 72, y: 174, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.94, blocks: true, sight: true, landmark: "audit board" },
+    { id: "audit-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -94, y: 174, radius: 18, radiusX: 21, radiusY: 7.5, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "hedge hide" },
+    { id: "pond-west", kit: "expanded", type: 2, x: -63, y: 215, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.18, blocks: true, sight: true, landmark: "black-water reeds" },
+    { id: "water-pine", kit: "base", type: 2, x: 91, y: 207, radius: 19, radiusX: 7.5, radiusY: 7.5, coverRadius: 28, scale: 0.92, blocks: true, sight: true, landmark: "pine" },
+    { id: "floodlight", kit: "expanded", type: 5, x: 18, y: 242, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 57, scale: 1.04, blocks: true, sight: false, landmark: "maintenance floodlight" },
+    { id: "pond-east", kit: "expanded", type: 2, x: 70, y: 260, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "pond edge" },
+    { id: "bunker-wall", kit: "expanded", type: 3, x: -18, y: 274, radius: 19, radiusX: 25, radiusY: 8, coverRadius: 27, scale: 1.12, blocks: true, sight: true, landmark: "bunker wall" },
+    { id: "final-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
     { id: "final-arch", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-left", x: -35, y: 310, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-right", x: 35, y: 310, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
-    { id: "final-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
-    { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 334, radius: 20, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
-    { id: "shed-left-wall", x: 5, y: 350, radius: 11, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
-    { id: "shed-right-wall", x: 45, y: 350, radius: 11, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "final-arch-left", x: -35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-right", x: 35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
+    { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 334, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
+    { id: "shed-left-wall", x: 5, y: 350, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-right-wall", x: 45, y: 350, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
   ];
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
@@ -1285,6 +1285,8 @@
       blockedWorldX: 0,
       blockedWorldY: 0,
       blockedRadius: 0,
+      blockedRadiusX: 0,
+      blockedRadiusY: 0,
       blockedCueCooldown: 0,
       navigationGuide:
         freshNavigationGuide(),
@@ -5078,6 +5080,8 @@
       blockedWorldX: 0,
       blockedWorldY: 0,
       blockedRadius: 0,
+      blockedRadiusX: 0,
+      blockedRadiusY: 0,
       blockedCueCooldown: 0,
       navigationGuide:
         freshNavigationGuide(),
@@ -5157,6 +5161,147 @@
 
   function worldDistance(a, b) {
     return Math.hypot((a.x - b.x) * 0.72, a.y - b.y);
+  }
+
+  function obstacleFootprintAxes(
+    obstacle,
+    padding = 0,
+  ) {
+    return {
+      x: Math.max(
+        0.01,
+        (obstacle.radiusX ??
+          obstacle.radius ??
+          0) +
+          padding,
+      ),
+      y: Math.max(
+        0.01,
+        (obstacle.radiusY ??
+          obstacle.radius ??
+          0) +
+          padding,
+      ),
+    };
+  }
+
+  function obstacleNormalizedDistance(
+    point,
+    obstacle,
+    padding = 0,
+  ) {
+    const axes =
+      obstacleFootprintAxes(
+        obstacle,
+        padding,
+      );
+    return Math.hypot(
+      (point.x - obstacle.x) *
+        0.72 /
+        axes.x,
+      (point.y - obstacle.y) /
+        axes.y,
+    );
+  }
+
+  function obstacleClearance(
+    point,
+    obstacle,
+    padding = 0,
+  ) {
+    const axes =
+      obstacleFootprintAxes(
+        obstacle,
+        padding,
+      );
+    const deltaX =
+      (point.x - obstacle.x) *
+      0.72;
+    const deltaY =
+      point.y - obstacle.y;
+    const centerDistance =
+      Math.hypot(deltaX, deltaY);
+    if (centerDistance < 0.0001) {
+      return -Math.min(
+        axes.x,
+        axes.y,
+      );
+    }
+    const normalizedDistance =
+      Math.hypot(
+        deltaX / axes.x,
+        deltaY / axes.y,
+      );
+    const boundaryDistance =
+      centerDistance /
+      Math.max(
+        0.0001,
+        normalizedDistance,
+      );
+    return centerDistance -
+      boundaryDistance;
+  }
+
+  function segmentObstacleIntersection(
+    start,
+    end,
+    obstacle,
+    padding = 0,
+  ) {
+    const axes =
+      obstacleFootprintAxes(
+        obstacle,
+        padding,
+      );
+    const startX =
+      (start.x - obstacle.x) *
+      0.72 /
+      axes.x;
+    const startY =
+      (start.y - obstacle.y) /
+      axes.y;
+    const endX =
+      (end.x - obstacle.x) *
+      0.72 /
+      axes.x;
+    const endY =
+      (end.y - obstacle.y) /
+      axes.y;
+    const segmentX = endX - startX;
+    const segmentY = endY - startY;
+    const segmentLengthSquared =
+      segmentX * segmentX +
+      segmentY * segmentY;
+    const amount =
+      segmentLengthSquared <= 0.0001
+        ? 0
+        : clamp(
+            -(
+              startX * segmentX +
+              startY * segmentY
+            ) /
+              segmentLengthSquared,
+            0,
+            1,
+          );
+    const closestX =
+      startX +
+      segmentX * amount;
+    const closestY =
+      startY +
+      segmentY * amount;
+    return {
+      amount,
+      startDistance:
+        Math.hypot(startX, startY),
+      endDistance:
+        Math.hypot(endX, endY),
+      closestDistance:
+        Math.hypot(
+          closestX,
+          closestY,
+        ),
+    };
   }
 
   function playerIsMoving() {
@@ -5618,7 +5763,10 @@
       }
       clearance = Math.min(
         clearance,
-        worldDistance(point, obstacle) - obstacle.radius,
+        obstacleClearance(
+          point,
+          obstacle,
+        ),
       );
     }
     return clearance;
@@ -5682,9 +5830,16 @@
       if (
         obstacle.coverRadius &&
         distance <= obstacle.coverRadius &&
-        distance >= Math.max(0, obstacle.radius - 1)
+        obstacleClearance(
+          player,
+          obstacle,
+        ) >= -1
       ) {
-        const coverDistance = distance - obstacle.radius;
+        const coverDistance =
+          obstacleClearance(
+            player,
+            obstacle,
+          );
         if (coverDistance < nearestCoverDistance) {
           nearestCover = obstacle;
           nearestCoverDistance = coverDistance;
@@ -5709,7 +5864,10 @@
     if (hardCover && blockingCover) {
       nearestCover = blockingCover;
       nearestCoverDistance =
-        worldDistance(player, blockingCover) - blockingCover.radius;
+        obstacleClearance(
+          player,
+          blockingCover,
+        );
     }
     const coverQuality = hardCover
       ? state.hole.crouched
@@ -5772,29 +5930,24 @@
   }
 
   function lineBlockerBetween(start, end) {
-    const ax = start.x * 0.72;
-    const ay = start.y;
-    const bx = end.x * 0.72;
-    const by = end.y;
-    const dx = bx - ax;
-    const dy = by - ay;
-    const lengthSquared = Math.max(0.001, dx * dx + dy * dy);
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       const obstacle = COURSE_OBSTACLES[index];
       if (!obstacle.blocks || !obstacle.sight) {
         continue;
       }
-      if (
-        worldDistance(start, obstacle) < obstacle.radius * 0.72
-      ) {
+      const intersection =
+        segmentObstacleIntersection(
+          start,
+          end,
+          obstacle,
+        );
+      if (intersection.startDistance < 1) {
         continue;
       }
-      const ox = obstacle.x * 0.72;
-      const oy = obstacle.y;
-      const amount = clamp(((ox - ax) * dx + (oy - ay) * dy) / lengthSquared, 0, 1);
-      const closestX = ax + dx * amount;
-      const closestY = ay + dy * amount;
-      if (Math.hypot(ox - closestX, oy - closestY) < obstacle.radius * 0.68) {
+      if (
+        intersection.closestDistance <
+        0.78
+      ) {
         return obstacle.id;
       }
     }
@@ -5831,8 +5984,13 @@
       if (!obstacle.blocks) {
         continue;
       }
-      const distance = worldDistance({ x, y }, obstacle);
-      if (distance < obstacle.radius + radius) {
+      if (
+        obstacleNormalizedDistance(
+          { x, y },
+          obstacle,
+          radius,
+        ) < 1
+      ) {
         return obstacle;
       }
     }
@@ -5863,6 +6021,58 @@
           nearPoint.y - farPoint.y,
         ) * 0.5,
         2.5,
+        HEIGHT * 0.13,
+      ),
+    };
+  }
+
+  function projectedObstacleFootprint(
+    obstacle,
+    padding = 0,
+  ) {
+    const axes =
+      obstacleFootprintAxes(
+        obstacle,
+        padding,
+      );
+    const point = worldToScreen(
+      obstacle.x,
+      obstacle.y,
+    );
+    const leftPoint = worldToScreen(
+      obstacle.x -
+        axes.x / 0.72,
+      obstacle.y,
+    );
+    const rightPoint = worldToScreen(
+      obstacle.x +
+        axes.x / 0.72,
+      obstacle.y,
+    );
+    const nearPoint = worldToScreen(
+      obstacle.x,
+      obstacle.y - axes.y,
+    );
+    const farPoint = worldToScreen(
+      obstacle.x,
+      obstacle.y + axes.y,
+    );
+    return {
+      point,
+      radiusX: clamp(
+        Math.abs(
+          rightPoint.x -
+            leftPoint.x,
+        ) * 0.5,
+        4,
+        WIDTH * 0.28,
+      ),
+      radiusY: clamp(
+        Math.abs(
+          nearPoint.y -
+            farPoint.y,
+        ) * 0.5,
+        2,
         HEIGHT * 0.13,
       ),
     };
@@ -5934,16 +6144,24 @@
           x: obstacle.x,
           y: obstacle.y,
           radius: obstacle.radius,
+          footprint: {
+            shape: "ellipse",
+            radiusX:
+              obstacleFootprintAxes(
+                obstacle,
+              ).x,
+            radiusY:
+              obstacleFootprintAxes(
+                obstacle,
+              ).y,
+          },
           blocks: obstacle.blocks,
           distance: Math.round(worldDistance(obstacle, state.player)),
           clearance: Number(
-            (
-              worldDistance(
-                obstacle,
-                state.player,
-              ) -
-              obstacle.radius -
-              PLAYER_COLLISION_RADIUS
+            obstacleClearance(
+              state.player,
+              obstacle,
+              PLAYER_COLLISION_RADIUS,
             ).toFixed(2),
           ),
           forwardDistance: Math.round(point.forwardDistance),
@@ -6164,7 +6382,7 @@
           initialBlocker = blocker;
         }
         const blockerDistance =
-          worldDistance(
+          obstacleClearance(
             player,
             blocker,
           );
@@ -6177,7 +6395,7 @@
           horizontalBlocker &&
           horizontalBlocker.id ===
             blocker.id &&
-          worldDistance(
+          obstacleClearance(
             {
               x: targetX,
               y: player.y,
@@ -6200,7 +6418,7 @@
           verticalBlocker &&
           verticalBlocker.id ===
             blocker.id &&
-          worldDistance(
+          obstacleClearance(
             {
               x: player.x,
               y: targetY,
@@ -6244,6 +6462,12 @@
       state.hole.blockedWorldY =
         initialBlocker.y;
       state.hole.blockedRadius =
+        initialBlocker.radius;
+      state.hole.blockedRadiusX =
+        initialBlocker.radiusX ??
+        initialBlocker.radius;
+      state.hole.blockedRadiusY =
+        initialBlocker.radiusY ??
         initialBlocker.radius;
       if (
         newContact &&
@@ -7903,14 +8127,6 @@
   }
 
   function joeObstacleOnSegment(start, end, padding = JOE_NAVIGATION_CLEARANCE) {
-    const startX = start.x * 0.72;
-    const startY = start.y;
-    const endX = end.x * 0.72;
-    const endY = end.y;
-    const segmentX = endX - startX;
-    const segmentY = endY - startY;
-    const segmentLengthSquared =
-      segmentX * segmentX + segmentY * segmentY;
     let nearest = null;
     let nearestAmount = Infinity;
 
@@ -7919,46 +8135,34 @@
       if (!obstacle.blocks) {
         continue;
       }
-      const obstacleX = obstacle.x * 0.72;
-      const obstacleY = obstacle.y;
-      const inflatedRadius = obstacle.radius + padding;
-      const startDistance = Math.hypot(
-        startX - obstacleX,
-        startY - obstacleY,
-      );
-      const endDistance = Math.hypot(
-        endX - obstacleX,
-        endY - obstacleY,
-      );
+      const intersection =
+        segmentObstacleIntersection(
+          start,
+          end,
+          obstacle,
+          padding,
+        );
 
       // Joe may begin inside an old prototype collider. Let him move out,
       // but never let steering carry him deeper into it.
       if (
-        startDistance < inflatedRadius &&
-        endDistance > startDistance + 0.01
+        intersection.startDistance < 1 &&
+        intersection.endDistance >
+          intersection.startDistance +
+            0.01
       ) {
         continue;
       }
 
-      const amount =
-        segmentLengthSquared <= 0.0001
-          ? 0
-          : clamp(
-              ((obstacleX - startX) * segmentX +
-                (obstacleY - startY) * segmentY) /
-                segmentLengthSquared,
-              0,
-              1,
-            );
-      const closestX = startX + segmentX * amount;
-      const closestY = startY + segmentY * amount;
-      const distance = Math.hypot(
-        closestX - obstacleX,
-        closestY - obstacleY,
-      );
-      if (distance < inflatedRadius && amount < nearestAmount) {
+      if (
+        intersection.closestDistance <
+          1 &&
+        intersection.amount <
+          nearestAmount
+      ) {
         nearest = obstacle;
-        nearestAmount = amount;
+        nearestAmount =
+          intersection.amount;
       }
     }
 
@@ -7974,8 +8178,10 @@
       }
       clearance = Math.min(
         clearance,
-        worldDistance(point, obstacle) -
-          obstacle.radius,
+        obstacleClearance(
+          point,
+          obstacle,
+        ),
       );
     }
     return clearance;
@@ -8429,8 +8635,10 @@
         continue;
       }
       const clearance =
-        worldDistance(joe, obstacle) -
-        obstacle.radius;
+        obstacleClearance(
+          joe,
+          obstacle,
+        );
       if (clearance < tightestClearance) {
         tightestObstacle = obstacle;
         tightestClearance = clearance;
@@ -8441,10 +8649,28 @@
       tightestClearance <
         JOE_NAVIGATION_CLEARANCE
     ) {
-      const metricX =
-        (joe.x - tightestObstacle.x) * 0.72;
-      const metricY =
-        joe.y - tightestObstacle.y;
+      const axes =
+        obstacleFootprintAxes(
+          tightestObstacle,
+        );
+      let metricX =
+        (joe.x -
+          tightestObstacle.x) *
+        0.72 /
+        (axes.x * axes.x);
+      let metricY =
+        (joe.y -
+          tightestObstacle.y) /
+        (axes.y * axes.y);
+      if (
+        Math.hypot(
+          metricX,
+          metricY,
+        ) < 0.0001
+      ) {
+        metricX = 0;
+        metricY = -1;
+      }
       const metricLength = Math.max(
         0.001,
         Math.hypot(metricX, metricY),
@@ -8978,15 +9204,12 @@
         state.hole.blockedTimer > 0 &&
         state.hole.blockedObstacle ===
           obstacle.id;
-      const distance =
-        worldDistance(
+      const clearance =
+        obstacleClearance(
           state.player,
           obstacle,
+          PLAYER_COLLISION_RADIUS,
         );
-      const clearance =
-        distance -
-        obstacle.radius -
-        PLAYER_COLLISION_RADIUS;
       const obstaclePoint =
         worldToScreen(
           obstacle.x,
@@ -8998,8 +9221,7 @@
         clearance < 17;
       const nearby =
         state.hole.focus &&
-        distance <
-          obstacle.radius + 30;
+        clearance < 30;
       if (
         !active &&
         !nearby &&
@@ -9008,10 +9230,9 @@
         continue;
       }
       const footprint =
-        projectedGroundRadius(
+        projectedObstacleFootprint(
           obstacle,
-          obstacle.radius +
-            PLAYER_COLLISION_RADIUS,
+          PLAYER_COLLISION_RADIUS,
         );
       if (
         !footprint.point.visible ||
@@ -9085,12 +9306,11 @@
         obstacle.y,
       );
       const clearance =
-        worldDistance(
+        obstacleClearance(
           state.player,
           obstacle,
-        ) -
-        obstacle.radius -
-        PLAYER_COLLISION_RADIUS;
+          PLAYER_COLLISION_RADIUS,
+        );
       if (
         point.visible &&
         point.forwardDistance > -4 &&
@@ -9129,10 +9349,9 @@
       const candidate =
         candidates[index];
       const footprint =
-        projectedGroundRadius(
+        projectedObstacleFootprint(
           candidate.obstacle,
-          candidate.obstacle.radius +
-            PLAYER_COLLISION_RADIUS,
+          PLAYER_COLLISION_RADIUS,
         );
       const labelX = clamp(
         candidate.point.x,
@@ -9211,14 +9430,17 @@
         y: state.hole.blockedWorldY,
         radius:
           state.hole.blockedRadius,
+        radiusX:
+          state.hole.blockedRadiusX,
+        radiusY:
+          state.hole.blockedRadiusY,
         landmark:
           state.hole.blockedLandmark,
       };
     const footprint =
-      projectedGroundRadius(
+      projectedObstacleFootprint(
         obstacle,
-        obstacle.radius +
-          PLAYER_COLLISION_RADIUS,
+        PLAYER_COLLISION_RADIUS,
       );
     const alpha = clamp(
       state.hole.blockedTimer * 1.65,
@@ -10956,16 +11178,22 @@
   ) {
     const footprint = projectedGroundRadius(
       obstacle,
-      obstacle.radius,
+      1,
     );
+    const obstacleFootprint =
+      projectedObstacleFootprint(
+        obstacle,
+      );
     const radiusX = Math.max(
-      drawWidth * 0.3,
-      footprint.radiusX * 0.88,
+      5,
+      obstacleFootprint.radiusX *
+        0.98,
     );
     const radiusY = Math.max(
       3,
-      footprint.radiusY * 0.82,
-      drawHeight * 0.035,
+      obstacleFootprint.radiusY *
+        0.94,
+      footprint.radiusY * 0.7,
     );
     const distance = worldDistance(
       state.player,
@@ -11129,22 +11357,31 @@
       return;
     }
     const cell = dedicatedArt
-      ? {
-          x: 0,
-          y: 0,
-          width:
-            dedicatedArt.naturalWidth,
-          height:
-            dedicatedArt.naturalHeight,
-          heightMeters:
-            obstacle.asset ===
-            "service-cart"
-              ? 3.25
-              : obstacle.asset ===
-                  "stone-cover"
-                ? 2.85
-                : 3.6,
-        }
+      ? obstacle.asset ===
+          "service-cart"
+        ? {
+            x: 20,
+            y: 100,
+            width: 1490,
+            height: 875,
+            heightMeters: 3.25,
+          }
+        : obstacle.asset ===
+            "stone-cover"
+          ? {
+              x: 36,
+              y: 204,
+              width: 1464,
+              height: 672,
+              heightMeters: 2.85,
+            }
+          : {
+              x: 40,
+              y: 144,
+              width: 1456,
+              height: 784,
+              heightMeters: 3.6,
+            }
       : obstacleCells[obstacle.type];
     if (!cell) {
       return;
@@ -11159,9 +11396,8 @@
       cell.height;
     if (dedicatedArt) {
       const footprint =
-        projectedGroundRadius(
+        projectedObstacleFootprint(
           obstacle,
-          obstacle.radius,
         );
       const footprintWidth =
         footprint.radiusX * 1.72;
@@ -12278,20 +12514,24 @@
       ctx.lineWidth = blocked
         ? 2
         : 1;
+      const footprint =
+        obstacleFootprintAxes(
+          obstacle,
+          PLAYER_COLLISION_RADIUS,
+        );
       ctx.beginPath();
       ctx.ellipse(
         obstaclePoint.x,
         obstaclePoint.y,
         Math.max(
           2.5,
-          (obstacle.radius +
-            PLAYER_COLLISION_RADIUS) *
+          footprint.x /
+            0.72 *
             mapScaleX,
         ),
         Math.max(
           1.8,
-          (obstacle.radius +
-            PLAYER_COLLISION_RADIUS) *
+          footprint.y *
             mapScaleY,
         ),
         0,
@@ -12627,7 +12867,7 @@
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
     drawText(
-      "RINGS = BLOCKERS  •  GLOW = USE RANGE",
+      "SHAPE = SOLID BASE  •  GLOW = USE",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
@@ -20729,6 +20969,12 @@
                   radius:
                     state.hole
                       .blockedRadius,
+                  radiusX:
+                    state.hole
+                      .blockedRadiusX,
+                  radiusY:
+                    state.hole
+                      .blockedRadiusY,
                   inputDirection:
                     state.hole
                       .blockedDirection,
@@ -20754,6 +21000,10 @@
               true,
             mapShowsCollisionFootprints:
               true,
+            collisionModel:
+              "authored_elliptical_visible_base",
+            mapMatchesFirstPersonCollision:
+              true,
             mapIncludesHiddenBlockers:
               true,
             mapShowsInteractionRanges:
@@ -20768,6 +21018,8 @@
               stoneCover: true,
               groundsCart: true,
               groundedToCollisionFootprints:
+                true,
+              transparentSourceMarginsRemoved:
                 true,
             },
             firstPersonGuidance: {
