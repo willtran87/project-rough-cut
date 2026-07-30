@@ -831,3 +831,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Human-playtest whether 14 seconds encourages varied routing without pulling attention away from Joe; tune only the window and event values, not survival difficulty.
 - Add unique generated art for the pond edge and final hedge tunnel after their collision footprints are proven comfortable under pursuit.
 - Consider a subtle full-chain audio flourish if it remains readable with the mower and threat-caption mix.
+
+## Visible-Base Collision Alignment Pass - July 30, 2026
+
+- Replaced generic circular obstacle collision with authored elliptical footprints that describe the visible ground contact of each prop.
+- Tuned broad, shallow footprints for hedges, carts, stone cover, bunker lips, pond reeds, and walls; compact footprints for signs and floodlights; and trunk-sized footprints for pines instead of canopy-sized blockers.
+- Reused the same ellipse data for player collision, collision clearance, escape sliding, Joe path checks, Joe obstacle recovery, line-of-sight cover, proximity callouts, first-person footprint rings, the course map, and text-state diagnostics.
+- Inflated the displayed contact shape by the player radius so the highlighted boundary communicates where the player's center can actually travel, not merely the prop's raw base.
+- Replaced circle-based map markers with aspect-correct footprint ellipses, including hidden hedge-tunnel sides and the split shed doorway.
+- Removed transparent source margins from the dedicated hedge, stone-cover, and grounds-cart sprites at render time, landing their visible bases directly on their projected terrain sockets.
+- Added `radiusX` and `radiusY` to visible-obstacle and collision-contact text state, plus an explicit authored-ellipse collision contract under navigation readability.
+- Added a deterministic `footprint_collision.json` browser action that approaches the grounds cart, makes contact, and holds Listening Focus for geometry inspection.
+- Passed JavaScript syntax and diff checks, the exact project browser client, direct contact, and side-step traversal with no reported page or console errors.
+- Confirmed 7.8 metric units of player-center clearance through each hedge tunnel and 3.5 through the split shed doorway after player-radius inflation.
+- Visually verified the complete responsive stage at 2560x1600 and 800x600 with no document overflow, layout clipping, page errors, or console errors.
+
+### Next production priorities
+
+- Human-playtest the two hedge tunnels and shed doorway during active pursuit; their openings now have explicit clearance, but chase comfort remains a feel decision.
+- Author ellipse footprints alongside every future generated prop so art, map, player collision, Joe routing, and cover cannot drift apart.
+- Consider a subtle footprint-edit debug overlay for future level-authoring builds, kept out of the player-facing production UI.
