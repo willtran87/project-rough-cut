@@ -15,7 +15,7 @@ The browser build includes:
 - A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
 - Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.
-- Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment while Joe continues closing in.
+- Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment, a route-colored release seal, and a clean handoff into the scorecard.
 - Precise swept collision, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
