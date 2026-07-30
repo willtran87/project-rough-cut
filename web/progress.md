@@ -958,3 +958,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest walking, sprinting, crouching, and Listening Focus back-to-back; tune the four shift amplitudes only if one stance feels disconnected from its actual speed.
 - Consider a very small forward/back camera pitch response after lateral movement has been accepted, keeping the stable crosshair and Reduced Camera Motion contract intact.
+
+## True Viewport Strafe Correction - July 30, 2026
+
+- Re-audited the first lateral-camera pass after player feedback that movement still felt weak.
+- Found the underlying issue: the previous implementation shifted projected world elements but never translated the actual world render transform, so the result still read as scenery sliding rather than the player changing lateral position.
+- Added a true whole-world viewport translation before the scene rotation and scale. The sky, horizon, course, obstacles, Joe, effects, and foreground now move together while all HUD and map layers remain fixed.
+- Retuned the input response to 68 pixels for walking, 88 for sprinting, 42 for crouching, and 32 for Listening Focus.
+- Split each response into a decisive viewport shift plus a smaller perspective-projection offset. Near-ground lines and foreground grass retain additional parallax, while the backdrop moves more slowly.
+- Added dynamic overscan based on viewport translation and roll so committed movement and sprinting never expose empty canvas corners at either lateral extreme.
+- Kept the existing 0.515-degree walking counter-lean and eased return, with the scene settling back to effectively zero after input release.
+- Preserved Reduced Camera Motion at roughly one-third strength, with only 7.4 pixels of whole-viewport travel and no roll or speed streaks.
+- Added camera-transform-aware screen projection for collision-contact geometry and golf-ball targets, keeping those overlays attached to their world objects during the stronger camera motion.
+- Extended `render_game_to_text` with separate whole-viewport and projected-world shift values plus the `translated_viewport_with_layered_parallax` render contract.
+- Passed JavaScript syntax and whitespace checks, the exact project browser client for strafing, direct collision contact, and golf-ball flight, with no page or console errors.
+- Verified sustained walking at approximately 34 pixels of whole-viewport travel plus 31 pixels of projected-world shift, sprint at 88 total response, crouch at 42, Listening Focus at 32, and a clean eased recenter.
+- Visually inspected walking and sprinting in both directions at 2560x1600, 1280x720, and 800x600. No world edges, empty corners, HUD drift, map drift, or responsive-stage clipping appeared.
+
+### Next production priorities
+
+- Human-playtest the corrected viewport translation before adding any new movement effects; this pass intentionally makes the lateral cue unmistakable.
+- If further tuning is needed, adjust `viewportShiftRatio` first so camera travel can change without disturbing authored world projection or collision geometry.
