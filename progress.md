@@ -757,3 +757,22 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Run human no-map play sessions across all three Night Orders and tune reflector density only where players still lose the route.
 - Consider an accessibility setting for reflector strength and duration while keeping the current medium treatment as the default.
 - Add more authored environmental silhouettes at major route forks if human players still need text bearing assistance.
+
+## Grounded Landmark and Persistent Map Pass - July 30, 2026
+
+- Restored the course map as a persistent HUD tool and integrated the existing first-person field bearing into its header so map planning and scene navigation reinforce each other.
+- Used built-in image generation to create a true prop-free moonlit course clean plate plus dedicated high-resolution pixel-art maintenance shed, hedge hide, stone cover, and grounds-cart assets.
+- Removed chroma backgrounds from the four landmark sprites with soft alpha mattes and validated their transparent silhouettes.
+- Replaced the baked/static shed with a depth-sorted world landmark that scales and moves through the same course projection as Joe and other props.
+- Replaced selected generic atlas obstacles with dedicated landmarks at their existing gameplay coordinates.
+- Added layered terrain sockets, soil occlusion, footprint rims, embedded grass, and close-range cover labels to visually join obstacles to the course surface.
+- Matched the dedicated landmarks' rendered bases to their collision and line-of-sight footprints, and split the shed body into two hidden wall colliders that preserve its central doorway.
+- Extended `render_game_to_text` with the persistent-map role and explicit dedicated-landmark grounding guarantees.
+- Re-ran the exact project Playwright client, visually inspected the opening course frame, and confirmed the new grounds cart, hedge hide, stone cover, clean backdrop, persistent map, and field bearing render with no client-reported errors.
+- Used the deterministic route harness to inspect the shed at interaction range and confirmed the doorway, terrain base, cover state, prompt, and map are all visible with no page errors.
+
+### Next production priorities
+
+- Conduct human route runs around both shed-wall halves and tune their clearance only if the door feels too narrow under chase pressure.
+- Add unique generated art for the bunker wall, pond edge, and final hedge tunnel after their current collision volumes are play-tested.
+- Consider a lower-detail map symbol atlas if landmark silhouettes become too dense at compact browser sizes.
