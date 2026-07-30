@@ -234,7 +234,7 @@
       name: "scope_escalation",
     },
   };
-  const JOE_CAPTURE_LINES = [
+  const BASE_JOE_CAPTURE_LINES = [
     { id: "scope", expression: 0, tone: "SATISFIED", lines: ["I moved this course into scope.", "You moved into my path."] },
     { id: "acceptance", expression: 1, tone: "DISAPPOINTED", lines: ["You missed the acceptance criteria.", "I did not."] },
     { id: "grass_compliance", expression: 5, tone: "FINAL", lines: ["The grass is compliant.", "You are not."] },
@@ -286,7 +286,7 @@
     { id: "value", expression: 0, tone: "PROFESSIONAL", lines: ["I maximize value.", "You reduced the cut quality."] },
     { id: "product_goal", expression: 5, tone: "FINAL", lines: ["The product goal is simple:", "leave no rough behind."] },
   ];
-  const JOE_STATE_BARKS = {
+  const BASE_JOE_STATE_BARKS = {
     patrol: [
       "Back to the plan.",
       "Variance resolved.",
@@ -344,6 +344,67 @@
       "We are closing this epic!",
     ],
   };
+  const JOE_DIALOGUE_LIBRARY =
+    window
+      .ROUGH_CUT_JOE_DIALOGUE || {
+      captureLines: [],
+      stateBarks: {},
+      contextBarks: {},
+      capturePackCount: 0,
+    };
+  const JOE_CAPTURE_LINES = [
+    ...BASE_JOE_CAPTURE_LINES,
+    ...JOE_DIALOGUE_LIBRARY
+      .captureLines,
+  ];
+  const JOE_STATE_BARKS = {};
+  for (
+    const mode of [
+      "patrol",
+      "investigate",
+      "search",
+      "chase",
+    ]
+  ) {
+    JOE_STATE_BARKS[mode] = [
+      ...(
+        BASE_JOE_STATE_BARKS[
+          mode
+        ] || []
+      ),
+      ...(
+        JOE_DIALOGUE_LIBRARY
+          .stateBarks[mode] || []
+      ),
+    ];
+  }
+  const JOE_CONTEXT_BARKS =
+    JOE_DIALOGUE_LIBRARY
+      .contextBarks;
+  const JOE_CAPTURE_HISTORY_LIMIT =
+    18;
+  const JOE_BARK_HISTORY_LIMIT =
+    12;
+  const JOE_STATE_BARK_COUNT =
+    Object.values(
+      JOE_STATE_BARKS,
+    ).reduce(
+      (total, lines) =>
+        total + lines.length,
+      0,
+    );
+  const JOE_CONTEXT_BARK_COUNT =
+    Object.values(
+      JOE_CONTEXT_BARKS,
+    ).reduce(
+      (total, lines) =>
+        total + lines.length,
+      0,
+    );
+  const JOE_DIALOGUE_VARIANT_COUNT =
+    JOE_CAPTURE_LINES.length +
+    JOE_STATE_BARK_COUNT +
+    JOE_CONTEXT_BARK_COUNT;
   const CLOUD_ATLAS_CELL = 512;
   const CLOUD_INSTANCES = [
     { cell: 0, x: -180, y: -130, width: 520, speed: 3.1, parallax: 0.05, alpha: 0.27, phase: 0.2 },
@@ -1160,6 +1221,7 @@
         RUN_VARIANTS.length,
     status: "Every blade is in scope.",
     lastJoeCaptureLineId: null,
+    lastJoeCaptureLineIds: [],
     manualTime: false,
     transitionAlpha: 0,
     shedReached: false,
@@ -1303,6 +1365,8 @@
       joeBark: null,
       joeBarkTimer: 0,
       joeBarkSerial: 0,
+      joeBarkContext: null,
+      joeBarkHistory: [],
       captureDialogue: null,
       stateBanner: "",
       stateBannerTimer: 0,
@@ -5112,6 +5176,8 @@
       joeBark: null,
       joeBarkTimer: 0,
       joeBarkSerial: 0,
+      joeBarkContext: null,
+      joeBarkHistory: [],
       captureDialogue: null,
       stateBanner: "",
       stateBannerTimer: 0,
@@ -7206,15 +7272,78 @@
     }
   }
 
-  function triggerJoeBark(mode) {
+  function currentJoeBarkContext(
+    mode,
+  ) {
+    const hole = state.hole;
+    if (
+      mode === "chase" &&
+      worldDistance(
+        hole.joe,
+        state.player,
+      ) < 18
+    ) {
+      return "close_chase";
+    }
+    if (
+      hole.trailWarningTimer > 0
+    ) {
+      return "trail";
+    }
+    if (
+      mode === "investigate" &&
+      hole.distraction
+    ) {
+      return "distraction";
+    }
+    if (
+      hole.overtime &&
+      hole.joeBarkSerial % 3 ===
+        2
+    ) {
+      return "overtime";
+    }
+    return null;
+  }
+
+  function triggerJoeBark(
+    mode,
+    requestedContext = null,
+  ) {
+    const context =
+      requestedContext ||
+      currentJoeBarkContext(mode);
+    const contextOptions =
+      context
+        ? JOE_CONTEXT_BARKS[
+            context
+          ]
+        : null;
     const options =
-      JOE_STATE_BARKS[mode];
+      contextOptions &&
+      contextOptions.length > 0
+        ? contextOptions
+        : JOE_STATE_BARKS[mode];
     if (
       !options ||
       options.length === 0
     ) {
       return;
     }
+    const recentBarks =
+      state.hole
+        .joeBarkHistory;
+    const freshOptions =
+      options.filter(
+        (line) =>
+          !recentBarks.includes(
+            line,
+          ),
+      );
+    const candidates =
+      freshOptions.length > 0
+        ? freshOptions
+        : options;
     state.hole.joeBarkSerial +=
       1;
     const seed =
@@ -7223,6 +7352,11 @@
         41 +
       state.hole.variantIndex *
         17 +
+      (
+        context
+          ? context.length * 13
+          : mode.length * 7
+      ) +
       Math.floor(
         state.hole.elapsed *
           3,
@@ -7230,11 +7364,26 @@
     const index =
       Math.floor(
         hash(seed) *
-          options.length,
+          candidates.length,
       ) %
-      options.length;
+      candidates.length;
     state.hole.joeBark =
-      options[index];
+      candidates[index];
+    state.hole.joeBarkContext =
+      context || mode;
+    recentBarks.push(
+      state.hole.joeBark,
+    );
+    if (
+      recentBarks.length >
+      JOE_BARK_HISTORY_LIMIT
+    ) {
+      recentBarks.splice(
+        0,
+        recentBarks.length -
+          JOE_BARK_HISTORY_LIMIT,
+      );
+    }
     state.hole.joeBarkTimer =
       mode === "chase"
         ? 3.2
@@ -7258,27 +7407,41 @@
         hole.maxDetection *
           100,
       );
-    let index =
+    const recentIds =
+      state
+        .lastJoeCaptureLineIds;
+    const freshLines =
+      JOE_CAPTURE_LINES.filter(
+        (line) =>
+          !recentIds.includes(
+            line.id,
+          ),
+      );
+    const availableLines =
+      freshLines.length > 0
+        ? freshLines
+        : JOE_CAPTURE_LINES;
+    const index =
       Math.floor(
         hash(seed) *
-          JOE_CAPTURE_LINES.length,
+          availableLines.length,
       ) %
-      JOE_CAPTURE_LINES.length;
-    if (
-      JOE_CAPTURE_LINES[index].id ===
-      state.lastJoeCaptureLineId
-    ) {
-      index =
-        (
-          index +
-          7
-        ) %
-        JOE_CAPTURE_LINES.length;
-    }
+      availableLines.length;
     const dialogue =
-      JOE_CAPTURE_LINES[index];
+      availableLines[index];
     state.lastJoeCaptureLineId =
       dialogue.id;
+    recentIds.push(dialogue.id);
+    if (
+      recentIds.length >
+      JOE_CAPTURE_HISTORY_LIMIT
+    ) {
+      recentIds.splice(
+        0,
+        recentIds.length -
+          JOE_CAPTURE_HISTORY_LIMIT,
+      );
+    }
     return {
       id: dialogue.id,
       expression:
@@ -7289,7 +7452,10 @@
     };
   }
 
-  function announceJoeState(mode) {
+  function announceJoeState(
+    mode,
+    dialogueContext = null,
+  ) {
     const labels = {
       patrol: "STATUS: ROUTINE WALKTHROUGH",
       investigate: "STATUS: VERIFYING DISTURBANCE",
@@ -7320,7 +7486,10 @@
         2.4,
       );
     }
-    triggerJoeBark(mode);
+    triggerJoeBark(
+      mode,
+      dialogueContext,
+    );
     const captionLabels = {
       patrol: "JOE RECEDING",
       investigate: "JOE TURNS TOWARD A SOUND",
@@ -7460,6 +7629,10 @@
       "world",
       2.1,
       `filing_${route}`,
+    );
+    triggerJoeBark(
+      hole.joe.mode,
+      "final_filing",
     );
     return true;
   }
@@ -7705,6 +7878,10 @@
         2.2,
         "key_pickup",
       );
+      triggerJoeBark(
+        state.hole.joe.mode,
+        "key_pickup",
+      );
       return;
     }
 
@@ -7719,7 +7896,10 @@
       state.hole.distraction = { x: 104, y: 178 };
       state.hole.distractionTimer = 5.5;
       state.hole.joe.mode = "investigate";
-      announceJoeState("investigate");
+      announceJoeState(
+        "investigate",
+        "sprinkler",
+      );
       state.hole.lastSeenPlayer = { ...state.hole.distraction };
       state.hole.stateBanner =
         "SPRINKLERS LIVE // QUIET WATER, LASTING TRACKS";
@@ -8113,6 +8293,7 @@
     const joe = hole.joe;
     const previousMode = joe.mode;
     let sandTrapTriggered = false;
+    let joeEventBarkContext = null;
     const playerDistance = worldDistance(joe, state.player);
     hole.closestJoeDistance = Math.min(
       hole.closestJoeDistance,
@@ -8193,6 +8374,8 @@
         2.7,
         "trail_found",
       );
+      joeEventBarkContext =
+        "trail";
     }
     const directSound =
       audibleNow &&
@@ -8404,6 +8587,8 @@
         125,
       );
       sandTrapTriggered = true;
+      joeEventBarkContext =
+        "sand";
       addWorldEffect(
         "sand_churn",
         joe.x,
@@ -8422,6 +8607,8 @@
       }
     }
     if (joeWet && !joe.wet) {
+      joeEventBarkContext =
+        "wet";
       hole.wetTrapCount += 1;
       hole.stateBanner =
         "MOWER BOGGED // MOVE WHILE JOE CLEARS THE DECK";
@@ -8493,7 +8680,12 @@
       );
     }
     if (joe.mode !== previousMode) {
-      announceJoeState(joe.mode);
+      announceJoeState(
+        joe.mode,
+        brokeContact
+          ? "lost_contact"
+          : joeEventBarkContext,
+      );
       if (
         brokeContact &&
         hole.chaseClosestDistance < 18
@@ -8534,6 +8726,13 @@
           riskAward?.tier || "break",
         );
       }
+    } else if (
+      joeEventBarkContext
+    ) {
+      triggerJoeBark(
+        joe.mode,
+        joeEventBarkContext,
+      );
     }
     if (
       sandTrapTriggered &&
@@ -21469,7 +21668,21 @@
                     .joeBark,
                 context:
                   state.hole
+                    .joeBarkContext ||
+                  state.hole
                     .joe.mode,
+                poolSize:
+                  (
+                    JOE_CONTEXT_BARKS[
+                      state.hole
+                        .joeBarkContext
+                    ] ||
+                    JOE_STATE_BARKS[
+                      state.hole.joe
+                        .mode
+                    ] ||
+                    []
+                  ).length,
                 delivery:
                   "subtitle_only",
               }
@@ -22911,6 +23124,26 @@
                   : null,
               captureDialoguePool:
                 JOE_CAPTURE_LINES.length,
+              dialogueLibrary: {
+                captureOutcomes:
+                  JOE_CAPTURE_LINES.length,
+                authoredCapturePacks:
+                  JOE_DIALOGUE_LIBRARY
+                    .capturePackCount,
+                stateBarks:
+                  JOE_STATE_BARK_COUNT,
+                contextBarks:
+                  JOE_CONTEXT_BARK_COUNT,
+                totalVariants:
+                  JOE_DIALOGUE_VARIANT_COUNT,
+                captureRepeatWindow:
+                  JOE_CAPTURE_HISTORY_LIMIT,
+                barkRepeatWindow:
+                  JOE_BARK_HISTORY_LIMIT,
+                activeContext:
+                  state.hole
+                    .joeBarkContext,
+              },
               expressionCount: 6,
               voice:
                 "subtitle_only",
