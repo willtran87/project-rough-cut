@@ -59,7 +59,7 @@
 - [x] Trigger victory when the player reaches and unlocks the shed with the key.
 - [x] Trigger a distinct alternate victory when the player releases pressure and reaches the drainage culvert.
 - [x] Trigger defeat as a darkly comic “claim denied” outcome when Joe catches the player.
-- [x] Support immediate same-order rematch, direct next-order play, reset, and return-to-Clubhouse flows from both victory and defeat.
+- [x] Support immediate same-order rematch that skips the redundant briefing and exposes the next Stamp target, plus direct next-order play, fully briefed manual reset, and return-to-Clubhouse flows from both victory and defeat.
 - [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
 - [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
 - [x] Grade completed runs without exposing a constant live score during the horror sequence; the in-run File Projection shows only a letter class and brief cause, while exact points remain in the after-action review.
