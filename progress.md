@@ -450,3 +450,26 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
 - Add a compact post-mastery reward for filing all three Change Requests and consider a cosmetic Course Echo reward only after repeat-run pacing is playtested.
+
+## Night Order Portfolio Mastery Reward — July 29, 2026
+
+- Added a permanent Portfolio Override reward for filing all three optional Change Requests; it grants deliberate Night Order selection without changing speed, resources, detection, score, or Joe.
+- Rebuilt the clubhouse's open right side as a three-dossier master ledger with individual order clearance, Change Request filing, objective hint, best grade/score, route/time, and Course Echo status.
+- Added a locked board state that makes 0/3 through 2/3 progress visible before mastery and explains the reward without allowing early selection.
+- Added a red-pen authorized state with a persistent selected-dossier highlight, route-line motif, distinct Night Order accents, and explicit override feedback.
+- Added keyboard Left/Right, standard-gamepad D-pad Left/Right, and direct touch-card selection while preserving vertical menu navigation and the independent Overtime toggle.
+- Persisted the selected Night Order in the existing career save, validated the ID on load, and safely fell back to the earned rotation for old, missing, or invalid selections.
+- Routed Begin Round through the selected dossier after unlock; Pause and Restart retain the active authored order and its matching objectives, Change Request, Joe opening patrol, and Course Echo compatibility.
+- Added Portfolio Override language to the survival briefing and active HUD plus a combined full-mastery scorecard payoff when the third order and third Change Request complete together.
+- Extended `render_game_to_text` with unlock progress, selection source, persistent selection, and the explicit `balanceEffect: "none"` contract.
+- Proved the third-file transition in an isolated instrumented browser run: Closing Shift filed CR-099, unlocked both Overtime and Portfolio Override, selected Closing Shift, persisted all three IDs, and did not re-fire the unlock on a second result.
+- Verified incomplete 2/3 saves stay locked and ignore selection input, mature saves unlock automatically, invalid legacy IDs fall back to career rotation, and the first deliberate choice normalizes and persists.
+- Verified keyboard, gamepad, and touch all selected the same dossier and that launching and Restarting used the chosen variant.
+- Re-ran the exact project Playwright client for both clubhouse and first-hole flows, inspected screenshots and text diagnostics, and found no console/page errors.
+- Visually inspected the locked board, authorized board, selected dossier, mastery scorecard, and 800×600 / 1280×720 / 2560×1440 layouts with no overflow.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
+- Add a cosmetic reward layer for perfected dossiers—such as redacted Echo trails or stamped ball skins—only after the Portfolio selector has been playtested for repeat-run clarity.
