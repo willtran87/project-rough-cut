@@ -19,7 +19,7 @@
   ];
   const MENU_DESCRIPTIONS = [
     "Enter Hole 1: The Pilot.",
-    "Tune audio, subtitles, and camera motion.",
+    "Tune audio, captions, and camera motion.",
     "Report an incident in the rough.",
     "Rewatch the opening incident.",
     "End the shift. The course remembers.",
@@ -88,13 +88,16 @@
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
   const CAREER_STORAGE_KEY = "rough-cut.career.v1";
   const SETTINGS_ROWS = [
-    { id: "master", label: "MASTER MIX", key: "volume", type: "slider" },
-    { id: "ambience", label: "COURSE AMBIENCE", key: "ambienceVolume", type: "slider" },
-    { id: "mower", label: "JOE'S MOWER", key: "mowerVolume", type: "slider" },
-    { id: "effects", label: "GAMEPLAY EFFECTS", key: "effectsVolume", type: "slider" },
-    { id: "danger", label: "DANGER PULSE", key: "dangerVolume", type: "slider" },
-    { id: "subtitles", label: "SUBTITLES", key: "subtitles", type: "toggle" },
-    { id: "reduced_motion", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
+    { id: "master", group: "audio", label: "MASTER MIX", key: "volume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "ambience", group: "audio", label: "COURSE AMBIENCE", key: "ambienceVolume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "mower", group: "audio", label: "JOE'S MOWER", key: "mowerVolume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "effects", group: "audio", label: "GAMEPLAY EFFECTS", key: "effectsVolume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "danger", group: "audio", label: "DANGER PULSE", key: "dangerVolume", type: "slider", min: 0, max: 1, step: 0.05 },
+    { id: "subtitles", group: "presentation", label: "DIALOGUE SUBTITLES", key: "subtitles", type: "toggle" },
+    { id: "subtitle_size", group: "presentation", label: "CAPTION SIZE", key: "subtitleSize", type: "slider", min: 0.8, max: 1.4, step: 0.1 },
+    { id: "caption_background", group: "presentation", label: "CAPTION BACKDROP", key: "captionBackground", type: "slider", min: 0, max: 1, step: 0.1 },
+    { id: "threat_captions", group: "presentation", label: "THREAT CAPTIONS", key: "threatCaptions", type: "toggle" },
+    { id: "reduced_motion", group: "presentation", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
   ];
   const TOUCH_CONTROLS = {
     move: { x: 116, y: 594, radius: 78 },
@@ -543,6 +546,18 @@
           typeof parsed.subtitles === "boolean"
             ? parsed.subtitles
             : true,
+        subtitleSize:
+          Number.isFinite(parsed.subtitleSize)
+            ? Math.max(0.8, Math.min(1.4, parsed.subtitleSize))
+            : 1,
+        captionBackground:
+          Number.isFinite(parsed.captionBackground)
+            ? Math.max(0, Math.min(1, parsed.captionBackground))
+            : 0.78,
+        threatCaptions:
+          typeof parsed.threatCaptions === "boolean"
+            ? parsed.threatCaptions
+            : true,
         reducedMotion:
           typeof parsed.reducedMotion === "boolean"
             ? parsed.reducedMotion
@@ -557,6 +572,9 @@
         effectsVolume: 1,
         dangerVolume: 0.9,
         subtitles: true,
+        subtitleSize: 1,
+        captionBackground: 0.78,
+        threatCaptions: true,
         reducedMotion: false,
       };
     }
@@ -810,6 +828,9 @@
     pauseIndex: 0,
     stingerPlayed: false,
     subtitles: savedPreferences.subtitles,
+    subtitleSize: savedPreferences.subtitleSize,
+    captionBackground: savedPreferences.captionBackground,
+    threatCaptions: savedPreferences.threatCaptions,
     reducedMotion: savedPreferences.reducedMotion,
     volume: savedPreferences.volume,
     ambienceVolume: savedPreferences.ambienceVolume,
@@ -942,6 +963,7 @@
       lastStepDistance: 0,
       lastKnownJoe: null,
       lastKnownJoeTimer: 0,
+      captions: [],
       worldEffects: [],
       screenParticles: [],
       turfMarks: [],
@@ -1024,6 +1046,9 @@
           effectsVolume: Number(state.effectsVolume.toFixed(2)),
           dangerVolume: Number(state.dangerVolume.toFixed(2)),
           subtitles: state.subtitles,
+          subtitleSize: Number(state.subtitleSize.toFixed(2)),
+          captionBackground: Number(state.captionBackground.toFixed(2)),
+          threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
         }),
       );
@@ -2028,6 +2053,34 @@
     drawText("NIGHT SHIFT BUILD 01", WIDTH - 28, 32, 12, "#70816b", "right");
   }
 
+  function drawSubtitleCard(
+    text,
+    centerX,
+    baselineY,
+    baseSize = 16,
+    color = "#f2e8c5",
+  ) {
+    const size = Math.round(baseSize * state.subtitleSize);
+    ctx.save();
+    ctx.font = `700 ${size}px "Courier New", monospace`;
+    const width = Math.min(WIDTH - 72, ctx.measureText(text).width + 38);
+    const height = size + 20;
+    ctx.fillStyle = `rgba(2,8,4,${state.captionBackground * 0.92})`;
+    ctx.fillRect(centerX - width * 0.5, baselineY - size - 11, width, height);
+    if (state.captionBackground > 0.05) {
+      strokeRect(
+        centerX - width * 0.5,
+        baselineY - size - 11,
+        width,
+        height,
+        "rgba(132,154,111,0.72)",
+        1,
+      );
+    }
+    drawText(text, centerX, baselineY, size, color, "center", true);
+    ctx.restore();
+  }
+
   function drawIntro() {
     const cut = inverseLerp(CUT_START, CUT_END, state.time);
     const lineProgress = inverseLerp(LINE_START, LINE_END, state.time);
@@ -2049,7 +2102,13 @@
       const subtitle = windowEnvelope(state.time, LINE_START, LINE_END, 0.18);
       if (subtitle > 0) {
         ctx.globalAlpha = subtitle;
-        drawText("HERE'S JOEY!", WIDTH * 0.5, HEIGHT * 0.85, 42, "#ffedb9", "center", true);
+        drawSubtitleCard(
+          "HERE'S JOEY!",
+          WIDTH * 0.5,
+          HEIGHT * 0.85,
+          34,
+          "#ffedb9",
+        );
         ctx.globalAlpha = 1;
       }
     }
@@ -2679,10 +2738,63 @@
   }
 
   function settingsRowGeometry(index) {
+    const setting = SETTINGS_ROWS[index];
+    const groupIndex = SETTINGS_ROWS
+      .slice(0, index)
+      .filter((row) => row.group === setting.group)
+      .length;
     return {
-      y: 230 + index * 43,
-      height: 39,
+      x: setting.group === "audio" ? 676 : 892,
+      y: 230 + groupIndex * 49,
+      width: 204,
+      height: 43,
     };
+  }
+
+  function settingsSliderGeometry(index) {
+    const row = settingsRowGeometry(index);
+    return {
+      x: row.x + 10,
+      y: row.y + 27,
+      width: 144,
+      height: 8,
+    };
+  }
+
+  function settingDisplayValue(setting) {
+    return `${Math.round(state[setting.key] * 100)}%`;
+  }
+
+  function drawSettingsToggle(
+    row,
+    label,
+    checked,
+    selected,
+  ) {
+    const boxX = row.x + 10;
+    const boxY = row.y + 12;
+    ctx.fillStyle = checked ? "#d96a24" : "#152219";
+    ctx.fillRect(boxX, boxY, 19, 19);
+    strokeRect(
+      boxX,
+      boxY,
+      19,
+      19,
+      selected ? "#e4ad6d" : "#80906c",
+      selected ? 2 : 1,
+    );
+    if (checked) {
+      drawText("✓", boxX + 10, boxY + 16, 16, "#fff1cc", "center", true);
+    }
+    drawText(
+      label,
+      boxX + 29,
+      row.y + 27,
+      10,
+      selected ? "#f2e7bd" : "#dce4cd",
+      "left",
+      selected,
+    );
   }
 
   function drawSettings() {
@@ -2798,14 +2910,20 @@
     ctx.lineTo(640, 590);
     ctx.stroke();
 
-    drawText("AUDIO / ACCESSIBILITY", 700, 213, 15, "#8f9e84", "left", true);
+    drawText("AUDIO MIX", 686, 213, 13, "#8f9e84", "left", true);
+    drawText("PRESENTATION", 902, 213, 13, "#8f9e84", "left", true);
     const selectedSetting = settingsRowGeometry(state.settingsIndex);
     ctx.fillStyle = "rgba(50,72,28,0.36)";
-    ctx.fillRect(684, selectedSetting.y, 398, selectedSetting.height);
-    strokeRect(
-      684,
+    ctx.fillRect(
+      selectedSetting.x,
       selectedSetting.y,
-      398,
+      selectedSetting.width,
+      selectedSetting.height,
+    );
+    strokeRect(
+      selectedSetting.x,
+      selectedSetting.y,
+      selectedSetting.width,
       selectedSetting.height,
       "#d47431",
       2,
@@ -2815,44 +2933,80 @@
       const row = settingsRowGeometry(index);
       if (setting.type === "slider") {
         const value = state[setting.key];
-        const barX = 868;
-        const barY = row.y + 14;
-        const barWidth = 152;
+        const slider = settingsSliderGeometry(index);
+        const normalized =
+          (value - setting.min) /
+          (setting.max - setting.min);
         drawText(
           setting.label,
-          700,
-          row.y + 25,
-          13,
+          row.x + 10,
+          row.y + 18,
+          10,
           index === state.settingsIndex ? "#f2e7bd" : "#c6d0ba",
           "left",
           index === state.settingsIndex,
         );
         ctx.fillStyle = "#172719";
-        ctx.fillRect(barX, barY, barWidth, 10);
+        ctx.fillRect(slider.x, slider.y, slider.width, slider.height);
         ctx.fillStyle =
           setting.id === "danger"
             ? "#bf4937"
             : setting.id === "mower"
               ? "#d17a31"
               : "#879d55";
-        ctx.fillRect(barX, barY, barWidth * value, 10);
-        strokeRect(barX, barY, barWidth, 10, "#65785a", 1);
+        ctx.fillRect(
+          slider.x,
+          slider.y,
+          slider.width * normalized,
+          slider.height,
+        );
+        strokeRect(
+          slider.x,
+          slider.y,
+          slider.width,
+          slider.height,
+          "#65785a",
+          1,
+        );
         drawText(
-          `${Math.round(value * 100)}%`,
-          1052,
-          row.y + 25,
-          12,
+          settingDisplayValue(setting),
+          row.x + row.width - 8,
+          row.y + 36,
+          10,
           "#dfe5d3",
           "right",
         );
       } else {
-        drawCheckbox(
-          700,
-          row.y + 6,
+        drawSettingsToggle(
+          row,
           setting.label,
           Boolean(state[setting.key]),
+          index === state.settingsIndex,
         );
       }
+    }
+    ctx.fillStyle = "rgba(15,30,17,0.86)";
+    ctx.fillRect(676, 480, 420, 57);
+    strokeRect(676, 480, 420, 57, "#4e6442", 1);
+    drawText("CAPTION PREVIEW", 688, 497, 9, "#819277", "left", true);
+    if (state.threatCaptions) {
+      drawSubtitleCard(
+        "[ MOWER APPROACHING — RIGHT ]",
+        886,
+        526,
+        12,
+        "#e6b06d",
+      );
+    } else {
+      drawText(
+        "THREAT CAPTIONS OFF",
+        886,
+        525,
+        12,
+        "#788274",
+        "center",
+        true,
+      );
     }
     drawText(
       touchActive
@@ -2861,8 +3015,8 @@
           ? "D-PAD  SELECT / ADJUST"
           : "F  FULLSCREEN",
       700,
-      540,
-      14,
+      548,
+      11,
       "#d9dfcc",
       "left",
     );
@@ -3117,6 +3271,7 @@
       lastStepDistance: 0,
       lastKnownJoe: null,
       lastKnownJoeTimer: 0,
+      captions: [],
       worldEffects: [],
       screenParticles: [],
       turfMarks: [],
@@ -3888,6 +4043,105 @@
     state.hole.messageTimer = duration;
   }
 
+  function directionFromPlayer(source) {
+    if (!source) {
+      return null;
+    }
+    const deltaX = source.x - state.player.x;
+    const deltaY = source.y - state.player.y;
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 0.55) {
+      return deltaX < 0 ? "LEFT" : "RIGHT";
+    }
+    return deltaY >= 0 ? "AHEAD" : "BEHIND";
+  }
+
+  function pushThreatCaption(
+    text,
+    source = null,
+    category = "world",
+    duration = 2.4,
+    key = text,
+  ) {
+    if (
+      !state.threatCaptions ||
+      state.mode !== "first_hole" ||
+      !state.hole.captions
+    ) {
+      return;
+    }
+    const existing = state.hole.captions.find(
+      (caption) => caption.key === key,
+    );
+    if (existing) {
+      existing.age = 0;
+      existing.duration = duration;
+      existing.direction = directionFromPlayer(source);
+      return;
+    }
+    state.hole.captions.push({
+      key,
+      text,
+      direction: directionFromPlayer(source),
+      category,
+      age: 0,
+      duration,
+    });
+    if (state.hole.captions.length > 3) {
+      state.hole.captions.shift();
+    }
+  }
+
+  function updateThreatCaptions(dt) {
+    if (!state.hole.captions) {
+      return;
+    }
+    for (let index = state.hole.captions.length - 1; index >= 0; index -= 1) {
+      const caption = state.hole.captions[index];
+      caption.age += dt;
+      if (caption.age >= caption.duration) {
+        state.hole.captions.splice(index, 1);
+      }
+    }
+  }
+
+  function drawThreatCaptions() {
+    if (
+      !state.threatCaptions ||
+      !state.hole.captions?.length ||
+      state.hole.tutorialVisible
+    ) {
+      return;
+    }
+    const captions = state.hole.captions.slice(-2);
+    for (let index = 0; index < captions.length; index += 1) {
+      const caption = captions[index];
+      const remaining = caption.duration - caption.age;
+      const fade = clamp(
+        Math.min(caption.age / 0.12, remaining / 0.3),
+        0,
+        1,
+      );
+      const color =
+        caption.category === "danger"
+          ? "#f09a69"
+          : caption.category === "mower"
+            ? "#e6b06d"
+            : "#c9d8bd";
+      const direction = caption.direction
+        ? ` — ${caption.direction}`
+        : "";
+      ctx.globalAlpha = fade;
+      drawSubtitleCard(
+        `[ ${caption.text}${direction} ]`,
+        WIDTH * 0.5,
+        494 + index * 38,
+        13,
+        color,
+      );
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function addWorldEffect(kind, x, y, duration = 1.4) {
     state.hole.worldEffects.push({
       kind,
@@ -4047,6 +4301,19 @@
         2.4,
       );
     }
+    const captionLabels = {
+      patrol: "MOWER RECEDING",
+      investigate: "MOWER TURNS TOWARD A SOUND",
+      search: "MOWER SEARCHING",
+      chase: "MOWER SURGING CLOSER",
+    };
+    pushThreatCaption(
+      captionLabels[mode] || "MOWER CHANGES COURSE",
+      state.hole.joe,
+      mode === "chase" ? "danger" : "mower",
+      mode === "chase" ? 2.8 : 2.1,
+      `joe_${mode}`,
+    );
     playThreatCue(mode);
   }
 
@@ -4097,6 +4364,13 @@
       1.9,
     );
     playChangeRequestCue();
+    pushThreatCaption(
+      "PAPERWORK SNAPS IN THE WIND",
+      request,
+      "world",
+      2,
+      "change_request",
+    );
     return true;
   }
 
@@ -4120,6 +4394,13 @@
       setHoleMessage("KEY ACQUIRED — Joe heard that.", 3.2);
       addWorldEffect("pickup", key.x, key.y, 1.7);
       playPickupCue();
+      pushThreatCaption(
+        "METAL KEY RINGS OUT",
+        key,
+        "world",
+        2.2,
+        "key_pickup",
+      );
       return;
     }
 
@@ -4147,6 +4428,13 @@
       addWorldEffect("drain_open", drain.x, drain.y, 3.2);
       playSprinklerCue();
       playDrainUnlockCue();
+      pushThreatCaption(
+        "SPRINKLERS ERUPT; CULVERT GRINDS OPEN",
+        sprinkler,
+        "world",
+        3,
+        "sprinkler_drain",
+      );
       return;
     }
 
@@ -4406,6 +4694,13 @@
     playBallCue(
       Math.sign(target.x - state.player.x),
     );
+    pushThreatCaption(
+      "GOLF BALL STRIKES TURF",
+      target,
+      "world",
+      2.1,
+      "ball_impact",
+    );
   }
 
   function recoverGolfBall(ball) {
@@ -4578,6 +4873,13 @@
         1.8,
       );
       playThreatCue("search");
+      pushThreatCaption(
+        "JOE RIPS THROUGH YOUR TRACKS",
+        trailEvidence,
+        "danger",
+        2.7,
+        "trail_found",
+      );
     }
     const directSound =
       audibleNow &&
@@ -4656,6 +4958,15 @@
         2.2,
       );
       playThreatCue("investigate");
+      pushThreatCaption(
+        visibleNow
+          ? "MOWER TURNS TOWARD YOU"
+          : "MOWER REACTS TO NOISE",
+        joe,
+        "danger",
+        2.2,
+        "detection_warning",
+      );
     } else if (
       hole.detection < 0.08 &&
       joe.mode !== "chase"
@@ -4784,6 +5095,13 @@
       );
       if (!joeWet) {
         playSandChurnCue();
+        pushThreatCaption(
+          "MOWER CHURNS THROUGH SAND",
+          joe,
+          "mower",
+          2.5,
+          "sand_churn",
+        );
       }
     }
     if (joeWet && !joe.wet) {
@@ -4803,6 +5121,13 @@
         2.1,
       );
       playMowerBogCue();
+      pushThreatCaption(
+        "MOWER COUGHS IN SOAKED TURF",
+        joe,
+        "mower",
+        2.7,
+        "mower_bog",
+      );
     }
     joe.wet = joeWet;
     joe.sand = joeSand;
@@ -9849,6 +10174,7 @@
     drawGolfBallTactics();
     drawFirstHoleOverlay();
     drawJoeStateBanner();
+    drawThreatCaptions();
     if (!state.hole.ballAim.active) {
       drawText("+", WIDTH * 0.5, HEIGHT * 0.52 + walkBob, 24, "#e0e6d6", "center", true);
       drawMovementFeedback(walkBob);
@@ -10373,6 +10699,7 @@
         hole.controlHintTimer - dt,
       );
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
+      updateThreatCaptions(dt);
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
       hole.stateBannerLockTimer = Math.max(
@@ -10497,6 +10824,13 @@
               18,
               242,
               4.2,
+            );
+            pushThreatCaption(
+              "FLOODLIGHT RELAY CLICKS OFF",
+              { x: 18, y: 242 },
+              "world",
+              2.6,
+              "power_sag",
             );
           } else if (zoneIndex === 3) {
             hole.dreadTimer = 5.2;
@@ -11499,12 +11833,14 @@
   }
 
   function settingsIndexAt(point) {
-    if (point.x < 684 || point.x > 1082) {
-      return -1;
-    }
     for (let index = 0; index < SETTINGS_ROWS.length; index += 1) {
       const row = settingsRowGeometry(index);
-      if (point.y >= row.y && point.y <= row.y + row.height) {
+      if (
+        point.x >= row.x &&
+        point.x <= row.x + row.width &&
+        point.y >= row.y &&
+        point.y <= row.y + row.height
+      ) {
         return index;
       }
     }
@@ -11806,13 +12142,20 @@
         if (index >= 0) {
           state.settingsIndex = index;
           const setting = SETTINGS_ROWS[index];
-          if (setting.type === "slider" && point.x >= 850) {
-            applyAudioSetting(setting.key, (point.x - 868) / 152);
+          if (setting.type === "slider") {
+            const slider = settingsSliderGeometry(index);
+            const normalized =
+              (point.x - slider.x) /
+              slider.width;
+            applySliderSetting(
+              setting,
+              setting.min +
+                clamp(normalized, 0, 1) *
+                  (setting.max - setting.min),
+            );
             playMixPreview(setting.id);
           } else if (setting.type === "toggle") {
-            state[setting.key] = !state[setting.key];
-            savePreferences();
-            playUiTone(state[setting.key] ? 320 : 210, 0.055, 0.02);
+            toggleSetting(setting);
           }
         }
       }
@@ -11898,8 +12241,12 @@
     }
   }
 
-  function applyAudioSetting(key, value) {
-    state[key] = clamp(value, 0, 1);
+  function applySliderSetting(setting, value) {
+    state[setting.key] = clamp(
+      value,
+      setting.min,
+      setting.max,
+    );
     if (audioContext) {
       const gainTargets = {
         volume: { node: masterGain, scale: 0.55 },
@@ -11908,16 +12255,33 @@
         effectsVolume: { node: effectsBusGain, scale: 1 },
         dangerVolume: { node: dangerBusGain, scale: 1 },
       };
-      const target = gainTargets[key];
+      const target = gainTargets[setting.key];
       if (target?.node) {
         target.node.gain.setTargetAtTime(
-          state[key] * target.scale,
+          state[setting.key] * target.scale,
           audioContext.currentTime,
           0.025,
         );
       }
     }
     savePreferences();
+  }
+
+  function toggleSetting(setting) {
+    state[setting.key] = !state[setting.key];
+    if (
+      setting.key === "threatCaptions" &&
+      !state.threatCaptions &&
+      state.hole.captions
+    ) {
+      state.hole.captions = [];
+    }
+    savePreferences();
+    playUiTone(
+      state[setting.key] ? 320 : 210,
+      0.055,
+      0.02,
+    );
   }
 
   function playMixPreview(id) {
@@ -11974,15 +12338,13 @@
   function adjustSelectedSetting(direction) {
     const setting = SETTINGS_ROWS[state.settingsIndex];
     if (setting.type === "slider") {
-      applyAudioSetting(
-        setting.key,
-        state[setting.key] + direction * 0.05,
+      applySliderSetting(
+        setting,
+        state[setting.key] + direction * setting.step,
       );
       playMixPreview(setting.id);
     } else {
-      state[setting.key] = !state[setting.key];
-      savePreferences();
-      playUiTone(state[setting.key] ? 320 : 210, 0.055, 0.02);
+      toggleSetting(setting);
     }
   }
 
@@ -12518,6 +12880,9 @@
       effectsVolume: Number(state.effectsVolume.toFixed(2)),
       dangerVolume: Number(state.dangerVolume.toFixed(2)),
       subtitles: state.subtitles,
+      subtitleSize: Number(state.subtitleSize.toFixed(2)),
+      captionBackground: Number(state.captionBackground.toFixed(2)),
+      threatCaptions: state.threatCaptions,
       reducedMotion: state.reducedMotion,
       returnTarget: state.settingsReturnMode,
       persisted: preferencesStorageAvailable,
@@ -12757,6 +13122,18 @@
           phase: state.hole.phase,
           overtime: state.hole.overtime,
           tutorialVisible: state.hole.tutorialVisible,
+          activeThreatCaptions:
+            state.hole.captions?.map((caption) => ({
+              text: caption.text,
+              direction: caption.direction,
+              category: caption.category,
+              remainingSeconds: Number(
+                Math.max(
+                  0,
+                  caption.duration - caption.age,
+                ).toFixed(2),
+              ),
+            })) || [],
           hudExpanded:
             state.hole.controlHintTimer > 0.01 ||
             state.hole.focus,

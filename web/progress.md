@@ -497,3 +497,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
 - Add subtitle size, background-opacity, and threat-caption options for players who keep one or more audio channels muted.
 - Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.
+
+## Directional Threat Caption Pass — July 29, 2026
+
+- Rebuilt the seven-row audio/accessibility stack as paired Audio Mix and Presentation columns while preserving the survival briefing and clear input guidance.
+- Added persistent caption-size, caption-backdrop-opacity, and threat-caption preferences with strict clamping and automatic defaults for older saves.
+- Unified settings rendering and hit testing around shared row and slider geometry, eliminating the old hard-coded pointer math and keeping keyboard, gamepad, pointer, and touch behavior in sync.
+- Added a live caption preview so presentation changes are visible before returning to the course.
+- Upgraded the opening subtitle to use the same scalable, high-contrast caption treatment without restoring synthetic dialogue.
+- Added a bounded two-line threat-caption layer for mower state changes, golf-ball impacts, key pickup, sprinkler and culvert activation, Change Request pickup, discovered tracks, detection warnings, wet mower bogging, bunker churn, and the floodlight power sag.
+- Added player-relative LEFT, RIGHT, AHEAD, and BEHIND direction labels to spatial events without changing Joe's detection, navigation, audio, or scoring.
+- Limited caption lifetime and queue size, deduplicated repeated event keys, froze captions with paused gameplay, and immediately clears the queue when threat captions are disabled.
+- Extended `render_game_to_text` with all presentation preferences and active caption text, direction, category, and remaining lifetime.
+- Verified keyboard adjustment, pointer slider positioning, threat-caption toggling, immediate queue clearing, legacy preference migration, and readable directional captions with mower, effects, and danger channels all muted.
+- Visually inspected the two-column panel and stacked live captions at 800×600 plus the existing responsive canvas treatment at 390×844 with no document overflow or browser errors.
+
+### Next production priorities
+
+- Add remappable keyboard/controller bindings with conflict detection and persistent custom prompts.
+- Playtest caption frequency during long pursuit/search loops and tune only if real sessions show fatigue.
+- Consider a stamped golf-ball cosmetic at 12/12 only if the gold Master Echo remains readable during long real-player sessions.

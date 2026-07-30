@@ -22,7 +22,7 @@ Each dossier also carries four persistent Performance Stamps earned only on succ
 
 Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
-The audio/accessibility panel provides persistent, independent control over the master mix, course ambience, Joe's spatial mower, gameplay effects, and the danger pulse used by heartbeat, threat stingers, and the chase drone. Every channel retains a visual gameplay counterpart, so lowering or muting a sound category does not hide objective, attention, direction, or interaction information.
+The two-column audio/accessibility panel provides persistent, independent control over the master mix, course ambience, Joe's spatial mower, gameplay effects, and the danger pulse used by heartbeat, threat stingers, and the chase drone. It also provides scalable dialogue subtitles, adjustable caption-backdrop opacity, directional threat captions, and reduced camera motion. Threat captions identify important mower, impact, terrain, and course sounds with bounded left/right/ahead/behind direction, so lowering or muting a sound category does not hide useful chase information.
 
 Joe's attention is now telegraphed before pursuit locks: sight and sound build the attention meter, stopping or crouching can clear a warning, and an active chase shows whether visual contact, audible movement, or neither is keeping the pursuit alive. When both are broken, a contact-break meter communicates exactly how long the player must remain undetected. The Water Hazard's first-entry power sag temporarily reduces actual floodlight exposure, and zone events only deliver their full stinger once instead of replaying during tactical backtracking.
 
@@ -78,6 +78,6 @@ Touch devices receive a dedicated in-game control layer:
 - Tap Pause to suspend the round; menus, unlocked Night Order dossiers, and settings use direct touch targets.
 - Landscape orientation is recommended. Portrait touch devices receive an explicit rotation prompt.
 
-The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Master, ambience, mower, effects, danger-pulse, subtitle, and reduced-camera-motion settings are navigable with pointer, keyboard, controller, or touch and persist across sessions.
+The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Every audio and presentation setting is navigable with pointer, keyboard, controller, or touch and persists across sessions. Older saved preferences automatically receive readable caption defaults.
 
 Browser audio requires the initial click or key press. Joe's line is presented as an on-screen subtitle; no synthetic dialogue voice is used.

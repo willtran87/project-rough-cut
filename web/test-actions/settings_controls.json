@@ -4,9 +4,11 @@
     { "buttons": ["space"], "frames": 2 },
     { "buttons": ["down"], "frames": 1 },
     { "buttons": ["enter"], "frames": 2 },
-    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 840, "mouse_y": 296 },
-    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 720, "mouse_y": 365 },
-    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 720, "mouse_y": 425 },
+    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 790, "mouse_y": 257 },
+    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 974, "mouse_y": 306 },
+    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 1017, "mouse_y": 355 },
+    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 910, "mouse_y": 398 },
+    { "buttons": ["left_mouse_button"], "frames": 2, "mouse_x": 910, "mouse_y": 398 },
     { "buttons": [], "frames": 8 }
   ]
 }
