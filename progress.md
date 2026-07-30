@@ -696,3 +696,23 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct short human “one more run” sessions to tune whether Performance Stamp targets or personal-record gaps are the stronger default rematch motivator.
 - Consider surfacing a record-gap target only when the active dossier has already earned all four stamps.
 - Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
+
+## Instant Targeted Rematch Pass - July 29, 2026
+
+- Audited the new result hub end to end and found its remaining replay friction: Rematch File still reopened the full Survival Briefing even though the player had deliberately selected the same known dossier.
+- Made result-screen rematches start immediately on the tee, with Joe, elapsed time, scoring, and input active on the next gameplay frame.
+- Preserved onboarding where it remains valuable: direct Next Order play still opens the complete briefing for the unfamiliar layout, and Restart Hole from Pause still opens the briefing without recording another attempt.
+- Promoted the selected Performance Stamp into a three-channel quick-start cue: a `FILE REOPENED` world banner, an explicit bottom message with the mechanic requirement, and the existing expanded HUD for a short four-second recall window.
+- Added Course Echo status to the rematch message when a compatible personal-best path is active, connecting the run target and live rival without another blocking screen.
+- Recorded the new round at deliberate rematch selection, then proved later movement and deterministic time advancement do not double-count the attempt.
+- Reduced the rematch transition fade from 0.80 to 0.42 so the course returns faster while preserving a readable visual handoff.
+- Extended `render_game_to_text` with quick-start state, briefing-skip semantics, the complete rematch target, round-accounting state, and Course Echo activity.
+- Proved victory and capture rematches, exactly-one round accounting, live Joe patrol, player movement, new-order briefing preservation, Pause Restart preservation, touch rematch, and standard-gamepad rematch.
+- Visually inspected the full-resolution and compact 800x900 target cue; verified 2560x1440 sizing with no document overflow or page/console errors.
+- Re-ran the exact project Playwright client, inspected its screenshot and text state, and found no client-reported errors.
+
+### Next production priorities
+
+- Conduct short human sessions to compare immediate rematch retention against the former briefing-gated loop.
+- Consider adding a record-gap target only after the active dossier has all four Performance Stamps.
+- Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.

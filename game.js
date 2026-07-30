@@ -1083,6 +1083,8 @@
       elapsed: 0,
       tutorialVisible: true,
       tutorialPage: 0,
+      quickRematch: false,
+      rematchTarget: null,
       hasMoved: false,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
@@ -4113,6 +4115,8 @@
       elapsed: 0,
       tutorialVisible: true,
       tutorialPage: 0,
+      quickRematch: false,
+      rematchTarget: null,
       hasMoved: false,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
@@ -15096,13 +15100,47 @@
     playUiTone(360, 0.09, 0.03);
   }
 
-  function retryFirstHole() {
+  function retryFirstHole(
+    quickStart = false,
+  ) {
     const retryVariant =
       activeRunVariant();
+    const target =
+      quickStart
+        ? nextPerformanceTarget()
+        : null;
     state.mode = "first_hole";
     state.time = 0;
     resetFirstHole(retryVariant);
-    state.transitionAlpha = 0.8;
+    state.transitionAlpha =
+      quickStart ? 0.42 : 0.8;
+    if (quickStart) {
+      const hole = state.hole;
+      hole.tutorialVisible = false;
+      hole.quickRematch = true;
+      hole.rematchTarget = {
+        id: target.id,
+        name: target.name,
+        shortName:
+          target.shortName,
+        hint: target.hint,
+      };
+      hole.zoneBannerTimer = 0;
+      hole.controlHintTimer = 4.2;
+      hole.message =
+        `${target.name} — ${target.hint}.${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`;
+      hole.messageTimer = 4.2;
+      hole.stateBanner =
+        `FILE REOPENED // ${target.name}`;
+      hole.stateBannerTimer = 3.4;
+      hole.stateBannerLockTimer = 1.4;
+      recordRoundStart();
+      playUiTone(
+        420,
+        0.09,
+        0.03,
+      );
+    }
   }
 
   function startNextNightOrder() {
@@ -15148,7 +15186,7 @@
       0.026,
     );
     if (action === "rematch") {
-      retryFirstHole();
+      retryFirstHole(true);
     } else if (
       action === "next_order"
     ) {
@@ -16230,6 +16268,24 @@
           phase: state.hole.phase,
           overtime: state.hole.overtime,
           tutorialVisible: state.hole.tutorialVisible,
+          rematch: {
+            quickStart:
+              state.hole.quickRematch,
+            briefingSkipped:
+              state.hole.quickRematch,
+            target:
+              state.hole.rematchTarget
+                ? {
+                    ...state.hole.rematchTarget,
+                  }
+                : null,
+            roundRecorded:
+              state.hole.attemptRecorded,
+            courseEchoActive:
+              Boolean(
+                state.hole.courseEchoRecord,
+              ),
+          },
           activeThreatCaptions:
             state.hole.captions?.map((caption) => ({
               text: caption.text,
