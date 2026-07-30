@@ -789,3 +789,19 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Applied separate parallax ratios, scale changes, sway, and restrained light modulation to the layers so forward and lateral movement read in the first-person scene while the world remains visually grounded.
 - Extended `render_game_to_text` with active Joe dialogue, expression and pool metadata, subtitle-only delivery, character traits, and the complete scene-decomposition contract.
 - Verified two consecutive captures select different Joe lines and expressions, inspected the full Claim Denied composition, and confirmed no page or console errors.
+
+## Alpha Ground and Independent Sky Pass - July 30, 2026
+
+- Replaced the combined course-and-sky plate with a true transparent course silhouette generated against chroma and cleaned to an alpha matte.
+- Added a dedicated high-resolution star-and-moon sky plate with no baked terrain, structures, trees, mist, or clouds.
+- Replaced the single drifting cloud band with a transparent six-sprite cloud atlas and eight runtime cloud instances.
+- Gave every cloud its own starting position, scale, opacity, drift rate, depth response, vertical bob, and seamless horizontal wrap.
+- Reordered the horizon back-to-front as sky, individual clouds, clubhouse/tree line, transparent course foreground, and mist so the course naturally conceals and grounds distant object bases.
+- Extended `render_game_to_text` with the alpha-ground contract, dedicated-sky identifier, cloud source count, runtime instance count, and motion model.
+- Validated the ground alpha bounds and transparent corners, then visually compared gameplay before and after a deterministic 30-second advance to confirm visibly independent cloud motion.
+- Re-ran the exact project Playwright client and confirmed the updated scene state and screenshots with no page or console errors.
+
+### Next production priorities
+
+- Tune cloud opacity only after human play sessions establish whether the stronger sky motion aids atmosphere without distracting from threat silhouettes.
+- Consider a low-frequency moonlight shift on the turf after the current layer separation is proven comfortable during pursuit.

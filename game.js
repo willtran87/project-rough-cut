@@ -144,10 +144,12 @@
   art.src = "./assets/rough-cut-opening.png";
   const grassArt = new Image();
   grassArt.src = "./assets/rough-cut-grass-curtain.png";
+  const nightSkyArt = new Image();
+  nightSkyArt.src = "./assets/rough-cut-night-sky-v1.png";
   const holeArt = new Image();
-  holeArt.src = "./assets/rough-cut-course-ground-sky-v3.png";
-  const cloudBandArt = new Image();
-  cloudBandArt.src = "./assets/rough-cut-cloud-band-v1.png";
+  holeArt.src = "./assets/rough-cut-course-ground-v4.png";
+  const cloudAtlasArt = new Image();
+  cloudAtlasArt.src = "./assets/rough-cut-cloud-atlas-v2.png";
   const distantTreeLineArt = new Image();
   distantTreeLineArt.src = "./assets/rough-cut-distant-treeline-v1.png";
   const distantClubhouseArt = new Image();
@@ -288,7 +290,17 @@
       "You skipped the review!",
     ],
   };
-  const CLOUD_LAYER_SOURCE = { x: 26, y: 273, width: 1623, height: 374 };
+  const CLOUD_ATLAS_CELL = 512;
+  const CLOUD_INSTANCES = [
+    { cell: 0, x: -180, y: -130, width: 520, speed: 3.1, parallax: 0.05, alpha: 0.27, phase: 0.2 },
+    { cell: 4, x: 360, y: -70, width: 430, speed: 4.3, parallax: 0.07, alpha: 0.24, phase: 1.7 },
+    { cell: 1, x: 790, y: -140, width: 570, speed: 2.4, parallax: 0.04, alpha: 0.25, phase: 2.9 },
+    { cell: 5, x: 1060, y: -50, width: 390, speed: 5.6, parallax: 0.1, alpha: 0.22, phase: 4.1 },
+    { cell: 2, x: 90, y: -80, width: 360, speed: 6.8, parallax: 0.12, alpha: 0.19, phase: 5.3 },
+    { cell: 3, x: 610, y: 35, width: 330, speed: 4.9, parallax: 0.09, alpha: 0.18, phase: 3.4 },
+    { cell: 0, x: 1240, y: -20, width: 300, speed: 7.7, parallax: 0.14, alpha: 0.16, phase: 6.2 },
+    { cell: 5, x: -520, y: 0, width: 310, speed: 5.2, parallax: 0.11, alpha: 0.17, phase: 0.9 },
+  ];
   const TREE_LINE_SOURCE = { x: 9, y: 373, width: 1650, height: 347 };
   const CLUBHOUSE_SOURCE = { x: 87, y: 289, width: 1516, height: 449 };
   const JOE_EXPRESSION_CELL = 512;
@@ -2535,6 +2547,118 @@
     ctx.restore();
   }
 
+  function drawIndependentClouds(
+    progress,
+    panX,
+    walkBob,
+  ) {
+    if (
+      !cloudAtlasArt.complete ||
+      cloudAtlasArt.naturalWidth === 0
+    ) {
+      return;
+    }
+    for (
+      let index = 0;
+      index <
+      CLOUD_INSTANCES.length;
+      index += 1
+    ) {
+      const cloud =
+        CLOUD_INSTANCES[index];
+      const column =
+        cloud.cell % 3;
+      const row =
+        Math.floor(
+          cloud.cell / 3,
+        );
+      const depthScale =
+        1 +
+        progress *
+          cloud.parallax *
+          0.28;
+      const width =
+        cloud.width *
+        depthScale;
+      const height = width;
+      const ambientDrift =
+        state.reducedMotion
+          ? 0
+          : state.hole.elapsed *
+            cloud.speed;
+      const span =
+        WIDTH +
+        width +
+        440;
+      const rawX =
+        cloud.x +
+        ambientDrift +
+        panX *
+          cloud.parallax *
+          3.8;
+      const x =
+        (
+          (
+            rawX +
+            width +
+            220
+          ) %
+            span +
+          span
+        ) %
+          span -
+        width -
+        220;
+      const bob =
+        state.reducedMotion
+          ? 0
+          : Math.sin(
+              state.hole.elapsed *
+                (
+                  0.11 +
+                  cloud.parallax *
+                    0.24
+                ) +
+                cloud.phase,
+            ) *
+            (
+              2.5 +
+              cloud.parallax *
+                16
+            );
+      drawParallaxAsset(
+        cloudAtlasArt,
+        {
+          x:
+            column *
+            CLOUD_ATLAS_CELL,
+          y:
+            row *
+            CLOUD_ATLAS_CELL,
+          width:
+            CLOUD_ATLAS_CELL,
+          height:
+            CLOUD_ATLAS_CELL,
+        },
+        x,
+        cloud.y -
+          progress *
+            (
+              3 +
+              cloud.parallax *
+                12
+            ) +
+          bob +
+          walkBob *
+            cloud.parallax *
+            0.08,
+        width,
+        height,
+        cloud.alpha,
+      );
+    }
+  }
+
   function drawCourseBackdrop(
     progress,
     walkBob,
@@ -2549,53 +2673,27 @@
       progress * 0.16;
     drawImageCover(
       ctx,
-      holeArt,
-      panX * 0.58,
-      walkBob +
-        progress * 10,
-      zoom,
+      nightSkyArt,
+      panX * 0.035,
+      -6 -
+        progress * 3 +
+        walkBob * 0.01,
+      1.035 +
+        progress * 0.018,
+    );
+    ctx.fillStyle =
+      "rgba(1,6,12,0.24)";
+    ctx.fillRect(
+      0,
+      0,
+      WIDTH,
+      HEIGHT,
     );
 
-    const cloudWidth =
-      1450 *
-      (
-        1 +
-        progress * 0.025
-      );
-    const cloudHeight =
-      cloudWidth *
-      CLOUD_LAYER_SOURCE.height /
-      CLOUD_LAYER_SOURCE.width;
-    const cloudDrift =
-      state.reducedMotion
-        ? 0
-        : Math.sin(
-            state.hole.elapsed *
-              0.045,
-          ) *
-            58 +
-          Math.sin(
-            state.hole.elapsed *
-              0.013 +
-              1.7,
-          ) *
-            24;
-    drawParallaxAsset(
-      cloudBandArt,
-      CLOUD_LAYER_SOURCE,
-      (
-        WIDTH -
-        cloudWidth
-      ) *
-        0.5 +
-        panX * 0.07 +
-        cloudDrift,
-      -20 -
-        progress * 5 +
-        walkBob * 0.05,
-      cloudWidth,
-      cloudHeight,
-      0.34,
+    drawIndependentClouds(
+      progress,
+      panX,
+      walkBob,
     );
 
     const clubhouseWidth =
@@ -2706,6 +2804,15 @@
       treeWidth,
       treeHeight,
       0.58,
+    );
+
+    drawImageCover(
+      ctx,
+      holeArt,
+      panX * 0.58,
+      walkBob +
+        progress * 10,
+      zoom,
     );
 
     const horizonMist =
@@ -19790,16 +19897,23 @@
           sceneDecomposition: {
             groundingLayer:
               "golf_course",
+            groundingTransparency:
+              "alpha_silhouette",
+            dedicatedSkyLayer:
+              "night_sky",
             animatedLayers: [
               {
                 id:
-                  "cloud_band",
+                  "individual_clouds",
                 depth:
-                  "sky",
+                  "multiple_sky_depths",
+                count:
+                  CLOUD_INSTANCES.length,
+                sourceSprites: 6,
                 motion:
                   state.reducedMotion
                     ? "static"
-                    : "slow_drift",
+                    : "independent_drift_wrap_bob_and_parallax",
               },
               {
                 id:
@@ -20119,8 +20233,9 @@
 
   art.addEventListener("load", render);
   grassArt.addEventListener("load", render);
+  nightSkyArt.addEventListener("load", render);
   holeArt.addEventListener("load", render);
-  cloudBandArt.addEventListener("load", render);
+  cloudAtlasArt.addEventListener("load", render);
   distantTreeLineArt.addEventListener("load", render);
   distantClubhouseArt.addEventListener("load", render);
   joeMowerArt.addEventListener("load", render);
