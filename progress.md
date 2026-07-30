@@ -736,3 +736,24 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human route-reading sessions with Listening Focus both used and ignored, then tune how much of each blocker footprint should remain visible outside direct contact.
 - Add an interaction-highlight strength option if players want either subtler horror presentation or stronger low-vision guidance.
 - Replace any future decorative boundary with authored collision and map geometry in the same data definition before it enters a playable route.
+
+## First-Person Positioning Pass - July 30, 2026
+
+- Reframed the navigation problem around scene readability rather than adding more mini-map detail.
+- Added an obstacle-aware player guidance route that selects the nearest currently valid objective or exit and refreshes as the player moves or objective state changes.
+- Rendered the route directly on the course as colored reflective ground chevrons; the line visibly bends around collision geometry instead of pointing through a blocker.
+- Added paired fairway-edge stakes at fixed world intervals and physical zone signs at course transitions so lateral position, forward motion, and changing course width remain legible without a top-down view.
+- Added automatic proximity footprints and grounded `SOLID` callouts for the nearest obstacles inside reaction distance, before an actual collision occurs.
+- Replaced the always-on mini-map after the 4.5-second opening orientation window with a compact Field Bearing panel that communicates target, distance, left/ahead/right course correction, current fairway side, course progress, and reflector color.
+- Kept the full mini-map available only while Listening Focus is held, preserving accessibility and deliberate planning without making it the default play surface.
+- Made collision escape instructions temporarily override the route bearing so the scene never says to turn one way while collision recovery says another.
+- Extended `render_game_to_text` with the map's current role, guidance target, distance, effective direction, route waypoint count, visible reflector count, and current field position.
+- Visually verified a folded-map route to the sprinkler, a gold route bending left toward the shed key, pre-contact service-cart footprint/label feedback at 5.8 units of clearance, collision recovery, and Listening Focus map recall.
+- Verified the guidance simulation advances 10 seconds in roughly 70 milliseconds in the deterministic browser harness, with no console errors.
+- Verified 800x900, 1280x720, and 2560x1440 layouts without document overflow.
+
+### Next production priorities
+
+- Run human no-map play sessions across all three Night Orders and tune reflector density only where players still lose the route.
+- Consider an accessibility setting for reflector strength and duration while keeping the current medium treatment as the default.
+- Add more authored environmental silhouettes at major route forks if human players still need text bearing assistance.
