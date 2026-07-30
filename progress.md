@@ -589,3 +589,27 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 - Conduct human listening tests on laptop speakers and headphones before raising any procedural-score gain.
 - Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
 - Consider an optional controller-layout selector only after remapped keyboard telemetry confirms the new settings route is discoverable.
+
+## Live File Projection Feedback Pass — July 29, 2026
+
+- Reused the authoritative final `calculateRunResult` path to add an exact in-run S–D File Projection without introducing a second formula or changing score balance.
+- Kept exact points out of the gameplay HUD after auditing the quality checklist's horror-preservation constraint; the chase shows only `FILE // S–D`, while the numeric score remains exclusive to diagnostics and the after-action review.
+- Added a compact grade chip to the existing Joe Attention header and used the previously empty line above the course map for `PROJECTED IF FILED NOW`.
+- Added a 2.8-second grade-change treatment that reports the dominant cause: Time Cost, Attention Cost, Ball Committed, Ball Recovered, Composure, Risk Banked, Change Request, Bunker Bait, or Overtime Premium.
+- Made the grade-change border and chip pulse honor Reduced Camera Motion while retaining a static color and cause label.
+- Sampled the projection at five hertz, keeping the cost negligible and avoiding per-frame object churn.
+- Preserved the current grade alert and score during Pause, resumed deterministic decay afterward, and reset the projection cleanly on Restart.
+- Forced one final synchronization against the recorded result during escape so projected and filed scores cannot diverge at the outcome boundary.
+- Extended `render_game_to_text` with projected score, grade, label, route assumption, direction, cause, remaining alert time, complete score breakdown, `scoringEffect: none`, and exact semantic meaning.
+- Proved an organic 30-second no-detection run crossed S→A at 6,691 with `TIME COST` and rendered the full change treatment without page or console errors.
+- Proved a deterministic behavior matrix: pressure produced B / Attention Cost at 5,452; filing the Change Request restored A at 6,102; a Razor Cut banked +400; and two Bunker Baits restored S at 6,851.
+- Proved committing two balls dropped S→A with `BALL COMMITTED`, while recovering the resources restored S with `BALL RECOVERED`.
+- Proved the authoritative victory result and last File Projection were exactly equal at 7,542 / S.
+- Re-ran the exact project Playwright client for the baseline and a 161-unit traversal, visually inspected both screenshots, and found no client-reported errors.
+- Visually verified the letter-only projection at 800×600, 1280×720, and 2560×1440 with document dimensions matching the viewport and no overflow.
+
+### Next production priorities
+
+- Conduct human listening tests on laptop speakers and headphones before raising any procedural-score gain.
+- Run longer organic pursuit sessions to tune the Risk Premium curve against human risk perception.
+- Evaluate whether the letter-only projection should default off under a future Minimal HUD preference after real-player horror sessions.
