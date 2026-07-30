@@ -37,6 +37,16 @@
     "Reset Hole 1 and begin again from the tee.",
     "Abandon this attempt and return to the main menu.",
   ];
+  const PORTFOLIO_PANEL = {
+    x: 558,
+    y: 78,
+    width: 650,
+    height: 398,
+  };
+  const PORTFOLIO_CARD_Y = 146;
+  const PORTFOLIO_CARD_WIDTH = 190;
+  const PORTFOLIO_CARD_HEIGHT = 286;
+  const PORTFOLIO_CARD_GAP = 16;
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
   const CAREER_STORAGE_KEY = "rough-cut.career.v1";
   const SETTINGS_ROWS = [
@@ -642,6 +652,14 @@
               ),
             ]
           : [],
+        selectedVariantId:
+          RUN_VARIANTS.some(
+            (variant) =>
+              variant.id ===
+              parsed.selectedVariantId,
+          )
+            ? parsed.selectedVariantId
+            : null,
         overtimeEnabled:
           parsed.overtimeEnabled === true,
         overtimeEscapes: Number.isFinite(
@@ -675,6 +693,7 @@
         captures: 0,
         completedVariants: [],
         filedChangeRequests: [],
+        selectedVariantId: null,
         overtimeEnabled: false,
         overtimeEscapes: 0,
         overtimeCaptures: 0,
@@ -704,6 +723,11 @@
     settingsIndex: 0,
     settingsReturnMode: "menu",
     career: savedCareer,
+    portfolioVariantId:
+      savedCareer.selectedVariantId ||
+      runVariantForRound(
+        savedCareer.roundsStarted,
+      ).id,
     overtimeSelected:
       savedCareer.overtimeEnabled &&
       savedCareer.completedVariants.length ===
@@ -942,6 +966,81 @@
     return (
       state.career.completedVariants.length >=
       RUN_VARIANTS.length
+    );
+  }
+
+  function portfolioUnlocked() {
+    return (
+      state.career.filedChangeRequests.length >=
+      RUN_VARIANTS.length
+    );
+  }
+
+  function portfolioVariant() {
+    return (
+      RUN_VARIANTS.find(
+        (variant) =>
+          variant.id ===
+          state.portfolioVariantId,
+      ) ||
+      runVariantForRound(
+        state.career.roundsStarted,
+      )
+    );
+  }
+
+  function selectedMenuVariant() {
+    return portfolioUnlocked()
+      ? portfolioVariant()
+      : runVariantForRound(
+          state.career.roundsStarted,
+        );
+  }
+
+  function selectPortfolioVariant(
+    selection,
+    absolute = false,
+  ) {
+    if (!portfolioUnlocked()) {
+      state.status =
+        `File all ${RUN_VARIANTS.length} Change Requests to authorize Portfolio Override.`;
+      playUiTone(116, 0.08, 0.02);
+      return;
+    }
+    const currentIndex = Math.max(
+      0,
+      RUN_VARIANTS.findIndex(
+        (variant) =>
+          variant.id ===
+          state.portfolioVariantId,
+      ),
+    );
+    const nextIndex =
+      absolute
+        ? clamp(
+            selection,
+            0,
+            RUN_VARIANTS.length - 1,
+          )
+        : (
+            currentIndex +
+            selection +
+            RUN_VARIANTS.length
+          ) %
+          RUN_VARIANTS.length;
+    const variant =
+      RUN_VARIANTS[nextIndex];
+    state.portfolioVariantId =
+      variant.id;
+    state.career.selectedVariantId =
+      variant.id;
+    state.status =
+      `Portfolio Override: Night Order ${String(variant.number).padStart(2, "0")} selected.`;
+    saveCareer();
+    playUiTone(
+      280 + nextIndex * 72,
+      0.08,
+      0.026,
     );
   }
 
@@ -1291,6 +1390,7 @@
       previousBestScore: null,
       masteryUnlocked: false,
       newChangeRequestFiled: false,
+      portfolioUnlocked: false,
       echoRoute: null,
       echoScore: null,
       echoTimeDelta: null,
@@ -1336,6 +1436,8 @@
     }
     const masteredBefore =
       overtimeUnlocked();
+    const portfolioBefore =
+      portfolioUnlocked();
     const previous = result.overtime
       ? state.career.overtimeBest
       : state.career.routes[route];
@@ -1369,6 +1471,15 @@
       state.career.filedChangeRequests.push(
         result.variantId,
       );
+    }
+    result.portfolioUnlocked =
+      !portfolioBefore &&
+      portfolioUnlocked();
+    if (result.portfolioUnlocked) {
+      state.portfolioVariantId =
+        result.variantId;
+      state.career.selectedVariantId =
+        result.variantId;
     }
     if (
       result.newBest &&
@@ -1761,6 +1872,314 @@
     );
   }
 
+  function bestRecordForVariant(
+    variantId,
+  ) {
+    const records = [
+      state.career.routes.shed,
+      state.career.routes.drain,
+      state.career.overtimeBest,
+    ].filter(
+      (record) =>
+        record?.variantId === variantId,
+    );
+    records.sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.timeSeconds - b.timeSeconds,
+    );
+    return records[0] || null;
+  }
+
+  function drawPortfolioBoard() {
+    const unlocked =
+      portfolioUnlocked();
+    const selected =
+      selectedMenuVariant();
+    const panel = PORTFOLIO_PANEL;
+    ctx.fillStyle = unlocked
+      ? "rgba(5,18,10,0.94)"
+      : "rgba(3,13,8,0.9)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      unlocked ? "#92763d" : "#394637",
+      unlocked ? 3 : 2,
+    );
+    drawText(
+      "NIGHT ORDER PORTFOLIO",
+      panel.x + 24,
+      panel.y + 34,
+      19,
+      unlocked ? "#ead58e" : "#9aa590",
+      "left",
+      true,
+    );
+    drawText(
+      unlocked
+        ? "RED-PEN AUTHORIZATION"
+        : "AUTHORIZATION PENDING",
+      panel.x + panel.width - 24,
+      panel.y + 32,
+      11,
+      unlocked ? "#e5723a" : "#6f7b6d",
+      "right",
+      true,
+    );
+    drawText(
+      `FILED CHANGES  ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}  //  CLEARED ORDERS  ${state.career.completedVariants.length}/${RUN_VARIANTS.length}`,
+      panel.x + 24,
+      panel.y + 57,
+      10,
+      unlocked ? "#b9c99e" : "#748171",
+      "left",
+    );
+
+    for (
+      let index = 0;
+      index < RUN_VARIANTS.length;
+      index += 1
+    ) {
+      const variant =
+        RUN_VARIANTS[index];
+      const x =
+        panel.x +
+        22 +
+        index *
+          (
+            PORTFOLIO_CARD_WIDTH +
+            PORTFOLIO_CARD_GAP
+          );
+      const selectedCard =
+        unlocked &&
+        selected.id === variant.id;
+      const cleared =
+        state.career.completedVariants.includes(
+          variant.id,
+        );
+      const filed =
+        state.career.filedChangeRequests.includes(
+          variant.id,
+        );
+      const record =
+        bestRecordForVariant(
+          variant.id,
+        );
+      ctx.fillStyle = selectedCard
+        ? "rgba(43,39,16,0.94)"
+        : "rgba(8,25,13,0.9)";
+      ctx.fillRect(
+        x,
+        PORTFOLIO_CARD_Y,
+        PORTFOLIO_CARD_WIDTH,
+        PORTFOLIO_CARD_HEIGHT,
+      );
+      strokeRect(
+        x,
+        PORTFOLIO_CARD_Y,
+        PORTFOLIO_CARD_WIDTH,
+        PORTFOLIO_CARD_HEIGHT,
+        selectedCard
+          ? "#e66f31"
+          : filed
+            ? variant.accent
+            : "#344733",
+        selectedCard ? 3 : 1,
+      );
+      ctx.fillStyle =
+        selectedCard
+          ? "#e66f31"
+          : filed
+            ? variant.accent
+            : "#53604f";
+      ctx.fillRect(
+        x,
+        PORTFOLIO_CARD_Y,
+        PORTFOLIO_CARD_WIDTH,
+        5,
+      );
+      drawText(
+        `ORDER ${String(variant.number).padStart(2, "0")}`,
+        x + 16,
+        PORTFOLIO_CARD_Y + 32,
+        11,
+        selectedCard
+          ? "#f3b36c"
+          : "#82917c",
+        "left",
+        true,
+      );
+      drawText(
+        variant.name,
+        x + 16,
+        PORTFOLIO_CARD_Y + 61,
+        14,
+        selectedCard
+          ? "#f3efd2"
+          : "#cbd4bd",
+        "left",
+        true,
+      );
+
+      const routeY =
+        PORTFOLIO_CARD_Y + 96;
+      ctx.strokeStyle =
+        filed
+          ? variant.accent
+          : "#3f4b3d";
+      ctx.lineWidth = selectedCard
+        ? 3
+        : 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 24, routeY);
+      ctx.lineTo(
+        x + PORTFOLIO_CARD_WIDTH - 24,
+        routeY,
+      );
+      ctx.stroke();
+      for (
+        let marker = 0;
+        marker < 3;
+        marker += 1
+      ) {
+        const markerX =
+          x +
+          24 +
+          marker *
+            (
+              (
+                PORTFOLIO_CARD_WIDTH -
+                48
+              ) /
+              2
+            );
+        ctx.fillStyle =
+          marker === 1 && filed
+            ? "#e66f31"
+            : cleared
+              ? variant.accent
+              : "#263127";
+        ctx.beginPath();
+        ctx.arc(
+          markerX,
+          routeY,
+          marker === 1 ? 6 : 4,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.strokeStyle = "#9daa90";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      drawText(
+        cleared
+          ? "✓ ORDER CLEARED"
+          : "○ REVIEW OPEN",
+        x + 16,
+        PORTFOLIO_CARD_Y + 132,
+        11,
+        cleared
+          ? "#a9c986"
+          : "#778477",
+        "left",
+        cleared,
+      );
+      drawText(
+        filed
+          ? `✓ ${variant.changeRequest.code} FILED`
+          : `◇ ${variant.changeRequest.code} UNFILED`,
+        x + 16,
+        PORTFOLIO_CARD_Y + 157,
+        11,
+        filed
+          ? "#e69158"
+          : "#778477",
+        "left",
+        filed,
+      );
+      drawText(
+        variant.keyHint,
+        x + 16,
+        PORTFOLIO_CARD_Y + 190,
+        9,
+        "#899783",
+        "left",
+      );
+      ctx.fillStyle =
+        "rgba(2,9,5,0.72)";
+      ctx.fillRect(
+        x + 14,
+        PORTFOLIO_CARD_Y + 211,
+        PORTFOLIO_CARD_WIDTH - 28,
+        48,
+      );
+      drawText(
+        record
+          ? `BEST ${record.grade} // ${record.score.toLocaleString()}`
+          : "BEST // UNFILED",
+        x + 24,
+        PORTFOLIO_CARD_Y + 233,
+        10,
+        record
+          ? gradeColor(record.grade)
+          : "#657163",
+        "left",
+        Boolean(record),
+      );
+      drawText(
+        record
+          ? `${record.route.toUpperCase()} // ${formatRunTime(record.timeSeconds)}`
+          : "NO COURSE ECHO",
+        x + 24,
+        PORTFOLIO_CARD_Y + 250,
+        9,
+        "#7e8c79",
+        "left",
+      );
+      if (selectedCard) {
+        ctx.fillStyle = "#e66f31";
+        polygon([
+          [
+            x + PORTFOLIO_CARD_WIDTH - 21,
+            PORTFOLIO_CARD_Y + 17,
+          ],
+          [
+            x + PORTFOLIO_CARD_WIDTH - 9,
+            PORTFOLIO_CARD_Y + 24,
+          ],
+          [
+            x + PORTFOLIO_CARD_WIDTH - 21,
+            PORTFOLIO_CARD_Y + 31,
+          ],
+        ]);
+      }
+    }
+    drawText(
+      unlocked
+        ? inputCopy(
+            "← → SELECT ORDER  //  OVERRIDE PERSISTS",
+            "D-PAD ← → SELECT ORDER  //  OVERRIDE PERSISTS",
+            "TAP A DOSSIER  //  OVERRIDE PERSISTS",
+          )
+        : "FILE ALL THREE CHANGE REQUESTS TO SELECT ANY NIGHT ORDER.",
+      panel.x + panel.width * 0.5,
+      panel.y + panel.height - 18,
+      11,
+      unlocked ? "#e3c77d" : "#6f7c6d",
+      "center",
+      unlocked,
+    );
+  }
+
   function drawMenu() {
     drawOpeningArt(state.time, 0, true);
     drawGrassCurtain(1, state.time, 0);
@@ -1777,9 +2196,8 @@
     drawText("THE COURSE CLOSES AT DUSK.", 92, 215, 18, "#ea8740", "left");
     drawText("JOE DOES NOT.", 92, 240, 18, "#ea8740", "left");
     const careerBest = bestCareerRecord();
-    const nextVariant = runVariantForRound(
-      state.career.roundsStarted,
-    );
+    const nextVariant =
+      selectedMenuVariant();
     ctx.fillStyle = "rgba(9,25,13,0.88)";
     ctx.fillRect(88, 252, 390, 34);
     drawText(
@@ -1818,6 +2236,8 @@
       }
       drawText(label, 108, y + 31, 19, selected ? "#ffc16d" : "#dce5ca", "left");
     });
+
+    drawPortfolioBoard();
 
     const overtimeAvailable =
       overtimeUnlocked();
@@ -1932,15 +2352,13 @@
     }
     drawText(
       inputCopy(
-        overtimeAvailable
-          ? "↑↓ SELECT  •  ENTER CONFIRM  •  R OVERTIME  •  F FULLSCREEN"
-          : "↑↓ SELECT  •  ENTER CONFIRM  •  F FULLSCREEN",
-        overtimeAvailable
-          ? "D-PAD SELECT  •  A CONFIRM  •  RB OVERTIME"
-          : "D-PAD SELECT  •  A CONFIRM",
-        overtimeAvailable
-          ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
-          : "TAP A MENU ITEM",
+        `${portfolioUnlocked() ? "←→ ORDER  •  " : ""}↑↓ SELECT  •  ENTER CONFIRM${overtimeAvailable ? "  •  R OVERTIME" : ""}  •  F FULLSCREEN`,
+        `D-PAD SELECT${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM${overtimeAvailable ? "  •  RB OVERTIME" : ""}`,
+        portfolioUnlocked()
+          ? "TAP MENU / DOSSIER / OVERTIME CARD"
+          : overtimeAvailable
+            ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
+            : "TAP A MENU ITEM",
       ),
       WIDTH - 32,
       HEIGHT - 25,
@@ -2287,9 +2705,7 @@
     clearTouchInputs(true);
     const variant =
       variantOverride ||
-      runVariantForRound(
-        state.career.roundsStarted,
-      );
+      selectedMenuVariant();
     const variantIndex = RUN_VARIANTS.indexOf(variant);
     const overtime =
       state.overtimeSelected &&
@@ -7801,6 +8217,8 @@
     drawText(
       overtime
         ? "AFTER-HOURS TERMS ARE VOLUNTARY. JOE'S ESCALATION IS NOT."
+        : portfolioUnlocked()
+          ? "PORTFOLIO OVERRIDE ACTIVE — THIS NIGHT ORDER WAS SELECTED FROM THE MASTER LEDGER."
         : "COURSE RECORDS VALUE STEALTH, SPEED, SAVED BALLS, AND SURVIVED CLOSE CALLS.",
       WIDTH * 0.5,
       184,
@@ -8628,7 +9046,7 @@
       ctx.fillRect(36, 34, 430, 224);
       strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
       drawText(
-        `HOLE 1 — ${variant.shortName}${hole.overtime ? " // OVERTIME" : ""}`,
+        `HOLE 1 — ${variant.shortName}${hole.overtime ? " // OVERTIME" : portfolioUnlocked() ? " // OVERRIDE" : ""}`,
         62,
         76,
         hole.overtime ? 23 : 29,
@@ -8692,7 +9110,7 @@
         2,
       );
       drawText(
-        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}${hole.overtime ? "  //  OVERTIME" : ""}`,
+        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}${hole.overtime ? "  //  OVERTIME" : portfolioUnlocked() ? "  //  OVERRIDE" : ""}`,
         56,
         65,
         16,
@@ -9361,7 +9779,12 @@
       true,
     );
     drawText(
-      result.masteryUnlocked
+      result.masteryUnlocked &&
+      result.portfolioUnlocked
+        ? "FULL MASTER FILE — OVERTIME AND PORTFOLIO OVERRIDE AUTHORIZED."
+        : result.portfolioUnlocked
+          ? "ALL CHANGES FILED — NIGHT ORDER PORTFOLIO OVERRIDE AUTHORIZED."
+      : result.masteryUnlocked
         ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
         : result.newChangeRequestFiled
           ? `${activeChangeRequest().code} FILED. CHANGE REQUESTS ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} SECURED.`
@@ -9376,6 +9799,7 @@
       570,
       13,
       result.masteryUnlocked ||
+        result.portfolioUnlocked ||
         result.newChangeRequestFiled ||
         result.echoOvertaken ||
         result.newBest
@@ -10650,6 +11074,39 @@
     return -1;
   }
 
+  function portfolioIndexAt(point) {
+    if (
+      point.y < PORTFOLIO_CARD_Y ||
+      point.y >
+        PORTFOLIO_CARD_Y +
+          PORTFOLIO_CARD_HEIGHT
+    ) {
+      return -1;
+    }
+    for (
+      let index = 0;
+      index < RUN_VARIANTS.length;
+      index += 1
+    ) {
+      const x =
+        PORTFOLIO_PANEL.x +
+        22 +
+        index *
+          (
+            PORTFOLIO_CARD_WIDTH +
+            PORTFOLIO_CARD_GAP
+          );
+      if (
+        point.x >= x &&
+        point.x <=
+          x + PORTFOLIO_CARD_WIDTH
+      ) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
   function pauseIndexAt(point) {
     if (point.x < 390 || point.x > 890) {
       return -1;
@@ -10934,6 +11391,15 @@
     } else if (state.mode === "intro") {
       enterMenu();
     } else if (state.mode === "menu" || state.mode === "claim") {
+      const portfolioIndex =
+        portfolioIndexAt(point);
+      if (portfolioIndex >= 0) {
+        selectPortfolioVariant(
+          portfolioIndex,
+          true,
+        );
+        return;
+      }
       if (
         point.x >= 558 &&
         point.x <= 1208 &&
@@ -11300,6 +11766,14 @@
         state.menuIndex =
           (state.menuIndex + MENU_ITEMS.length - 1) % MENU_ITEMS.length;
         playUiTone(190 + state.menuIndex * 14, 0.045, 0.016);
+      } else if (
+        directionPressed("left")
+      ) {
+        selectPortfolioVariant(-1);
+      } else if (
+        directionPressed("right")
+      ) {
+        selectPortfolioVariant(1);
       }
       if (pressed(5)) {
         toggleOvertimeAudit();
@@ -11401,6 +11875,16 @@
       } else if (event.code === "ArrowUp") {
         state.menuIndex = (state.menuIndex + MENU_ITEMS.length - 1) % MENU_ITEMS.length;
         playUiTone(190 + state.menuIndex * 14, 0.045, 0.016);
+        event.preventDefault();
+      } else if (
+        event.code === "ArrowLeft"
+      ) {
+        selectPortfolioVariant(-1);
+        event.preventDefault();
+      } else if (
+        event.code === "ArrowRight"
+      ) {
+        selectPortfolioVariant(1);
         event.preventDefault();
       } else if (event.code === "Enter" || event.code === "Space") {
         playUiTone(285, 0.07, 0.025);
@@ -11549,15 +12033,16 @@
     nextNightOrder:
       state.mode === "menu" || state.mode === "claim"
         ? {
-            id: runVariantForRound(
-              state.career.roundsStarted,
-            ).id,
-            number: runVariantForRound(
-              state.career.roundsStarted,
-            ).number,
-            name: runVariantForRound(
-              state.career.roundsStarted,
-            ).name,
+            id:
+              selectedMenuVariant().id,
+            number:
+              selectedMenuVariant().number,
+            name:
+              selectedMenuVariant().name,
+            source:
+              portfolioUnlocked()
+                ? "portfolio_override"
+                : "career_rotation",
           }
         : null,
     challenge: {
@@ -11581,6 +12066,22 @@
           OVERTIME_SCORE_MULTIPLIER,
         strongerEvidence: true,
       },
+    },
+    portfolio: {
+      id: "night_order_portfolio",
+      unlocked:
+        portfolioUnlocked(),
+      unlockProgress: {
+        filed:
+          state.career.filedChangeRequests.length,
+        required:
+          RUN_VARIANTS.length,
+      },
+      selectedVariant:
+        selectedMenuVariant().id,
+      persistsSelection:
+        portfolioUnlocked(),
+      balanceEffect: "none",
     },
     dialogue: state.mode === "intro" && state.time >= LINE_START && state.time <= LINE_END
       ? { text: "HERE'S JOEY!", delivery: "subtitle_only" }
@@ -11648,6 +12149,8 @@
         state.career.filedChangeRequests.length,
       filedChangeRequests:
         state.career.filedChangeRequests.slice(),
+      selectedVariantId:
+        state.career.selectedVariantId,
       bestOverall: careerRecordSummary(
         bestCareerRecord(),
       ),
@@ -12346,26 +12849,26 @@
       global: "F fullscreen",
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
-      menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
+      menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
       firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
-        menu: "Arrow keys and Enter, or pointer; R toggles Overtime Audit after mastery",
+        menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
         firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {
-        menu: "D-pad selects; A confirms; RB toggles Overtime Audit after mastery; B returns",
+        menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
         firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, secures a change request, or reclaims a landed ball; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
       },
       touch: {
         gate: "Tap to begin",
         intro: "Tap to skip",
-        menu: "Tap menu items directly; tap the Overtime card after mastery",
+        menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
         firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact or reclaim a ball; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
       },

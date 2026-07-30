@@ -16,6 +16,8 @@ Successful personal records now preserve a bounded Course Echo of the run. When 
 
 Every Night Order also places one Unfiled Change Request in a deliberately exposed side lane. Securing it makes a small noise and marks the document as banked for the current attempt, but its +650 score bonus and persistent filing credit are awarded only after a successful escape. The briefing, compact HUD, world view, Listening Focus, and course map all communicate the optional risk without turning it into a required checklist.
 
+Filing all three Change Requests now authorizes the Night Order Portfolio Override. The clubhouse opens a three-dossier master ledger showing order-clearance, filing, best-score, route, time, and Course Echo status. Keyboard, gamepad, or touch players can then select any authored Night Order for the next attempt; that choice persists across reloads and remains independent from Overtime. The reward changes replay control rather than player power, making targeted route-record and Echo rematches possible without weakening Joe.
+
 Holding Q enters Listening Focus: movement slows, ambience falls away, the mower direction becomes readable, and nearby cover, landmarks, and light exposure are surfaced. The presentation also includes state-specific animated Joe-and-mower performances, a reactive night soundscape, terrain-sensitive footsteps, grass debris, spatial mower panning, steering-load audio, danger heartbeat, action-specific cues, corporate Joe-state callouts, chase grading, directional threat feedback, and route-aware animated victory/capture transitions. Joe is hidden from the course map until he is close or actively pursuing; a decaying last-signal marker replaces permanent omniscient tracking.
 
 The audio/accessibility panel provides persistent, independent control over the master mix, course ambience, Joe's spatial mower, gameplay effects, and the danger pulse used by heartbeat, threat stingers, and the chase drone. Every channel retains a visual gameplay counterpart, so lowering or muting a sound category does not hide objective, attention, direction, or interaction information.
@@ -39,6 +41,7 @@ Then open `http://127.0.0.1:4187/`.
 - Click, Enter, or Space — begin the incident.
 - Click, Enter, Space, or Escape — skip the opening.
 - Arrow keys and Enter — navigate the main menu.
+- After filing all three Change Requests, Left/Right — select a Night Order dossier.
 - R — toggle Overtime Audit after clearing all three Night Orders.
 - Pointer — select menu and settings controls.
 - WASD or arrow keys — move through Hole 1.
@@ -54,6 +57,7 @@ Then open `http://127.0.0.1:4187/`.
 Standard gamepads are also supported:
 
 - Left stick or D-pad — move and navigate menus.
+- After filing all three Change Requests, D-pad Left/Right — select a Night Order dossier.
 - RT — sprint.
 - LB — crouch and use hard cover or rough.
 - LT — Listening Focus.
@@ -69,7 +73,7 @@ Touch devices receive a dedicated in-game control layer:
 - Hold Crouch or Listen while moving to use stealth and Listening Focus.
 - Tap Use to interact, unlock exits, secure a change request, or reclaim a landed ball.
 - Hold Chip, slide left or right to aim, and release to shoot.
-- Tap Pause to suspend the round; menus and settings use direct touch targets.
+- Tap Pause to suspend the round; menus, unlocked Night Order dossiers, and settings use direct touch targets.
 - Landscape orientation is recommended. Portrait touch devices receive an explicit rotation prompt.
 
 The interface switches between keyboard, controller, and touch prompts based on the most recent active input. Master, ambience, mower, effects, danger-pulse, subtitle, and reduced-camera-motion settings are navigable with pointer, keyboard, controller, or touch and persist across sessions.

@@ -31,6 +31,7 @@ The browser build includes:
 - A persistent Course Echo that replays the best compatible route as spectral world tracks and a live mini-map rival, with ahead/behind pacing on repeat attempts.
 - A persistent player file tracking rounds started, escapes, captures, and the best shed or drain performance.
 - Persistent Night Order completion tracking that turns the three-layout rotation into a compact mastery loop.
+- A post-mastery Night Order Portfolio: file all three optional Change Requests to permanently select any authored order for deliberate record and Course Echo rematches.
 - An unlockable Overtime Audit contract after all three Night Orders: fewer balls, faster pursuit, stronger evidence, a 1.30× score premium, and a separate persistent record.
 - Reactive mower audio, footsteps, heartbeat, environmental effects, and animated victory/capture presentation.
 
