@@ -99,6 +99,30 @@
     { id: "threat_captions", group: "presentation", label: "THREAT CAPTIONS", key: "threatCaptions", type: "toggle" },
     { id: "reduced_motion", group: "presentation", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
   ];
+  const KEYBOARD_BINDING_ROWS = [
+    { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
+    { id: "move_left", label: "MOVE LEFT", defaultCode: "KeyA" },
+    { id: "move_down", label: "MOVE BACK", defaultCode: "KeyS" },
+    { id: "move_right", label: "MOVE RIGHT", defaultCode: "KeyD" },
+    { id: "sprint", label: "SPRINT", defaultCode: "ShiftLeft" },
+    { id: "crouch", label: "CROUCH", defaultCode: "KeyC" },
+    { id: "focus", label: "LISTENING FOCUS", defaultCode: "KeyQ" },
+    { id: "interact", label: "INTERACT / RECLAIM", defaultCode: "Enter" },
+    { id: "chip", label: "AIM / CHIP", defaultCode: "Space" },
+    { id: "controls", label: "SHOW CONTROLS", defaultCode: "KeyH" },
+  ];
+  const RESERVED_BINDING_CODES = new Set([
+    "Escape",
+    "KeyF",
+    "Tab",
+    "CapsLock",
+    "MetaLeft",
+    "MetaRight",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+  ]);
   const TOUCH_CONTROLS = {
     move: { x: 116, y: 594, radius: 78 },
     interact: { x: 1008, y: 568, radius: 38 },
@@ -538,6 +562,39 @@
     };
   }
 
+  function defaultKeyboardBindings() {
+    return Object.fromEntries(
+      KEYBOARD_BINDING_ROWS.map((binding) => [
+        binding.id,
+        binding.defaultCode,
+      ]),
+    );
+  }
+
+  function validKeyboardBindings(value) {
+    const bindings = defaultKeyboardBindings();
+    if (!value || typeof value !== "object") {
+      return bindings;
+    }
+    for (const binding of KEYBOARD_BINDING_ROWS) {
+      const candidate = value[binding.id];
+      if (
+        bindingCodeAllowed(candidate)
+      ) {
+        bindings[binding.id] = candidate;
+      }
+    }
+    if (
+      new Set(
+        Object.values(bindings),
+      ).size !==
+      KEYBOARD_BINDING_ROWS.length
+    ) {
+      return defaultKeyboardBindings();
+    }
+    return bindings;
+  }
+
   function readSavedPreferences() {
     try {
       const parsed = JSON.parse(
@@ -584,6 +641,10 @@
           typeof parsed.reducedMotion === "boolean"
             ? parsed.reducedMotion
             : false,
+        keyboardBindings:
+          validKeyboardBindings(
+            parsed.keyboardBindings,
+          ),
       };
     } catch {
       preferencesStorageAvailable = false;
@@ -598,6 +659,8 @@
         captionBackground: 0.78,
         threatCaptions: true,
         reducedMotion: false,
+        keyboardBindings:
+          defaultKeyboardBindings(),
       };
     }
   }
@@ -859,8 +922,15 @@
     mowerVolume: savedPreferences.mowerVolume,
     effectsVolume: savedPreferences.effectsVolume,
     dangerVolume: savedPreferences.dangerVolume,
+    keyboardBindings:
+      savedPreferences.keyboardBindings,
     inputMethod: "keyboard",
     settingsIndex: 0,
+    settingsPage: "mix",
+    bindingIndex: 0,
+    bindingCaptureId: null,
+    bindingStatus:
+      "Select an action, then press Enter to reassign it.",
     settingsReturnMode: "menu",
     career: savedCareer,
     portfolioVariantId:
@@ -1089,6 +1159,9 @@
           captionBackground: Number(state.captionBackground.toFixed(2)),
           threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
+          keyboardBindings: {
+            ...state.keyboardBindings,
+          },
         }),
       );
     } catch {
@@ -1832,6 +1905,174 @@
       return touchCopy;
     }
     return keyboardCopy;
+  }
+
+  function keyboardBindingCode(id) {
+    const definition =
+      KEYBOARD_BINDING_ROWS.find(
+        (binding) => binding.id === id,
+      );
+    return (
+      state.keyboardBindings[id] ||
+      definition?.defaultCode ||
+      ""
+    );
+  }
+
+  function keyboardCodeLabel(code) {
+    const exactLabels = {
+      Space: "SPACE",
+      Enter: "ENTER",
+      ShiftLeft: "L SHIFT",
+      ShiftRight: "R SHIFT",
+      ControlLeft: "L CTRL",
+      ControlRight: "R CTRL",
+      AltLeft: "L ALT",
+      AltRight: "R ALT",
+      Backspace: "BACKSPACE",
+      Backquote: "`",
+      Minus: "-",
+      Equal: "=",
+      BracketLeft: "[",
+      BracketRight: "]",
+      Backslash: "\\",
+      Semicolon: ";",
+      Quote: "'",
+      Comma: ",",
+      Period: ".",
+      Slash: "/",
+    };
+    if (exactLabels[code]) {
+      return exactLabels[code];
+    }
+    if (code.startsWith("Key")) {
+      return code.slice(3);
+    }
+    if (code.startsWith("Digit")) {
+      return code.slice(5);
+    }
+    if (code.startsWith("Numpad")) {
+      return `NUM ${code.slice(6).toUpperCase()}`;
+    }
+    return code
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .toUpperCase();
+  }
+
+  function keyboardBindingLabel(id) {
+    return keyboardCodeLabel(
+      keyboardBindingCode(id),
+    );
+  }
+
+  function keyboardBindingDown(id) {
+    return state.keys.has(
+      keyboardBindingCode(id),
+    );
+  }
+
+  function keyboardActionForCode(code) {
+    return (
+      KEYBOARD_BINDING_ROWS.find(
+        (binding) =>
+          keyboardBindingCode(
+            binding.id,
+          ) === code,
+      )?.id || null
+    );
+  }
+
+  function keyboardMovementCopy() {
+    const labels = [
+      keyboardBindingLabel("move_up"),
+      keyboardBindingLabel("move_left"),
+      keyboardBindingLabel("move_down"),
+      keyboardBindingLabel("move_right"),
+    ];
+    const primary =
+      labels.join("") === "WASD"
+        ? "WASD"
+        : labels.join("/");
+    return `${primary} / ARROWS`;
+  }
+
+  function bindingCodeAllowed(code) {
+    return (
+      typeof code === "string" &&
+      code.length > 0 &&
+      code.length <= 32 &&
+      !RESERVED_BINDING_CODES.has(code) &&
+      !/^F\d{1,2}$/.test(code) &&
+      code !== "Unidentified"
+    );
+  }
+
+  function rebindKeyboardAction(id, code) {
+    const target =
+      KEYBOARD_BINDING_ROWS.find(
+        (binding) => binding.id === id,
+      );
+    if (!target) {
+      return false;
+    }
+    if (!bindingCodeAllowed(code)) {
+      state.bindingStatus =
+        `${keyboardCodeLabel(code)} is reserved for menus, movement fallback, or the browser.`;
+      playUiTone(142, 0.09, 0.026);
+      return false;
+    }
+    const previousCode =
+      keyboardBindingCode(id);
+    const conflict =
+      KEYBOARD_BINDING_ROWS.find(
+        (binding) =>
+          binding.id !== id &&
+          keyboardBindingCode(
+            binding.id,
+          ) === code,
+      );
+    state.keyboardBindings[id] = code;
+    if (conflict) {
+      state.keyboardBindings[
+        conflict.id
+      ] = previousCode;
+      state.bindingStatus =
+        `${target.label} set to ${keyboardCodeLabel(code)}. ${conflict.label} moved to ${keyboardCodeLabel(previousCode)}.`;
+    } else {
+      state.bindingStatus =
+        `${target.label} set to ${keyboardCodeLabel(code)}.`;
+    }
+    state.bindingCaptureId = null;
+    state.keys.clear();
+    savePreferences();
+    playUiTone(342, 0.09, 0.03);
+    return true;
+  }
+
+  function resetKeyboardBindings() {
+    state.keyboardBindings =
+      defaultKeyboardBindings();
+    state.bindingCaptureId = null;
+    state.bindingStatus =
+      "Default keyboard bindings restored.";
+    state.keys.clear();
+    savePreferences();
+    playUiTone(250, 0.08, 0.024);
+  }
+
+  function openKeyboardBindings() {
+    state.settingsPage = "bindings";
+    state.bindingCaptureId = null;
+    state.bindingStatus =
+      "Select an action, then press Enter to reassign it.";
+    playUiTone(286, 0.07, 0.024);
+  }
+
+  function returnToMixSettings() {
+    state.settingsPage = "mix";
+    state.bindingCaptureId = null;
+    state.keys.clear();
+    playUiTone(190, 0.055, 0.018);
   }
 
   function inverseLerp(a, b, value) {
@@ -2881,7 +3122,250 @@
     );
   }
 
+  function bindingRowGeometry(index) {
+    const column =
+      index < 5 ? 0 : 1;
+    const rowIndex =
+      index % 5;
+    return {
+      x: column === 0 ? 194 : 664,
+      y: 198 + rowIndex * 64,
+      width: 422,
+      height: 52,
+    };
+  }
+
+  function drawKeyboardBindings() {
+    if (state.settingsReturnMode === "paused") {
+      drawFirstHole();
+    } else {
+      drawMenu();
+    }
+    ctx.fillStyle = "rgba(0,0,0,0.76)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const panel = {
+      x: 150,
+      y: 82,
+      width: 980,
+      height: 556,
+    };
+    ctx.fillStyle = "rgba(5,16,9,0.985)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      "#dc6c25",
+      3,
+    );
+    drawText(
+      "KEY BINDINGS",
+      WIDTH * 0.5,
+      130,
+      34,
+      "#eee8c9",
+      "center",
+      true,
+    );
+    drawText(
+      "PERSONAL OPERATING PROCEDURE // KEYBOARD",
+      WIDTH * 0.5,
+      160,
+      13,
+      "#d77b3b",
+      "center",
+    );
+    drawText(
+      "ARROW KEYS REMAIN A FIXED MOVEMENT FALLBACK",
+      WIDTH * 0.5,
+      181,
+      10,
+      "#82927f",
+      "center",
+    );
+
+    for (
+      let index = 0;
+      index < KEYBOARD_BINDING_ROWS.length;
+      index += 1
+    ) {
+      const binding =
+        KEYBOARD_BINDING_ROWS[index];
+      const row =
+        bindingRowGeometry(index);
+      const selected =
+        index === state.bindingIndex;
+      const capturing =
+        state.bindingCaptureId ===
+        binding.id;
+      ctx.fillStyle = capturing
+        ? "rgba(98,39,17,0.72)"
+        : selected
+          ? "rgba(50,72,28,0.48)"
+          : "rgba(11,28,15,0.78)";
+      ctx.fillRect(
+        row.x,
+        row.y,
+        row.width,
+        row.height,
+      );
+      strokeRect(
+        row.x,
+        row.y,
+        row.width,
+        row.height,
+        capturing
+          ? "#f09b4e"
+          : selected
+            ? "#d47431"
+            : "#42543a",
+        selected || capturing ? 2 : 1,
+      );
+      drawText(
+        binding.label,
+        row.x + 18,
+        row.y + 31,
+        13,
+        selected
+          ? "#f2e7bd"
+          : "#bcc8b2",
+        "left",
+        selected,
+      );
+      const capWidth = 128;
+      const capX =
+        row.x + row.width - 78;
+      ctx.fillStyle = capturing
+        ? "#6b2814"
+        : "#17271a";
+      ctx.fillRect(
+        capX - capWidth * 0.5,
+        row.y + 8,
+        capWidth,
+        36,
+      );
+      strokeRect(
+        capX - capWidth * 0.5,
+        row.y + 8,
+        capWidth,
+        36,
+        capturing
+          ? "#ffc06f"
+          : "#788a65",
+        capturing ? 2 : 1,
+      );
+      drawText(
+        capturing
+          ? "PRESS KEY"
+          : keyboardBindingLabel(
+              binding.id,
+            ),
+        capX,
+        row.y + 32,
+        capturing ? 11 : 13,
+        capturing
+          ? "#fff0bd"
+          : "#f0edd7",
+        "center",
+        true,
+      );
+    }
+
+    ctx.fillStyle = "rgba(15,30,17,0.9)";
+    ctx.fillRect(194, 526, 892, 45);
+    strokeRect(
+      194,
+      526,
+      892,
+      45,
+      state.bindingCaptureId
+        ? "#d47431"
+        : "#4e6442",
+      1,
+    );
+    drawText(
+      state.bindingCaptureId
+        ? `ASSIGNING ${KEYBOARD_BINDING_ROWS[state.bindingIndex].label} // ESC CANCELS`
+        : state.bindingStatus,
+      WIDTH * 0.5,
+      554,
+      11,
+      state.bindingCaptureId
+        ? "#ffd184"
+        : "#aab8a2",
+      "center",
+      true,
+    );
+
+    ctx.fillStyle = "rgba(21,41,23,0.82)";
+    ctx.fillRect(194, 585, 252, 36);
+    strokeRect(
+      194,
+      585,
+      252,
+      36,
+      "#687e4a",
+      1,
+    );
+    drawText(
+      state.inputMethod === "touch"
+        ? "RESET DEFAULTS"
+        : "R  RESET DEFAULTS",
+      320,
+      609,
+      12,
+      "#d9dfcc",
+      "center",
+      true,
+    );
+    ctx.fillStyle = "rgba(21,41,23,0.82)";
+    ctx.fillRect(834, 585, 252, 36);
+    strokeRect(
+      834,
+      585,
+      252,
+      36,
+      "#687e4a",
+      1,
+    );
+    drawText(
+      state.inputMethod === "gamepad"
+        ? "B  BACK TO SETTINGS"
+        : state.inputMethod === "touch"
+          ? "BACK TO SETTINGS"
+          : "ESC  BACK TO SETTINGS",
+      960,
+      609,
+      12,
+      "#d9dfcc",
+      "center",
+      true,
+    );
+    drawText(
+      state.inputMethod === "gamepad"
+        ? "D-PAD SELECTS // A PREPARES KEYBOARD CAPTURE"
+        : state.inputMethod === "touch"
+          ? "TAP AN ACTION, THEN PRESS A PHYSICAL KEY"
+          : "ARROWS SELECT  •  ENTER REBIND  •  CONFLICTS SWAP",
+      WIDTH * 0.5,
+      633,
+      10,
+      "#84927d",
+      "center",
+    );
+  }
+
   function drawSettings() {
+    if (state.settingsPage === "bindings") {
+      drawKeyboardBindings();
+      return;
+    }
     if (state.settingsReturnMode === "paused") {
       drawFirstHole();
     } else {
@@ -2915,12 +3399,12 @@
           ? "Hold CHIP + slide, then release."
           : controllerActive
             ? "Hold X + stick L/R, then release."
-            : "Hold SPACE + A/D, then release.",
+            : `Hold ${keyboardBindingLabel("chip")} + ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")}, then release.`,
         subdetail: touchActive
           ? "Landed balls stay. USE reclaims them."
           : controllerActive
             ? "Landed balls stay. A reclaims them."
-            : "Landed balls stay. ENTER reclaims them.",
+            : `Landed balls stay. ${keyboardBindingLabel("interact")} reclaims them.`,
       },
       {
         y: 436,
@@ -2955,7 +3439,7 @@
         ? "LEFT PAD  MOVE  •  RUN  SPRINT"
         : controllerActive
           ? "LEFT STICK / D-PAD  MOVE"
-          : "WASD / ARROWS  MOVE",
+          : `${keyboardMovementCopy()}  MOVE`,
       205,
       520,
       14,
@@ -2967,7 +3451,7 @@
         ? "HOLD CROUCH  •  HOLD LISTEN"
         : controllerActive
           ? "LB CROUCH  •  LT LISTENING FOCUS"
-          : "C CROUCH  •  Q LISTENING FOCUS",
+          : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTENING FOCUS`,
       205,
       548,
       14,
@@ -2979,7 +3463,7 @@
         ? "RT SPRINTS — FAST, LOUD, AND EXPOSED."
         : touchActive
           ? "RUN IS FAST, LOUD, AND EXPOSED."
-          : "SHIFT SPRINTS — FAST, LOUD, AND EXPOSED.",
+          : `${keyboardBindingLabel("sprint")} SPRINTS — FAST, LOUD, AND EXPOSED.`,
       205,
       587,
       12,
@@ -3105,23 +3589,39 @@
       "left",
     );
     ctx.fillStyle = "rgba(21,41,23,0.8)";
-    ctx.fillRect(700, 554, 350, 36);
-    strokeRect(700, 554, 350, 36, "#687e4a", 1);
+    ctx.fillRect(676, 554, 194, 36);
+    strokeRect(676, 554, 194, 36, "#687e4a", 1);
+    drawText(
+      touchActive
+        ? "KEY BINDINGS"
+        : controllerActive
+          ? "Y  KEY BINDINGS"
+          : "B  KEY BINDINGS",
+      773,
+      578,
+      11,
+      "#d9dfcc",
+      "center",
+      true,
+    );
+    ctx.fillStyle = "rgba(21,41,23,0.8)";
+    ctx.fillRect(880, 554, 216, 36);
+    strokeRect(880, 554, 216, 36, "#687e4a", 1);
     drawText(
       `←  RETURN TO ${state.settingsReturnMode === "paused" ? "PAUSE" : "MENU"}`,
-      875,
+      988,
       578,
-      13,
+      11,
       "#d9dfcc",
       "center",
       true,
     );
     drawText(
       controllerActive
-        ? "LEFT / RIGHT MIX  •  A TOGGLE  •  B RETURN"
+        ? "LEFT / RIGHT MIX  •  A TOGGLE  •  Y BINDINGS  •  B RETURN"
         : touchActive
-          ? "TAP SLIDERS  •  TAP TOGGLES  •  TAP RETURN"
-          : "ARROWS ADJUST  •  ENTER TOGGLE  •  ESC RETURN",
+          ? "TAP SLIDERS  •  TAP TOGGLES  •  TAP BUTTONS"
+          : "ARROWS ADJUST  •  ENTER TOGGLE  •  B BINDINGS  •  ESC RETURN",
       700,
       612,
       11,
@@ -3417,11 +3917,39 @@
 
   function movementInput() {
     const keyboardX =
-      (state.keys.has("KeyD") || state.keys.has("ArrowRight") ? 1 : 0) -
-      (state.keys.has("KeyA") || state.keys.has("ArrowLeft") ? 1 : 0);
+      (
+        keyboardBindingDown(
+          "move_right",
+        ) ||
+        state.keys.has("ArrowRight")
+          ? 1
+          : 0
+      ) -
+      (
+        keyboardBindingDown(
+          "move_left",
+        ) ||
+        state.keys.has("ArrowLeft")
+          ? 1
+          : 0
+      );
     const keyboardY =
-      (state.keys.has("KeyW") || state.keys.has("ArrowUp") ? 1 : 0) -
-      (state.keys.has("KeyS") || state.keys.has("ArrowDown") ? 1 : 0);
+      (
+        keyboardBindingDown(
+          "move_up",
+        ) ||
+        state.keys.has("ArrowUp")
+          ? 1
+          : 0
+      ) -
+      (
+        keyboardBindingDown(
+          "move_down",
+        ) ||
+        state.keys.has("ArrowDown")
+          ? 1
+          : 0
+      );
     return {
       x: clamp(
         keyboardX +
@@ -3448,16 +3976,20 @@
 
   function crouchHeld() {
     return (
-      state.keys.has("KeyC") ||
+      keyboardBindingDown("crouch") ||
       state.gamepad.crouch ||
       state.touch.crouchPointerId !== null
     );
   }
 
   function sprintHeld() {
+    const defaultRightShiftAlias =
+      keyboardBindingCode("sprint") ===
+        "ShiftLeft" &&
+      state.keys.has("ShiftRight");
     return (
-      state.keys.has("ShiftLeft") ||
-      state.keys.has("ShiftRight") ||
+      keyboardBindingDown("sprint") ||
+      defaultRightShiftAlias ||
       state.gamepad.sprint ||
       state.touch.sprintPointerId !== null
     );
@@ -3465,7 +3997,7 @@
 
   function focusHeld() {
     return (
-      state.keys.has("KeyQ") ||
+      keyboardBindingDown("focus") ||
       state.gamepad.focus ||
       state.touch.focusPointerId !== null
     );
@@ -6818,7 +7350,7 @@
             : playerDistance <
                 BALL_RECOVERY_RADIUS
               ? inputCopy(
-                  "ENTER — RECLAIM",
+                  `${keyboardBindingLabel("interact")} — RECLAIM`,
                   "A — RECLAIM",
                 )
               : `LOST BALL ${Math.round(playerDistance)}m`;
@@ -8733,7 +9265,7 @@
     );
     drawText(
       inputCopy(
-        "A / D AIM  •  RELEASE SPACE TO CHIP  •  ESC CANCEL",
+        `${keyboardBindingLabel("move_left")} / ${keyboardBindingLabel("move_right")} AIM  •  RELEASE ${keyboardBindingLabel("chip")} TO CHIP  •  ESC CANCEL`,
         "STICK L/R AIM  •  RELEASE X TO CHIP  •  B CANCEL",
         "SLIDE CHIP BUTTON TO AIM  •  RELEASE TO CHIP",
       ),
@@ -9086,12 +9618,12 @@
           ? "HOLD CHIP  •  SLIDE  •  RELEASE"
           : controllerActive
             ? "HOLD X  •  STICK  •  RELEASE"
-            : "HOLD SPACE  •  A/D  •  RELEASE",
+            : `HOLD ${keyboardBindingLabel("chip")}  •  ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")}  •  RELEASE`,
         subdetail: touchActive
           ? "TAP USE TO RECLAIM — IF JOE ALLOWS"
           : controllerActive
             ? "A RECLAIMS IT — IF JOE ALLOWS"
-            : "ENTER RECLAIMS IT — IF JOE ALLOWS",
+            : `${keyboardBindingLabel("interact")} RECLAIMS IT — IF JOE ALLOWS`,
       },
       {
         x: 780,
@@ -9102,7 +9634,7 @@
           ? "HOLD CROUCH  •  HOLD LISTEN"
           : controllerActive
             ? "LB CROUCH  •  LT LISTEN"
-            : "C CROUCH  •  Q LISTEN",
+            : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN`,
         subdetail:
           "CLOSER ESCAPES BANK MORE RISK PREMIUM",
       },
@@ -9136,11 +9668,36 @@
       drawKeyCap("L STICK", 278, 526, 112);
       drawText("D-PAD MOVES • RT SPRINTS", 278, 579, 10, "#df8c47", "center");
     } else {
-      drawKeyCap("W", 278, 504, 42);
-      drawKeyCap("A", 231, 551, 42);
-      drawKeyCap("S", 278, 551, 42);
-      drawKeyCap("D", 325, 551, 42);
-      drawText("SHIFT SPRINTS — LOUD", 278, 579, 11, "#df8c47", "center");
+      const movementLabels = [
+        keyboardBindingLabel("move_up"),
+        keyboardBindingLabel("move_left"),
+        keyboardBindingLabel("move_down"),
+        keyboardBindingLabel("move_right"),
+      ];
+      if (
+        movementLabels.join("") ===
+        "WASD"
+      ) {
+        drawKeyCap("W", 278, 504, 42);
+        drawKeyCap("A", 231, 551, 42);
+        drawKeyCap("S", 278, 551, 42);
+        drawKeyCap("D", 325, 551, 42);
+      } else {
+        drawKeyCap(
+          movementLabels.join("/"),
+          278,
+          526,
+          194,
+        );
+      }
+      drawText(
+        `${keyboardBindingLabel("sprint")} SPRINTS — LOUD`,
+        278,
+        579,
+        11,
+        "#df8c47",
+        "center",
+      );
     }
 
     drawText("CROUCH", 510, 478, 13, "#8f9f85", "center");
@@ -9149,7 +9706,9 @@
         ? "CROUCH"
         : controllerActive
           ? "LB"
-          : "C",
+          : keyboardBindingLabel(
+              "crouch",
+            ),
       510,
       526,
       touchActive ? 104 : 70,
@@ -9162,7 +9721,9 @@
         ? "CHIP"
         : controllerActive
           ? "X"
-          : "SPACE",
+          : keyboardBindingLabel(
+              "chip",
+            ),
       760,
       526,
       112,
@@ -9175,7 +9736,9 @@
         ? "USE"
         : controllerActive
           ? "A"
-          : "ENTER",
+          : keyboardBindingLabel(
+              "interact",
+            ),
       979,
       526,
       112,
@@ -9189,7 +9752,7 @@
         ? "TOUCH LEFT PAD OR TAP USE TO START"
         : controllerActive
           ? "MOVE LEFT STICK OR PRESS A TO START"
-          : "PRESS A MOVEMENT KEY OR ENTER TO START",
+          : `PRESS ${keyboardBindingLabel("move_up")} OR ${keyboardBindingLabel("interact")} TO START`,
       WIDTH * 0.5,
       621,
       16,
@@ -9215,7 +9778,23 @@
     ctx.fillStyle = "#17271a";
     ctx.fillRect(x - width * 0.5, y - 28, width, 42);
     strokeRect(x - width * 0.5, y - 28, width, 42, "#788a65", 2);
-    drawText(label, x, y, 16, "#f0edd7", "center", true);
+    const fontSize = Math.max(
+      9,
+      Math.min(
+        16,
+        (width - 14) /
+          Math.max(1, label.length * 0.62),
+      ),
+    );
+    drawText(
+      label,
+      x,
+      y,
+      fontSize,
+      "#f0edd7",
+      "center",
+      true,
+    );
   }
 
   function drawListeningFocus() {
@@ -10025,7 +10604,7 @@
       );
       drawFieldIcon(1, 79, 184, 38);
       drawText(
-        `${inputCopy("HOLD SPACE", "HOLD X", "HOLD CHIP")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
+        `${inputCopy(`HOLD ${keyboardBindingLabel("chip")}`, "HOLD X", "HOLD CHIP")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
         106,
         189,
         13,
@@ -10035,8 +10614,8 @@
       drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
       drawText(
         hole.drainUnlocked
-          ? `${inputCopy("ENTER", "A", "USE")}  DRAIN EXIT OPEN`
-          : `${inputCopy("ENTER", "A", "USE")}  INTERACT / UNLOCK`,
+          ? `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  DRAIN EXIT OPEN`
+          : `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  INTERACT / UNLOCK`,
         106,
         227,
         13,
@@ -10223,11 +10802,11 @@
       drawText(
         expandedHud
           ? inputCopy(
-              "MOVE WASD/ARROWS  •  SHIFT SPRINT  •  C CROUCH  •  Q LISTEN  •  ENTER INTERACT  •  HOLD SPACE AIM  •  ESC PAUSE",
+              `MOVE ${keyboardMovementCopy()}  •  ${keyboardBindingLabel("sprint")} SPRINT  •  ${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN  •  ${keyboardBindingLabel("interact")} INTERACT  •  HOLD ${keyboardBindingLabel("chip")} AIM  •  ESC PAUSE`,
               "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  HOLD X AIM  •  START PAUSE",
             )
           : inputCopy(
-              "H CONTROLS  •  ESC PAUSE",
+              `${keyboardBindingLabel("controls")} CONTROLS  •  ESC PAUSE`,
               "Y CONTROLS  •  START PAUSE",
             ),
         28,
@@ -10992,7 +11571,7 @@
       if (hole.tutorialVisible) {
         hole.noise = 0;
         hole.prompt = inputCopy(
-          "PRESS A MOVEMENT KEY OR ENTER TO START",
+          `PRESS ${keyboardBindingLabel("move_up")} OR ${keyboardBindingLabel("interact")} TO START`,
           "MOVE LEFT STICK OR PRESS A TO START",
           "TOUCH LEFT PAD OR TAP USE TO START",
         );
@@ -11277,7 +11856,7 @@
         nearestRecoverableBall();
       if (hole.ballAim.active) {
         hole.prompt = inputCopy(
-          "RELEASE SPACE TO CHIP",
+          `RELEASE ${keyboardBindingLabel("chip")} TO CHIP`,
           "RELEASE X TO CHIP",
           "RELEASE CHIP TO SHOOT",
         );
@@ -11285,13 +11864,13 @@
         hole.prompt = "BALL IN FLIGHT";
       } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy(
-          "ENTER — TAKE SHED KEY",
+          `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
           "A — TAKE SHED KEY",
           "TAP USE — TAKE SHED KEY",
         );
       } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
         hole.prompt = inputCopy(
-          "ENTER — ACTIVATE SPRINKLERS",
+          `${keyboardBindingLabel("interact")} — ACTIVATE SPRINKLERS`,
           "A — ACTIVATE SPRINKLERS",
           "TAP USE — ACTIVATE SPRINKLERS",
         );
@@ -11301,7 +11880,7 @@
           shed.radius
       ) {
         hole.prompt = inputCopy(
-          "ENTER — UNLOCK SHED",
+          `${keyboardBindingLabel("interact")} — UNLOCK SHED`,
           "A — UNLOCK SHED",
           "TAP USE — UNLOCK SHED",
         );
@@ -11311,7 +11890,7 @@
           drain.radius
       ) {
         hole.prompt = inputCopy(
-          "ENTER — ESCAPE THROUGH DRAIN",
+          `${keyboardBindingLabel("interact")} — ESCAPE THROUGH DRAIN`,
           "A — ESCAPE THROUGH DRAIN",
           "TAP USE — ESCAPE THROUGH DRAIN",
         );
@@ -11323,7 +11902,7 @@
         ) < changeRequest.radius
       ) {
         hole.prompt = inputCopy(
-          `ENTER — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+          `${keyboardBindingLabel("interact")} — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
           `A — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
           `TAP USE — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
         );
@@ -11338,8 +11917,8 @@
           );
         hole.prompt = inputCopy(
           recoveryDanger.dangerous
-            ? `ENTER — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
-            : "ENTER — RECLAIM GOLF BALL",
+            ? `${keyboardBindingLabel("interact")} — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : `${keyboardBindingLabel("interact")} — RECLAIM GOLF BALL`,
           recoveryDanger.dangerous
             ? `A — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
             : "A — RECLAIM GOLF BALL",
@@ -11349,13 +11928,13 @@
         );
       } else if (worldDistance(state.player, shed) < shed.radius) {
         hole.prompt = inputCopy(
-          "ENTER — TRY SHED DOOR",
+          `${keyboardBindingLabel("interact")} — TRY SHED DOOR`,
           "A — TRY SHED DOOR",
           "TAP USE — TRY SHED DOOR",
         );
       } else if (worldDistance(state.player, drain) < drain.radius) {
         hole.prompt = inputCopy(
-          "ENTER — INSPECT SEALED DRAIN",
+          `${keyboardBindingLabel("interact")} — INSPECT SEALED DRAIN`,
           "A — INSPECT SEALED DRAIN",
           "TAP USE — INSPECT SEALED DRAIN",
         );
@@ -11437,6 +12016,8 @@
       resumeFirstHole();
     } else if (state.pauseIndex === 1) {
       state.settingsReturnMode = "paused";
+      state.settingsPage = "mix";
+      state.bindingCaptureId = null;
       state.mode = "settings";
       state.transitionAlpha = 0.22;
     } else if (state.pauseIndex === 2) {
@@ -11467,6 +12048,8 @@
         break;
       case 1:
         state.settingsReturnMode = "menu";
+        state.settingsPage = "mix";
+        state.bindingCaptureId = null;
         state.mode = "settings";
         state.transitionAlpha = 0.35;
         break;
@@ -12508,6 +13091,26 @@
     return -1;
   }
 
+  function bindingIndexAt(point) {
+    for (
+      let index = 0;
+      index < KEYBOARD_BINDING_ROWS.length;
+      index += 1
+    ) {
+      const row =
+        bindingRowGeometry(index);
+      if (
+        point.x >= row.x &&
+        point.x <= row.x + row.width &&
+        point.y >= row.y &&
+        point.y <= row.y + row.height
+      ) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
   function pointInTouchCircle(point, control, padding = 0) {
     return (
       Math.hypot(
@@ -12791,11 +13394,51 @@
         activateMenu();
       }
     } else if (state.mode === "settings") {
-      if (
-        point.x >= 690 &&
-        point.x <= 1060 &&
-        point.y >= 548 &&
-        point.y <= 596
+      if (state.settingsPage === "bindings") {
+        if (
+          point.x >= 194 &&
+          point.x <= 446 &&
+          point.y >= 585 &&
+          point.y <= 621
+        ) {
+          resetKeyboardBindings();
+        } else if (
+          point.x >= 834 &&
+          point.x <= 1086 &&
+          point.y >= 585 &&
+          point.y <= 621
+        ) {
+          returnToMixSettings();
+        } else {
+          const index =
+            bindingIndexAt(point);
+          if (index >= 0) {
+            state.bindingIndex = index;
+            state.bindingCaptureId =
+              KEYBOARD_BINDING_ROWS[
+                index
+              ].id;
+            state.bindingStatus =
+              "Press a physical key. Conflicts will swap automatically.";
+            playUiTone(
+              260 + index * 9,
+              0.055,
+              0.02,
+            );
+          }
+        }
+      } else if (
+        point.x >= 676 &&
+        point.x <= 870 &&
+        point.y >= 554 &&
+        point.y <= 590
+      ) {
+        openKeyboardBindings();
+      } else if (
+        point.x >= 880 &&
+        point.x <= 1096 &&
+        point.y >= 554 &&
+        point.y <= 590
       ) {
         returnFromSettings();
       } else {
@@ -12874,10 +13517,39 @@
     }
     state.inputMethod = "keyboard";
     if (state.mode === "settings") {
-      const index = settingsIndexAt(canvasPoint(event));
-      if (index >= 0 && index !== state.settingsIndex) {
-        state.settingsIndex = index;
-        playUiTone(190 + index * 12, 0.04, 0.012);
+      if (state.settingsPage === "bindings") {
+        const index =
+          bindingIndexAt(
+            canvasPoint(event),
+          );
+        if (
+          index >= 0 &&
+          index !== state.bindingIndex &&
+          !state.bindingCaptureId
+        ) {
+          state.bindingIndex = index;
+          playUiTone(
+            190 + index * 12,
+            0.04,
+            0.012,
+          );
+        }
+      } else {
+        const index =
+          settingsIndexAt(
+            canvasPoint(event),
+          );
+        if (
+          index >= 0 &&
+          index !== state.settingsIndex
+        ) {
+          state.settingsIndex = index;
+          playUiTone(
+            190 + index * 12,
+            0.04,
+            0.012,
+          );
+        }
       }
     } else if (state.mode === "paused") {
       const index = pauseIndexAt(canvasPoint(event));
@@ -12996,6 +13668,22 @@
     playUiTone(198 + state.settingsIndex * 20, 0.045, 0.016);
   }
 
+  function selectBinding(direction) {
+    state.bindingCaptureId = null;
+    state.bindingIndex =
+      (
+        state.bindingIndex +
+        direction +
+        KEYBOARD_BINDING_ROWS.length
+      ) %
+      KEYBOARD_BINDING_ROWS.length;
+    playUiTone(
+      198 + state.bindingIndex * 12,
+      0.045,
+      0.016,
+    );
+  }
+
   function adjustSelectedSetting(direction) {
     const setting = SETTINGS_ROWS[state.settingsIndex];
     if (setting.type === "slider") {
@@ -13018,7 +13706,17 @@
       playUiTone(285, 0.07, 0.025);
       activateMenu();
     } else if (state.mode === "settings") {
-      adjustSelectedSetting(1);
+      if (state.settingsPage === "bindings") {
+        state.bindingCaptureId =
+          KEYBOARD_BINDING_ROWS[
+            state.bindingIndex
+          ].id;
+        state.bindingStatus =
+          "Press a physical key. Conflicts will swap automatically.";
+        playUiTone(278, 0.065, 0.022);
+      } else {
+        adjustSelectedSetting(1);
+      }
     } else if (state.mode === "paused") {
       activatePause();
     } else if (state.mode === "first_hole") {
@@ -13049,7 +13747,11 @@
     } else if (state.mode === "paused") {
       resumeFirstHole();
     } else if (state.mode === "settings") {
-      returnFromSettings();
+      if (state.settingsPage === "bindings") {
+        returnToMixSettings();
+      } else {
+        returnFromSettings();
+      }
     } else if (
       state.mode === "claim" ||
       state.mode === "victory" ||
@@ -13180,7 +13882,17 @@
         toggleOvertimeAudit();
       }
     } else if (state.mode === "settings") {
-      if (directionPressed("down")) {
+      if (state.settingsPage === "bindings") {
+        if (directionPressed("down")) {
+          selectBinding(1);
+        } else if (directionPressed("up")) {
+          selectBinding(-1);
+        } else if (directionPressed("left")) {
+          selectBinding(-5);
+        } else if (directionPressed("right")) {
+          selectBinding(5);
+        }
+      } else if (directionPressed("down")) {
         selectSettings(1);
       } else if (directionPressed("up")) {
         selectSettings(-1);
@@ -13225,7 +13937,16 @@
     ) {
       commitGolfBallAim();
     }
-    if (pressed(3) && state.mode === "first_hole") {
+    if (
+      pressed(3) &&
+      state.mode === "settings" &&
+      state.settingsPage === "mix"
+    ) {
+      openKeyboardBindings();
+    } else if (
+      pressed(3) &&
+      state.mode === "first_hole"
+    ) {
       state.hole.controlHintTimer = 8;
       playUiTone(220, 0.045, 0.015);
     }
@@ -13254,6 +13975,26 @@
     }
     state.inputMethod = "keyboard";
     state.keys.add(event.code);
+    if (
+      state.mode === "settings" &&
+      state.settingsPage === "bindings" &&
+      state.bindingCaptureId
+    ) {
+      if (event.code === "Escape") {
+        state.bindingCaptureId = null;
+        state.bindingStatus =
+          "Assignment cancelled.";
+        state.keys.clear();
+        playUiTone(176, 0.055, 0.018);
+      } else if (!event.repeat) {
+        rebindKeyboardAction(
+          state.bindingCaptureId,
+          event.code,
+        );
+      }
+      event.preventDefault();
+      return;
+    }
     if (event.code === "KeyF") {
       toggleFullscreen();
       event.preventDefault();
@@ -13292,11 +14033,49 @@
         activateMenu();
         event.preventDefault();
       }
-    } else if (state.mode === "settings" && event.code === "Escape") {
-      returnFromSettings();
-      event.preventDefault();
     } else if (state.mode === "settings") {
-      if (event.code === "ArrowDown") {
+      if (
+        state.settingsPage === "bindings"
+      ) {
+        if (event.code === "Escape") {
+          returnToMixSettings();
+        } else if (
+          event.code === "KeyR" &&
+          !event.repeat
+        ) {
+          resetKeyboardBindings();
+        } else if (event.code === "ArrowDown") {
+          selectBinding(1);
+        } else if (event.code === "ArrowUp") {
+          selectBinding(-1);
+        } else if (event.code === "ArrowLeft") {
+          selectBinding(-5);
+        } else if (event.code === "ArrowRight") {
+          selectBinding(5);
+        } else if (
+          (event.code === "Enter" ||
+            event.code === "Space") &&
+          !event.repeat
+        ) {
+          state.bindingCaptureId =
+            KEYBOARD_BINDING_ROWS[
+              state.bindingIndex
+            ].id;
+          state.bindingStatus =
+            "Press a physical key. Conflicts will swap automatically.";
+          playUiTone(278, 0.065, 0.022);
+        }
+        event.preventDefault();
+      } else if (event.code === "Escape") {
+        returnFromSettings();
+        event.preventDefault();
+      } else if (
+        event.code === "KeyB" &&
+        !event.repeat
+      ) {
+        openKeyboardBindings();
+        event.preventDefault();
+      } else if (event.code === "ArrowDown") {
         selectSettings(1);
         event.preventDefault();
       } else if (event.code === "ArrowUp") {
@@ -13337,22 +14116,38 @@
         event.preventDefault();
       }
     } else if (state.mode === "first_hole") {
-      const startKeys = [
-        "KeyW",
-        "KeyA",
-        "KeyS",
-        "KeyD",
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "KeyC",
-        "KeyQ",
-        "Enter",
-        "Space",
-      ];
-      if (state.hole.tutorialVisible && startKeys.includes(event.code)) {
-        dismissHoleTutorial(!["Enter", "Space"].includes(event.code));
+      const gameplayAction =
+        keyboardActionForCode(event.code);
+      const fixedMovement =
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+        ].includes(event.code);
+      const movementAction =
+        fixedMovement ||
+        [
+          "move_up",
+          "move_left",
+          "move_down",
+          "move_right",
+        ].includes(gameplayAction);
+      const tutorialStartAction =
+        movementAction ||
+        [
+          "crouch",
+          "focus",
+          "interact",
+          "chip",
+        ].includes(gameplayAction);
+      if (
+        state.hole.tutorialVisible &&
+        tutorialStartAction
+      ) {
+        dismissHoleTutorial(
+          movementAction,
+        );
         event.preventDefault();
       } else if (event.code === "Escape") {
         if (state.hole.ballAim.active) {
@@ -13361,17 +14156,30 @@
           enterPause();
         }
         event.preventDefault();
-      } else if (event.code === "KeyH") {
+      } else if (
+        gameplayAction === "controls"
+      ) {
         state.hole.controlHintTimer = 8;
         playUiTone(220, 0.045, 0.015);
         event.preventDefault();
-      } else if (event.code === "Enter" && !event.repeat) {
+      } else if (
+        gameplayAction === "interact" &&
+        !event.repeat
+      ) {
         if (!state.hole.ballAim.active) {
           interactWithCourse();
         }
         event.preventDefault();
-      } else if (event.code === "Space" && !event.repeat) {
+      } else if (
+        gameplayAction === "chip" &&
+        !event.repeat
+      ) {
         beginGolfBallAim("keyboard");
+        event.preventDefault();
+      } else if (
+        gameplayAction ||
+        fixedMovement
+      ) {
         event.preventDefault();
       }
     } else if (state.mode === "victory" || state.mode === "defeat") {
@@ -13391,7 +14199,8 @@
   window.addEventListener("keyup", (event) => {
     state.keys.delete(event.code);
     if (
-      event.code === "Space" &&
+      event.code ===
+        keyboardBindingCode("chip") &&
       state.mode === "first_hole" &&
       state.hole.ballAim.active &&
       state.hole.ballAim.source === "keyboard"
@@ -13547,8 +14356,44 @@
       reducedMotion: state.reducedMotion,
       returnTarget: state.settingsReturnMode,
       persisted: preferencesStorageAvailable,
+      page: state.settingsPage,
       selected:
-        SETTINGS_ROWS[state.settingsIndex].id,
+        state.settingsPage === "bindings"
+          ? KEYBOARD_BINDING_ROWS[
+              state.bindingIndex
+            ].id
+          : SETTINGS_ROWS[
+              state.settingsIndex
+            ].id,
+      bindingCapture:
+        state.bindingCaptureId,
+      bindingStatus:
+        state.bindingStatus,
+      keyboardBindings:
+        Object.fromEntries(
+          KEYBOARD_BINDING_ROWS.map(
+            (binding) => [
+              binding.id,
+              {
+                code:
+                  keyboardBindingCode(
+                    binding.id,
+                  ),
+                label:
+                  keyboardBindingLabel(
+                    binding.id,
+                  ),
+              },
+            ],
+          ),
+        ),
+      fixedMovementFallback:
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+        ],
     },
     career: {
       persisted: careerStorageAvailable,
@@ -14415,14 +15260,14 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, secures a change request, or reclaims a landed ball; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: "WASD/arrow keys move; Shift sprints; hold C to crouch; hold Q for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; Enter interacts, secures a change request, or reclaims a landed ball; hold Space and use A/D to aim, then release to chip; H shows controls; Escape cancels a shot or pauses",
+        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, secures a change request, or reclaims a landed ball; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
       },
       gamepad: {

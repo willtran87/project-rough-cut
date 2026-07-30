@@ -11,7 +11,7 @@ Working directory for a first-person 2.5D pixel-horror game about Joe, a product
 The browser build includes:
 
 - An original grass-and-weed-whacker horror-comedy opening.
-- Keyboard, pointer, standard gamepad, and complete multi-touch support with automatic prompt switching.
+- Keyboard, pointer, standard gamepad, and complete multi-touch support with automatic prompt switching, plus persistent conflict-safe keyboard remapping.
 - A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
 - Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.
@@ -24,7 +24,7 @@ The browser build includes:
 - Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
 - Obstacle-aware Joe navigation with patrol, investigate, search, and chase animation.
-- An adaptive HUD that recedes after onboarding and can be recalled with H or Y.
+- An adaptive HUD that recedes after onboarding and can be recalled with the configured keyboard key (H by default) or Y on gamepad.
 - A true pause layer with resume, how-to/settings, restart, and clubhouse actions.
 - A persistent five-channel audio mix plus scalable dialogue subtitles, adjustable caption backdrops, directional threat captions, and reduced-camera-motion preferences.
 - A post-run course scorecard with S–D risk grades, banked Risk Premium and Razor Cut recognition, and route-specific personal records.
