@@ -194,6 +194,17 @@
   joeExpressionArt.src = "./assets/rough-cut-joe-expressions-v1.png";
   const drainArt = new Image();
   drainArt.src = "./assets/rough-cut-drain-culvert-v1.png";
+  const pathLanternArt = new Image();
+  pathLanternArt.src =
+    "./assets/rough-cut-path-lantern-atlas-v1.png";
+  const interactablePropArt =
+    new Image();
+  interactablePropArt.src =
+    "./assets/rough-cut-interactable-props-v1.png";
+  const courseClutterArt =
+    new Image();
+  courseClutterArt.src =
+    "./assets/rough-cut-course-clutter-v1.png";
   const grassBuffer = document.createElement("canvas");
   grassBuffer.width = WIDTH;
   grassBuffer.height = HEIGHT;
@@ -590,6 +601,128 @@
     { x: 100, y: 485, width: 460, height: 425, heightMeters: 2.6 },
     { x: 635, y: 520, width: 430, height: 390, heightMeters: 1.65 },
     { x: 1050, y: 570, width: 520, height: 350, heightMeters: 1 },
+  ];
+  const PATH_LANTERN_CELLS = [
+    {
+      x: 143,
+      y: 42,
+      width: 329,
+      height: 540,
+      heightMeters: 0.88,
+      lightY: 0.45,
+    },
+    {
+      x: 762,
+      y: 22,
+      width: 323,
+      height: 569,
+      heightMeters: 0.92,
+      lightY: 0.47,
+    },
+    {
+      x: 139,
+      y: 676,
+      width: 349,
+      height: 523,
+      heightMeters: 0.84,
+      lightY: 0.38,
+    },
+    {
+      x: 787,
+      y: 653,
+      width: 277,
+      height: 561,
+      heightMeters: 1.08,
+      lightY: 0.43,
+    },
+  ];
+  const INTERACTABLE_PROP_CELLS = [
+    {
+      x: 34,
+      y: 107,
+      width: 566,
+      height: 475,
+      heightMeters: 0.38,
+    },
+    {
+      x: 643,
+      y: 33,
+      width: 578,
+      height: 594,
+      heightMeters: 0.72,
+    },
+    {
+      x: 55,
+      y: 641,
+      width: 493,
+      height: 569,
+      heightMeters: 0.82,
+    },
+    {
+      x: 635,
+      y: 627,
+      width: 585,
+      height: 575,
+      heightMeters: 0.3,
+    },
+  ];
+  const COURSE_CLUTTER_CELLS = [
+    {
+      x: 39,
+      y: 96,
+      width: 456,
+      height: 366,
+      heightMeters: 0.72,
+    },
+    {
+      x: 523,
+      y: 119,
+      width: 467,
+      height: 348,
+      heightMeters: 0.58,
+    },
+    {
+      x: 1031,
+      y: 122,
+      width: 484,
+      height: 346,
+      heightMeters: 0.34,
+    },
+    {
+      x: 39,
+      y: 535,
+      width: 455,
+      height: 383,
+      heightMeters: 0.42,
+    },
+    {
+      x: 538,
+      y: 563,
+      width: 451,
+      height: 356,
+      heightMeters: 0.28,
+    },
+    {
+      x: 1029,
+      y: 561,
+      width: 465,
+      height: 357,
+      heightMeters: 0.3,
+    },
+  ];
+  const COURSE_CLUTTER = [
+    { id: "tee-stone", type: 0, x: -103, y: 34, scale: 0.88 },
+    { id: "tee-hose", type: 2, x: 104, y: 66, scale: 0.92 },
+    { id: "audit-balls", type: 3, x: -101, y: 108, scale: 0.86 },
+    { id: "audit-bag", type: 1, x: 101, y: 142, scale: 0.94 },
+    { id: "audit-clippings", type: 5, x: -104, y: 169, scale: 0.9 },
+    { id: "water-tools", type: 4, x: 105, y: 198, scale: 0.92 },
+    { id: "water-stone", type: 0, x: -102, y: 228, scale: 0.82 },
+    { id: "water-hose", type: 2, x: 104, y: 252, scale: 0.88 },
+    { id: "dead-balls", type: 3, x: -102, y: 282, scale: 0.92 },
+    { id: "dead-tools", type: 4, x: 104, y: 302, scale: 0.96 },
+    { id: "dead-bag", type: 1, x: -104, y: 326, scale: 0.9 },
+    { id: "shed-clippings", type: 5, x: 105, y: 346, scale: 1.02 },
   ];
   const DEAD_GREEN_SCENERY = [
     { id: "dead-grass-west", type: 0, x: -103, y: 286, scale: 1.08, landmark: "withered rough" },
@@ -6281,7 +6414,8 @@
         target: key,
         available:
           !state.hole.keyCollected,
-        worldImage: "field-kit-key",
+        worldImage:
+          "imagegen-grounded-key",
       },
       {
         id: "sprinkler",
@@ -6290,7 +6424,7 @@
         available:
           !state.hole.sprinklerUsed,
         worldImage:
-          "field-kit-valve",
+          "imagegen-grounded-valve",
       },
       {
         id: changeRequest.id,
@@ -6300,7 +6434,7 @@
           !state.hole
             .changeRequestCollected,
         worldImage:
-          "procedural-clipboard",
+          "imagegen-change-request-clipboard",
       },
       {
         id: "maintenance-shed",
@@ -9737,21 +9871,39 @@
       );
     const inReach =
       distance < target.radius;
-    const size = clamp(
-      48 * point.scale,
-      38,
-      92,
+    const propCell =
+      INTERACTABLE_PROP_CELLS[
+        iconIndex
+      ];
+    const drawHeight = clamp(
+      (
+        propCell
+          ? propCell.heightMeters *
+            point.pixelsPerMeter
+          : 48 * point.scale
+      ),
+      34,
+      112,
     );
+    const drawWidth =
+      propCell
+        ? drawHeight *
+          propCell.width /
+          propCell.height
+        : drawHeight;
     const bob = state.reducedMotion
       ? 0
       : Math.sin(
           state.time * 3.8 +
             target.x * 0.1,
         ) *
-        Math.min(3, point.scale * 2);
-    const imageY =
+        Math.min(
+          0.8,
+          point.scale * 0.45,
+        );
+    const imageTop =
       point.y -
-      size * 0.56 +
+      drawHeight +
       bob;
     drawInteractionGroundRing(
       target,
@@ -9765,8 +9917,11 @@
     ctx.ellipse(
       point.x,
       point.y + 1,
-      size * 0.32,
-      size * 0.09,
+      drawWidth * 0.42,
+      Math.max(
+        2,
+        drawHeight * 0.07,
+      ),
       0,
       0,
       Math.PI * 2,
@@ -9776,20 +9931,41 @@
     ctx.shadowBlur = inReach
       ? 19
       : 9;
-    drawFieldIcon(
-      iconIndex,
-      point.x,
-      imageY,
-      size,
-    );
+    if (
+      propCell &&
+      interactablePropArt.complete &&
+      interactablePropArt
+        .naturalWidth > 0
+    ) {
+      ctx.drawImage(
+        interactablePropArt,
+        propCell.x,
+        propCell.y,
+        propCell.width,
+        propCell.height,
+        point.x -
+          drawWidth * 0.5,
+        imageTop,
+        drawWidth,
+        drawHeight,
+      );
+    } else {
+      drawFieldIcon(
+        iconIndex,
+        point.x,
+        point.y -
+          drawHeight * 0.52,
+        drawHeight,
+      );
+    }
     ctx.restore();
 
     const panelWidth = inReach
       ? 184
       : 146;
     const panelY =
-      imageY -
-      size * 0.58 -
+      imageTop -
+      11 -
       (inReach ? 28 : 0);
     ctx.fillStyle = inReach
       ? "rgba(18,31,16,0.94)"
@@ -10381,7 +10557,7 @@
       const first =
         visible[0].point;
       drawText(
-        `${guide.targetLabel}  //  FOLLOW REFLECTORS`,
+        `${guide.targetLabel}  //  FOLLOW LANTERNS`,
         first.x,
         first.y + 24,
         9,
@@ -10389,6 +10565,300 @@
         "center",
         true,
       );
+    }
+    ctx.restore();
+  }
+
+  function drawPathLantern(
+    worldX,
+    worldY,
+    markerIndex,
+    sideIndex,
+  ) {
+    const point =
+      worldToScreen(
+        worldX,
+        worldY,
+      );
+    if (
+      !point.visible ||
+      point.x < -90 ||
+      point.x > WIDTH + 90
+    ) {
+      return;
+    }
+    const type =
+      Math.abs(
+        markerIndex +
+          (
+            sideIndex < 0
+              ? 1
+              : 3
+          ),
+      ) %
+      PATH_LANTERN_CELLS.length;
+    const cell =
+      PATH_LANTERN_CELLS[type];
+    const drawHeight = clamp(
+      cell.heightMeters *
+        point.pixelsPerMeter,
+      9,
+      88,
+    );
+    const drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    const zone =
+      courseZoneAt(worldY);
+    const networkPower =
+      zone.id ===
+      "water_hazard"
+        ? floodlightPower()
+        : 1;
+    const damaged =
+      markerIndex % 11 === 0;
+    const pulse =
+      state.reducedMotion
+        ? 0.76
+        : 0.7 +
+          Math.sin(
+            state.hole.elapsed *
+              (
+                damaged
+                  ? 8.4
+                  : 1.7
+              ) +
+              markerIndex * 0.83 +
+              sideIndex,
+          ) *
+            (
+              damaged
+                ? 0.24
+                : 0.08
+            );
+    const lightPower =
+      clamp(
+        networkPower *
+          pulse *
+          (
+            damaged
+              ? 0.48
+              : 1
+          ),
+        0.08,
+        1,
+      );
+    const lightY =
+      point.y -
+      drawHeight *
+        cell.lightY;
+
+    ctx.save();
+    ctx.translate(
+      point.x,
+      point.y,
+    );
+    ctx.scale(1, 0.25);
+    const groundGlow =
+      ctx.createRadialGradient(
+        0,
+        0,
+        0,
+        0,
+        0,
+        Math.max(
+          12,
+          drawWidth * 1.65,
+        ),
+      );
+    groundGlow.addColorStop(
+      0,
+      `rgba(220,143,55,${
+        0.2 * lightPower
+      })`,
+    );
+    groundGlow.addColorStop(
+      0.42,
+      `rgba(116,91,41,${
+        0.11 * lightPower
+      })`,
+    );
+    groundGlow.addColorStop(
+      1,
+      "rgba(44,48,24,0)",
+    );
+    ctx.fillStyle =
+      groundGlow;
+    ctx.fillRect(
+      -drawWidth * 1.7,
+      -drawWidth * 1.7,
+      drawWidth * 3.4,
+      drawWidth * 3.4,
+    );
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation =
+      "screen";
+    const lampGlow =
+      ctx.createRadialGradient(
+        point.x,
+        lightY,
+        0,
+        point.x,
+        lightY,
+        Math.max(
+          10,
+          drawHeight * 0.76,
+        ),
+      );
+    lampGlow.addColorStop(
+      0,
+      `rgba(255,214,132,${
+        0.38 * lightPower
+      })`,
+    );
+    lampGlow.addColorStop(
+      0.28,
+      `rgba(235,156,63,${
+        0.18 * lightPower
+      })`,
+    );
+    lampGlow.addColorStop(
+      1,
+      "rgba(214,127,43,0)",
+    );
+    ctx.fillStyle = lampGlow;
+    ctx.fillRect(
+      point.x -
+        drawHeight,
+      lightY -
+        drawHeight,
+      drawHeight * 2,
+      drawHeight * 2,
+    );
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.34 +
+        point.scale * 0.5,
+      0.38,
+      0.96,
+    );
+    ctx.fillStyle =
+      "rgba(1,3,2,0.48)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      drawWidth * 0.48,
+      Math.max(
+        1,
+        drawHeight * 0.035,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    if (
+      pathLanternArt.complete &&
+      pathLanternArt.naturalWidth >
+        0
+    ) {
+      ctx.drawImage(
+        pathLanternArt,
+        cell.x,
+        cell.y,
+        cell.width,
+        cell.height,
+        point.x -
+          drawWidth * 0.5,
+        point.y -
+          drawHeight,
+        drawWidth,
+        drawHeight,
+      );
+    } else {
+      ctx.fillStyle =
+        "#aa8653";
+      ctx.fillRect(
+        point.x - 2,
+        point.y -
+          drawHeight,
+        4,
+        drawHeight,
+      );
+    }
+    if (
+      drawHeight > 18 &&
+      lightPower > 0.22
+    ) {
+      ctx.globalCompositeOperation =
+        "screen";
+      const moteCount =
+        state.reducedMotion
+          ? 1
+          : 3;
+      for (
+        let index = 0;
+        index < moteCount;
+        index += 1
+      ) {
+        const orbit =
+          state.reducedMotion
+            ? index * 2.1
+            : state.hole.elapsed *
+                (
+                  0.8 +
+                  index * 0.34
+                ) +
+              markerIndex * 0.7 +
+              sideIndex;
+        const moteX =
+          point.x +
+          Math.cos(orbit) *
+            drawHeight *
+            (
+              0.22 +
+              index * 0.08
+            );
+        const moteY =
+          lightY +
+          Math.sin(
+            orbit * 1.43,
+          ) *
+            drawHeight *
+            0.18;
+        ctx.fillStyle =
+          `rgba(255,218,140,${
+            (
+              0.38 +
+              index * 0.1
+            ) *
+            lightPower
+          })`;
+        const moteSize =
+          Math.max(
+            1,
+            Math.round(
+              point.scale *
+                (
+                  index === 0
+                    ? 1.5
+                    : 1
+                ),
+            ),
+          );
+        ctx.fillRect(
+          Math.round(moteX),
+          Math.round(moteY),
+          moteSize,
+          moteSize,
+        );
+      }
     }
     ctx.restore();
   }
@@ -10431,43 +10901,11 @@
         ) {
           continue;
         }
-        const height = clamp(
-          point.pixelsPerMeter * 0.72,
-          5,
-          42,
-        );
-        ctx.globalAlpha = clamp(
-          0.18 +
-            point.scale * 0.35,
-          0.18,
-          0.72,
-        );
-        ctx.fillStyle =
-          "rgba(5,10,5,0.58)";
-        ctx.fillRect(
-          point.x -
-            Math.max(
-              1,
-              height * 0.06,
-            ),
-          point.y - height,
-          Math.max(
-            2,
-            height * 0.12,
-          ),
-          height,
-        );
-        ctx.fillStyle =
-          markerIndex % 2 === 0
-            ? "#d5c47a"
-            : "#7fa989";
-        ctx.fillRect(
-          point.x -
-            height * 0.11,
-          point.y -
-            height * 0.86,
-          height * 0.22,
-          height * 0.2,
+        drawPathLantern(
+          worldX,
+          worldY,
+          markerIndex,
+          sideIndex,
         );
       }
     }
@@ -10574,6 +11012,45 @@
       }
     }
     ctx.restore();
+  }
+
+  function visiblePathLanternCount() {
+    const firstMarkerY =
+      Math.floor(
+        state.player.y / 18,
+      ) *
+        18 +
+      18;
+    let visible = 0;
+    for (
+      let worldY = firstMarkerY;
+      worldY <=
+        state.player.y + 116;
+      worldY += 18
+    ) {
+      const zone =
+        courseZoneAt(worldY);
+      for (
+        let sideIndex = -1;
+        sideIndex <= 1;
+        sideIndex += 2
+      ) {
+        const point =
+          worldToScreen(
+            zone.fairwayHalfWidth *
+              sideIndex,
+            worldY,
+          );
+        if (
+          point.visible &&
+          point.x > -90 &&
+          point.x < WIDTH + 90
+        ) {
+          visible += 1;
+        }
+      }
+    }
+    return visible;
   }
 
   function drawPerspectiveCourse(progress, walkBob) {
@@ -11504,6 +11981,18 @@
         2,
         7,
       );
+      const propCell =
+        INTERACTABLE_PROP_CELLS[3];
+      const propHeight = clamp(
+        propCell.heightMeters *
+          point.pixelsPerMeter,
+        18,
+        54,
+      );
+      const propWidth =
+        propHeight *
+        propCell.width /
+        propCell.height;
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.52)";
       ctx.beginPath();
@@ -11544,46 +12033,41 @@
           : "rgba(247,231,172,0.92)";
       ctx.shadowBlur =
         7 + pulse * 8;
-      ctx.fillStyle =
-        ball.wet
-          ? "#d4f0e5"
-          : "#f1ead1";
-      ctx.beginPath();
-      ctx.arc(
-        point.x,
-        point.y - ballRadius * 0.35,
-        ballRadius,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle =
-        ball.wet
-          ? "#72aaa1"
-          : "#a9a279";
-      ctx.fillRect(
-        Math.round(
+      if (
+        interactablePropArt.complete &&
+        interactablePropArt
+          .naturalWidth > 0
+      ) {
+        ctx.drawImage(
+          interactablePropArt,
+          propCell.x,
+          propCell.y,
+          propCell.width,
+          propCell.height,
           point.x -
-            ballRadius * 0.34,
-        ),
-        Math.round(
+            propWidth * 0.5,
           point.y -
-            ballRadius * 0.8,
-        ),
-        Math.max(
-          1,
-          Math.round(
-            ballRadius * 0.45,
-          ),
-        ),
-        Math.max(
-          1,
-          Math.round(
-            ballRadius * 0.45,
-          ),
-        ),
-      );
+            propHeight,
+          propWidth,
+          propHeight,
+        );
+      } else {
+        ctx.fillStyle =
+          ball.wet
+            ? "#d4f0e5"
+            : "#f1ead1";
+        ctx.beginPath();
+        ctx.arc(
+          point.x,
+          point.y -
+            ballRadius * 0.35,
+          ballRadius,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
       if (
         hole.focus ||
         playerDistance < 24
@@ -11602,8 +12086,8 @@
           label,
           point.x,
           point.y -
-            17 -
-            ballRadius,
+            propHeight -
+            8,
           9,
           danger.dangerous
             ? "#efa462"
@@ -11646,8 +12130,18 @@
       0.48,
       1.65,
     );
-    const width = 30 * scale;
-    const height = 38 * scale;
+    const propCell =
+      INTERACTABLE_PROP_CELLS[1];
+    const height = clamp(
+      propCell.heightMeters *
+        point.pixelsPerMeter,
+      42,
+      118,
+    );
+    const width =
+      height *
+      propCell.width /
+      propCell.height;
     const pulse = state.reducedMotion
       ? 0.62
       : 0.55 +
@@ -11702,63 +12196,46 @@
     ctx.stroke();
     ctx.translate(
       point.x,
-      point.y - height * 0.72,
+      point.y,
     );
     ctx.rotate(flutter);
     ctx.shadowColor =
       "rgba(232,105,41,0.68)";
     ctx.shadowBlur =
       8 + pulse * 8;
-    ctx.fillStyle = "#a43f21";
-    ctx.fillRect(
-      -width * 0.55,
-      -height * 0.08,
-      width * 1.1,
-      height * 0.88,
-    );
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#d9662d";
-    ctx.fillRect(
-      -width * 0.58,
-      -height * 0.16,
-      width * 0.78,
-      height * 0.22,
-    );
-    ctx.fillStyle = "#e8dfbd";
-    ctx.fillRect(
-      -width * 0.42,
-      0,
-      width * 0.82,
-      height * 0.64,
-    );
-    ctx.fillStyle = "#2c382a";
-    const lineHeight =
-      Math.max(1, 2 * scale);
-    for (
-      let line = 0;
-      line < 4;
-      line += 1
+    if (
+      interactablePropArt.complete &&
+      interactablePropArt
+        .naturalWidth > 0
     ) {
+      ctx.drawImage(
+        interactablePropArt,
+        propCell.x,
+        propCell.y,
+        propCell.width,
+        propCell.height,
+        -width * 0.5,
+        -height,
+        width,
+        height,
+      );
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#a43f21";
       ctx.fillRect(
-        -width * 0.3,
-        height *
-          (0.13 + line * 0.1),
-        width *
-          (line === 3 ? 0.36 : 0.58),
-        lineHeight,
+        -width * 0.5,
+        -height,
+        width,
+        height,
+      );
+      ctx.fillStyle = "#e8dfbd";
+      ctx.fillRect(
+        -width * 0.34,
+        -height * 0.82,
+        width * 0.68,
+        height * 0.62,
       );
     }
-    ctx.strokeStyle = "#ef7136";
-    ctx.lineWidth = Math.max(
-      1,
-      1.5 * scale,
-    );
-    ctx.strokeRect(
-      -width * 0.24,
-      height * 0.48,
-      width * 0.48,
-      height * 0.12,
-    );
     ctx.restore();
     if (
       hole.focus ||
@@ -12332,6 +12809,131 @@
     }
   }
 
+  function drawCourseClutter(
+    clutter,
+  ) {
+    if (
+      !courseClutterArt.complete ||
+      courseClutterArt
+        .naturalWidth === 0
+    ) {
+      return;
+    }
+    const point =
+      worldToScreen(
+        clutter.x,
+        clutter.y,
+      );
+    if (
+      !point.visible ||
+      point.x < -220 ||
+      point.x > WIDTH + 220
+    ) {
+      return;
+    }
+    const cell =
+      COURSE_CLUTTER_CELLS[
+        clutter.type
+      ];
+    if (!cell) {
+      return;
+    }
+    const drawHeight = clamp(
+      cell.heightMeters *
+        clutter.scale *
+        point.pixelsPerMeter,
+      8,
+      86,
+    );
+    const drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    const dewPulse =
+      state.reducedMotion
+        ? 0.46
+        : 0.4 +
+          Math.sin(
+            state.hole.elapsed *
+              0.82 +
+              clutter.x * 0.11,
+          ) *
+            0.08;
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.38 +
+        point.scale * 0.52,
+      0.42,
+      0.96,
+    );
+    ctx.fillStyle =
+      "rgba(1,4,2,0.5)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      drawWidth * 0.43,
+      Math.max(
+        1,
+        drawHeight * 0.055,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.drawImage(
+      courseClutterArt,
+      cell.x,
+      cell.y,
+      cell.width,
+      cell.height,
+      point.x -
+        drawWidth * 0.5,
+      point.y -
+        drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    if (
+      (
+        clutter.type === 0 ||
+        clutter.type === 3
+      ) &&
+      drawHeight > 18
+    ) {
+      ctx.globalCompositeOperation =
+        "screen";
+      ctx.fillStyle =
+        `rgba(177,220,211,${
+          dewPulse * 0.34
+        })`;
+      ctx.fillRect(
+        Math.round(
+          point.x -
+            drawWidth * 0.18,
+        ),
+        Math.round(
+          point.y -
+            drawHeight * 0.72,
+        ),
+        Math.max(
+          1,
+          Math.round(
+            point.scale * 1.4,
+          ),
+        ),
+        Math.max(
+          1,
+          Math.round(
+            point.scale * 1.4,
+          ),
+        ),
+      );
+    }
+    ctx.restore();
+  }
+
   function drawLayeredCourseEntities() {
     const entities = [];
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
@@ -12344,6 +12946,29 @@
         entities.push({
           y: point.y,
           draw: () => drawCourseObstacle(obstacle),
+        });
+      }
+    }
+    for (
+      let index = 0;
+      index <
+        COURSE_CLUTTER.length;
+      index += 1
+    ) {
+      const clutter =
+        COURSE_CLUTTER[index];
+      const point =
+        worldToScreen(
+          clutter.x,
+          clutter.y,
+        );
+      if (point.visible) {
+        entities.push({
+          y: point.y,
+          draw: () =>
+            drawCourseClutter(
+              clutter,
+            ),
         });
       }
     }
@@ -22691,6 +23316,8 @@
             firstPersonGuidance: {
               worldRibbon: true,
               fairwayEdgeStakes:
+                false,
+              fairwayEdgeLanterns:
                 true,
               proximityBlockers:
                 true,
@@ -22732,6 +23359,8 @@
                     );
                   })
                   .length,
+              visiblePathLanterns:
+                visiblePathLanternCount(),
               fieldPosition:
                 playerFieldPositionLabel(),
             },
@@ -22824,6 +23453,25 @@
                 "dedicated_six_cell_pixel_art_atlas_with_runtime_labels",
               sandTraps:
                 "dedicated_three_cell_pixel_art_atlas_projected_to_authoritative_terrain_zones",
+              pathLanterns:
+                "dedicated_four_cell_imagegen_atlas_with_projected_amber_light_pools_and_water_hazard_power_sag",
+              interactables:
+                "dedicated_imagegen_world_props_for_key_sprinkler_change_request_and_recoverable_golf_ball",
+              courseClutter: {
+                source:
+                  "dedicated_six_cell_imagegen_atlas",
+                placements:
+                  COURSE_CLUTTER.length,
+                collision:
+                  "low_profile_margin_dressing_step_over",
+              },
+              proceduralStandInsReplaced: [
+                "fairway_edge_stakes",
+                "change_request_clipboard",
+                "floating_key_icon",
+                "floating_sprinkler_icon",
+                "procedural_recoverable_golf_ball",
+              ],
             },
           },
           deadGreenLayers: {
@@ -23239,5 +23887,14 @@
   defeatArt.addEventListener("load", render);
   joeExpressionArt.addEventListener("load", render);
   drainArt.addEventListener("load", render);
+  pathLanternArt.addEventListener("load", render);
+  interactablePropArt.addEventListener(
+    "load",
+    render,
+  );
+  courseClutterArt.addEventListener(
+    "load",
+    render,
+  );
   requestAnimationFrame(frame);
 })();
