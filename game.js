@@ -216,12 +216,14 @@
     cameraHeightMeters: 1.65,
     worldUnitMeters: 0.12,
     referencePixelsPerMeter: 50,
-    lateralWalkPixels: 42,
-    lateralSprintPixels: 56,
-    lateralCrouchPixels: 27,
-    lateralFocusPixels: 20,
-    lateralResponse: 10.5,
-    lateralReturnResponse: 7.5,
+    lateralWalkPixels: 68,
+    lateralSprintPixels: 88,
+    lateralCrouchPixels: 42,
+    lateralFocusPixels: 32,
+    lateralResponse: 9.2,
+    lateralReturnResponse: 6.8,
+    viewportShiftRatio: 0.5,
+    reducedViewportShiftRatio: 0.32,
     maxRollRadians: 0.009,
     sprintRollRadians: 0.012,
   };
@@ -3406,7 +3408,7 @@
         .offsetX;
     const panX = clamp(
       -state.player.x * 0.5 +
-        cameraShift * 0.72,
+        cameraShift * 0.18,
       -96,
       96,
     );
@@ -6418,8 +6420,34 @@
   }
 
   function applyCourseCameraTransform() {
+    const frame =
+      courseCameraFrameTransform();
+    ctx.translate(
+      frame.viewportShift,
+      0,
+    );
+    ctx.translate(
+      WIDTH * 0.5,
+      HEIGHT * 0.5,
+    );
+    ctx.rotate(
+      frame.roll,
+    );
+    ctx.scale(
+      frame.scale,
+      frame.scale,
+    );
+    ctx.translate(
+      -WIDTH * 0.5,
+      -HEIGHT * 0.5,
+    );
+  }
+
+  function courseCameraFrameTransform() {
     const motion =
       courseCameraMotion();
+    const viewportShift =
+      courseViewportShiftX();
     const strength =
       clamp(
         Math.abs(
@@ -6431,26 +6459,81 @@
         1,
       );
     const scale =
-      state.reducedMotion
-        ? 1
-        : 1 +
-          strength *
-            0.024;
-    ctx.translate(
-      WIDTH * 0.5,
-      HEIGHT * 0.5,
-    );
-    ctx.rotate(
-      motion.roll,
-    );
-    ctx.scale(
+      1 +
+      Math.abs(
+        viewportShift,
+      ) *
+        2 /
+        WIDTH +
+      Math.abs(
+        motion.roll,
+      ) *
+        WIDTH /
+        HEIGHT +
+      strength *
+        0.004;
+    return {
+      viewportShift,
+      roll: motion.roll,
       scale,
-      scale,
-    );
-    ctx.translate(
-      -WIDTH * 0.5,
-      -HEIGHT * 0.5,
-    );
+    };
+  }
+
+  function transformCourseScreenPoint(
+    point,
+  ) {
+    const frame =
+      courseCameraFrameTransform();
+    const relativeX =
+      (
+        point.x -
+        WIDTH * 0.5
+      ) *
+      frame.scale;
+    const relativeY =
+      (
+        point.y -
+        HEIGHT * 0.5
+      ) *
+      frame.scale;
+    const cosine =
+      Math.cos(
+        frame.roll,
+      );
+    const sine =
+      Math.sin(
+        frame.roll,
+      );
+    return {
+      x:
+        WIDTH * 0.5 +
+        frame.viewportShift +
+        relativeX *
+          cosine -
+        relativeY *
+          sine,
+      y:
+        HEIGHT * 0.5 +
+        relativeX *
+          sine +
+        relativeY *
+          cosine,
+      scale:
+        frame.scale,
+    };
+  }
+
+  function courseViewportShiftX() {
+    const motion =
+      courseCameraMotion();
+    return motion.offsetX *
+      (
+        state.reducedMotion
+          ? COURSE_CAMERA
+              .reducedViewportShiftRatio
+          : COURSE_CAMERA
+              .viewportShiftRatio
+      );
   }
 
   function drawLateralCameraFeedback() {
@@ -6576,7 +6659,8 @@
           COURSE_CAMERA.worldUnitMeters *
           pixelsPerMeter +
         courseCameraMotion()
-          .offsetX,
+          .offsetX *
+          0.46,
       y:
         COURSE_CAMERA.horizonY +
         COURSE_CAMERA.cameraHeightMeters *
@@ -10809,18 +10893,22 @@
         obstacle,
         PLAYER_COLLISION_RADIUS,
       );
+    const transformedPoint =
+      transformCourseScreenPoint(
+        footprint.point,
+      );
     const alpha = clamp(
       state.hole.blockedTimer * 1.65,
       0,
       1,
     );
     const targetX = clamp(
-      footprint.point.x,
+      transformedPoint.x,
       108,
       WIDTH - 108,
     );
     const targetY = clamp(
-      footprint.point.y,
+      transformedPoint.y,
       COURSE_CAMERA.horizonY + 52,
       HEIGHT - 190,
     );
@@ -10852,11 +10940,13 @@
       targetY,
       Math.max(
         12,
-        footprint.radiusX,
+        footprint.radiusX *
+          transformedPoint.scale,
       ),
       Math.max(
         5,
-        footprint.radiusY,
+        footprint.radiusY *
+          transformedPoint.scale,
       ),
       0,
       0,
@@ -11601,7 +11691,7 @@
       -state.player.x * 3.1 +
       courseCameraMotion()
         .offsetX *
-        1.18;
+        0.62;
 
     ctx.save();
     ctx.globalAlpha = 0.2;
@@ -13825,7 +13915,7 @@
       -state.player.x * 12.5 +
         courseCameraMotion()
           .offsetX *
-          2.1,
+          1.35,
       -820,
       820,
     );
@@ -16159,15 +16249,19 @@
         flight.target.x,
         flight.target.y,
       );
+      const transformedTargetPoint =
+        transformCourseScreenPoint(
+          targetPoint,
+        );
       const startX = WIDTH * 0.5;
       const startY = HEIGHT * 0.75;
       const targetX = clamp(
-        targetPoint.x,
+        transformedTargetPoint.x,
         492,
         WIDTH - 326,
       );
       const targetY = clamp(
-        targetPoint.y,
+        transformedTargetPoint.y,
         122,
         HEIGHT * 0.69,
       );
@@ -16235,13 +16329,17 @@
       target.x,
       target.y,
     );
+    const transformedTargetPoint =
+      transformCourseScreenPoint(
+        targetPoint,
+      );
     const targetX = clamp(
-      targetPoint.x,
+      transformedTargetPoint.x,
       492,
       WIDTH - 326,
     );
     const targetY = clamp(
-      targetPoint.y,
+      transformedTargetPoint.y,
       112,
       HEIGHT * 0.68,
     );
@@ -23509,6 +23607,15 @@
             targetShiftPixels: Number(
               courseCameraMotion().targetOffsetX.toFixed(2),
             ),
+            viewportShiftPixels: Number(
+              courseViewportShiftX().toFixed(2),
+            ),
+            projectedWorldShiftPixels: Number(
+              (
+                courseCameraMotion().offsetX *
+                0.46
+              ).toFixed(2),
+            ),
             rollDegrees: Number(
               (
                 courseCameraMotion().roll *
@@ -23528,7 +23635,7 @@
               : "eased_shift_with_counter_roll",
             hudAnchoring: "screen_fixed",
             worldResponse:
-              "backdrop_parallax_projection_and_foreground",
+              "translated_viewport_with_layered_parallax",
           },
         }
       : null,
