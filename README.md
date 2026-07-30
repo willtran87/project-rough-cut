@@ -12,10 +12,11 @@ The browser build includes:
 
 - An original grass-and-weed-whacker horror-comedy opening.
 - Keyboard, pointer, standard gamepad, and complete multi-touch support with automatic prompt switching, plus persistent conflict-safe keyboard remapping.
-- A 360-unit, four-zone course with distinct suspense pacing and readable landmarks.
+- A 540-unit, six-zone course with distinct suspense pacing across The Tee, Audit Row, Water Hazard, Clubhouse Crossing, Service Maze, and The Dead Green.
 - Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.
 - Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment, a route-colored release seal, and a clean handoff into the scorecard.
+- Two optional Sprint Review gates in the extended back nine: crossing their exposed amber rings restores a golf ball when space is available and shortens Final Filing, but the review bell redirects Joe toward the gate.
 - Precise stepped collision with object-specific authored ellipse footprints, contact callouts, guaranteed escape movement, hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Image-generated key, sprinkler, Change Request, and recoverable-ball props grounded directly into the world with distance labels, projected use-range rings, explicit in-reach states, and matching mini-map symbols.
 - First-person route communication through an obstacle-aware ground ribbon, four variants of image-generated fairway lanterns with projected amber light pools, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
@@ -29,8 +30,8 @@ The browser build includes:
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
 - A capped world-space mower-effects system: Joe throws spinning grass shavings with gravity, drag, landing, and camera parallax; soaked turf produces heavy wet clumps, bunkers produce grit, close cover can throw sparks, and pursuit pushes debris toward the camera.
 - Gameplay-linked horror atmosphere including Joe's moving moon shadow, mower-driven fog shear, reactive floodlight moths, grass dust, near-camera debris, and reduced-motion-aware effect density.
-- Temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
-- Three permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
+- Six temporary sprinkler soak zones that create quieter routes, stronger wet footprints, and mower-bog opportunities against Joe.
+- Five permanent bunker-sand hazards that slow both the player and Joe's mower, preserve loud tracks, and reward successful mower baiting.
 - A sight-and-sound attention meter, explicit contact-break progress, and a capped Risk Premium that makes closer pursuit escapes worth more without increasing the existing maximum recovery score.
 - A 14-second Delivery Chain that rewards linking smart plays—course progress, risky ball recoveries, bunker baits, optional paperwork, and contact breaks—without changing survival difficulty.
 - A live letter-only File Projection that reacts to time, attention, resources, optional filings, and recovery plays without exposing exact score optimization during the chase.

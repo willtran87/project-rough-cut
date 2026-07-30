@@ -915,3 +915,25 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest the Water Hazard power sag with the new lantern network and tune only glow strength if the route becomes too bright during blackout.
 - Human-playtest the twelve clutter placements during a full run and move only pieces that compete with moment-to-moment obstacle silhouettes.
+
+## Extended Back Nine and Sprint Review Pass - July 30, 2026
+
+- Increased Hole 1 from 360 to 540 world units and expanded the course from four to six authored suspense zones.
+- Added Clubhouse Crossing as a bright, exposed middle act and Service Maze as a tight hedge-and-maintenance corridor before relocating The Dead Green and both exits to the new finale.
+- Expanded the collision field from 28 to 41 unique obstacles, added two bunker-sand regions, extended sprinkler coverage to all six zones, and distributed additional generated clutter through the new course length.
+- Extended Joe's patrol route through the clubhouse, maze, final approach, and both exits.
+- Added a gradual course-pressure multiplier that increases Joe's movement by up to 14% near the finish instead of introducing a sudden invisible difficulty spike.
+- Added two variant-aware Sprint Review gates. Crossing their amber rings restores a golf ball when capacity allows, reduces Final Filing by 0.18 seconds per gate, and contributes a dedicated Review family to the Delivery Chain.
+- Made each Review bell a tactical risk: it redirects Joe toward the cleared checkpoint unless he is already chasing, while still producing explicit world captions, banners, map markers, and text-state diagnostics.
+- Increased the course map height to preserve six-zone readability and added amber/accepted Review markers to its interaction legend.
+- Updated the How to Survive panel, compact course contract, README, and browser documentation for the extended progression.
+- Passed JavaScript syntax checks and the exact project Playwright client with a 540-unit, six-zone course, two active Review gates, seven world interactables, and no page or console errors.
+- Completed a collision-aware live route from the west-tee sprinkler through the clubhouse tunnel and across Review A. The gate cleared at y=358, reduced filing by 0.18 seconds, preserved a full four-ball pocket, reached Delivery ×2.2, and escalated Joe to a 12-meter chase without any browser errors.
+- Visually inspected the opening and active Review encounter at 1280x720. The taller map remains subordinate to the FPS view, the authored Review sign and amber ring read as a physical checkpoint, and temporary reward/threat messaging stays inside the existing HUD composition.
+- Verified live gameplay at 2560x1600: the canvas remained 2508x1403.75 at x=26 and y=98.125 with no document overflow, UI drift, page errors, or console errors.
+- Verified live gameplay at 800x600: the canvas remained 769.625x428.016 at x=15.188 and y=85.984 with no document overflow, map clipping, UI drift, page errors, or console errors.
+
+### Next production priorities
+
+- Human-playtest the final Service Maze route at normal movement speed and tune only obstacle positions that force map consultation after their first visible reveal.
+- Evaluate whether a unique generated Sprint Review sign atlas is warranted after the reused authored signage has been tested for recognition across all three Night Orders.

@@ -436,7 +436,7 @@
   const BUNKER_ATLAS_CELL = 724;
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
-  const COURSE_LENGTH = 360;
+  const COURSE_LENGTH = 540;
   const COURSE_MIN_Y = 0;
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
@@ -453,11 +453,12 @@
   const DELIVERY_CHAIN_WINDOW = 14;
   const DELIVERY_CHAIN_MAX = 5;
   const DELIVERY_FAMILY_CAPS = {
-    zone: 3,
+    zone: 5,
     recovery: 3,
     bunker: 2,
     contact: 3,
     change: 1,
+    review: 2,
   };
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
@@ -472,8 +473,10 @@
   const SAND_MOWER_SPEED_MULTIPLIER = 0.76;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
-  const SHED_EXIT = { x: 24, y: 350, radius: 13 };
-  const DRAIN_EXIT = { x: -76, y: 339, radius: 15 };
+  const SHED_EXIT = { x: 24, y: 530, radius: 13 };
+  const DRAIN_EXIT = { x: -76, y: 519, radius: 15 };
+  const SPRINT_REVIEW_RADIUS = 13;
+  const SPRINT_REVIEW_FILING_REDUCTION = 0.18;
   const ESCAPE_FILING_DURATION = {
     shed: 1.35,
     drain: 1.7,
@@ -483,7 +486,9 @@
     { id: "west-tee", name: "WEST TEE", x: -82, y: 61, radius: 28 },
     { id: "east-relief", name: "EAST RELIEF", x: 78, y: 181, radius: 27 },
     { id: "pond-fringe", name: "POND FRINGE", x: 4, y: 226, radius: 30 },
-    { id: "final-approach", name: "FINAL APPROACH", x: -77, y: 323, radius: 28 },
+    { id: "clubhouse-crossing", name: "CLUBHOUSE CROSSING", x: -77, y: 323, radius: 28 },
+    { id: "service-lane", name: "SERVICE LANE", x: 69, y: 419, radius: 29 },
+    { id: "final-approach", name: "FINAL APPROACH", x: -77, y: 503, radius: 28 },
   ];
   const BUNKER_SAND_ZONES = [
     {
@@ -512,6 +517,24 @@
       radiusX: 46,
       radiusY: 34,
       rakeAngle: -0.08,
+    },
+    {
+      id: "clubhouse-bunker",
+      name: "CLUBHOUSE BUNKER",
+      x: -70,
+      y: 352,
+      radiusX: 36,
+      radiusY: 22,
+      rakeAngle: 0.16,
+    },
+    {
+      id: "service-bunker",
+      name: "SERVICE BUNKER",
+      x: 72,
+      y: 438,
+      radiusX: 34,
+      radiusY: 21,
+      rakeAngle: -0.12,
     },
   ];
   const COURSE_ZONES = [
@@ -546,10 +569,30 @@
       cue: "WATER HAZARD — reeds hide movement; the floodlight exposes it.",
     },
     {
+      id: "clubhouse_crossing",
+      name: "CLUBHOUSE CROSSING",
+      subtitle: "OPEN KILL ZONE",
+      start: 276,
+      end: 366,
+      fairwayHalfWidth: 64,
+      tint: "38,29,18",
+      cue: "CLUBHOUSE CROSSING — bright windows and open ground leave almost nowhere to disappear.",
+    },
+    {
+      id: "maintenance_maze",
+      name: "SERVICE MAZE",
+      subtitle: "BACKLOG OF BLIND CORNERS",
+      start: 366,
+      end: 455,
+      fairwayHalfWidth: 51,
+      tint: "23,34,18",
+      cue: "SERVICE MAZE — tight maintenance lanes reward listening and punish sprinting blind.",
+    },
+    {
       id: "dead_green",
       name: "THE DEAD GREEN",
       subtitle: "FINAL APPROACH",
-      start: 276,
+      start: 455,
       end: COURSE_LENGTH + 1,
       fairwayHalfWidth: 62,
       tint: "44,24,14",
@@ -576,6 +619,16 @@
       key: "B TRITONE",
       rootHz: 30.87,
       accent: "153,70,39",
+    },
+    {
+      key: "A# MINOR",
+      rootHz: 29.14,
+      accent: "145,101,51",
+    },
+    {
+      key: "A DIMINISHED",
+      rootHz: 27.5,
+      accent: "166,63,38",
     },
   ];
   const COURSE_OBSTACLE_CELLS = [
@@ -719,22 +772,27 @@
     { id: "water-tools", type: 4, x: 105, y: 198, scale: 0.92 },
     { id: "water-stone", type: 0, x: -102, y: 228, scale: 0.82 },
     { id: "water-hose", type: 2, x: 104, y: 252, scale: 0.88 },
-    { id: "dead-balls", type: 3, x: -102, y: 282, scale: 0.92 },
-    { id: "dead-tools", type: 4, x: 104, y: 302, scale: 0.96 },
-    { id: "dead-bag", type: 1, x: -104, y: 326, scale: 0.9 },
-    { id: "shed-clippings", type: 5, x: 105, y: 346, scale: 1.02 },
+    { id: "clubhouse-balls", type: 3, x: -102, y: 282, scale: 0.92 },
+    { id: "clubhouse-tools", type: 4, x: 104, y: 312, scale: 0.96 },
+    { id: "clubhouse-bag", type: 1, x: -104, y: 348, scale: 0.9 },
+    { id: "maze-stone", type: 0, x: 103, y: 378, scale: 0.86 },
+    { id: "maze-hose", type: 2, x: -104, y: 402, scale: 0.93 },
+    { id: "maze-tools", type: 4, x: 103, y: 438, scale: 0.98 },
+    { id: "dead-balls", type: 3, x: -102, y: 468, scale: 0.92 },
+    { id: "dead-bag", type: 1, x: 104, y: 494, scale: 0.94 },
+    { id: "shed-clippings", type: 5, x: -105, y: 526, scale: 1.02 },
   ];
   const DEAD_GREEN_SCENERY = [
-    { id: "dead-grass-west", type: 0, x: -103, y: 286, scale: 1.08, landmark: "withered rough" },
-    { id: "warning-flag", type: 1, x: 46, y: 298, scale: 0.96, landmark: "torn warning flag" },
-    { id: "burst-sprinkler", type: 2, x: -28, y: 316, scale: 1.05, landmark: "burst sprinkler" },
-    { id: "dead-grass-east", type: 0, x: 104, y: 322, scale: 1.14, landmark: "dead boundary grass" },
-    { id: "dead-topiary", type: 3, x: -58, y: 333, scale: 1.02, landmark: "dead topiary" },
-    { id: "finish-flag", type: 1, x: 16, y: 335, scale: 0.82, landmark: "final warning flag" },
-    { id: "snapped-sign", type: 4, x: -34, y: 344, scale: 0.96, landmark: "snapped course sign" },
-    { id: "mower-wreck", type: 5, x: 71, y: 346, scale: 1.08, landmark: "mower wreck" },
-    { id: "dead-grass-left-finish", type: 0, x: -86, y: 355, scale: 0.92, landmark: "withered rough" },
-    { id: "dead-grass-finish", type: 0, x: 106, y: 357, scale: 0.98, landmark: "withered rough" },
+    { id: "dead-grass-west", type: 0, x: -103, y: 466, scale: 1.08, landmark: "withered rough" },
+    { id: "warning-flag", type: 1, x: 46, y: 478, scale: 0.96, landmark: "torn warning flag" },
+    { id: "burst-sprinkler", type: 2, x: -28, y: 496, scale: 1.05, landmark: "burst sprinkler" },
+    { id: "dead-grass-east", type: 0, x: 104, y: 502, scale: 1.14, landmark: "dead boundary grass" },
+    { id: "dead-topiary", type: 3, x: -58, y: 513, scale: 1.02, landmark: "dead topiary" },
+    { id: "finish-flag", type: 1, x: 16, y: 515, scale: 0.82, landmark: "final warning flag" },
+    { id: "snapped-sign", type: 4, x: -34, y: 524, scale: 0.96, landmark: "snapped course sign" },
+    { id: "mower-wreck", type: 5, x: 71, y: 526, scale: 1.08, landmark: "mower wreck" },
+    { id: "dead-grass-left-finish", type: 0, x: -86, y: 535, scale: 0.92, landmark: "withered rough" },
+    { id: "dead-grass-finish", type: 0, x: 106, y: 537, scale: 0.98, landmark: "withered rough" },
   ];
   const COURSE_OBSTACLES = [
     { id: "start-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -42, y: 28, radius: 15, radiusX: 20, radiusY: 7, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "hedge hide" },
@@ -757,14 +815,27 @@
     { id: "floodlight", kit: "expanded", type: 5, x: 18, y: 242, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 57, scale: 1.04, blocks: true, sight: false, landmark: "maintenance floodlight" },
     { id: "pond-east", kit: "expanded", type: 2, x: 70, y: 260, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "pond edge" },
     { id: "bunker-wall", kit: "expanded", type: 3, x: -18, y: 274, radius: 19, radiusX: 25, radiusY: 8, coverRadius: 27, scale: 1.12, blocks: true, sight: true, landmark: "bunker wall" },
-    { id: "final-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
-    { id: "final-arch", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-left", x: -35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-right", x: 35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
-    { id: "final-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
-    { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 334, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
-    { id: "shed-left-wall", x: 5, y: 350, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
-    { id: "shed-right-wall", x: 45, y: 350, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "clubhouse-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
+    { id: "clubhouse-arch", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-arch-left", x: -35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-arch-right", x: 35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
+    { id: "clubhouse-stone", asset: "stone-cover", kit: "base", type: 1, x: 54, y: 343, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 0.96, blocks: true, sight: true, landmark: "clubhouse stone cover" },
+    { id: "service-hedge-west", asset: "hedge-hide", kit: "base", type: 0, x: -87, y: 382, radius: 18, radiusX: 22, radiusY: 8, coverRadius: 28, scale: 1.04, blocks: true, sight: true, landmark: "service hedge" },
+    { id: "service-pine-east", kit: "base", type: 2, x: 91, y: 397, radius: 19, radiusX: 7.5, radiusY: 7.5, coverRadius: 28, scale: 0.95, blocks: true, sight: true, landmark: "service pine" },
+    { id: "maze-cart", kit: "expanded", type: 1, x: -58, y: 409, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "abandoned service cart" },
+    { id: "service-arch", kit: "expanded", type: 0, x: 12, y: 421, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "service hedge tunnel" },
+    { id: "service-arch-left", x: -23, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
+    { id: "service-arch-right", x: 47, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
+    { id: "service-board", kit: "expanded", type: 4, x: 72, y: 444, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.92, blocks: true, sight: true, landmark: "sprint board" },
+    { id: "service-pond", kit: "expanded", type: 2, x: -74, y: 451, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "service runoff" },
+    { id: "final-arch", kit: "expanded", type: 0, x: 0, y: 478, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-left", x: -35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-right", x: 35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-board", kit: "expanded", type: 4, x: -77, y: 497, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "final audit board" },
+    { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 514, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
+    { id: "shed-left-wall", x: 5, y: 530, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-right-wall", x: 45, y: 530, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
   ];
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
@@ -773,15 +844,22 @@
     { x: 44, y: 185 },
     { x: 45, y: 215 },
     { x: 0, y: 230 },
-    { x: 0, y: 250 },
-    { x: -110, y: 250 },
-    { x: -110, y: 340 },
-    { x: -35, y: 345 },
-    { x: 20, y: 345 },
-    { x: -35, y: 345 },
-    { x: -110, y: 340 },
-    { x: -110, y: 250 },
-    { x: -110, y: 195 },
+    { x: -90, y: 250 },
+    { x: -82, y: 315 },
+    { x: 34, y: 338 },
+    { x: 92, y: 365 },
+    { x: 82, y: 410 },
+    { x: 0, y: 432 },
+    { x: -92, y: 452 },
+    { x: -82, y: 505 },
+    { x: -20, y: 525 },
+    { x: 62, y: 515 },
+    { x: 96, y: 470 },
+    { x: 42, y: 425 },
+    { x: -82, y: 390 },
+    { x: -92, y: 315 },
+    { x: -102, y: 250 },
+    { x: -96, y: 195 },
     { x: -35, y: 195 },
   ];
   const RUN_VARIANTS = [
@@ -801,6 +879,10 @@
         hint:
           "WEST OF POND // INSIDE JOE'S CUT LINE",
       },
+      reviews: [
+        { id: "review-a", code: "REVIEW A", x: -18, y: 350, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-b", code: "REVIEW B", x: 10, y: 448, radius: SPRINT_REVIEW_RADIUS },
+      ],
       keyHint: "FIND KEY WEST OF WATER",
       joeStart: {
         x: 44,
@@ -828,6 +910,10 @@
         hint:
           "EAST OF AUDIT BOARD // OPEN SIGHTLINE",
       },
+      reviews: [
+        { id: "review-a", code: "REVIEW A", x: 18, y: 350, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-b", code: "REVIEW B", x: -8, y: 448, radius: SPRINT_REVIEW_RADIUS },
+      ],
       keyHint: "FIND KEY BY FLOODLIGHT",
       joeStart: {
         x: -90,
@@ -855,6 +941,10 @@
         hint:
           "WEST DEAD GREEN // EXIT PATROL",
       },
+      reviews: [
+        { id: "review-a", code: "REVIEW A", x: 0, y: 338, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-b", code: "REVIEW B", x: 18, y: 446, radius: SPRINT_REVIEW_RADIUS },
+      ],
       keyHint: "FIND KEY IN AUDIT ROW",
       joeStart: {
         x: 20,
@@ -893,6 +983,19 @@
   function activeChangeRequest() {
     return activeRunVariant()
       .changeRequest;
+  }
+
+  function activeSprintReviews() {
+    return activeRunVariant()
+      .reviews || [];
+  }
+
+  function sprintReviewCleared(review) {
+    return Boolean(
+      state.hole?.reviewsCleared?.includes(
+        review.id,
+      ),
+    );
   }
 
   function golfBallCapacity() {
@@ -1390,6 +1493,9 @@
       phase: "find_key",
       keyCollected: false,
       changeRequestCollected: false,
+      reviewsCleared: [],
+      reviewRewards: 0,
+      filingReduction: 0,
       golfBalls: 4,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
@@ -1524,7 +1630,10 @@
       trailWarningTimer: 0,
       zoneIndex: 0,
       zoneBannerTimer: 0,
-      zoneVisits: [1, 0, 0, 0],
+      zoneVisits: COURSE_ZONES.map(
+        (zone, index) =>
+          index === 0 ? 1 : 0,
+      ),
       blackoutTimer: 0,
       dreadTimer: 0,
       focus: false,
@@ -2148,6 +2257,8 @@
     const family =
       label.includes("REACHED")
         ? "zone"
+        : label.includes("SPRINT REVIEW")
+          ? "review"
         : label.includes("RECOVERY") ||
             label.includes("BALL RECOVERED")
           ? "recovery"
@@ -2223,7 +2334,7 @@
     const variant = activeRunVariant();
     const timeBonus = Math.max(
       0,
-      Math.round((210 - hole.elapsed) * 9),
+      Math.round((270 - hole.elapsed) * 9),
     );
     const exposure =
       hole.maxDetection * 0.68 +
@@ -4809,7 +4920,7 @@
         icon: 0,
         title: "1. CHOOSE + FILE AN EXIT",
         detail: "Key→shed; sprinkler→drain; movement aborts filing.",
-        subdetail: "Optional change request adds +650 on escape.",
+        subdetail: "Amber Reviews restore balls + shorten filing; CR adds +650.",
       },
       {
         y: 348,
@@ -5193,6 +5304,9 @@
       phase: "find_key",
       keyCollected: false,
       changeRequestCollected: false,
+      reviewsCleared: [],
+      reviewRewards: 0,
+      filingReduction: 0,
       golfBalls: overtime ? 2 : 4,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
@@ -5335,7 +5449,10 @@
       trailWarningTimer: 0,
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
-      zoneVisits: [1, 0, 0, 0],
+      zoneVisits: COURSE_ZONES.map(
+        (zone, index) =>
+          index === 0 ? 1 : 0,
+      ),
       blackoutTimer: 0,
       dreadTimer: 0,
       focus: false,
@@ -6407,6 +6524,8 @@
       activeSprinklerPoint();
     const changeRequest =
       activeChangeRequest();
+    const reviews =
+      activeSprintReviews();
     const definitions = [
       {
         id: "shed-key",
@@ -6453,6 +6572,25 @@
           "drain-culvert",
       },
     ];
+    for (
+      let index = 0;
+      index < reviews.length;
+      index += 1
+    ) {
+      const review =
+        reviews[index];
+      definitions.push({
+        id: review.id,
+        label: review.code,
+        target: review,
+        available:
+          !sprintReviewCleared(
+            review,
+          ),
+        worldImage:
+          "generated-sprint-review-signage",
+      });
+    }
     return definitions.map(
       (definition) => {
         const point =
@@ -7716,8 +7854,13 @@
     filing.sealing = false;
     filing.route = route;
     filing.progress = 0;
-    filing.duration =
-      ESCAPE_FILING_DURATION[route];
+    filing.duration = Math.max(
+      route === "drain"
+        ? 1
+        : 0.72,
+      ESCAPE_FILING_DURATION[route] -
+        hole.filingReduction,
+    );
     filing.sealProgress = 0;
     filing.sealDuration =
       ESCAPE_SEAL_DURATION;
@@ -7980,6 +8123,115 @@
       "change_request",
     );
     return true;
+  }
+
+  function clearSprintReview(review) {
+    const hole = state.hole;
+    if (
+      !review ||
+      sprintReviewCleared(review)
+    ) {
+      return false;
+    }
+    const previousBalls =
+      hole.golfBalls;
+    hole.reviewsCleared.push(
+      review.id,
+    );
+    hole.reviewRewards += 1;
+    hole.filingReduction =
+      hole.reviewsCleared.length *
+      SPRINT_REVIEW_FILING_REDUCTION;
+    hole.golfBalls = Math.min(
+      golfBallCapacity(),
+      hole.golfBalls + 1,
+    );
+    hole.detection = Math.max(
+      0,
+      hole.detection - 0.12,
+    );
+    hole.noise = Math.max(
+      hole.noise,
+      0.5,
+    );
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.34,
+    );
+    hole.stateBanner =
+      `${review.code} ACCEPTED // FASTER FINAL FILING`;
+    hole.stateBannerTimer = 3;
+    hole.stateBannerLockTimer = 3;
+    awardDeliveryBeat(
+      "SPRINT REVIEW CLEARED",
+      125,
+    );
+    setHoleMessage(
+      hole.golfBalls > previousBalls
+        ? `${review.code} CLEARED — golf ball restored, filing shortened, and Joe heard the review bell.`
+        : `${review.code} CLEARED — filing shortened. Your pockets are full, and Joe heard the review bell.`,
+      3.8,
+    );
+    addWorldEffect(
+      "filing_stamp",
+      review.x,
+      review.y,
+      1.2,
+    );
+    playEscapeFilingCue(
+      Math.min(
+        2,
+        hole.reviewsCleared.length,
+      ),
+    );
+    pushThreatCaption(
+      "SPRINT REVIEW BELL RINGS",
+      review,
+      "world",
+      2.2,
+      `sprint_review_${review.id}`,
+    );
+    if (
+      hole.joe.mode !== "chase"
+    ) {
+      hole.distraction = {
+        x: review.x,
+        y: review.y,
+      };
+      hole.distractionTimer = 2.6;
+      hole.joe.mode =
+        "investigate";
+      announceJoeState(
+        "investigate",
+      );
+    }
+    return true;
+  }
+
+  function updateSprintReviews() {
+    const reviews =
+      activeSprintReviews();
+    for (
+      let index = 0;
+      index < reviews.length;
+      index += 1
+    ) {
+      const review =
+        reviews[index];
+      if (
+        !sprintReviewCleared(
+          review,
+        ) &&
+        worldDistance(
+          state.player,
+          review,
+        ) < review.radius
+      ) {
+        clearSprintReview(
+          review,
+        );
+      }
+    }
   }
 
   function interactWithCourse() {
@@ -9389,10 +9641,32 @@
       );
   }
 
+  function joeCoursePressureMultiplier() {
+    const progress =
+      clamp(
+        state.player.y /
+          COURSE_LENGTH,
+        0,
+        1,
+      );
+    return (
+      1 +
+      smoothstep(progress) *
+        0.14 +
+      (
+        state.hole
+          .reviewsCleared
+          ?.length || 0
+      ) *
+        0.015
+    );
+  }
+
   function moveJoeToward(target, speed, dt) {
     const joe = state.hole.joe;
     const effectiveSpeed =
       speed *
+      joeCoursePressureMultiplier() *
       (
         state.hole.overtime
           ? OVERTIME_JOE_SPEED_MULTIPLIER
@@ -11098,10 +11372,21 @@
   }
 
   function drawDeadGreenGround() {
-    if (state.player.y < COURSE_ZONES[3].start - 44) {
+    const deadGreenZone =
+      COURSE_ZONES.find(
+        (zone) =>
+          zone.id ===
+          "dead_green",
+      );
+    if (
+      !deadGreenZone ||
+      state.player.y <
+        deadGreenZone.start - 44
+    ) {
       return;
     }
-    const zoneStart = COURSE_ZONES[3].start + 2;
+    const zoneStart =
+      deadGreenZone.start + 2;
     ctx.save();
     for (let row = 0; row < 9; row += 1) {
       const worldY = zoneStart + row * 10;
@@ -12809,6 +13094,225 @@
     }
   }
 
+  function drawSprintReviewGate(
+    review,
+    reviewIndex,
+  ) {
+    const point =
+      worldToScreen(
+        review.x,
+        review.y,
+      );
+    if (
+      !point.visible ||
+      point.x < -220 ||
+      point.x > WIDTH + 220
+    ) {
+      return;
+    }
+    const cleared =
+      sprintReviewCleared(
+        review,
+      );
+    const distance =
+      worldDistance(
+        state.player,
+        review,
+      );
+    const pulse =
+      state.reducedMotion
+        ? 0.72
+        : 0.66 +
+          Math.sin(
+            state.hole.elapsed *
+              4.2 +
+              reviewIndex *
+                1.7,
+          ) *
+            0.16;
+    const radiusX = clamp(
+      review.radius *
+        COURSE_CAMERA
+          .worldUnitMeters *
+        point.pixelsPerMeter,
+      18,
+      270,
+    );
+    const radiusY =
+      Math.max(
+        4,
+        radiusX * 0.12,
+      );
+    ctx.save();
+    ctx.globalAlpha =
+      cleared
+        ? 0.24
+        : clamp(
+            0.38 +
+              point.scale *
+                0.52,
+            0.42,
+            0.96,
+          );
+    ctx.fillStyle =
+      cleared
+        ? "rgba(87,118,77,0.14)"
+        : `rgba(219,167,62,${
+            0.1 +
+            pulse * 0.08
+          })`;
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle =
+      cleared
+        ? "#718a68"
+        : "#e3b44e";
+    ctx.lineWidth =
+      cleared ? 1 : 2;
+    ctx.setLineDash(
+      cleared
+        ? [4, 5]
+        : [8, 5],
+    );
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const signHeight = clamp(
+      point.pixelsPerMeter *
+        1.55,
+      18,
+      96,
+    );
+    const signWidth =
+      signHeight * 1.08;
+    ctx.fillStyle =
+      "rgba(1,4,2,0.48)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      signWidth * 0.34,
+      Math.max(
+        1,
+        signHeight * 0.04,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    if (
+      signageAtlasArt.complete &&
+      signageAtlasArt.naturalWidth >
+        0
+    ) {
+      ctx.drawImage(
+        signageAtlasArt,
+        (
+          reviewIndex % 3
+        ) *
+          SIGNAGE_ATLAS_CELL,
+        SIGNAGE_ATLAS_CELL,
+        SIGNAGE_ATLAS_CELL,
+        SIGNAGE_ATLAS_CELL,
+        point.x -
+          signWidth * 0.5,
+        point.y -
+          signHeight,
+        signWidth,
+        signHeight,
+      );
+    } else {
+      ctx.fillStyle =
+        "#28371f";
+      ctx.fillRect(
+        point.x -
+          signWidth * 0.35,
+        point.y -
+          signHeight * 0.76,
+        signWidth * 0.7,
+        signHeight * 0.38,
+      );
+      ctx.fillStyle =
+        "#6e6541";
+      ctx.fillRect(
+        point.x - 2,
+        point.y -
+          signHeight * 0.4,
+        4,
+        signHeight * 0.4,
+      );
+    }
+    if (
+      point.forwardDistance <
+        98 &&
+      signHeight > 24
+    ) {
+      const labelY =
+        point.y -
+        signHeight -
+        12;
+      const labelWidth = 174;
+      ctx.globalAlpha =
+        cleared ? 0.54 : 0.94;
+      ctx.fillStyle =
+        "rgba(3,8,4,0.88)";
+      ctx.fillRect(
+        point.x -
+          labelWidth * 0.5,
+        labelY - 15,
+        labelWidth,
+        31,
+      );
+      strokeRect(
+        point.x -
+          labelWidth * 0.5,
+        labelY - 15,
+        labelWidth,
+        31,
+        cleared
+          ? "#718a68"
+          : "#d8a743",
+        1.5,
+      );
+      drawText(
+        cleared
+          ? `${review.code} // ACCEPTED`
+          : `${review.code} // ${Math.ceil(
+              distance,
+            )}m`,
+        point.x,
+        labelY + 4,
+        10,
+        cleared
+          ? "#9eb195"
+          : "#f1d17a",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
   function drawCourseClutter(
     clutter,
   ) {
@@ -12946,6 +13450,31 @@
         entities.push({
           y: point.y,
           draw: () => drawCourseObstacle(obstacle),
+        });
+      }
+    }
+    const reviews =
+      activeSprintReviews();
+    for (
+      let index = 0;
+      index < reviews.length;
+      index += 1
+    ) {
+      const review =
+        reviews[index];
+      const point =
+        worldToScreen(
+          review.x,
+          review.y,
+        );
+      if (point.visible) {
+        entities.push({
+          y: point.y,
+          draw: () =>
+            drawSprintReviewGate(
+              review,
+              index,
+            ),
         });
       }
     }
@@ -13778,7 +14307,7 @@
   }
 
   function drawCourseMiniMap() {
-    const panel = { x: WIDTH - 274, y: 210, width: 234, height: 260 };
+    const panel = { x: WIDTH - 274, y: 210, width: 234, height: 340 };
     const courseEcho =
       currentCourseEcho();
     const guide =
@@ -13794,6 +14323,8 @@
     const sprinkler = activeSprinklerPoint();
     const changeRequest =
       activeChangeRequest();
+    const reviews =
+      activeSprintReviews();
     const keyPoint = mapPoint(key.x, key.y);
     const sprinklerPoint = mapPoint(
       sprinkler.x,
@@ -14198,6 +14729,47 @@
       "#e37842",
       !state.hole.changeRequestCollected,
     );
+    for (
+      let index = 0;
+      index < reviews.length;
+      index += 1
+    ) {
+      const review =
+        reviews[index];
+      const cleared =
+        sprintReviewCleared(
+          review,
+        );
+      const reviewPoint =
+        mapPoint(
+          review.x,
+          review.y,
+        );
+      drawMapInteractionRange(
+        review,
+        "#e1b04c",
+        !cleared,
+      );
+      ctx.fillStyle =
+        cleared
+          ? "#6d8565"
+          : "#e1b04c";
+      ctx.beginPath();
+      ctx.arc(
+        reviewPoint.x,
+        reviewPoint.y,
+        cleared ? 3 : 4,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      if (!cleared) {
+        ctx.strokeStyle =
+          "#f3da83";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
     ctx.fillStyle = "#d0a95b";
     ctx.fillRect(shedPoint.x - 6, shedPoint.y - 5, 12, 10);
     ctx.strokeStyle = state.hole.drainUnlocked ? "#74c9ac" : "#687268";
@@ -14423,7 +14995,7 @@
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
     drawText(
-      "SHAPE = SOLID BASE  •  GLOW = USE",
+      "SOLID SHAPES  •  AMBER REVIEW  •  GLOW USE",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
@@ -17119,9 +17691,11 @@
       hole.sprinklerSoakTimer > 0
         ? `  •  WATER ${Math.ceil(hole.sprinklerSoakTimer)}s`
         : "";
+    const reviewStatus =
+      `  •  REVIEWS ${hole.reviewsCleared.length}/${activeSprintReviews().length}`;
     const terrainStatus =
       expandedHud
-        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  STAMPS ${activeStampCount}/${PERFORMANCE_STAMPS.length}`
+        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}${reviewStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}`
         : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}`;
     const terrainColor =
       environment.sand
@@ -19397,7 +19971,14 @@
           );
           setHoleMessage(COURSE_ZONES[zoneIndex].cue, 3.4);
           playThreatCue(zoneIndex >= 2 ? "search" : "investigate");
-          if (zoneIndex === 2) {
+          const enteredZone =
+            COURSE_ZONES[
+              zoneIndex
+            ];
+          if (
+            enteredZone.id ===
+            "water_hazard"
+          ) {
             hole.blackoutTimer = 4.2;
             setHoleMessage(
               "POWER SAG — the floodlight is cycling. Move while it is dark.",
@@ -19416,7 +19997,33 @@
               2.6,
               "power_sag",
             );
-          } else if (zoneIndex === 3) {
+          } else if (
+            enteredZone.id ===
+            "clubhouse_crossing"
+          ) {
+            hole.joe.alert = Math.max(
+              hole.joe.alert,
+              0.16,
+            );
+            hole.stateBanner =
+              "CLUBHOUSE CROSSING // OPEN SIGHTLINES";
+            hole.stateBannerTimer = 2.7;
+          } else if (
+            enteredZone.id ===
+            "maintenance_maze"
+          ) {
+            hole.dreadTimer = 4.4;
+            hole.joe.alert = Math.max(
+              hole.joe.alert,
+              0.23,
+            );
+            hole.stateBanner =
+              "SERVICE MAZE // LISTEN BEFORE COMMITTING";
+            hole.stateBannerTimer = 2.9;
+          } else if (
+            enteredZone.id ===
+            "dead_green"
+          ) {
             hole.dreadTimer = 5.2;
             hole.joe.alert = Math.max(
               hole.joe.alert,
@@ -19425,6 +20032,7 @@
           }
         }
       }
+      updateSprintReviews();
       hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
       const environment = getPlayerEnvironmentState();
       const inRough = environment.inRough;
@@ -22944,6 +23552,43 @@
                 activeRunVariant().id,
               ),
           },
+          sprintReviews: {
+            cleared:
+              state.hole.reviewsCleared.length,
+            total:
+              activeSprintReviews().length,
+            filingReductionSeconds:
+              Number(
+                state.hole.filingReduction.toFixed(
+                  2,
+                ),
+              ),
+            reward:
+              "one golf ball plus shorter final filing",
+            risk:
+              "review bell redirects Joe unless he is already chasing",
+            gates:
+              activeSprintReviews().map(
+                (review) => ({
+                  id: review.id,
+                  code: review.code,
+                  x: review.x,
+                  y: review.y,
+                  radius: review.radius,
+                  cleared:
+                    sprintReviewCleared(
+                      review,
+                    ),
+                  distance:
+                    Number(
+                      worldDistance(
+                        state.player,
+                        review,
+                      ).toFixed(2),
+                    ),
+                }),
+              ),
+          },
           drainUnlocked: state.hole.drainUnlocked,
           escapeRoute: state.hole.escapeRoute,
           golfBalls: state.hole.golfBalls,
@@ -23623,6 +24268,12 @@
             y: Math.round(state.hole.joe.y),
             mode: state.hole.joe.mode,
             alert: Number(state.hole.joe.alert.toFixed(2)),
+            coursePressureMultiplier:
+              Number(
+                joeCoursePressureMultiplier().toFixed(
+                  3,
+                ),
+              ),
             wet: state.hole.joe.wet,
             sand:
               state.hole.joe.sand,
