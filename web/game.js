@@ -145,7 +145,7 @@
   const grassArt = new Image();
   grassArt.src = "./assets/rough-cut-grass-curtain.png";
   const holeArt = new Image();
-  holeArt.src = "./assets/rough-cut-hole-1-clean-plate-v1.png";
+  holeArt.src = "./assets/rough-cut-hole-1-clean-world-v2.png";
   const joeMowerArt = new Image();
   joeMowerArt.src = "./assets/joe-mower-v1.png";
   const joeMowerAnimatedArt = new Image();
@@ -158,6 +158,14 @@
   courseObstacleArt.src = "./assets/rough-cut-course-obstacle-kit-v1.png";
   const expandedCourseArt = new Image();
   expandedCourseArt.src = "./assets/rough-cut-expanded-course-kit-v1.png";
+  const maintenanceShedArt = new Image();
+  maintenanceShedArt.src = "./assets/rough-cut-maintenance-shed-v2.png";
+  const hedgeHideArt = new Image();
+  hedgeHideArt.src = "./assets/rough-cut-hedge-hide-v2.png";
+  const stoneCoverArt = new Image();
+  stoneCoverArt.src = "./assets/rough-cut-stone-cover-v2.png";
+  const serviceCartArt = new Image();
+  serviceCartArt.src = "./assets/rough-cut-service-cart-v2.png";
   const deadGreenSceneryArt = new Image();
   deadGreenSceneryArt.src = "./assets/rough-cut-dead-green-kit-v1.png";
   const foregroundFringeArt = new Image();
@@ -376,21 +384,21 @@
     { id: "dead-grass-finish", type: 0, x: 106, y: 357, scale: 0.98, landmark: "withered rough" },
   ];
   const COURSE_OBSTACLES = [
-    { id: "start-hedge", kit: "base", type: 0, x: -42, y: 28, radius: 15, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "clipped hedge" },
-    { id: "start-boundary", kit: "base", type: 1, x: 75, y: 22, radius: 18, coverRadius: 22, scale: 1, blocks: true, sight: false, landmark: "stone boundary" },
-    { id: "service-cart", kit: "base", type: 3, x: 28, y: 43, radius: 13, coverRadius: 21, scale: 1, blocks: true, sight: true, landmark: "service cart" },
+    { id: "start-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -42, y: 28, radius: 15, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "hedge hide" },
+    { id: "start-boundary", asset: "stone-cover", kit: "base", type: 1, x: 75, y: 22, radius: 18, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "stone cover" },
+    { id: "service-cart", asset: "service-cart", kit: "base", type: 3, x: 28, y: 43, radius: 13, coverRadius: 21, scale: 1, blocks: true, sight: true, landmark: "grounds cart" },
     { id: "east-pine", kit: "base", type: 2, x: 86, y: 49, radius: 18, coverRadius: 27, scale: 1, blocks: true, sight: true, landmark: "pine" },
     { id: "bunker-rake", kit: "base", type: 5, x: -85, y: 64, radius: 16, coverRadius: 22, scale: 1, blocks: true, sight: true, landmark: "bunker lip" },
     { id: "course-sign", kit: "base", type: 4, x: -32, y: 68, radius: 9, coverRadius: 14, scale: 1, blocks: true, sight: false, landmark: "course sign" },
-    { id: "mid-boundary", kit: "base", type: 1, x: 55, y: 72, radius: 17, coverRadius: 21, scale: 0.94, blocks: true, sight: false, landmark: "stone boundary" },
-    { id: "north-hedge", kit: "base", type: 0, x: 86, y: 84, radius: 17, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge" },
+    { id: "mid-boundary", asset: "stone-cover", kit: "base", type: 1, x: 55, y: 72, radius: 17, coverRadius: 24, scale: 0.94, blocks: true, sight: true, landmark: "stone cover" },
+    { id: "north-hedge", asset: "hedge-hide", kit: "base", type: 0, x: 86, y: 84, radius: 17, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge hide" },
     { id: "north-pine", kit: "base", type: 2, x: -94, y: 90, radius: 19, coverRadius: 28, scale: 0.9, blocks: true, sight: true, landmark: "pine" },
     { id: "audit-arch", kit: "expanded", type: 0, x: 0, y: 116, radius: 0, scale: 1.05, blocks: false, sight: false, landmark: "hedge tunnel" },
     { id: "audit-arch-left", x: -35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
     { id: "audit-arch-right", x: 35, y: 116, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
     { id: "audit-cart", kit: "expanded", type: 1, x: -58, y: 145, radius: 18, coverRadius: 27, scale: 1.08, blocks: true, sight: true, landmark: "overturned cart" },
     { id: "audit-board", kit: "expanded", type: 4, x: 72, y: 174, radius: 11, coverRadius: 19, scale: 0.94, blocks: true, sight: true, landmark: "audit board" },
-    { id: "audit-hedge", kit: "base", type: 0, x: -94, y: 174, radius: 18, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "clipped hedge" },
+    { id: "audit-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -94, y: 174, radius: 18, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "hedge hide" },
     { id: "pond-west", kit: "expanded", type: 2, x: -63, y: 215, radius: 22, coverRadius: 29, scale: 1.18, blocks: true, sight: true, landmark: "black-water reeds" },
     { id: "water-pine", kit: "base", type: 2, x: 91, y: 207, radius: 19, coverRadius: 28, scale: 0.92, blocks: true, sight: true, landmark: "pine" },
     { id: "floodlight", kit: "expanded", type: 5, x: 18, y: 242, radius: 6, coverRadius: 11, lightRadius: 57, scale: 1.04, blocks: true, sight: false, landmark: "maintenance floodlight" },
@@ -402,7 +410,8 @@
     { id: "final-arch-right", x: 35, y: 310, radius: 15, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
     { id: "final-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
     { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 334, radius: 20, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
-    { id: "shed-boundary", kit: "base", type: 1, x: 62, y: 349, radius: 15, coverRadius: 20, scale: 0.88, blocks: true, sight: false, landmark: "shed wall" },
+    { id: "shed-left-wall", x: 5, y: 350, radius: 11, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-right-wall", x: 45, y: 350, radius: 11, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
   ];
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
@@ -9797,14 +9806,188 @@
     }
   }
 
+  function dedicatedObstacleImage(asset) {
+    if (asset === "hedge-hide") {
+      return hedgeHideArt;
+    }
+    if (asset === "stone-cover") {
+      return stoneCoverArt;
+    }
+    if (asset === "service-cart") {
+      return serviceCartArt;
+    }
+    return null;
+  }
+
+  function drawGroundSocket(
+    obstacle,
+    point,
+    drawWidth,
+    drawHeight,
+  ) {
+    const footprint = projectedGroundRadius(
+      obstacle,
+      obstacle.radius,
+    );
+    const radiusX = Math.max(
+      drawWidth * 0.3,
+      footprint.radiusX * 0.88,
+    );
+    const radiusY = Math.max(
+      3,
+      footprint.radiusY * 0.82,
+      drawHeight * 0.035,
+    );
+    const distance = worldDistance(
+      state.player,
+      obstacle,
+    );
+    const inCover =
+      obstacle.sight &&
+      distance <
+        (obstacle.coverRadius ||
+          obstacle.radius);
+    const closeToCover =
+      obstacle.sight &&
+      distance <
+        (obstacle.coverRadius ||
+          obstacle.radius) +
+          11;
+    const soil = ctx.createRadialGradient(
+      point.x,
+      point.y,
+      1,
+      point.x,
+      point.y,
+      radiusX,
+    );
+    soil.addColorStop(
+      0,
+      inCover
+        ? "rgba(18,53,37,0.7)"
+        : "rgba(3,7,3,0.62)",
+    );
+    soil.addColorStop(
+      0.68,
+      inCover
+        ? "rgba(43,85,54,0.38)"
+        : "rgba(34,43,22,0.3)",
+    );
+    soil.addColorStop(
+      1,
+      "rgba(2,5,2,0)",
+    );
+    ctx.fillStyle = soil;
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle = inCover
+      ? "rgba(126,207,163,0.86)"
+      : closeToCover
+        ? "rgba(169,191,125,0.62)"
+        : "rgba(80,101,54,0.3)";
+    ctx.lineWidth = inCover
+      ? 2.5
+      : 1;
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y,
+      radiusX * 0.94,
+      radiusY * 0.9,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    const bladeCount = clamp(
+      Math.round(radiusX / 24),
+      4,
+      13,
+    );
+    ctx.strokeStyle =
+      "rgba(82,112,54,0.58)";
+    ctx.lineWidth = 1.25;
+    for (
+      let index = 0;
+      index < bladeCount;
+      index += 1
+    ) {
+      const amount =
+        (index + 0.5) /
+        bladeCount;
+      const bladeX =
+        point.x -
+        radiusX * 0.82 +
+        amount *
+          radiusX *
+          1.64;
+      const bladeHeight =
+        4 +
+        hash(
+          obstacle.x * 19 +
+            obstacle.y * 7 +
+            index * 31,
+        ) *
+          Math.min(
+            13,
+            point.scale * 7,
+          );
+      ctx.beginPath();
+      ctx.moveTo(
+        bladeX,
+        point.y + radiusY * 0.24,
+      );
+      ctx.lineTo(
+        bladeX +
+          (hash(index * 43) -
+            0.5) *
+            6,
+        point.y -
+          bladeHeight,
+      );
+      ctx.stroke();
+    }
+    if (closeToCover) {
+      drawText(
+        inCover
+          ? "IN COVER"
+          : "COVER",
+        point.x,
+        point.y +
+          radiusY +
+          15,
+        9,
+        inCover
+          ? "#9be1bd"
+          : "#c2ce9b",
+        "center",
+        true,
+      );
+    }
+  }
+
   function drawCourseObstacle(obstacle) {
     if (obstacle.draw === false) {
       return;
     }
+    const dedicatedArt =
+      dedicatedObstacleImage(
+        obstacle.asset,
+      );
     const obstacleArt =
-      obstacle.kit === "expanded"
+      dedicatedArt ||
+      (obstacle.kit === "expanded"
         ? expandedCourseArt
-        : courseObstacleArt;
+        : courseObstacleArt);
     const obstacleCells =
       obstacle.kit === "expanded"
         ? EXPANDED_OBSTACLE_CELLS
@@ -9816,33 +9999,63 @@
     if (!point.visible || point.x < -420 || point.x > WIDTH + 420) {
       return;
     }
-    const cell = obstacleCells[obstacle.type];
+    const cell = dedicatedArt
+      ? {
+          x: 0,
+          y: 0,
+          width:
+            dedicatedArt.naturalWidth,
+          height:
+            dedicatedArt.naturalHeight,
+          heightMeters:
+            obstacle.asset ===
+            "service-cart"
+              ? 3.25
+              : obstacle.asset ===
+                  "stone-cover"
+                ? 2.85
+                : 3.6,
+        }
+      : obstacleCells[obstacle.type];
     if (!cell) {
       return;
     }
-    const drawHeight =
+    let drawHeight =
       cell.heightMeters *
       obstacle.scale *
       point.pixelsPerMeter;
-    const drawWidth = drawHeight * cell.width / cell.height;
+    let drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    if (dedicatedArt) {
+      const footprint =
+        projectedGroundRadius(
+          obstacle,
+          obstacle.radius,
+        );
+      const footprintWidth =
+        footprint.radiusX * 1.72;
+      if (drawWidth < footprintWidth) {
+        const ratio =
+          footprintWidth /
+          drawWidth;
+        drawWidth *= ratio;
+        drawHeight *= ratio;
+      }
+    }
     const sway = state.reducedMotion
       ? 0
       : Math.sin(state.time * 0.7 + obstacle.x * 0.11) * Math.min(2.5, point.scale * 2);
 
     ctx.save();
     ctx.globalAlpha = clamp(0.52 + point.scale * 0.48, 0.48, 1);
-    ctx.fillStyle = `rgba(0,3,1,${clamp(point.scale * 0.32, 0.1, 0.38)})`;
-    ctx.beginPath();
-    ctx.ellipse(
-      point.x,
-      point.y - 2,
-      drawWidth * 0.31,
-      Math.max(3, drawHeight * 0.045),
-      0,
-      0,
-      Math.PI * 2,
+    drawGroundSocket(
+      obstacle,
+      point,
+      drawWidth,
+      drawHeight,
     );
-    ctx.fill();
     ctx.drawImage(
       obstacleArt,
       cell.x,
@@ -9881,6 +10094,79 @@
         drawHeight * 0.8,
       );
     }
+    ctx.restore();
+  }
+
+  function drawMaintenanceShed() {
+    if (
+      !maintenanceShedArt.complete ||
+      maintenanceShedArt.naturalWidth ===
+        0
+    ) {
+      return;
+    }
+    const shed = {
+      id: "maintenance-shed",
+      x: SHED_EXIT.x,
+      y: SHED_EXIT.y + 2,
+      radius: 31,
+      coverRadius: 35,
+      sight: true,
+    };
+    const point = worldToScreen(
+      shed.x,
+      shed.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -520 ||
+      point.x > WIDTH + 520
+    ) {
+      return;
+    }
+    const footprint =
+      projectedGroundRadius(
+        shed,
+        shed.radius,
+      );
+    let drawHeight =
+      5.4 *
+      point.pixelsPerMeter;
+    let drawWidth =
+      drawHeight *
+      maintenanceShedArt
+        .naturalWidth /
+      maintenanceShedArt
+        .naturalHeight;
+    const targetWidth =
+      footprint.radiusX * 1.72;
+    if (drawWidth < targetWidth) {
+      const ratio =
+        targetWidth /
+        drawWidth;
+      drawWidth *= ratio;
+      drawHeight *= ratio;
+    }
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.58 +
+        point.scale * 0.46,
+      0.52,
+      1,
+    );
+    drawGroundSocket(
+      shed,
+      point,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.drawImage(
+      maintenanceShedArt,
+      point.x - drawWidth * 0.5,
+      point.y - drawHeight,
+      drawWidth,
+      drawHeight,
+    );
     ctx.restore();
   }
 
@@ -10069,6 +10355,16 @@
       entities.push({
         y: drainPoint.y,
         draw: drawDrainExit,
+      });
+    }
+    const shedPoint = worldToScreen(
+      SHED_EXIT.x,
+      SHED_EXIT.y + 2,
+    );
+    if (shedPoint.visible) {
+      entities.push({
+        y: shedPoint.y,
+        draw: drawMaintenanceShed,
       });
     }
     entities.sort((a, b) => a.y - b.y);
@@ -10561,10 +10857,12 @@
   }
 
   function drawCourseMiniMap() {
-    const panel = { x: WIDTH - 274, y: 176, width: 234, height: 238 };
+    const panel = { x: WIDTH - 274, y: 176, width: 234, height: 260 };
     const courseEcho =
       currentCourseEcho();
-    const mapTop = panel.y + 41;
+    const guide =
+      state.hole.navigationGuide;
+    const mapTop = panel.y + 62;
     const mapBottom = panel.y + panel.height - 18;
     const mapPoint = (worldX, worldY) => ({
       x: panel.x + panel.width * 0.5 + worldX / 224 * (panel.width - 28),
@@ -10606,9 +10904,34 @@
         true,
       );
     }
+    if (
+      guide &&
+      guide.target
+    ) {
+      drawText(
+        effectiveGuidanceDirection(),
+        panel.x + 14,
+        panel.y + 43,
+        9,
+        guide.targetColor,
+        "left",
+        true,
+      );
+      drawText(
+        `${guide.targetLabel} ${Math.ceil(guide.distance)}m`,
+        panel.x +
+          panel.width -
+          14,
+        panel.y + 43,
+        9,
+        "#e8eadc",
+        "right",
+        true,
+      );
+    }
 
     ctx.fillStyle = "#0a1b10";
-    ctx.fillRect(panel.x + 13, panel.y + 33, panel.width - 26, panel.height - 47);
+    ctx.fillRect(panel.x + 13, panel.y + 54, panel.width - 26, panel.height - 68);
     for (let index = 1; index < COURSE_ZONES.length; index += 1) {
       const zoneY = mapPoint(0, COURSE_ZONES[index].start).y;
       ctx.strokeStyle = "rgba(164,178,125,0.22)";
@@ -10622,8 +10945,8 @@
     polygon([
       [panel.x + panel.width * 0.43, panel.y + panel.height - 14],
       [panel.x + panel.width * 0.57, panel.y + panel.height - 14],
-      [panel.x + panel.width * 0.69, panel.y + 41],
-      [panel.x + panel.width * 0.31, panel.y + 41],
+      [panel.x + panel.width * 0.69, mapTop],
+      [panel.x + panel.width * 0.31, mapTop],
     ]);
     const mapScaleX =
       (panel.width - 28) / 224;
@@ -13524,14 +13847,7 @@
       "center",
       projectionChanging,
     );
-    const mapVisible =
-      hole.focus ||
-      hole.elapsed < 4.5;
-    if (mapVisible) {
-      drawCourseMiniMap();
-    } else {
-      drawFieldBearingPanel();
-    }
+    drawCourseMiniMap();
 
     if (expandedHud) {
       ctx.fillStyle = "rgba(2,8,5,0.82)";
@@ -18764,12 +19080,15 @@
             focusShowsNearbyFootprints:
               true,
             mapRole:
-              state.hole.focus
-                ? "listening_focus"
-                : state.hole.elapsed <
-                    4.5
-                  ? "orientation_intro"
-                  : "folded",
+              "persistent_with_field_bearing",
+            dedicatedLandmarks: {
+              shed: true,
+              hedgeHides: true,
+              stoneCover: true,
+              groundsCart: true,
+              groundedToCollisionFootprints:
+                true,
+            },
             firstPersonGuidance: {
               worldRibbon: true,
               fairwayEdgeStakes:
@@ -19089,6 +19408,10 @@
   fieldKitArt.addEventListener("load", render);
   courseObstacleArt.addEventListener("load", render);
   expandedCourseArt.addEventListener("load", render);
+  maintenanceShedArt.addEventListener("load", render);
+  hedgeHideArt.addEventListener("load", render);
+  stoneCoverArt.addEventListener("load", render);
+  serviceCartArt.addEventListener("load", render);
   deadGreenSceneryArt.addEventListener("load", render);
   foregroundFringeArt.addEventListener("load", render);
   defeatArt.addEventListener("load", render);

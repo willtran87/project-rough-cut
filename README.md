@@ -18,8 +18,9 @@ The browser build includes:
 - Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment, a route-colored release seal, and a clean handoff into the scorecard.
 - Precise swept collision with object-specific contact callouts, guaranteed escape movement, authored hard cover, partial rough concealment, floodlight exposure, and recoverable pursuit.
 - Image-generated key and sprinkler props rendered directly in the world with distance labels, projected use-range rings, explicit in-reach states, and matching mini-map symbols.
-- First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing.
-- An optional Listening Focus mini-map with true blocker footprints—including hidden tunnel collision sides—interaction ranges, maintained-course limits, and active-contact highlighting; it folds away during normal traversal.
+- First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
+- A persistent course mini-map with true blocker footprints—including hidden tunnel and shed-wall collision sides—interaction ranges, maintained-course limits, and active-contact highlighting.
+- Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, projected from the same footprints used for collision and line-of-sight cover.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
