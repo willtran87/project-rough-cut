@@ -21,7 +21,7 @@ The browser build includes:
 - First-person route communication through obstacle-aware ground reflectors, fairway-edge stakes, physical zone signs, proximity blocker labels, and a compact left/ahead/right field bearing integrated into the course map.
 - A persistent course mini-map with true blocker footprints—including hidden tunnel and shed-wall collision sides—interaction ranges, maintained-course limits, and active-contact highlighting.
 - Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, projected from the same footprints used for collision and line-of-sight cover.
-- A decomposed living horizon: the golf course remains the grounding plate while clouds, distant trees, clubhouse lights, and drifting mist move independently at restrained parallax depths.
+- A fully decomposed living horizon: an alpha-cut golf-course foreground sits over a dedicated star-and-moon sky while eight independently drifting cloud instances, distant trees, clubhouse lights, and mist move at restrained parallax depths.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
 - Persistent mower-cut strips that trade rough concealment for quieter footing, decaying bent-grass player trails Joe can discover, and lasting golf-ball divots.
