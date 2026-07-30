@@ -122,6 +122,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Layered course obstacle, foreground-fringe, and clean-background assets used to create measurable motion and authored boundaries.
 - [x] Drainage culvert prop used as a complete alternate escape route.
 - [x] Dedicated Joe capture tableau used by the defeat transition.
+- [x] Dedicated Dead Green scenery atlas and world-anchored dry-ground treatment used to give the final approach its own silhouette, depth, and optical flow.
 - [x] Versioned canonical generated assets stored under the project’s character and environment asset folders.
 
 ### Required Image-Generation Workflow
@@ -144,7 +145,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] A state-readable runtime Joe set for patrol, investigate, search, chase, mower vibration, erratic arms/head movement, and capture presentation. The canonical source package still needs its final manual paint-clean before production lock.
 - [ ] Layered tall-grass states: untouched, bending, recently cut, flattened, wet, moonlit, backlit, and blood- or rust-stained variants where appropriate.
 - [ ] Maintenance-shed exterior and interior, including several readable entry routes and hiding opportunities.
-- [ ] Course props: tee markers, flags, carts, sprinklers, signs, insurance notices, mower debris, and abandoned personal items.
+- [x] First production course-prop family: flags, carts, sprinklers, signs, mower debris, reeds, hedges, bunker walls, and maintenance landmarks. Additional hole-specific families remain future work.
 - [ ] Golf-course vistas for additional holes, weather states, and time-of-night transitions.
 - [ ] Defeat stills, chapter cards, loading art, and restrained menu flourishes.
 - [ ] UI icon families that match the world art without sacrificing immediate readability.
