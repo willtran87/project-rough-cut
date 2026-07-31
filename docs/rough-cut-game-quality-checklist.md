@@ -25,6 +25,16 @@
 
 ## Current Playable Vertical Slice
 
+### Implemented Story Premise
+
+- [x] Cast the player as an associate product analyst on Joe's insurance-software team.
+- [x] Establish the inciting incident at 5:47 PM on release night: Joe assigns one last action item requiring a signed Night Order to cross the insurer's executive golf course.
+- [x] Lock the south service gate behind the player and place the maintenance shed and drainage culvert on the far side, giving the full-course crossing an immediate physical reason.
+- [x] Connect golf and grass to the insurance setting through a turf-sensor and terrain-risk pilot that Joe Product-Owns and can control after hours.
+- [x] Reframe the player as the pilot's final "unplanned dependency" and the chase as Joe's live acceptance test.
+- [x] Make optional Change Requests evidence that Joe knew the pilot was unsafe, so collecting and filing them carries narrative as well as scoring value.
+- [x] Present the mandatory premise in a short, skippable survival briefing; quick rematches retain their existing briefing skip.
+
 ### Opening and Menu
 
 - [x] Present a high-detail pixel-art opening in which a weed whacker cuts through tall grass.
@@ -43,15 +53,22 @@
 - [x] Support WASD and arrow-key movement.
 - [x] Support Shift to sprint, C to crouch, Enter to interact, hold Space plus A/D to aim and chip a golf-ball distraction, H to recall controls, and Escape to cancel a shot or pause.
 - [x] Show visible movement chevrons and movement/sprint status so locomotion is discoverable.
+- [x] Make movement build a readable panic envelope: normal running, sprinting, Second Wind, detection, and Joe proximity continuously drive cadence, impact, shoulder sway, surge, peripheral grass rush, tunnel pressure, weighted footsteps, and heartbeat without changing player input.
+- [x] Reduced Camera Motion preserves movement speed, footstep cadence, and exertion audio while removing panic bob, shoulder roll, surge zoom, stride impact, tunnel pressure, and speed streaks.
 - [x] Place the shed key at a readable, authored landmark selected by the current Night Order.
 - [x] Provide a locked shed as the escape target.
 - [x] Provide a sprinkler valve that creates a major distraction and opens the alternate drainage route.
 - [x] Give the player a limited supply of four golf balls for aimed chip-shot distractions.
 - [x] Make fairway travel quieter but more exposed.
 - [x] Make rough travel noisier but more concealed.
-- [x] Give Joe patrol, investigate, search, and chase states.
+- [x] Give Joe patrol, investigate, search, and chase states, including paced print-to-print turf investigation that physically routes him through discovered evidence.
+- [x] Make deduction bidirectional: Listening Focus interprets recent Joe mower cuts through bounded age, distance, freshness, and travel-heading clues without adding permanent live map tracking.
+- [x] Turn mower-cut interpretation into a deliberate observation: hold Listening Focus for 0.55 seconds to log an unrecorded Cut Trace and retain its historical heading for six seconds after release.
+- [x] Reward acting on forensic information: travel 12 meters against a memorized heading to complete a Counter-Route, add a capped Intel-family Delivery beat, and earn 3.2 seconds of quieter non-sand footing; active pursuit remains ineligible.
 - [x] Let authored hedges, trees, and course structures block Joe’s line of sight.
 - [x] Let the player break contact, crouch in deep rough, become concealed, survive Joe’s last-known-position search, and recover to patrol.
+- [x] Give active pursuit one readable information owner: a directional contact card communicates whether Joe can see or hear the player, the immediate counterplay, break progress, and live Risk preview without competing caption stacks.
+- [x] Turn safe waiting into an optional observation challenge: leaving shelter while Joe moves away opens a 5.5-second Blindside Transfer, and reaching different shelter after 14 meters adds a capped maneuver-family Delivery beat.
 - [x] Make repeated golf-ball distractions progressively shorter so one tactic cannot be repeated without consequence.
 - [x] Show Joe with the generated front-facing lawn-mower sprite during pursuit.
 - [x] Provide a mower-proximity meter and contextual interaction prompts.
@@ -61,7 +78,7 @@
 - [x] Trigger defeat as a darkly comic “Sprint Terminated” outcome when Joe catches the player.
 - [x] Support immediate same-order rematch that skips the redundant briefing and exposes the next Stamp target, plus direct next-order play, fully briefed manual reset, and return-to-Clubhouse flows from both victory and defeat.
 - [x] Pause the single-player simulation during pursuits and provide resume, how-to/settings, restart, and return-to-menu actions.
-- [x] Collapse the onboarding-heavy HUD into a compact field display, with a player-invoked expanded view.
+- [x] Collapse the onboarding-heavy HUD into a compact field display after 18 meters of demonstrated movement, while preserving a short reading window and player-invoked expanded views through H/Y and Listening Focus.
 - [x] Grade completed runs without exposing a constant live score during the horror sequence; the in-run File Projection shows only a letter class and brief cause, while exact points remain in the after-action review.
 - [x] Reward a balanced mix of speed, stealth, saved golf balls, careful movement, and successful pursuit recovery.
 - [x] Persist separate shed- and drain-route personal records plus rounds, escapes, and captures.
@@ -79,6 +96,7 @@
 - [x] Switch tutorials, HUD labels, contextual prompts, menu help, settings help, and result-screen actions to the most recently active input method.
 - [x] Keep gameplay understandable without a voiced tutorial.
 - [x] Expose deterministic time advancement and text-state output for automated inspection.
+- [x] Keep long-route rendering bounded: render the persistent map into its actual 234×340 panel, cache Joe's layered mower-wake variants, cap automatic quality recovery at the stable balanced tier, and use presented-frame telemetry to reduce effects when compositor stalls persist.
 - [x] Browser-test the opening, exact subtitle reveal, menus, settings, briefing, keyboard and controller movement, controller prompt switching, controller settings navigation, map, locked-shed redirect, key pickup, distraction fatigue, sprinkler activation, drain opening, line-of-sight break, rough concealment, search recovery, pursuit, capture, both victories, retry, controller disconnect fallback, and reset.
 - [x] Complete the current automated pass with zero console errors.
 - [x] Validate responsive presentation at 800×600, 1440×900, and 2560×1600 without document overflow.
@@ -89,7 +107,7 @@ The intended first-session flow is:
 
 1. The grass-cutting cold open introduces Joe as both joke and threat.
 2. The menu establishes the title, mood, and clear access to instructions and settings.
-3. A short briefing explains movement, sprinting, crouch concealment, noise, distraction, and both escape routes.
+3. A short incident briefing establishes the player's final action item, the locked south gate, Joe's turf-risk pilot, and the evidence value of Change Requests while explaining movement, stealth, distraction, and both far-side escape routes.
 4. The player enters the moonlit course, reads the mini-map and terrain, and begins moving before Joe closes in.
 5. The player reads the current Night Order, then chooses between its relocated shed key or sprinkler controls.
 6. Golf balls redirect Joe with diminishing effectiveness; sight blockers and deep rough let the player break pursuit and survive a search.
@@ -110,7 +128,7 @@ This loop is the foundation for the larger game: **enter a course, read its gras
 - Joe's short pursuit barks should reveal his product-owner certainty, golf etiquette, and grass obsession without turning every encounter into a joke.
 - [x] The capture screen selects from 50 original lines across six expression portraits, avoids an immediate repeat, and treats each failure as a fresh Joe performance.
 - Dialogue is subtitle-only in the current build. If spoken dialogue is added later, it should be sparse and human-performed; do not reintroduce a robot voice.
-- [x] Reward linked smart play with a 14-second Delivery Chain: progress, recoveries, bunker baits, optional Change Requests, and contact breaks raise a capped score multiplier without weakening Joe.
+- [x] Reward linked smart play with a 14-second Delivery Chain: progress, recoveries, bunker baits, optional Change Requests, contact breaks, and capped Evidence Denied recoveries raise a score multiplier without weakening Joe.
 - [x] Surface the Delivery Chain through a live timer, event award, File Projection, text-state contract, and post-run peak so it is legible without forcing score play.
 
 ## Image Generation for Asset Creation and Polish
@@ -127,11 +145,15 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [x] Transparent in-game derivatives produced through local chroma-key/alpha cleanup where needed.
 - [x] Layered course obstacles, foreground fringe, a true prop-free clean background, and dedicated shed/hedge/stone/cart landmark assets used to create measurable motion and authored boundaries.
 - [x] Moonless sky, independent moon, far ridge, distant villas, signage atlas, and three-sprite bunker atlas, all composed as dedicated runtime layers rather than a single flat plate.
-- [x] Procedural two-depth horizon fog and five-depth ground fog used for atmosphere while preserving obstacle and interaction readability.
+- [x] Dedicated image-generated estate-perimeter panorama adds pines, Tudor villas, maintenance sheds, fencing, berms, and a water tower as a separate far-architecture plane.
+- [x] Ten-plane background composition uses independently scaled lateral and forward parallax, eleven staggered clouds, near-canopy shoulders, two horizon-fog depths, and a distinct grounded course plane.
+- [x] Procedural two-depth horizon fog and five-depth ground fog used for atmosphere while preserving obstacle and interaction readability; ground banks shift color and density by course zone, subtly intensify with Joe's pressure, and become static under Reduced Camera Motion.
+- [x] A generated six-variant ornamental-verge atlas distributes 28 depth-sorted, non-blocking botanical clusters across the complete route: fescue, reeds, ferns, wildflowers, juniper, and withered rough progress with the course's environmental story. Ground contact, perspective scaling, bounded dew highlights, adaptive density, and base-anchored sway keep the decoration lush without creating false collision or obscuring route cues; Reduced Camera Motion retains the plants in a static presentation.
+- [x] Player locomotion receives surface-specific projected feedback: fairway compression and dew loss, displaced rough blades, low wet-turf ripples, and bunker scuffs share the world camera and expire behind the player. Responses are bounded, quality-scaled, and converted to static fading imprints under Reduced Camera Motion; nearby ornamental verge art bends from its planted base around player and mower pressure.
 - [x] Drainage culvert prop used as a complete alternate escape route.
 - [x] Dedicated Joe capture tableau used by the defeat transition.
 - [x] Six-expression Joe portrait atlas used to vary the capture-screen performance.
-- [x] Dedicated sky-only plate, alpha-cut golf-course grounding layer, six-cloud transparent atlas, distant tree line, clubhouse, and mist used as independently composited horizon layers.
+- [x] Dedicated sky-only plate, alpha-cut golf-course grounding layer, six-cloud transparent atlas reused across eleven independent placements, estate panorama, distant tree line, near-canopy frame, clubhouse, and mist used as independently composited horizon layers.
 - [x] Dedicated Dead Green scenery atlas and world-anchored dry-ground treatment used to give the final approach its own silhouette, depth, and optical flow.
 - [x] Versioned canonical generated assets stored under the project’s character and environment asset folders.
 
@@ -380,9 +402,10 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make Joe interact physically with doors, gates, carts, course equipment, documents, and terrain.
 - [ ] Avoid obvious teleportation unless a specific supernatural rule clearly supports and communicates it.
 - [ ] Make any impossible behavior deliberate, rare, and consistently foreshadowed.
-- [ ] Make Joe leave traces that the player can read, such as cart tracks, clipped notices, moved flags, radio chatter, footprints, or updated task boards.
+- [x] Make Joe leave readable mower-cut traces: fresh strips use dark crushed turf, interrupted mower grooves, irregular wet clippings, and a restrained moonlit edge that ages into the course instead of neon repeated streaks; Listening Focus exposes an age-bounded historical heading rather than his current position.
+- [x] Prevent Cut Trace farming and permanent tracking: each mark can be memorized once, logged history is bounded, memory fades after six seconds, and Reduced Motion preserves the clue without animation.
 - [ ] Keep Joe threatening throughout the game without relying only on increasing movement speed or damage.
-- [ ] Make Joe's presence alter the atmosphere even when he is not visible.
+- [x] Make Joe's presence alter the atmosphere even when he is not visible through threat-responsive ground fog, mower shockwaves, cold breath, floodlight disturbance, and directional edge refraction.
 - [ ] Ensure Joe remains the emotional and mechanical center of the horror experience.
 
 ## Joe's Behavioral States
@@ -401,7 +424,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Let Joe become more thorough after repeated deception without becoming omniscient.
 - [ ] Make Joe capable of abandoning a weak lead and returning to scheduled behavior.
 - [ ] Prevent Joe from remaining permanently locked into a failed search.
-- [ ] Make Joe's search duration scale with the strength of available evidence.
+- [x] Make Joe's turf-evidence search duration scale with print strength and consecutive Trail Chain depth without granting frame-by-frame perfect tracking.
 - [ ] Give the player opportunities to observe when Joe is distracted, occupied, or committed to another task.
 - [ ] Allow authored sequences to adjust Joe's state while preserving the same readable rules.
 - [ ] Test every state transition for soft locks, infinite searches, and impossible objective conditions.
@@ -436,7 +459,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Prevent Joe from instantly recapturing the player after a successful escape interaction.
 - [ ] Telegraph grabs, tackles, blocked exits, thrown objects, or other capture attempts clearly enough to react.
 - [ ] Avoid instant-kill attacks without strong setup and obvious counterplay.
-- [ ] Make close calls produce strong visual, audio, animation, and environmental feedback.
+- [x] Make close calls produce strong visual, audio, animation, and environmental feedback, including Risk Premium presentation and a brief Second Wind movement reward after close contact is broken.
+- [x] Sequence chase recovery feedback so Risk Premium, Delivery, threat direction, and concealment guidance remain legible instead of drawing over one another.
 - [ ] Let Joe cut off predictable routes when he has enough information, but preserve alternative escape options.
 - [ ] Avoid silently spawning Joe directly in front of or behind the player.
 - [ ] Make Joe's re-entry routes physically plausible or distinctly signaled.
@@ -568,7 +592,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make bent, cut, diseased, dead, artificial, invasive, or altered grass communicate environmental history.
 - [ ] Use mowing patterns, discoloration, growth direction, clippings, and divots as navigational or narrative clues.
 - [ ] Let grass indicate where Joe recently walked, waited, dragged equipment, or changed the course.
-- [ ] Let Joe read the player's disturbed turf and follow recent evidence.
+- [x] Let Joe read the player's disturbed turf and follow recent evidence one physical print at a time, with fairway and cut turf serving as readable ways to stop creating the chain.
+- [x] Reward a deliberate ×3-or-deeper trail break with an Evidence Denied recovery beat, a brief attention reset, clear “trail cold” feedback, and a two-event Delivery-family cap; shallow trails and active pursuits are ineligible.
 - [ ] Give the player limited ways to brush out, water, cut, replace, disguise, or redirect a trail.
 - [ ] Avoid requiring tedious cleanup after every movement.
 - [ ] Make wind move grass in ways that reveal hidden bodies, routes, or approaching danger.
@@ -609,8 +634,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make footprints, bent blades, dew loss, sand displacement, ball trails, divots, clippings, mud, and broken stems readable at useful distances.
 - [ ] Distinguish fresh evidence from old environmental wear.
 - [ ] Make evidence persistence respond consistently to rain, sprinklers, wind, mowing, traffic, and time.
-- [ ] Let the player use Joe's footprints, cart tracks, paperwork, cigar ash, coffee, tools, or compressed turf to infer his route.
-- [ ] Let Joe use the player's evidence without following it with impossible precision.
+- [x] Let the player use Joe's recent mower-cut strips to infer his historical route, freshness, and direction of travel.
+- [x] Let Joe use the player's trail evidence without following it with impossible precision by pacing discoveries, approaching each marked position, and allowing the chain to expire.
 - [ ] Make crossing hard surfaces, water, maintenance mats, or existing traffic useful for breaking a trail.
 - [ ] Allow the player to intentionally create a false trail or duplicate disturbance.
 - [ ] Avoid turning trail management into constant mandatory busywork.
@@ -621,7 +646,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Use repeated mowing lines, footprints, and course damage to tell stories without text.
 - [ ] Ensure evidence does not accumulate until the course becomes visually unreadable or technically unstable.
 - [ ] Test evidence on every lighting, weather, quality, and color-vision setting.
-- [ ] Make evidence systems support deduction in both directions: the player can track Joe, and Joe can track the player.
+- [x] Make the implemented turf-evidence system support deduction in both directions: Joe follows paced player prints, while the player reads age-bounded Joe cuts through Listening Focus.
 
 ## Course Design and Open-Space Horror
 
@@ -783,6 +808,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make Joe's routines predictable enough to plan around but variable enough to prevent rote waiting.
 - [ ] Avoid long mandatory waits for Joe to leave an area.
 - [ ] Give patient players active observation, preparation, or alternate-route decisions while waiting.
+- [x] In the current slice, surface a readable Blindside opportunity while sheltered so patient observation can convert into a timed cover-to-cover scoring decision without weakening Joe.
 - [ ] Escalate pressure when the player remains in one area too long only through readable systems.
 - [ ] Avoid invisible anti-camping timers that force irrational movement.
 - [ ] Use objective progress, course time, weather, project deadlines, and Joe's information to shape escalation.
@@ -881,9 +907,9 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 
 ## Story and Worldbuilding
 
-- [ ] Give the player a clear immediate reason to escape, hide, or resist Joe.
-- [ ] Establish why the player is on the course and why grass and golf matter to their objective.
-- [ ] Establish why Joe has authority, resources, access, and motivation to pursue the player.
+- [x] Give the player a clear immediate reason to escape, hide, or resist Joe.
+- [x] Establish why the player is on the course and why grass and golf matter to their objective.
+- [x] Establish why Joe has authority, resources, access, and motivation to pursue the player.
 - [ ] Decide whether Joe is human, altered, supernatural, institutional, or deliberately ambiguous, and keep his rules coherent.
 - [ ] Preserve mystery without withholding every piece of actionable context.
 - [ ] Give Joe a history, worldview, and relationship to the project beyond being a pursuer.
@@ -1129,6 +1155,8 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Provide optional conventional overlays for players who need them.
 - [ ] Make corporate terminology visually secondary to plain mechanical meaning.
 - [ ] Clearly communicate action progress, interruption risk, blocked reasons, costs, and consequences.
+- [x] Sequence simultaneous chase-break rewards through a HUD priority system so survival, score, dialogue, and accessibility information do not obscure one another.
+- [x] Keep early guidance readable without covering active navigation: movement proficiency accelerates the onboarding-panel collapse, while manual recalls remain independent of that threshold.
 - [ ] Avoid opening complex menus automatically while Joe is nearby.
 - [ ] Allow inventory, map, field guide, objectives, and records to pause single-player play where appropriate.
 - [ ] Make menus responsive to mouse, keyboard, controller, and touch where supported.
@@ -1227,6 +1255,10 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 
 ## Performance and Technical Reliability
 
+- [x] Cap presentation at 60 Hz on high-refresh monitors while keeping simulation updates delta-time bounded.
+- [x] Measure render cost at runtime and adapt only decorative fog, particles, clutter, and distant-layer cadence when the frame budget is missed; never remove collision landmarks, objectives, or interactables.
+- [x] Cache static screen treatment and atlas cells, pool depth-sorted render records, and bound high-cost outdoor atmosphere systems.
+- [x] Stress-test the current heaviest Night Range pursuit composition at desktop, compact, high-resolution, and Reduced Camera Motion presentations with no browser errors.
 - [ ] Prioritize stable frame rate and low input latency during stalking, golf shots, machinery activity, and pursuit.
 - [ ] Preserve Joe's AI, perception, pathfinding, animation, and collision behavior across supported frame rates.
 - [ ] Preserve golf-ball physics and turf interactions across supported frame rates.
