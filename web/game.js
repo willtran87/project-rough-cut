@@ -163,7 +163,7 @@
   const signageAtlasArt = new Image();
   signageAtlasArt.src = "./assets/rough-cut-signage-atlas-v1.png";
   const bunkerAtlasArt = new Image();
-  bunkerAtlasArt.src = "./assets/rough-cut-bunker-atlas-v1.png";
+  bunkerAtlasArt.src = "./assets/rough-cut-bunker-atlas-v2.png";
   const joeMowerArt = new Image();
   joeMowerArt.src = "./assets/joe-mower-v1.png";
   const joeMowerAnimatedArt = new Image();
@@ -454,7 +454,13 @@
   const FAR_RIDGE_SOURCE = { x: 0, y: 600, width: 1672, height: 341 };
   const DISTANT_VILLAS_SOURCE = { x: 0, y: 490, width: 1672, height: 210 };
   const SIGNAGE_ATLAS_CELL = 512;
-  const BUNKER_ATLAS_CELL = 724;
+  const BUNKER_ATLAS_SOURCES = [
+    { x: 0, y: 105, width: 430, height: 510 },
+    { x: 415, y: 100, width: 490, height: 520 },
+    { x: 890, y: 95, width: 405, height: 525 },
+    { x: 1260, y: 125, width: 460, height: 470 },
+    { x: 1670, y: 100, width: 502, height: 520 },
+  ];
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
   const COURSE_LENGTH = 540;
@@ -11868,13 +11874,61 @@
           ?.sandZone?.id ===
           zone.id &&
         state.hole.environment.sand;
+      const wet =
+        wetStateAt(
+          zone,
+        ).active;
       const alpha = clamp(
-        0.24 +
-          point.scale * 0.24 +
-          (active ? 0.12 : 0),
-        0.22,
-        0.72,
+        0.42 +
+          point.scale * 0.3 +
+          (active ? 0.1 : 0),
+        0.4,
+        0.88,
       );
+      ctx.save();
+      ctx.translate(
+        point.x,
+        point.y,
+      );
+      ctx.rotate(
+        zone.rakeAngle * 0.22,
+      );
+      const groundShadow =
+        ctx.createRadialGradient(
+          0,
+          verticalRadius * 0.1,
+          horizontalRadius * 0.12,
+          0,
+          verticalRadius * 0.1,
+          horizontalRadius * 1.12,
+        );
+      groundShadow.addColorStop(
+        0,
+        `rgba(18,14,9,${alpha * 0.26})`,
+      );
+      groundShadow.addColorStop(
+        0.7,
+        `rgba(14,11,7,${alpha * 0.34})`,
+      );
+      groundShadow.addColorStop(
+        1,
+        "rgba(8,7,5,0)",
+      );
+      ctx.fillStyle =
+        groundShadow;
+      ctx.beginPath();
+      ctx.ellipse(
+        0,
+        verticalRadius * 0.13,
+        horizontalRadius * 1.11,
+        verticalRadius * 1.34,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.restore();
+
       ctx.save();
       if (
         bunkerAtlasArt.complete &&
@@ -11890,28 +11944,32 @@
                 zone.id,
             ),
           );
+        const source =
+          BUNKER_ATLAS_SOURCES[
+            atlasIndex %
+              BUNKER_ATLAS_SOURCES.length
+          ];
+        const artWidth =
+          horizontalRadius * 2.38;
+        const artHeight =
+          verticalRadius * 3.15;
         ctx.globalAlpha = clamp(
-          alpha * 1.35,
-          0.46,
-          0.94,
+          alpha * 1.12,
+          0.5,
+          0.98,
         );
         ctx.drawImage(
           bunkerAtlasArt,
-          atlasIndex *
-            BUNKER_ATLAS_CELL,
-          0,
-          BUNKER_ATLAS_CELL,
-          BUNKER_ATLAS_CELL,
+          source.x,
+          source.y,
+          source.width,
+          source.height,
           point.x -
-            horizontalRadius *
-              1.13,
+            artWidth * 0.5,
           point.y -
-            verticalRadius *
-              3.5,
-          horizontalRadius *
-            2.26,
-          verticalRadius *
-            5.2,
+            artHeight * 0.53,
+          artWidth,
+          artHeight,
         );
         ctx.globalAlpha = 1;
       } else {
@@ -11953,85 +12011,132 @@
         );
         ctx.fill();
       }
-      ctx.beginPath();
-      ctx.ellipse(
-        point.x,
-        point.y,
-        horizontalRadius,
-        verticalRadius,
-        zone.rakeAngle,
-        0,
-        Math.PI * 2,
-      );
-      ctx.strokeStyle =
-        `rgba(220,181,108,${alpha * 0.66})`;
-      ctx.lineWidth = Math.max(
-        1,
-        point.scale * 1.5,
-      );
-      ctx.stroke();
 
       ctx.beginPath();
       ctx.ellipse(
         point.x,
         point.y,
-        horizontalRadius * 0.9,
-        verticalRadius * 0.8,
+        horizontalRadius * 0.88,
+        verticalRadius * 0.78,
         zone.rakeAngle,
         0,
         Math.PI * 2,
       );
       ctx.clip();
-      const rakeSpacing = Math.max(
-        5,
-        verticalRadius * 0.24,
-      );
-      for (
-        let line = -7;
-        line <= 7;
-        line += 1
-      ) {
-        const lineY =
+
+      const moonWash =
+        ctx.createLinearGradient(
+          point.x,
+          point.y -
+            verticalRadius,
+          point.x,
           point.y +
-          line * rakeSpacing;
-        const drift =
-          state.reducedMotion
-            ? 0
-            : Math.sin(
-                state.hole.elapsed *
-                  0.35 +
-                  line +
-                  index,
-              ) *
-              point.scale *
-              0.7;
+            verticalRadius,
+        );
+      moonWash.addColorStop(
+        0,
+        `rgba(191,183,158,${alpha * 0.08})`,
+      );
+      moonWash.addColorStop(
+        0.48,
+        `rgba(161,121,68,${alpha * 0.06})`,
+      );
+      moonWash.addColorStop(
+        1,
+        `rgba(68,42,23,${alpha * 0.14})`,
+      );
+      ctx.fillStyle =
+        moonWash;
+      ctx.fillRect(
+        point.x -
+          horizontalRadius,
+        point.y -
+          verticalRadius,
+        horizontalRadius * 2,
+        verticalRadius * 2,
+      );
+
+      if (wet) {
+        const wetSeed =
+          hash(
+            index * 83.9,
+          );
+        const wetX =
+          point.x +
+          (
+            wetSeed -
+            0.5
+          ) *
+            horizontalRadius *
+            0.42;
+        const wetY =
+          point.y +
+          (
+            hash(
+              wetSeed * 51,
+            ) -
+            0.5
+          ) *
+            verticalRadius *
+            0.36;
+        const wetGradient =
+          ctx.createRadialGradient(
+            wetX,
+            wetY,
+            0,
+            wetX,
+            wetY,
+            horizontalRadius * 0.38,
+          );
+        wetGradient.addColorStop(
+          0,
+          `rgba(50,101,105,${alpha * 0.34})`,
+        );
+        wetGradient.addColorStop(
+          0.68,
+          `rgba(30,70,72,${alpha * 0.22})`,
+        );
+        wetGradient.addColorStop(
+          1,
+          "rgba(24,56,58,0)",
+        );
+        ctx.fillStyle =
+          wetGradient;
+        ctx.beginPath();
+        ctx.ellipse(
+          wetX,
+          wetY,
+          horizontalRadius * 0.38,
+          verticalRadius * 0.28,
+          zone.rakeAngle,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
         ctx.strokeStyle =
-          `rgba(235,203,134,${alpha * 0.23})`;
+          `rgba(145,206,202,${alpha * 0.32})`;
         ctx.lineWidth = Math.max(
           1,
-          point.scale * 0.65,
+          point.scale,
         );
         ctx.beginPath();
-        ctx.moveTo(
-          point.x -
-            horizontalRadius +
-            drift,
-          lineY,
-        );
-        ctx.quadraticCurveTo(
-          point.x,
-          lineY -
-            verticalRadius * 0.11,
-          point.x +
-            horizontalRadius +
-            drift,
-          lineY,
+        ctx.ellipse(
+          wetX -
+            horizontalRadius * 0.04,
+          wetY -
+            verticalRadius * 0.03,
+          horizontalRadius * 0.19,
+          verticalRadius * 0.08,
+          zone.rakeAngle,
+          Math.PI * 1.05,
+          Math.PI * 1.82,
         );
         ctx.stroke();
       }
+
       for (
         let grain = 0;
-        grain < 18;
+        grain < 26;
         grain += 1
       ) {
         const seed = hash(
@@ -12042,12 +12147,12 @@
           point.x +
           (seed * 2 - 1) *
             horizontalRadius *
-            0.8;
+            0.78;
         const grainY =
           point.y +
           (hash(seed * 71) * 2 - 1) *
             verticalRadius *
-            0.72;
+            0.66;
         const size = Math.max(
           1,
           point.scale *
@@ -12058,14 +12163,207 @@
         );
         ctx.fillStyle =
           grain % 3 === 0
-            ? `rgba(224,190,123,${alpha * 0.42})`
-            : `rgba(78,55,31,${alpha * 0.38})`;
+            ? `rgba(224,203,157,${alpha * 0.34})`
+            : `rgba(63,48,34,${alpha * 0.3})`;
         ctx.fillRect(
           Math.round(grainX),
           Math.round(grainY),
           Math.ceil(size),
           Math.ceil(size * 0.6),
         );
+      }
+      if (
+        !state.reducedMotion &&
+        point.scale > 0.18
+      ) {
+        for (
+          let drift = 0;
+          drift < 6;
+          drift += 1
+        ) {
+          const seed =
+            hash(
+              index * 211 +
+                drift * 59.7,
+            );
+          const phase =
+            (
+              seed +
+              state.hole.elapsed *
+                (
+                  0.028 +
+                  drift * 0.002
+                )
+            ) %
+            1;
+          const driftX =
+            point.x -
+            horizontalRadius * 0.72 +
+            phase *
+              horizontalRadius *
+              1.44;
+          const driftY =
+            point.y +
+            (
+              hash(seed * 97) -
+              0.5
+            ) *
+              verticalRadius *
+              1.1;
+          const driftAlpha =
+            Math.sin(
+              phase *
+                Math.PI,
+            ) *
+            alpha *
+            0.24;
+          ctx.strokeStyle =
+            `rgba(232,215,176,${driftAlpha})`;
+          ctx.lineWidth =
+            Math.max(
+              1,
+              point.scale * 0.55,
+            );
+          ctx.beginPath();
+          ctx.moveTo(
+            driftX,
+            driftY,
+          );
+          ctx.lineTo(
+            driftX +
+              Math.max(
+                2,
+                point.scale * 5,
+              ),
+            driftY -
+              Math.max(
+                1,
+                point.scale * 0.8,
+              ),
+          );
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      ctx.save();
+      const tuftCount =
+        point.scale > 0.12
+          ? 14
+          : 8;
+      for (
+        let tuft = 0;
+        tuft < tuftCount;
+        tuft += 1
+      ) {
+        const seed =
+          hash(
+            index * 151 +
+              tuft * 43.3,
+          );
+        const angle =
+          seed *
+          Math.PI *
+          2;
+        const tuftX =
+          point.x +
+          Math.cos(
+            angle,
+          ) *
+            horizontalRadius *
+            (
+              0.94 +
+              hash(seed * 19) *
+                0.12
+            );
+        const tuftY =
+          point.y +
+          Math.sin(
+            angle,
+          ) *
+            verticalRadius *
+            (
+              0.88 +
+              hash(seed * 31) *
+                0.15
+            );
+        const bladeHeight =
+          Math.max(
+            2,
+            point.scale *
+              (
+                3 +
+                hash(seed * 71) *
+                  5
+              ),
+          );
+        ctx.strokeStyle =
+          tuft % 3 === 0
+            ? `rgba(111,121,62,${alpha * 0.58})`
+            : `rgba(43,63,34,${alpha * 0.74})`;
+        ctx.lineWidth =
+          Math.max(
+            1,
+            point.scale * 0.65,
+          );
+        ctx.beginPath();
+        ctx.moveTo(
+          tuftX,
+          tuftY,
+        );
+        ctx.lineTo(
+          tuftX +
+            (
+              seed -
+              0.5
+            ) *
+              bladeHeight *
+              0.55,
+          tuftY -
+            bladeHeight,
+        );
+        ctx.stroke();
+      }
+
+      if (
+        active ||
+        state.hole.focus
+      ) {
+        ctx.strokeStyle =
+          active
+            ? `rgba(238,190,105,${0.28 + alpha * 0.2})`
+            : `rgba(191,170,112,${alpha * 0.24})`;
+        ctx.lineWidth =
+          Math.max(
+            1,
+            point.scale * 1.2,
+          );
+        ctx.setLineDash(
+          active
+            ? []
+            : [
+                Math.max(
+                  2,
+                  point.scale * 4,
+                ),
+                Math.max(
+                  2,
+                  point.scale * 3,
+                ),
+              ],
+        );
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y,
+          horizontalRadius * 0.94,
+          verticalRadius * 0.9,
+          zone.rakeAngle,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
       ctx.restore();
     }
@@ -24522,8 +24820,28 @@
             groundedFeatureArt: {
               courseSigns:
                 "dedicated_six_cell_pixel_art_atlas_with_runtime_labels",
-              sandTraps:
-                "dedicated_three_cell_pixel_art_atlas_projected_to_authoritative_terrain_zones",
+              sandTraps: {
+                source:
+                  "dedicated_five_cell_imagegen_atlas",
+                authoredVariants:
+                  BUNKER_ATLAS_SOURCES.length,
+                coursePlacements:
+                  BUNKER_SAND_ZONES.length,
+                projection:
+                  "authoritative_terrain_zone_with_irregular_alpha_silhouette",
+                detailLayers: [
+                  "ground_contact_shadow",
+                  "authored_sod_lip",
+                  "unique_rake_and_footprint_story",
+                  "moon_wash",
+                  "wet_sand_pooling",
+                  "granular_scatter",
+                  "edge_grass_tufts",
+                  "windblown_sand",
+                ],
+                reducedMotion:
+                  "static_sand_detail_without_drift",
+              },
               pathLanterns:
                 "dedicated_four_cell_imagegen_atlas_with_projected_amber_light_pools_and_water_hazard_power_sag",
               interactables:

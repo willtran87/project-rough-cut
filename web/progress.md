@@ -979,3 +979,27 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest the corrected viewport translation before adding any new movement effects; this pass intentionally makes the lateral cue unmistakable.
 - If further tuning is needed, adjust `viewportShiftRatio` first so camera travel can change without disturbing authored world projection or collision geometry.
+
+## Five-Variant Bunker Art and Complexity Pass - July 30, 2026
+
+- Audited the existing sand-trap presentation after player feedback that the bunkers looked poor.
+- Identified two root causes: the old atlas used tall isometric retaining walls that flattened into floating bowls under the course projection, and a three-cell atlas was indexed by five sand zones, leaving the final two placements without authored coverage.
+- Used built-in image generation to create a new high-resolution five-variant pixel-art atlas on a flat magenta chroma background.
+- The final prompt requested five shallow ground-hugging bunker silhouettes with unique rake arcs, footprints, damp sand, puddle glints, a half-buried ball, mower churn, scattered leaves, granular sand, irregular sod lips, exposed soil, and restrained moonlit horror grading.
+- Removed the chroma background with a soft alpha matte and despill. The production PNG contains 1,071,362 fully transparent pixels and 33,082 partially transparent edge pixels across the 2172x724 atlas.
+- Preserved both the image-generation chroma source and the final alpha PNG as versioned v2 assets; the original v1 atlas remains available for comparison.
+- Replaced the fixed 724-pixel three-cell slicing assumption with five authored source rectangles, guaranteeing unique art coverage for every course bunker.
+- Reduced the old exaggerated vertical projection and removed the universal hard ellipse outline and repeated procedural rake overlay that made every trap look identical.
+- Added soft ground-contact shadowing, warmer dry-sand grading, a restrained moon wash, 26 granular accents per visible trap, irregular edge grass tufts, and six subtle windblown sand streaks on near bunkers.
+- Added localized wet-sand pools and water glints when a bunker overlaps an active sprinkler zone; dry and soaked states remain visually distinct.
+- Kept gameplay boundaries authoritative and added active/Listening Focus outlines only when hazard feedback is useful.
+- Integrated Reduced Motion by preserving every static detail while disabling the drifting sand layer.
+- Extended `render_game_to_text` with the five-variant source contract, authored coverage count, terrain projection rule, eight visual-detail layers, and Reduced Motion behavior.
+- Passed JavaScript syntax and whitespace checks plus the exact project browser client with no page or console errors.
+- Deterministically entered the West Tee bunker at x=-84/y=54, confirmed the `BUNKER SAND` movement state, activated the sprinkler at x=-98/y=54, and confirmed the `SOAKED BUNKER` state with all six wet zones live.
+- Visually inspected dry and soaked bunker compositions at 2560x1600, 1280x720, and 800x600. All five atlas cells load, the irregular lip remains grounded, wet pooling stays inside the hazard, and the responsive canvas reports no clipping or layer drift.
+
+### Next production priorities
+
+- Human-playtest all five bunker placements during a complete run and tune only individual source crops if one silhouette reads less clearly at its authored distance.
+- Consider unique sand-entry audio layers for dry grit, damp suction, and mower churn after the visual silhouettes have been accepted.

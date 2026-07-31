@@ -24,7 +24,7 @@ The browser build includes:
 - A persistent course mini-map with the same player-inflated ellipse footprints used by world collision—including hidden tunnel and shed-wall sides—plus interaction ranges, maintained-course limits, and active-contact highlighting.
 - Dedicated image-generated maintenance shed, hedge hide, stone cover, and grounds-cart landmarks, alpha-cropped and projected so their visible ground contact matches the footprints used for collision and line-of-sight cover.
 - A fully decomposed living horizon: an alpha-cut golf-course foreground sits over a moonless star field, with the moon, eight independent clouds, a far ridge, distant villas, clubhouse, tree line, and multiple fog bands moving at restrained parallax depths.
-- Dedicated image-generated signage and bunker atlases grounded into the same projected positions, interaction routes, and sand zones used by gameplay.
+- Dedicated image-generated signage and a five-variant bunker atlas grounded into the same projected positions, interaction routes, and sand zones used by gameplay, with irregular sod lips, footprints, rake stories, wet pooling, edge vegetation, and drifting sand detail.
 - A dedicated six-cell course-clutter atlas adds mossy yardage stones, abandoned golf bags, coiled irrigation hose, spilled range balls, rusted mower tools, and damp clipping piles along the course margins without creating dishonest collision.
 - Listening Focus for mower direction, cover proximity, landmarks, and environmental awareness.
 - A pressure-driven golf chip: hold to charge, steer the landing point, misdirect Joe on impact, then risk reclaiming the persistent ball while he investigates.
