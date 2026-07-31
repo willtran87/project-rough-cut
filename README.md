@@ -12,7 +12,9 @@ The browser build includes:
 
 - An original grass-and-weed-whacker horror-comedy opening.
 - Keyboard, pointer, standard gamepad, and complete multi-touch support with automatic prompt switching, plus persistent conflict-safe keyboard remapping.
-- A 540-unit, six-zone course with distinct suspense pacing across The Tee, Audit Row, Water Hazard, Clubhouse Crossing, Service Maze, and The Dead Green.
+- A 720-unit, eight-zone course with distinct suspense pacing across The Tee, Audit Row, Water Hazard, Clubhouse Crossing, Service Maze, The Dead Green, Night Range, and Release Corridor.
+- A true second act beyond the former finish: The Dead Green is now a false finish, Night Range forces a choice between floodlit crossfire and abandoned-cart cover, and Release Corridor compresses the final escape into alternating hedge, stone, and service-lane chicanes.
+- Three optional Sprint Review gates create a longer risk/reward arc, while 59 grounded collision obstacles, 24 non-blocking clutter placements, eight wet-turf regions, and an extended Joe patrol keep the added distance authored rather than empty.
 - Three curated, rotating Night Orders that relocate both objectives and change Joe's opening patrol without sacrificing authored route readability.
 - One authored Unfiled Change Request per Night Order: secure the risky optional document, escape alive, and bank a +650 score bonus with persistent 3-order filing progress.
 - Two complete escape routes through the maintenance shed or drainage culvert, each ending in a vulnerable Final Filing commitment, a route-colored release seal, and a clean handoff into the scorecard.
