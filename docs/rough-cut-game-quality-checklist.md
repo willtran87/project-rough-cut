@@ -1194,7 +1194,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Introduce one major system at a time before combining it with active pursuit.
 - [ ] Let the player safely observe an example of Joe's detection logic before severe consequences.
 - [ ] Teach the difference between suspicion, investigation, search, and pursuit through controlled situations.
-- [ ] Demonstrate how a golf ball can distract Joe before requiring it under pressure; the briefing currently explains and illustrates the shot, but does not stage a live Joe reaction.
+- [x] Demonstrate how a golf ball can distract Joe before requiring it under pressure. A first-time optional tee-side field test now gives the player a safe amber-ring target, visibly diverts Joe, and teaches that the marked ball can be reclaimed once the lane clears; moving beyond the tee skips it without penalty.
 - [ ] Demonstrate how grass conceals, records, or reveals movement before making it essential.
 - [ ] Teach the player to read course landmarks, wind, lies, and environmental systems.
 - [ ] Explain insurance and project-management mechanics using exact plain-language outcomes.

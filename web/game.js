@@ -707,6 +707,7 @@
       "counter_route",
       "blindside_transfer",
       "ball_recovery",
+      "practice_shot",
     ]);
   const JOE_STATE_BARK_COUNT =
     Object.values(
@@ -772,6 +773,12 @@
   const BALL_CHARGE_SECONDS = 0.8;
   const BALL_MAX_AIM_ANGLE = 1.12;
   const BALL_RECOVERY_RADIUS = 8;
+  const TEE_PRACTICE_TARGET = {
+    x: 0,
+    y: 94,
+    radius: 18,
+  };
+  const TEE_PRACTICE_EXIT_Y = 80;
   const OVERTIME_SCORE_MULTIPLIER = 1.3;
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
@@ -1607,6 +1614,23 @@
     };
   }
 
+  function freshPracticeDrill(enabled) {
+    return {
+      active: enabled,
+      completed: false,
+      reclaimed: false,
+      stage: enabled
+        ? "chip_at_bell"
+        : "already_learned",
+      target: {
+        ...TEE_PRACTICE_TARGET,
+      },
+      attempts: 0,
+      misses: 0,
+      landedBallId: null,
+    };
+  }
+
   function freshNavigationGuide() {
     return {
       targetId: null,
@@ -1915,6 +1939,8 @@
         captures: Number.isFinite(parsed.captures)
           ? Math.max(0, Math.round(parsed.captures))
           : 0,
+        golfLessonCompleted:
+          parsed.golfLessonCompleted === true,
         completedVariants: Array.isArray(
           parsed.completedVariants,
         )
@@ -1986,6 +2012,7 @@
         roundsStarted: 0,
         escapes: 0,
         captures: 0,
+        golfLessonCompleted: false,
         completedVariants: [],
         filedChangeRequests: [],
         selectedVariantId: null,
@@ -2155,6 +2182,10 @@
       ballThrowsUsed: 0,
       ballAim: freshBallAimState(),
       ballFlight: null,
+      practiceDrill:
+        freshPracticeDrill(
+          !savedCareer.golfLessonCompleted,
+        ),
       prompt: "",
       message: "South gate locked. Find the shed key — or open the drain.",
       messageTimer: 4,
@@ -6487,6 +6518,12 @@
       ballThrowsUsed: 0,
       ballAim: freshBallAimState(),
       ballFlight: null,
+      practiceDrill:
+        freshPracticeDrill(
+          !state.career
+            .golfLessonCompleted &&
+            !overtime,
+        ),
       prompt: "",
       message: overtime
         ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
@@ -11502,6 +11539,101 @@
     }
   }
 
+  function practiceDrillActive() {
+    const drill =
+      state.hole?.practiceDrill;
+    return Boolean(
+      drill &&
+        drill.active &&
+        !drill.completed &&
+        state.player.y <
+          TEE_PRACTICE_EXIT_Y,
+    );
+  }
+
+  function practiceShotLocked(target) {
+    const drill =
+      state.hole?.practiceDrill;
+    return Boolean(
+      target &&
+        practiceDrillActive() &&
+        worldDistance(
+          target,
+          drill.target,
+        ) <= drill.target.radius,
+    );
+  }
+
+  function completePracticeDrill(
+    landedBall,
+  ) {
+    const hole = state.hole;
+    const drill = hole.practiceDrill;
+    drill.active = false;
+    drill.completed = true;
+    drill.stage = "joe_diverted";
+    drill.landedBallId =
+      landedBall.id;
+    state.career.golfLessonCompleted =
+      true;
+    saveCareer();
+    hole.distractionTimer = Math.max(
+      hole.distractionTimer,
+      5.4,
+    );
+    hole.stateBanner =
+      "FIELD TEST PASSED // JOE TOOK THE BAIT";
+    hole.stateBannerTimer = 3.4;
+    hole.stateBannerLockTimer = 1.8;
+    awardDeliveryBeat(
+      "FIELD TEST PASSED",
+      110,
+    );
+    addWorldEffect(
+      "filing_stamp",
+      drill.target.x,
+      drill.target.y,
+      1.25,
+    );
+    playPracticeBellCue();
+    triggerJoeBark(
+      "investigate",
+      "practice_shot",
+    );
+  }
+
+  function updatePracticeDrill() {
+    const drill =
+      state.hole.practiceDrill;
+    if (
+      !drill.active ||
+      drill.completed ||
+      state.hole.ballFlight
+    ) {
+      return;
+    }
+    if (
+      state.player.y >=
+      TEE_PRACTICE_EXIT_Y
+    ) {
+      drill.active = false;
+      drill.stage = "skipped_optional";
+      if (
+        state.hole.message.startsWith(
+          "OPTIONAL FIELD TEST",
+        )
+      ) {
+        state.hole.messageTimer = 0;
+      }
+      if (
+        state.hole.stateBanner ===
+        "OPTIONAL FIELD TEST // RING THE STARTER BELL"
+      ) {
+        state.hole.stateBannerTimer = 0;
+      }
+    }
+  }
+
   function golfBallAimTarget() {
     const aim = state.hole.ballAim;
     const range = lerp(
@@ -11636,6 +11768,11 @@
 
   function landGolfBall(target) {
     const hole = state.hole;
+    const drillAttempt =
+      practiceDrillActive();
+    const practiceHit =
+      drillAttempt &&
+      practiceShotLocked(target);
     hole.ballFlight = null;
     const landedBall = {
       id: hole.nextRecoverableBallId,
@@ -11644,6 +11781,7 @@
       landedAt: hole.elapsed,
       throwNumber: hole.ballThrowsUsed,
       wet: wetStateAt(target).active,
+      practiceHit,
     };
     hole.nextRecoverableBallId += 1;
     hole.recoverableBalls.push(
@@ -11670,12 +11808,31 @@
     hole.joe.mode = "investigate";
     announceJoeState("investigate");
     hole.noise = Math.max(hole.noise, 0.38);
-    setHoleMessage(
-      hole.ballThrowsUsed >= 3
-        ? "JOE RECOGNIZED THE PATTERN — reclaim the ball only if the lane clears."
-        : "BALL LANDED — Joe changed course. The ball can be reclaimed.",
-      3.1,
-    );
+    if (drillAttempt) {
+      hole.practiceDrill.attempts += 1;
+      if (practiceHit) {
+        completePracticeDrill(
+          landedBall,
+        );
+        setHoleMessage(
+          "STARTER BELL RANG — watch Joe divert, then reclaim the marked ball when the lane clears.",
+          4.2,
+        );
+      } else {
+        hole.practiceDrill.misses += 1;
+        setHoleMessage(
+          "JOE HEARD THE LANDING — the amber bell remains an optional aim test.",
+          3.4,
+        );
+      }
+    } else {
+      setHoleMessage(
+        hole.ballThrowsUsed >= 3
+          ? "JOE RECOGNIZED THE PATTERN — reclaim the ball only if the lane clears."
+          : "BALL LANDED — Joe changed course. The ball can be reclaimed.",
+        3.1,
+      );
+    }
     addWorldEffect(
       "sound",
       target.x,
@@ -11693,7 +11850,9 @@
       Math.sign(target.x - state.player.x),
     );
     pushThreatCaption(
-      "GOLF BALL STRIKES TURF",
+      practiceHit
+        ? "STARTER BELL RINGS // JOE DIVERTED"
+        : "GOLF BALL STRIKES TURF",
       target,
       "world",
       2.1,
@@ -11719,6 +11878,8 @@
     }
     const danger =
       golfBallDangerState(ball);
+    const practiceRecovery =
+      ball.practiceHit === true;
     hole.recoverableBalls =
       hole.recoverableBalls.filter(
         (candidate) =>
@@ -11727,10 +11888,14 @@
     hole.golfBalls += 1;
     hole.ballsRecovered += 1;
     awardDeliveryBeat(
-      danger.dangerous
+      practiceRecovery
+        ? "TRAINING BALL RECOVERY"
+        : danger.dangerous
         ? "PRESSURE RECOVERY"
         : "BALL RECOVERED",
-      danger.dangerous
+      practiceRecovery
+        ? 125
+        : danger.dangerous
         ? 140
         : 90,
     );
@@ -11744,7 +11909,19 @@
       ball.y,
       1.45,
     );
-    if (danger.dangerous) {
+    if (practiceRecovery) {
+      hole.practiceDrill.reclaimed =
+        true;
+      hole.practiceDrill.stage =
+        "ball_reclaimed";
+      hole.stateBanner =
+        "TRAINING LOOP CLOSED // BALL RESTORED";
+      hole.stateBannerTimer = 2.4;
+      setHoleMessage(
+        "BALL RECLAIMED — you can bait Joe, move through the gap, and recover the resource when it is safe.",
+        3.8,
+      );
+    } else if (danger.dangerous) {
       const closeRecovery =
         danger.joeDistance < 32;
       hole.stateBanner = closeRecovery
@@ -14373,6 +14550,133 @@
       : "rgba(4,12,7,0.08)";
     ctx.fill();
     ctx.restore();
+  }
+
+  function drawPracticeBell() {
+    if (!practiceDrillActive()) {
+      return;
+    }
+    const drill =
+      state.hole.practiceDrill;
+    const target = drill.target;
+    const point = worldToScreen(
+      target.x,
+      target.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -130 ||
+      point.x > WIDTH + 130
+    ) {
+      return;
+    }
+    drawInteractionGroundRing(
+      target,
+      "#e9b84f",
+      false,
+    );
+    const height = clamp(
+      point.pixelsPerMeter * 2.4,
+      38,
+      132,
+    );
+    const width = height * 0.38;
+    const sway = state.reducedMotion
+      ? 0
+      : Math.sin(state.time * 1.9) *
+        0.025;
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.fillStyle =
+      "rgba(0,0,0,0.34)";
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      2,
+      width * 0.84,
+      Math.max(3, width * 0.18),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.fillStyle = "#243026";
+    ctx.fillRect(
+      -width * 0.48,
+      -height * 0.08,
+      width * 0.96,
+      height * 0.08,
+    );
+    ctx.fillStyle = "#3d4a3b";
+    ctx.fillRect(
+      -width * 0.11,
+      -height * 0.78,
+      width * 0.22,
+      height * 0.72,
+    );
+    ctx.fillStyle = "#66705a";
+    ctx.fillRect(
+      -width * 0.035,
+      -height * 0.75,
+      width * 0.07,
+      height * 0.63,
+    );
+    ctx.save();
+    ctx.translate(
+      0,
+      -height * 0.72,
+    );
+    ctx.rotate(sway);
+    ctx.fillStyle = "#5a3c20";
+    ctx.fillRect(
+      -width * 0.56,
+      -height * 0.12,
+      width * 1.12,
+      height * 0.12,
+    );
+    ctx.fillStyle = "#d59a34";
+    ctx.beginPath();
+    ctx.moveTo(
+      -width * 0.42,
+      -height * 0.06,
+    );
+    ctx.lineTo(
+      width * 0.42,
+      -height * 0.06,
+    );
+    ctx.lineTo(
+      width * 0.58,
+      height * 0.18,
+    );
+    ctx.lineTo(
+      -width * 0.58,
+      height * 0.18,
+    );
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f1c55a";
+    ctx.fillRect(
+      -width * 0.32,
+      -height * 0.025,
+      width * 0.64,
+      height * 0.04,
+    );
+    ctx.fillStyle = "#b66d29";
+    ctx.fillRect(
+      -width * 0.07,
+      height * 0.18,
+      width * 0.14,
+      height * 0.08,
+    );
+    ctx.restore();
+    ctx.restore();
+    drawWorldMarker(
+      target.x,
+      target.y,
+      "OPTIONAL FIELD TEST // CHIP HERE",
+      "#e9b84f",
+      "◎",
+    );
   }
 
   function drawWorldInteractable(
@@ -20328,6 +20632,38 @@
         );
       }
     }
+    if (practiceDrillActive()) {
+      const practicePoint = mapPoint(
+        state.hole.practiceDrill
+          .target.x,
+        state.hole.practiceDrill
+          .target.y,
+      );
+      const practicePulse =
+        state.reducedMotion
+          ? 4
+          : 4 +
+            Math.sin(state.time * 5) *
+              0.8;
+      ctx.strokeStyle = "#e8b451";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(
+        practicePoint.x,
+        practicePoint.y,
+        practicePulse,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.fillStyle = "#f2cc6b";
+      ctx.fillRect(
+        practicePoint.x - 1.5,
+        practicePoint.y - 1.5,
+        3,
+        3,
+      );
+    }
     const shotTarget =
       state.hole.ballAim.target ||
       state.hole.ballFlight?.target ||
@@ -21869,6 +22205,8 @@
     const actualDistance = Math.round(
       worldDistance(state.player, target),
     );
+    const practiceLocked =
+      practiceShotLocked(target);
     const pulse = state.reducedMotion
       ? 0.8
       : 0.68 +
@@ -21894,7 +22232,9 @@
     ctx.fillStyle = focusShade;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    ctx.strokeStyle = `rgba(238,202,102,${pulse})`;
+    ctx.strokeStyle = practiceLocked
+      ? `rgba(116,232,186,${Math.min(1, pulse + 0.18)})`
+      : `rgba(238,202,102,${pulse})`;
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 8]);
     ctx.beginPath();
@@ -21963,15 +22303,21 @@
       panel.y,
       panel.width,
       panel.height,
-      "#d09b48",
+      practiceLocked
+        ? "#74d9ad"
+        : "#d09b48",
       2,
     );
     drawText(
-      `CHIP SHOT  //  LANDING ${actualDistance}m`,
+      practiceLocked
+        ? `FIELD TEST LOCKED  //  RELEASE AT ${actualDistance}m`
+        : `CHIP SHOT  //  LANDING ${actualDistance}m`,
       WIDTH * 0.5,
       panel.y + 24,
       13,
-      "#f0e4bd",
+      practiceLocked
+        ? "#9ce9c3"
+        : "#f0e4bd",
       "center",
       true,
     );
@@ -22015,11 +22361,17 @@
       true,
     );
     drawText(
-      "JOE KEEPS MOVING WHILE YOU LINE UP THE SHOT.",
+      practiceLocked
+        ? "STARTER BELL LOCKED — RELEASE TO WATCH JOE DIVERT."
+        : practiceDrillActive()
+          ? "LAND INSIDE THE AMBER RING — JOE KEEPS MOVING."
+          : "JOE KEEPS MOVING WHILE YOU LINE UP THE SHOT.",
       WIDTH * 0.5,
       panel.y + 91,
       10,
-      "#c27443",
+      practiceLocked
+        ? "#74d9ad"
+        : "#c27443",
       "center",
     );
     ctx.restore();
@@ -26690,6 +27042,7 @@
       "behind",
     );
     drawLayeredCourseEntities();
+    drawPracticeBell();
     drawMowerWorldParticles(
       "front",
     );
@@ -27856,6 +28209,7 @@
           dt,
           movement,
         );
+        updatePracticeDrill();
       }
       const moving =
         !hole.escapeFiling.sealing &&
@@ -28333,6 +28687,12 @@
           recoveryDanger.dangerous
             ? `TAP USE — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
             : "TAP USE — RECLAIM GOLF BALL",
+        );
+      } else if (practiceDrillActive()) {
+        hole.prompt = inputCopy(
+          `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
+          "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
+          "HOLD CHIP — AIM AT AMBER BELL (OPTIONAL)",
         );
       } else if (worldDistance(state.player, shed) < shed.radius) {
         hole.prompt = inputCopy(
@@ -29534,6 +29894,32 @@
     playTransientTone(360, 190, 0.09, 0.032, "triangle", 0.24);
   }
 
+  function playPracticeBellCue() {
+    playTransientTone(
+      784,
+      740,
+      0.52,
+      0.045,
+      "sine",
+    );
+    playTransientTone(
+      1174,
+      1046,
+      0.66,
+      0.028,
+      "triangle",
+      0.08,
+    );
+    playTransientTone(
+      1568,
+      1396,
+      0.48,
+      0.016,
+      "sine",
+      0.16,
+    );
+  }
+
   function playBallRecoveryCue(dangerous) {
     playTransientTone(
       dangerous ? 330 : 440,
@@ -30243,6 +30629,16 @@
         : "SOUTH GATE LOCKED — cross to the shed key or release the drain.",
       3.6,
     );
+    if (practiceDrillActive()) {
+      setHoleMessage(
+        "OPTIONAL FIELD TEST — chip into the amber bell ring to watch Joe react, or move on.",
+        4.8,
+      );
+      state.hole.stateBanner =
+        "OPTIONAL FIELD TEST // RING THE STARTER BELL";
+      state.hole.stateBannerTimer = 3.6;
+      state.hole.stateBannerLockTimer = 1.4;
+    }
     if (state.hole.courseEchoRecord) {
       state.hole.stateBanner =
         `COURSE ECHO // ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD`;
@@ -30269,6 +30665,9 @@
     if (quickStart) {
       const hole = state.hole;
       hole.tutorialVisible = false;
+      hole.practiceDrill.active = false;
+      hole.practiceDrill.stage =
+        "skipped_rematch";
       hole.quickRematch = true;
       hole.rematchTarget = {
         id: target.id,
@@ -31286,6 +31685,8 @@
       roundsStarted: state.career.roundsStarted,
       escapes: state.career.escapes,
       captures: state.career.captures,
+      golfLessonCompleted:
+        state.career.golfLessonCompleted,
       overtimeEscapes:
         state.career.overtimeEscapes,
       overtimeCaptures:
@@ -32074,6 +32475,8 @@
                   activeLure:
                     danger.activeLure,
                   wet: ball.wet,
+                  practiceHit:
+                    ball.practiceHit === true,
                   ageSeconds: Number(
                     (
                       state.hole.elapsed -
@@ -32086,6 +32489,51 @@
               },
             ),
           ballThrowsUsed: state.hole.ballThrowsUsed,
+          practiceDrill: {
+            active:
+              practiceDrillActive(),
+            completed:
+              state.hole.practiceDrill
+                .completed,
+            reclaimed:
+              state.hole.practiceDrill
+                .reclaimed,
+            stage:
+              state.hole.practiceDrill
+                .stage,
+            target: {
+              x:
+                state.hole.practiceDrill
+                  .target.x,
+              y:
+                state.hole.practiceDrill
+                  .target.y,
+              radius:
+                state.hole.practiceDrill
+                  .target.radius,
+              distance: Number(
+                worldDistance(
+                  state.player,
+                  state.hole.practiceDrill
+                    .target,
+                ).toFixed(2),
+              ),
+            },
+            attempts:
+              state.hole.practiceDrill
+                .attempts,
+            misses:
+              state.hole.practiceDrill
+                .misses,
+            landedBallId:
+              state.hole.practiceDrill
+                .landedBallId,
+            optional: true,
+            skipRule:
+              `Move beyond ${TEE_PRACTICE_EXIT_Y}m or start a quick rematch.`,
+            lesson:
+              "Aim, land inside the bell ring, observe Joe investigate, then reclaim the marked ball when safe.",
+          },
           golfShot: {
             aiming: state.hole.ballAim.active,
             source: state.hole.ballAim.source,
