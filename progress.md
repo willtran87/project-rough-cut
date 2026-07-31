@@ -1003,3 +1003,28 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest all five bunker placements during a complete run and tune only individual source crops if one silhouette reads less clearly at its authored distance.
 - Consider unique sand-entry audio layers for dry grit, damp suction, and mower churn after the visual silhouettes have been accepted.
+
+## Night Range and Release Corridor Expansion - July 30, 2026
+
+- Increased Hole 1 from 540 to 720 world units and expanded the course from six to eight authored suspense zones.
+- Reframed The Dead Green as a false finish instead of stretching its existing rhythm across the added distance.
+- Added Night Range as an exposed second-act arena with a hedge intake, abandoned range carts, three overlapping floodlight lanes, range dressing, distinct blue-black grading, and multiple cover-versus-speed choices.
+- Added Release Corridor as a compressed final gauntlet with alternating hedge, service-cart, audit-board, stone-cover, and final-gate chicanes before the relocated shed and drain exits.
+- Expanded the collision field from 41 to 59 physical obstacles while keeping each new blocker represented by authored world art or a paired visible arch.
+- Added seven non-blocking generated clutter placements and eight reused Dead Green environment-art placements across the new zones without introducing dishonest collision.
+- Extended sprinkler coverage from six to eight projected regions and increased the Course Echo recording window from 260 to 360 samples for the longer run.
+- Extended Joe's patrol from 20 to 29 waypoints through both new zones and both relocated exits.
+- Added a third variant-aware Release Review gate inside Night Range. It uses the existing risk/reward contract: one restored ball when capacity allows, 0.18 seconds removed from Final Filing, Delivery Chain credit, and an audible bell that redirects Joe.
+- Expanded Delivery family caps from five to seven zone transitions and from two to three Review clears so the longer course continues rewarding authored progression.
+- Added two late-course reactive-score profiles: G# Locrian for Night Range and G Diminished for Release Corridor.
+- Updated README documentation for the 720-unit, eight-zone, 59-obstacle course and its three-Review progression.
+- Passed JavaScript syntax and whitespace validation.
+- Ran the exact required web-game Playwright client after the level change; it reported a 720-unit course, eight zones, three Reviews, 24 clutter placements, and no browser or console errors.
+- Completed a deterministic live run from the tee sprinkler through the former finish into Night Range at y=547. The player reached the new zone at 76% progress with Joe 21 meters behind, proving the old finale no longer terminates traversal.
+- Visually inspected the live Night Range entrance at 2560x1600: the hedge gate, range floodlights, warning cue, collision silhouettes, and expanded map all align in first-person view.
+- Inspected Night Range and Release Corridor staging at 2560x1600, then verified the final corridor at 1280x720 and 800x600. The responsive canvas stayed within the document bounds at every size with no clipping, overflow, page errors, or console errors.
+
+### Next production priorities
+
+- Human-playtest a full escape through Release Corridor at normal speed and tune Joe's late patrol holds only if the last 90 units consistently collapse into an unavoidable chase.
+- Evaluate a dedicated Night Range prop atlas after the reused obstacle kit has been tested for recognition during live pursuit.

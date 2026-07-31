@@ -463,7 +463,7 @@
   ];
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
-  const COURSE_LENGTH = 540;
+  const COURSE_LENGTH = 720;
   const COURSE_MIN_Y = 0;
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
@@ -480,12 +480,12 @@
   const DELIVERY_CHAIN_WINDOW = 14;
   const DELIVERY_CHAIN_MAX = 5;
   const DELIVERY_FAMILY_CAPS = {
-    zone: 5,
+    zone: 7,
     recovery: 3,
     bunker: 2,
     contact: 3,
     change: 1,
-    review: 2,
+    review: 3,
   };
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
@@ -493,15 +493,15 @@
   const MAX_PLAYER_TRACKS = 72;
   const MAX_MOWER_WORLD_PARTICLES = 190;
   const COURSE_ECHO_SAMPLE_SECONDS = 0.4;
-  const MAX_COURSE_ECHO_SAMPLES = 260;
+  const MAX_COURSE_ECHO_SAMPLES = 360;
   const SPRINKLER_SOAK_SECONDS = 24;
   const WET_MOWER_SPEED_MULTIPLIER = 0.68;
   const SAND_PLAYER_SPEED_MULTIPLIER = 0.72;
   const SAND_MOWER_SPEED_MULTIPLIER = 0.76;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
-  const SHED_EXIT = { x: 24, y: 530, radius: 13 };
-  const DRAIN_EXIT = { x: -76, y: 519, radius: 15 };
+  const SHED_EXIT = { x: 35, y: 710, radius: 13 };
+  const DRAIN_EXIT = { x: -78, y: 699, radius: 15 };
   const SPRINT_REVIEW_RADIUS = 13;
   const SPRINT_REVIEW_FILING_REDUCTION = 0.18;
   const ESCAPE_FILING_DURATION = {
@@ -516,6 +516,8 @@
     { id: "clubhouse-crossing", name: "CLUBHOUSE CROSSING", x: -77, y: 323, radius: 28 },
     { id: "service-lane", name: "SERVICE LANE", x: 69, y: 419, radius: 29 },
     { id: "final-approach", name: "FINAL APPROACH", x: -77, y: 503, radius: 28 },
+    { id: "night-range", name: "NIGHT RANGE", x: 73, y: 588, radius: 29 },
+    { id: "release-corridor", name: "RELEASE CORRIDOR", x: -72, y: 674, radius: 29 },
   ];
   const BUNKER_SAND_ZONES = [
     {
@@ -618,12 +620,32 @@
     {
       id: "dead_green",
       name: "THE DEAD GREEN",
-      subtitle: "FINAL APPROACH",
+      subtitle: "FALSE FINISH",
       start: 455,
-      end: COURSE_LENGTH + 1,
+      end: 545,
       fairwayHalfWidth: 62,
       tint: "44,24,14",
-      cue: "THE DEAD GREEN — choose an exit before Joe closes the course.",
+      cue: "THE DEAD GREEN — the old finish is gone. The release moved deeper into the dark.",
+    },
+    {
+      id: "night_range",
+      name: "NIGHT RANGE",
+      subtitle: "FLOODLIGHT CROSSFIRE",
+      start: 545,
+      end: 635,
+      fairwayHalfWidth: 66,
+      tint: "16,31,37",
+      cue: "NIGHT RANGE — cross the lit lanes or spend time threading the abandoned carts.",
+    },
+    {
+      id: "release_corridor",
+      name: "RELEASE CORRIDOR",
+      subtitle: "SHIP OR SLIP",
+      start: 635,
+      end: COURSE_LENGTH + 1,
+      fairwayHalfWidth: 50,
+      tint: "48,21,14",
+      cue: "RELEASE CORRIDOR — the exits are close, the lanes are narrow, and Joe has stopped patrolling.",
     },
   ];
   const REACTIVE_SCORE_ZONES = [
@@ -656,6 +678,16 @@
       key: "A DIMINISHED",
       rootHz: 27.5,
       accent: "166,63,38",
+    },
+    {
+      key: "G# LOCRIAN",
+      rootHz: 25.96,
+      accent: "72,123,146",
+    },
+    {
+      key: "G DIMINISHED",
+      rootHz: 24.5,
+      accent: "178,55,36",
     },
   ];
   const COURSE_OBSTACLE_CELLS = [
@@ -808,6 +840,13 @@
     { id: "dead-balls", type: 3, x: -102, y: 468, scale: 0.92 },
     { id: "dead-bag", type: 1, x: 104, y: 494, scale: 0.94 },
     { id: "shed-clippings", type: 5, x: -105, y: 526, scale: 1.02 },
+    { id: "range-balls-west", type: 3, x: -104, y: 556, scale: 0.96 },
+    { id: "range-bag-east", type: 1, x: 104, y: 579, scale: 1.02 },
+    { id: "range-tools-west", type: 4, x: -102, y: 607, scale: 0.96 },
+    { id: "range-hose-east", type: 2, x: 105, y: 628, scale: 0.92 },
+    { id: "release-stone-west", type: 0, x: -104, y: 650, scale: 0.92 },
+    { id: "release-clippings-east", type: 5, x: 104, y: 676, scale: 1.06 },
+    { id: "release-bag-west", type: 1, x: -103, y: 704, scale: 0.96 },
   ];
   const DEAD_GREEN_SCENERY = [
     { id: "dead-grass-west", type: 0, x: -103, y: 466, scale: 1.08, landmark: "withered rough" },
@@ -820,6 +859,14 @@
     { id: "mower-wreck", type: 5, x: 71, y: 526, scale: 1.08, landmark: "mower wreck" },
     { id: "dead-grass-left-finish", type: 0, x: -86, y: 535, scale: 0.92, landmark: "withered rough" },
     { id: "dead-grass-finish", type: 0, x: 106, y: 537, scale: 0.98, landmark: "withered rough" },
+    { id: "range-warning-flag", type: 1, x: -48, y: 552, scale: 0.9, landmark: "range warning flag" },
+    { id: "range-sprinkler", type: 2, x: 88, y: 574, scale: 0.94, landmark: "leaking range sprinkler" },
+    { id: "range-topiary", type: 3, x: -92, y: 600, scale: 0.9, landmark: "range silhouette" },
+    { id: "range-snapped-sign", type: 4, x: 55, y: 621, scale: 0.92, landmark: "range sign" },
+    { id: "release-dead-grass-west", type: 0, x: -105, y: 642, scale: 1.08, landmark: "release rough" },
+    { id: "release-warning-flag", type: 1, x: 76, y: 660, scale: 0.88, landmark: "release warning flag" },
+    { id: "release-mower-wreck", type: 5, x: -62, y: 682, scale: 1.02, landmark: "abandoned mower" },
+    { id: "release-dead-grass-east", type: 0, x: 104, y: 706, scale: 1.12, landmark: "finish rough" },
   ];
   const COURSE_OBSTACLES = [
     { id: "start-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -42, y: 28, radius: 15, radiusX: 20, radiusY: 7, coverRadius: 23, scale: 1, blocks: true, sight: true, landmark: "hedge hide" },
@@ -861,8 +908,27 @@
     { id: "final-arch-right", x: 35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
     { id: "final-board", kit: "expanded", type: 4, x: -77, y: 497, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "final audit board" },
     { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 514, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
-    { id: "shed-left-wall", x: 5, y: 530, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
-    { id: "shed-right-wall", x: 45, y: 530, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "range-entry-arch", kit: "expanded", type: 0, x: 0, y: 552, radius: 0, scale: 1.08, blocks: false, sight: false, landmark: "night range arch" },
+    { id: "range-entry-left", x: -35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "night range arch" },
+    { id: "range-entry-right", x: 35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "night range arch" },
+    { id: "range-cart-west", kit: "expanded", type: 1, x: -63, y: 573, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.04, blocks: true, sight: true, landmark: "range cart" },
+    { id: "range-light-west", kit: "expanded", type: 5, x: -72, y: 592, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 54, scale: 0.98, blocks: true, sight: false, landmark: "west range floodlight" },
+    { id: "range-light-center", kit: "expanded", type: 5, x: 0, y: 594, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 61, scale: 1.08, blocks: true, sight: false, landmark: "center range floodlight" },
+    { id: "range-light-east", kit: "expanded", type: 5, x: 72, y: 592, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 54, scale: 0.98, blocks: true, sight: false, landmark: "east range floodlight" },
+    { id: "range-cart-east", kit: "expanded", type: 1, x: 60, y: 610, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned range cart" },
+    { id: "range-exit-arch", kit: "expanded", type: 0, x: 24, y: 627, radius: 0, scale: 1.06, blocks: false, sight: false, landmark: "release intake" },
+    { id: "range-exit-left", x: -11, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "release intake" },
+    { id: "range-exit-right", x: 59, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "release intake" },
+    { id: "release-hedge-west", asset: "hedge-hide", kit: "base", type: 0, x: -88, y: 646, radius: 18, radiusX: 22, radiusY: 8, coverRadius: 28, scale: 1.06, blocks: true, sight: true, landmark: "release hedge" },
+    { id: "release-cart", kit: "expanded", type: 1, x: -44, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
+    { id: "release-board", kit: "expanded", type: 4, x: 76, y: 670, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.96, blocks: true, sight: true, landmark: "release board" },
+    { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 42, y: 680, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
+    { id: "release-arch", kit: "expanded", type: 0, x: -18, y: 694, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
+    { id: "release-arch-left", x: -53, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch-right", x: 17, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-pine", kit: "base", type: 2, x: 94, y: 702, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.04, blocks: true, sight: true, landmark: "release pine" },
+    { id: "shed-left-wall", x: 16, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-right-wall", x: 54, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
   ];
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
@@ -880,7 +946,16 @@
     { x: -92, y: 452 },
     { x: -82, y: 505 },
     { x: -20, y: 525 },
-    { x: 62, y: 515 },
+    { x: 54, y: 565 },
+    { x: -42, y: 585 },
+    { x: 86, y: 612 },
+    { x: 20, y: 640 },
+    { x: -76, y: 666 },
+    { x: -16, y: 696 },
+    { x: 58, y: 706 },
+    { x: 96, y: 680 },
+    { x: 74, y: 630 },
+    { x: 62, y: 565 },
     { x: 96, y: 470 },
     { x: 42, y: 425 },
     { x: -82, y: 390 },
@@ -909,6 +984,7 @@
       reviews: [
         { id: "review-a", code: "REVIEW A", x: -18, y: 350, radius: SPRINT_REVIEW_RADIUS },
         { id: "review-b", code: "REVIEW B", x: 10, y: 448, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-c", code: "RELEASE REVIEW", x: -42, y: 614, radius: SPRINT_REVIEW_RADIUS },
       ],
       keyHint: "FIND KEY WEST OF WATER",
       joeStart: {
@@ -940,6 +1016,7 @@
       reviews: [
         { id: "review-a", code: "REVIEW A", x: 18, y: 350, radius: SPRINT_REVIEW_RADIUS },
         { id: "review-b", code: "REVIEW B", x: -8, y: 448, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-c", code: "RELEASE REVIEW", x: 38, y: 616, radius: SPRINT_REVIEW_RADIUS },
       ],
       keyHint: "FIND KEY BY FLOODLIGHT",
       joeStart: {
@@ -971,6 +1048,7 @@
       reviews: [
         { id: "review-a", code: "REVIEW A", x: 0, y: 338, radius: SPRINT_REVIEW_RADIUS },
         { id: "review-b", code: "REVIEW B", x: 18, y: 446, radius: SPRINT_REVIEW_RADIUS },
+        { id: "review-c", code: "RELEASE REVIEW", x: -36, y: 610, radius: SPRINT_REVIEW_RADIUS },
       ],
       keyHint: "FIND KEY IN AUDIT ROW",
       joeStart: {
