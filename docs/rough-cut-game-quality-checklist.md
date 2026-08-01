@@ -69,7 +69,7 @@
 - [x] Let authored hedges, trees, and course structures block Joe’s line of sight.
 - [x] Let the player break contact, crouch in deep rough, become concealed, survive Joe’s last-known-position search, and recover to patrol.
 - [x] Give active pursuit one readable information owner: a directional contact card communicates whether Joe can see or hear the player, the immediate counterplay, break progress, and live Risk preview without competing caption stacks.
-- [x] Turn safe waiting into an optional observation challenge: leaving shelter while Joe moves away opens a 5.5-second Blindside Transfer, and reaching different shelter after 14 meters adds a capped maneuver-family Delivery beat.
+- [x] Turn safe waiting into an optional observation challenge: when Joe moves away, collision-clear mint hard-cover and deep-rough lanes preview in the world and map with first-person off-screen bearings; rough destinations explicitly require crouching and expose concealment progress. Leaving shelter opens a 5.5-second Blindside Transfer, and reaching different shelter after 14 meters adds a capped maneuver-family Delivery beat.
 - [x] Make repeated golf-ball distractions progressively shorter so one tactic cannot be repeated without consequence.
 - [x] Show Joe with the generated front-facing lawn-mower sprite during pursuit.
 - [x] Provide a mower-proximity meter and contextual interaction prompts.
@@ -809,7 +809,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make Joe's routines predictable enough to plan around but variable enough to prevent rote waiting.
 - [ ] Avoid long mandatory waits for Joe to leave an area.
 - [ ] Give patient players active observation, preparation, or alternate-route decisions while waiting.
-- [x] In the current slice, surface a readable Blindside opportunity while sheltered so patient observation can convert into a timed cover-to-cover scoring decision without weakening Joe.
+- [x] In the current slice, surface a readable Blindside opportunity while sheltered through grounded hard-cover and rough-lane rings, crouch/concealment guidance, off-screen field bearings, matching map diamonds, and a shared text-state contract, so patient observation can convert into a timed shelter transfer without weakening Joe or requiring map-only navigation.
 - [ ] Escalate pressure when the player remains in one area too long only through readable systems.
 - [ ] Avoid invisible anti-camping timers that force irrational movement.
 - [ ] Use objective progress, course time, weather, project deadlines, and Joe's information to shape escalation.
