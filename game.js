@@ -825,6 +825,9 @@
   const BUNKER_TRAP_BONUS = 175;
   const DELIVERY_CHAIN_WINDOW = 14;
   const DELIVERY_CHAIN_MAX = 5;
+  const DELIVERY_AWARD_QUEUE_MAX = 5;
+  const DELIVERY_AWARD_QUEUED_DURATION =
+    1.7;
   const SECOND_WIND_CLOSE_SECONDS =
     2.6;
   const SECOND_WIND_RAZOR_SECONDS =
@@ -851,6 +854,7 @@
     evidence: 2,
     intel: 3,
     maneuver: 3,
+    nerve: 2,
     status: 1,
     weather: 3,
   };
@@ -874,6 +878,13 @@
   const BLINDSIDE_TRANSFER_MIN_JOE_DISTANCE = 24;
   const BLINDSIDE_TRANSFER_MAX_JOE_DISTANCE = 78;
   const BLINDSIDE_TRANSFER_BONUS = 115;
+  const NERVE_HOLD_SECONDS = 1.65;
+  const NERVE_HOLD_GRACE_SECONDS = 0.24;
+  const NERVE_HOLD_MIN_JOE_DISTANCE = 11;
+  const NERVE_HOLD_MAX_JOE_DISTANCE = 42;
+  const NERVE_HOLD_COOLDOWN = 11;
+  const NERVE_HOLD_BONUS = 105;
+  const NERVE_EXIT_WINDOW_SECONDS = 4.4;
   const TENSION_DIRECTOR_GRACE_SECONDS = 8;
   const TENSION_DIRECTOR_MIN_JOE_DISTANCE = 108;
   const TENSION_DIRECTOR_WARNING_SECONDS = 2.8;
@@ -1799,6 +1810,24 @@
     };
   }
 
+  function freshNerveHold() {
+    return {
+      progress: 0,
+      active: false,
+      armed: false,
+      completions: 0,
+      cooldown: 0,
+      lastZone: null,
+      joeDistance: null,
+      graceRemaining: 0,
+      interruption: null,
+      exitWindow: 0,
+      blockedReason:
+        "not_concealed",
+      tutorialShown: false,
+    };
+  }
+
   function defaultKeyboardBindings() {
     return Object.fromEntries(
       KEYBOARD_BINDING_ROWS.map((binding) => [
@@ -2418,6 +2447,8 @@
       blindsidePreview: null,
       blindsidePreviewRefresh: 0,
       blindsideTutorialShown: false,
+      nerveHold:
+        freshNerveHold(),
       zoneIndex: 0,
       zoneBannerTimer: 0,
       zoneVisits: COURSE_ZONES.map(
@@ -2470,6 +2501,8 @@
       deliveryEvents: [],
       deliveryFamilyCounts: {},
       deliveryAward: null,
+      deliveryAwardQueue: [],
+      deliveryAwardOverflowMerges: 0,
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -3072,6 +3105,8 @@
           ? "intel"
         : label.includes("BLINDSIDE")
           ? "maneuver"
+        : label.includes("NERVE HELD")
+          ? "nerve"
         : label.includes("RECOVERY") ||
             label.includes("BALL RECOVERED")
           ? "recovery"
@@ -3132,7 +3167,7 @@
         hole.deliveryChain,
       family,
     });
-    hole.deliveryAward = {
+    const award = {
       label,
       amount,
       chain:
@@ -3140,8 +3175,37 @@
       multiplier,
       age: 0,
       duration: 2.15,
+      mergedCount: 1,
     };
-    return hole.deliveryAward;
+    if (!hole.deliveryAward) {
+      hole.deliveryAward = award;
+    } else if (
+      hole.deliveryAwardQueue.length <
+      DELIVERY_AWARD_QUEUE_MAX
+    ) {
+      hole.deliveryAwardQueue.push({
+        ...award,
+        duration:
+          DELIVERY_AWARD_QUEUED_DURATION,
+      });
+    } else {
+      const queuedTail =
+        hole.deliveryAwardQueue[
+          hole.deliveryAwardQueue.length -
+            1
+        ];
+      queuedTail.label =
+        "DELIVERY STACK";
+      queuedTail.amount += amount;
+      queuedTail.chain =
+        award.chain;
+      queuedTail.multiplier =
+        award.multiplier;
+      queuedTail.mergedCount += 1;
+      hole.deliveryAwardOverflowMerges +=
+        1;
+    }
+    return award;
   }
 
   function calculateRunResult(route) {
@@ -3274,6 +3338,8 @@
       chaseBreaks: hole.chaseBreaks,
       closeCalls: hole.closeCalls,
       razorCuts: hole.razorCuts || 0,
+      nerveHolds:
+        hole.nerveHold.completions,
       riskPremiumBanked: recoveryBonus,
       riskBreakBonuses:
         hole.riskBreakBonuses?.slice() || [],
@@ -7039,6 +7105,8 @@
       blindsidePreview: null,
       blindsidePreviewRefresh: 0,
       blindsideTutorialShown: false,
+      nerveHold:
+        freshNerveHold(),
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
       zoneVisits: COURSE_ZONES.map(
@@ -7091,6 +7159,8 @@
       deliveryEvents: [],
       deliveryFamilyCounts: {},
       deliveryAward: null,
+      deliveryAwardQueue: [],
+      deliveryAwardOverflowMerges: 0,
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -7826,13 +7896,19 @@
         joe,
         state.player,
       );
+    const nerveExitWindow =
+      hole.nerveHold
+        ?.exitWindow > 0;
     return Boolean(
       shelter?.active &&
       hole.blindsideTransferCooldown <=
         0 &&
       hole.secondWindTimer <= 0 &&
       !hole.riskAward &&
-      !hole.deliveryAward &&
+      (
+        !hole.deliveryAward ||
+        nerveExitWindow
+      ) &&
       !hole.escapeFiling.active &&
       joe.mode !== "chase" &&
       joe.effectSpeed >= 3.5 &&
@@ -7841,7 +7917,11 @@
       joeDistance <=
         BLINDSIDE_TRANSFER_MAX_JOE_DISTANCE &&
       joeBlindsideAlignment() <=
-        -0.18 &&
+        (
+          nerveExitWindow
+            ? 0.12
+            : -0.18
+        ) &&
       hole.detection < 0.26
     );
   }
@@ -8200,6 +8280,20 @@
     const active =
       hole.blindsideTransfer;
 
+    if (
+      !active &&
+      (
+        hole.nerveHold?.armed ||
+        hole.nerveHold?.active
+      )
+    ) {
+      hole.blindsidePreview = null;
+      hole.blindsidePreviewRefresh = 0;
+      hole.blindsidePreviousShelter =
+        shelter;
+      return;
+    }
+
     hole.blindsidePreviewRefresh =
       Math.max(
         0,
@@ -8437,6 +8531,257 @@
 
     hole.blindsidePreviousShelter =
       shelter;
+  }
+
+  function nerveHoldEligibility(
+    environment,
+    moving,
+  ) {
+    const hole = state.hole;
+    const nerve = hole.nerveHold;
+    const zone =
+      courseZoneAt(
+        state.player.y,
+      );
+    const joeDistance =
+      worldDistance(
+        hole.joe,
+        state.player,
+      );
+    let blockedReason = null;
+    if (
+      nerve.completions >=
+      DELIVERY_FAMILY_CAPS.nerve
+    ) {
+      blockedReason =
+        "run_cap_reached";
+    } else if (
+      nerve.cooldown > 0
+    ) {
+      blockedReason = "cooldown";
+    } else if (
+      nerve.lastZone === zone.id
+    ) {
+      blockedReason =
+        "zone_already_held";
+    } else if (
+      !environment.effectiveRough
+    ) {
+      blockedReason =
+        "not_in_effective_rough";
+    } else if (!hole.crouched) {
+      blockedReason = "not_crouched";
+    } else if (
+      hole.concealment < 0.56
+    ) {
+      blockedReason =
+        "concealment_building";
+    } else if (moving) {
+      blockedReason = "movement";
+    } else if (
+      ![
+        "investigate",
+        "search",
+        "chase",
+      ].includes(
+        hole.joe.mode,
+      )
+    ) {
+      blockedReason =
+        "joe_not_searching";
+    } else if (
+      hole.hasLineOfSight ||
+      hole.detection >= 0.68
+    ) {
+      blockedReason = "exposed";
+    } else if (
+      joeDistance <
+        NERVE_HOLD_MIN_JOE_DISTANCE
+    ) {
+      blockedReason = "too_close";
+    } else if (
+      joeDistance >
+        NERVE_HOLD_MAX_JOE_DISTANCE
+    ) {
+      blockedReason = "too_far";
+    } else if (
+      hole.escapeFiling.active ||
+      hole.statusRequest.active ||
+      hole.blindsideTransfer ||
+      hole.ballAim.active ||
+      hole.ballFlight ||
+      hole.riskAward ||
+      hole.deliveryAward
+    ) {
+      blockedReason =
+        "another_action_active";
+    }
+    return {
+      eligible:
+        blockedReason === null,
+      blockedReason,
+      zone,
+      joeDistance,
+    };
+  }
+
+  function updateNerveHold(
+    dt,
+    environment,
+    moving,
+  ) {
+    const hole = state.hole;
+    const nerve = hole.nerveHold;
+    nerve.cooldown = Math.max(
+      0,
+      nerve.cooldown - dt,
+    );
+    nerve.exitWindow = Math.max(
+      0,
+      nerve.exitWindow - dt,
+    );
+    const eligibility =
+      nerveHoldEligibility(
+        environment,
+        moving,
+      );
+    nerve.joeDistance =
+      Number(
+        eligibility.joeDistance.toFixed(
+          2,
+        ),
+      );
+    nerve.blockedReason =
+      eligibility.blockedReason;
+    const wasActive = nerve.active;
+    nerve.armed =
+      eligibility.eligible;
+    nerve.active =
+      eligibility.eligible &&
+      hole.focus;
+    if (!eligibility.eligible) {
+      const recoverableInterruption =
+        wasActive &&
+        hole.focus &&
+        !moving &&
+        [
+          "exposed",
+          "too_close",
+          "too_far",
+        ].includes(
+          eligibility.blockedReason,
+        ) &&
+        nerve.graceRemaining > 0;
+      if (recoverableInterruption) {
+        nerve.graceRemaining =
+          Math.max(
+            0,
+            nerve.graceRemaining - dt,
+          );
+        nerve.armed = true;
+        nerve.active = true;
+        nerve.interruption =
+          eligibility.blockedReason;
+        nerve.blockedReason =
+          `${eligibility.blockedReason}_grace`;
+        return;
+      }
+      nerve.interruption =
+        eligibility.blockedReason;
+      nerve.graceRemaining = 0;
+      nerve.progress =
+        eligibility.blockedReason ===
+          "another_action_active"
+          ? nerve.progress
+          : 0;
+      return;
+    }
+    nerve.interruption = null;
+    if (
+      !nerve.tutorialShown &&
+      hole.stateBannerLockTimer <= 0
+    ) {
+      nerve.tutorialShown = true;
+      setHoleMessage(
+        "HOLD YOUR NERVE -- stay crouched and hold Listening Focus while Joe searches nearby.",
+        3.4,
+      );
+    }
+    if (!nerve.active) {
+      nerve.graceRemaining = 0;
+      nerve.progress = Math.max(
+        0,
+        nerve.progress - dt * 1.4,
+      );
+      nerve.blockedReason =
+        "hold_listening_focus";
+      return;
+    }
+    nerve.graceRemaining =
+      NERVE_HOLD_GRACE_SECONDS;
+    if (!wasActive) {
+      playUiTone(
+        156,
+        0.07,
+        0.014,
+      );
+    }
+    nerve.progress = Math.min(
+      NERVE_HOLD_SECONDS,
+      nerve.progress + dt,
+    );
+    if (
+      nerve.progress <
+      NERVE_HOLD_SECONDS
+    ) {
+      return;
+    }
+    nerve.completions += 1;
+    nerve.lastZone =
+      eligibility.zone.id;
+    nerve.cooldown =
+      NERVE_HOLD_COOLDOWN;
+    nerve.exitWindow =
+      NERVE_EXIT_WINDOW_SECONDS;
+    nerve.progress = 0;
+    nerve.active = false;
+    nerve.armed = false;
+    nerve.graceRemaining = 0;
+    nerve.interruption = null;
+    nerve.blockedReason =
+      "zone_already_held";
+    const deliveryAward =
+      awardDeliveryBeat(
+        "NERVE HELD",
+        NERVE_HOLD_BONUS,
+      );
+    hole.stateBanner =
+      deliveryAward
+        ? `NERVE HELD // +${deliveryAward.amount} DELIVERY`
+        : "NERVE HELD // SEARCH SURVIVED";
+    hole.stateBannerTimer = 2.5;
+    hole.stateBannerLockTimer = 2.5;
+    setHoleMessage(
+      `NERVE HELD -- Joe passed within ${Math.round(eligibility.joeDistance)}m. Watch for the mint exit lane.`,
+      3.4,
+    );
+    pushThreatCaption(
+      "MOWER PASSES WITHOUT CONFIRMING",
+      hole.joe,
+      "mower",
+      2.2,
+      "nerve_held",
+    );
+    playUiTone(
+      392,
+      0.1,
+      0.022,
+    );
+    playUiTone(
+      587,
+      0.14,
+      0.018,
+    );
   }
 
   function wetStateAt(point) {
@@ -25461,6 +25806,118 @@
       drawText(concealmentLabel, WIDTH * 0.5, HEIGHT * 0.52 + 94, 12, hardCover ? "#c8deb5" : "#dec98f", "center", true);
       ctx.restore();
     }
+
+    const nerve =
+      hole.nerveHold;
+    if (
+      nerve &&
+      (
+        nerve.armed ||
+        nerve.active
+      ) &&
+      !hole.riskAward &&
+      !hole.deliveryAward
+    ) {
+      const progress = clamp(
+        nerve.progress /
+          NERVE_HOLD_SECONDS,
+        0,
+        1,
+      );
+      const interrupted =
+        nerve.active &&
+        nerve.interruption &&
+        nerve.blockedReason?.endsWith(
+          "_grace",
+        );
+      const pulse =
+        state.reducedMotion
+          ? 0
+          : Math.sin(
+              state.time * 7.4,
+            ) *
+            0.04 *
+            (
+              0.35 +
+              progress * 0.65
+            );
+      const panelWidth = 326;
+      const panelHeight = 58;
+      const panelX =
+        WIDTH * 0.5 -
+        panelWidth * 0.5;
+      const panelY =
+        HEIGHT * 0.52 + 112;
+      const color =
+        interrupted
+          ? "#e0a65d"
+        : nerve.active
+          ? "#9fd2aa"
+          : "#d7bb72";
+      ctx.save();
+      ctx.globalAlpha =
+        0.94 + pulse;
+      ctx.fillStyle =
+        "rgba(2,15,8,0.92)";
+      ctx.fillRect(
+        panelX,
+        panelY,
+        panelWidth,
+        panelHeight,
+      );
+      strokeRect(
+        panelX,
+        panelY,
+        panelWidth,
+        panelHeight,
+        color,
+        nerve.active ? 2 : 1,
+      );
+      drawText(
+        interrupted
+          ? "SIGHTLINE SHIFT // HOLD"
+        : nerve.active
+          ? `HOLD YOUR NERVE // ${Math.round(progress * 100)}%`
+          : inputCopy(
+              `${keyboardBindingLabel("focus")} LISTEN // HOLD YOUR NERVE`,
+              "LT LISTEN // HOLD YOUR NERVE",
+              "LISTEN // HOLD YOUR NERVE",
+            ),
+        WIDTH * 0.5,
+        panelY + 20,
+        11,
+        color,
+        "center",
+        true,
+      );
+      ctx.fillStyle = "#17271a";
+      ctx.fillRect(
+        panelX + 18,
+        panelY + 29,
+        panelWidth - 36,
+        7,
+      );
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        panelX + 18,
+        panelY + 29,
+        (
+          panelWidth - 36
+        ) * progress,
+        7,
+      );
+      drawText(
+        interrupted
+          ? `GRACE ${nerve.graceRemaining.toFixed(2)}s // DO NOT MOVE`
+          : `JOE ${Math.round(nerve.joeDistance)}m // ${hole.joe.mode.toUpperCase()} // STAY STILL`,
+        WIDTH * 0.5,
+        panelY + 49,
+        9,
+        "#b9c5aa",
+        "center",
+      );
+      ctx.restore();
+    }
   }
 
   function drawJoeStateBanner() {
@@ -27012,6 +27469,18 @@
         : award.chain >= 3
           ? "#8fd3a5"
           : "#79b9a0";
+    const queuedAwards =
+      state.hole
+        .deliveryAwardQueue;
+    const queuedAmount =
+      queuedAwards.reduce(
+        (
+          total,
+          queuedAward,
+        ) =>
+          total + queuedAward.amount,
+        0,
+      );
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle =
@@ -27032,8 +27501,35 @@
         ? 2
         : 1,
     );
+    if (queuedAwards.length > 0) {
+      ctx.fillStyle =
+        "rgba(4,20,12,0.96)";
+      ctx.fillRect(
+        centerX + 8,
+        centerY - 47,
+        134,
+        14,
+      );
+      strokeRect(
+        centerX + 8,
+        centerY - 47,
+        134,
+        14,
+        color,
+        1,
+      );
+      drawText(
+        `NEXT ${queuedAwards.length} // +${queuedAmount}`,
+        centerX + 75,
+        centerY - 37,
+        8,
+        color,
+        "center",
+        true,
+      );
+    }
     drawText(
-      `${award.label} // DELIVERY ×${award.multiplier.toFixed(1)}`,
+      `${award.label}${award.mergedCount > 1 ? ` ×${award.mergedCount}` : ""} // DELIVERY ×${award.multiplier.toFixed(1)}`,
       centerX,
       centerY - 12,
       10,
@@ -27576,6 +28072,17 @@
         ? "PURSUIT LOCK"
         : directorWarning
           ? `SERVICE GATE // ${directorWarning.seconds.toFixed(1)}s`
+        : hole.nerveHold?.active
+          ? `NERVE CHECK // ${Math.round(hole.nerveHold.progress / NERVE_HOLD_SECONDS * 100)}%`
+        : hole.nerveHold?.armed
+          ? inputCopy(
+              `NERVE READY // ${keyboardBindingLabel("focus")} LISTEN`,
+              "NERVE READY // LT LISTEN",
+              "NERVE READY // LISTEN",
+            )
+        : hole.nerveHold
+              ?.exitWindow > 0
+          ? `EXIT WINDOW // ${hole.nerveHold.exitWindow.toFixed(1)}s`
         : hole.joe.mode ===
               "search"
           ? "SEARCHING LAST SIGNAL"
@@ -31554,6 +32061,23 @@
           hole.deliveryAward = null;
         }
       }
+      if (
+        !hole.deliveryAward &&
+        !hole.riskAward &&
+        hole.deliveryAwardQueue.length >
+          0
+      ) {
+        hole.deliveryAward =
+          hole.deliveryAwardQueue.shift();
+        hole.deliveryAward.age = 0;
+        playUiTone(
+          330 +
+            hole.deliveryAward.chain *
+              22,
+          0.055,
+          0.012,
+        );
+      }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
       hole.blockedCueCooldown = Math.max(
         0,
@@ -32198,6 +32722,31 @@
           dt,
           moving,
         );
+        updateNerveHold(
+          dt,
+          getPlayerEnvironmentState(),
+          moving,
+        );
+        if (
+          !hole.prompt &&
+          (
+            hole.nerveHold.active ||
+            hole.nerveHold.armed
+          )
+        ) {
+          hole.prompt =
+            hole.nerveHold.active
+              ? inputCopy(
+                  `HOLD ${keyboardBindingLabel("crouch")} + ${keyboardBindingLabel("focus")} // DO NOT MOVE`,
+                  "HOLD LB + LT // DO NOT MOVE",
+                  "HOLD CROUCH + LISTEN // DO NOT MOVE",
+                )
+              : inputCopy(
+                  `HOLD ${keyboardBindingLabel("focus")} // HOLD YOUR NERVE`,
+                  "HOLD LT // HOLD YOUR NERVE",
+                  "HOLD LISTEN // HOLD YOUR NERVE",
+                );
+        }
         updateBlindsideTransfer(
           dt,
           getPlayerEnvironmentState(),
@@ -35928,6 +36477,9 @@
             closeCalls: state.hole.closeCalls,
             razorCuts:
               state.hole.razorCuts,
+            nerveHolds:
+              state.hole
+                .nerveHold.completions,
             fileProjection:
               state.hole.liveProjection
                 ? {
@@ -36025,6 +36577,57 @@
                 state.hole.deliveryBonus,
               events:
                 state.hole.deliveryEvents.slice(),
+              activeAward:
+                state.hole.deliveryAward
+                  ? {
+                      label:
+                        state.hole
+                          .deliveryAward.label,
+                      amount:
+                        state.hole
+                          .deliveryAward.amount,
+                      chain:
+                        state.hole
+                          .deliveryAward.chain,
+                      mergedCount:
+                        state.hole
+                          .deliveryAward.mergedCount,
+                      remainingSeconds:
+                        Number(
+                          Math.max(
+                            0,
+                            state.hole
+                              .deliveryAward.duration -
+                              state.hole
+                                .deliveryAward.age,
+                          ).toFixed(2),
+                        ),
+                    }
+                  : null,
+              queuedAwards:
+                state.hole
+                  .deliveryAwardQueue.map(
+                    (
+                      queuedAward,
+                      index,
+                    ) => ({
+                      position:
+                        index + 1,
+                      label:
+                        queuedAward.label,
+                      amount:
+                        queuedAward.amount,
+                      chain:
+                        queuedAward.chain,
+                      mergedCount:
+                        queuedAward.mergedCount,
+                    }),
+                  ),
+              presentationQueueCap:
+                DELIVERY_AWARD_QUEUE_MAX,
+              overflowMerges:
+                state.hole
+                  .deliveryAwardOverflowMerges,
               familyCounts: {
                 ...state.hole.deliveryFamilyCounts,
               },
@@ -36032,7 +36635,7 @@
                 ...DELIVERY_FAMILY_CAPS,
               },
               rule:
-                "Link smart plays before the timer expires; the chain increases score but never changes survival difficulty.",
+                "Link smart plays before the timer expires; the chain increases score but never changes survival difficulty. Simultaneous award cards play in order through a bounded five-card presentation queue, with excess cards merged visually while every scoring event remains in the ledger.",
             },
             closestJoeDistance: Number.isFinite(
               state.hole.closestJoeDistance,
@@ -37004,6 +37607,94 @@
             rule:
               "When Joe moves away, mint lanes preview safe destinations. Leave shelter, travel 14m, and enter different shelter within 5.5 seconds without triggering pursuit; rough lanes require crouching until concealment reaches 0.56.",
           },
+          nerveHold: {
+            id: "hold_your_nerve",
+            armed:
+              state.hole
+                .nerveHold.armed,
+            active:
+              state.hole
+                .nerveHold.active,
+            progressPercent:
+              Number(
+                clamp(
+                  state.hole
+                    .nerveHold.progress /
+                    NERVE_HOLD_SECONDS,
+                  0,
+                  1,
+                ).toFixed(2),
+              ),
+            requiredSeconds:
+              NERVE_HOLD_SECONDS,
+            completions:
+              state.hole
+                .nerveHold.completions,
+            runCap:
+              DELIVERY_FAMILY_CAPS
+                .nerve,
+            cooldownSeconds:
+              Number(
+                state.hole
+                  .nerveHold.cooldown.toFixed(
+                    2,
+                  ),
+              ),
+            interruptionGraceSeconds:
+              NERVE_HOLD_GRACE_SECONDS,
+            graceRemainingSeconds:
+              Number(
+                state.hole
+                  .nerveHold.graceRemaining.toFixed(
+                    2,
+                  ),
+              ),
+            interruption:
+              state.hole
+                .nerveHold.interruption,
+            exitWindowSeconds:
+              Number(
+                state.hole
+                  .nerveHold.exitWindow.toFixed(
+                    2,
+                  ),
+              ),
+            exitLaneReady:
+              Boolean(
+                state.hole
+                  .nerveHold.exitWindow > 0 &&
+                state.hole
+                  .blindsidePreview
+                  ?.options?.length > 0,
+              ),
+            exitWindowPurpose:
+              "temporarily_allow_mint_blindside_guidance_during_delivery_feedback_when_joe_is_moving_away_or_laterally",
+            lastZone:
+              state.hole
+                .nerveHold.lastZone,
+            joeDistance:
+              state.hole
+                .nerveHold.joeDistance,
+            distanceWindow: {
+              minimum:
+                NERVE_HOLD_MIN_JOE_DISTANCE,
+              maximum:
+                NERVE_HOLD_MAX_JOE_DISTANCE,
+            },
+            blockedReason:
+              state.hole
+                .nerveHold.blockedReason,
+            input:
+              inputCopy(
+                `${keyboardBindingLabel("crouch")} + ${keyboardBindingLabel("focus")}`,
+                "LB + LT",
+                "CROUCH + LISTEN",
+              ),
+            deliveryBonus:
+              NERVE_HOLD_BONUS,
+            rule:
+              "While concealed in deep rough and Joe is searching 11-42m away without line of sight, stay still and hold crouch plus Listening Focus for 1.65 seconds. Brief sightline or range flicker freezes progress for up to 0.24 seconds; movement or sustained exposure resets it. Completion opens 4.4 seconds of mint Blindside guidance during reward feedback when Joe is moving away or laterally, without changing detection or movement. Each zone can score once, with two Nerve-family awards per run.",
+          },
           suspense: {
             blackoutSeconds: Number(
               state.hole.blackoutTimer.toFixed(2),
@@ -37221,8 +37912,13 @@
               ),
             deliveryQueued:
               Boolean(
-                state.hole.riskAward &&
-                state.hole.deliveryAward,
+                (
+                  state.hole.riskAward &&
+                  state.hole.deliveryAward
+                ) ||
+                state.hole
+                  .deliveryAwardQueue.length >
+                  0,
               ),
             deliveryVisible:
               Boolean(
