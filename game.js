@@ -716,6 +716,7 @@
       "blindside_transfer",
       "ball_recovery",
       "practice_shot",
+      "status_request",
     ]);
   const JOE_STATE_BARK_COUNT =
     Object.values(
@@ -804,6 +805,23 @@
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
   const CHANGE_REQUEST_BONUS = 650;
+  const EMERGENCY_APPEAL_MIN_DISTANCE =
+    10;
+  const EMERGENCY_APPEAL_MAX_DISTANCE =
+    26;
+  const EMERGENCY_APPEAL_REVIEW_SECONDS =
+    3.6;
+  const STATUS_REQUEST_WINDOW_SECONDS =
+    5.4;
+  const STATUS_RESPONSE_SECONDS = 1.15;
+  const STATUS_ACK_PING_SECONDS = 1.7;
+  const STATUS_ESCALATION_PING_SECONDS =
+    4.4;
+  const CROSSWIND_WARNING_SECONDS = 1.35;
+  const CROSSWIND_ACTIVE_SECONDS = 4.4;
+  const CROSSWIND_NOISE_MULTIPLIER = 0.42;
+  const CROSSWIND_RUN_DISTANCE = 30;
+  const CROSSWIND_RUN_BONUS = 90;
   const BUNKER_TRAP_BONUS = 175;
   const DELIVERY_CHAIN_WINDOW = 14;
   const DELIVERY_CHAIN_MAX = 5;
@@ -833,6 +851,8 @@
     evidence: 2,
     intel: 3,
     maneuver: 3,
+    status: 1,
+    weather: 3,
   };
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
@@ -1464,6 +1484,13 @@
         patrolIndex: 0,
         hold: 2.4,
       },
+      statusRequest: {
+        code: "SR-01",
+        label: "SPRINT STATUS",
+        request:
+          "REPORT DELIVERY STATUS",
+        triggerY: 292,
+      },
       briefing:
         "KEY WEST OF WATER  •  VALVE AT WEST TEE  •  BOTH EXITS ACTIVE",
       accent: "#91ad62",
@@ -1495,6 +1522,13 @@
         y: 250,
         patrolIndex: 4,
         hold: 1.8,
+      },
+      statusRequest: {
+        code: "SR-02",
+        label: "DEPENDENCY CHECK",
+        request:
+          "CONFIRM ACTIVE BLOCKERS",
+        triggerY: 388,
       },
       briefing:
         "KEY BY FLOODLIGHT  •  VALVE EAST OF AUDIT ROW  •  JOE STARTS WEST",
@@ -1528,11 +1562,48 @@
         patrolIndex: 7,
         hold: 1.25,
       },
+      statusRequest: {
+        code: "SR-03",
+        label: "RELEASE READINESS",
+        request:
+          "CONFIRM EXIT FORECAST",
+        triggerY: 486,
+      },
       briefing:
         "KEY IN AUDIT ROW  •  VALVE AT EAST WATER EDGE  •  JOE GUARDS EXITS",
       accent: "#77b9aa",
     },
   ];
+
+  function freshStatusRequest(
+    variant,
+  ) {
+    const definition =
+      variant.statusRequest;
+    return {
+      code: definition.code,
+      label: definition.label,
+      request: definition.request,
+      triggerY: definition.triggerY,
+      issued: false,
+      active: false,
+      resolved: false,
+      outcome: null,
+      timer: 0,
+      duration:
+        STATUS_REQUEST_WINDOW_SECONDS,
+      responding: false,
+      responseProgress: 0,
+      responseDuration:
+        STATUS_RESPONSE_SECONDS,
+      responseCancels: 0,
+      urgentCuePlayed: false,
+      location: null,
+      joeLine: null,
+      issuedAt: null,
+      resolvedAt: null,
+    };
+  }
 
   function runVariantForRound(roundsStarted) {
     return RUN_VARIANTS[
@@ -1701,6 +1772,30 @@
       observedZone: 0,
       lastEvent: "opening_stillness",
       lastEventSeconds: 0,
+    };
+  }
+
+  function freshCrosswind(
+    variantIndex = 0,
+  ) {
+    return {
+      phase: "calm",
+      timer:
+        13.5 +
+        variantIndex * 1.8,
+      direction:
+        variantIndex % 2 === 0
+          ? 1
+          : -1,
+      eventCount: 0,
+      lastZone: -1,
+      maskedSeconds: 0,
+      currentDistance: 0,
+      totalMaskedDistance: 0,
+      windRuns: 0,
+      awardGiven: false,
+      lastTravelDistance: 0,
+      lastOutcome: null,
     };
   }
 
@@ -2146,6 +2241,12 @@
       phase: "find_key",
       keyCollected: false,
       changeRequestCollected: false,
+      appealUsed: false,
+      appealWindowSeen: false,
+      appealWindowWasEligible: false,
+      appealDocument: null,
+      appealReviewTimer: 0,
+      appealActivationDistance: null,
       reviewsCleared: [],
       reviewRewards: 0,
       filingReduction: 0,
@@ -2327,6 +2428,12 @@
         freshTensionDirector(),
       horrorDirector:
         freshHorrorDirector(),
+      crosswind:
+        freshCrosswind(0),
+      statusRequest:
+        freshStatusRequest(
+          RUN_VARIANTS[0],
+        ),
       focus: false,
       environment: null,
       discoveredY: 0,
@@ -2955,6 +3062,10 @@
         ? "zone"
         : label.includes("SPRINT REVIEW")
           ? "review"
+        : label.includes("STATUS ACKNOWLEDGED")
+          ? "status"
+        : label.includes("CROSSWIND")
+          ? "weather"
         : label.includes("COUNTER-ROUTE")
           ? "intel"
         : label.includes("BLINDSIDE")
@@ -3116,6 +3227,39 @@
       ballsRecovered: hole.ballsRecovered,
       changeRequestCollected:
         hole.changeRequestCollected,
+      appealUsed: hole.appealUsed,
+      appealCode:
+        hole.appealDocument?.code || null,
+      appealForfeitedBonus:
+        hole.appealUsed
+          ? CHANGE_REQUEST_BONUS
+          : 0,
+      appealActivationDistance:
+        hole.appealActivationDistance,
+      crosswindRuns:
+        hole.crosswind.windRuns,
+      crosswindMaskedSeconds:
+        hole.crosswind.maskedSeconds,
+      crosswindMaskedDistance:
+        hole.crosswind.totalMaskedDistance,
+      statusRequestOutcome:
+        hole.statusRequest.outcome,
+      statusAcknowledged:
+        hole.statusRequest.outcome ===
+        "acknowledged",
+      statusEscalated:
+        hole.statusRequest.outcome ===
+        "escalated",
+      statusResponseCancels:
+        hole.statusRequest.responseCancels,
+      statusRequestCode:
+        hole.statusRequest.code,
+      statusRequestLocation:
+        hole.statusRequest.location
+          ? {
+              ...hole.statusRequest.location,
+            }
+          : null,
       sandTrapCount:
         hole.sandTrapCount,
       sandTrapSeconds:
@@ -4652,13 +4796,22 @@
       progress * 24 +
       walkBob * 0.12;
     const sway =
-      state.reducedMotion
-        ? 0
-        : Math.sin(
-            state.hole.elapsed *
-              0.19,
-          ) *
-            3.2;
+      (
+        state.reducedMotion
+          ? 0
+          : Math.sin(
+              state.hole.elapsed *
+                0.19,
+            ) *
+              3.2
+      ) +
+      crosswindStrength() *
+        state.hole.crosswind.direction *
+        (
+          state.reducedMotion
+            ? 3.5
+            : 11
+        );
     drawParallaxAsset(
       distantTreeLineArt,
       {
@@ -6697,6 +6850,12 @@
       phase: "find_key",
       keyCollected: false,
       changeRequestCollected: false,
+      appealUsed: false,
+      appealWindowSeen: false,
+      appealWindowWasEligible: false,
+      appealDocument: null,
+      appealReviewTimer: 0,
+      appealActivationDistance: null,
       reviewsCleared: [],
       reviewRewards: 0,
       filingReduction: 0,
@@ -6888,6 +7047,12 @@
         freshTensionDirector(),
       horrorDirector:
         freshHorrorDirector(),
+      crosswind:
+        freshCrosswind(
+          variantIndex,
+        ),
+      statusRequest:
+        freshStatusRequest(variant),
       focus: false,
       environment: null,
       discoveredY: 0,
@@ -9783,7 +9948,8 @@
         target: changeRequest,
         available:
           !state.hole
-            .changeRequestCollected,
+            .changeRequestCollected &&
+          !state.hole.appealUsed,
         worldImage:
           "imagegen-change-request-clipboard",
       },
@@ -10166,6 +10332,12 @@
     ) {
       return "final_filing";
     }
+    if (hole.appealReviewTimer > 0) {
+      return "emergency_appeal";
+    }
+    if (hole.statusRequest.active) {
+      return "status_request";
+    }
     if (hole.riskAward) {
       return "risk_premium";
     }
@@ -10205,7 +10377,9 @@
     if (
       focus === "pursuit" ||
       focus ===
-        "blindside_transfer"
+        "blindside_transfer" ||
+      focus === "emergency_appeal" ||
+      focus === "status_request"
     ) {
       return;
     }
@@ -10259,7 +10433,11 @@
       hole.riskAward ||
       hole.deliveryAward ||
       activeHudPresentationFocus() ===
-        "trail_evidence"
+        "trail_evidence" ||
+      activeHudPresentationFocus() ===
+        "emergency_appeal" ||
+      activeHudPresentationFocus() ===
+        "status_request"
     ) {
       return;
     }
@@ -11493,10 +11671,527 @@
     playVictoryCue();
   }
 
+  function emergencyAppealState() {
+    const hole = state.hole;
+    const joeDistance = worldDistance(
+      hole.joe,
+      state.player,
+    );
+    let blockedReason = "ready";
+    if (hole.appealUsed) {
+      blockedReason = "already_used";
+    } else if (
+      !hole.changeRequestCollected
+    ) {
+      blockedReason = "no_change_request";
+    } else if (
+      hole.escapeFiling.active ||
+      hole.escapeFiling.sealing
+    ) {
+      blockedReason = "final_filing_locked";
+    } else if (
+      hole.ballAim.active ||
+      hole.ballFlight
+    ) {
+      blockedReason = "golf_ball_committed";
+    } else if (
+      hole.distractionTimer > 0 &&
+      hole.distraction
+    ) {
+      blockedReason = "active_distraction";
+    } else if (hole.joe.mode !== "chase") {
+      blockedReason = "joe_not_chasing";
+    } else if (
+      joeDistance <
+      EMERGENCY_APPEAL_MIN_DISTANCE
+    ) {
+      blockedReason = "too_close";
+    } else if (
+      joeDistance >
+      EMERGENCY_APPEAL_MAX_DISTANCE
+    ) {
+      blockedReason = "too_far";
+    }
+    return {
+      eligible: blockedReason === "ready",
+      blockedReason,
+      joeDistance,
+      minimumDistance:
+        EMERGENCY_APPEAL_MIN_DISTANCE,
+      maximumDistance:
+        EMERGENCY_APPEAL_MAX_DISTANCE,
+      reviewSeconds:
+        EMERGENCY_APPEAL_REVIEW_SECONDS,
+      forfeitedBonus:
+        CHANGE_REQUEST_BONUS,
+      code: activeChangeRequest().code,
+    };
+  }
+
+  function activateEmergencyAppeal() {
+    const appeal = emergencyAppealState();
+    if (!appeal.eligible) {
+      return false;
+    }
+    const hole = state.hole;
+    const document = {
+      x: clamp(
+        state.player.x -
+          Math.cos(
+            state.player.heading,
+          ) *
+            2.2,
+        -COURSE_MAX_X,
+        COURSE_MAX_X,
+      ),
+      y: clamp(
+        state.player.y -
+          Math.sin(
+            state.player.heading,
+          ) *
+            2.2,
+        4,
+        COURSE_LENGTH,
+      ),
+      code: appeal.code,
+      age: 0,
+      duration:
+        EMERGENCY_APPEAL_REVIEW_SECONDS,
+    };
+    hole.changeRequestCollected = false;
+    hole.appealUsed = true;
+    hole.appealDocument = document;
+    hole.appealReviewTimer =
+      EMERGENCY_APPEAL_REVIEW_SECONDS;
+    hole.appealActivationDistance =
+      appeal.joeDistance;
+    hole.appealWindowWasEligible = false;
+    hole.distraction = {
+      x: document.x,
+      y: document.y,
+      kind: "appeal",
+      code: document.code,
+    };
+    hole.distractionTimer =
+      EMERGENCY_APPEAL_REVIEW_SECONDS;
+    hole.lastSeenPlayer = {
+      x: document.x,
+      y: document.y,
+    };
+    hole.trailTarget = null;
+    hole.trailApproachTimer = 0;
+    hole.lostSightTimer = 0;
+    hole.chaseClosestDistance = Infinity;
+    hole.joe.mode = "investigate";
+    hole.previousJoeMode = "investigate";
+    hole.joe.alert = Math.max(
+      0.46,
+      hole.joe.alert - 0.08,
+    );
+    hole.detection = Math.min(
+      hole.detection,
+      0.48,
+    );
+    hole.detectionWarning = false;
+    hole.tensionDirector.pendingIntercept = null;
+    hole.tensionDirector.reliefSeconds =
+      Math.max(
+        hole.tensionDirector.reliefSeconds,
+        EMERGENCY_APPEAL_REVIEW_SECONDS +
+          1.4,
+      );
+    hole.tensionDirector.beatTimer =
+      Math.max(
+        hole.tensionDirector.beatTimer,
+        EMERGENCY_APPEAL_REVIEW_SECONDS +
+          2,
+      );
+    hole.stateBanner =
+      `EMERGENCY APPEAL FILED // ${document.code} FORFEITED`;
+    hole.stateBannerTimer = 3.1;
+    hole.stateBannerLockTimer = 3.1;
+    setHoleMessage(
+      `JOE MUST REVIEW ${document.code} — the +${CHANGE_REQUEST_BONUS} evidence bonus is gone. Move now.`,
+      3.8,
+    );
+    addWorldEffect(
+      "emergency_appeal",
+      document.x,
+      document.y,
+      2.4,
+    );
+    playEmergencyAppealCue();
+    pushThreatCaption(
+      "JOE STOPS TO REVIEW THE SCOPE",
+      document,
+      "world",
+      3,
+      "emergency_appeal",
+    );
+    announceJoeState(
+      "investigate",
+      "change_request",
+    );
+    return true;
+  }
+
+  function updateEmergencyAppealWindow() {
+    const hole = state.hole;
+    const appeal = emergencyAppealState();
+    if (
+      appeal.eligible &&
+      !hole.appealWindowWasEligible &&
+      !hole.appealWindowSeen
+    ) {
+      hole.appealWindowSeen = true;
+      hole.stateBanner =
+        "EMERGENCY APPEAL READY // FORFEIT EVIDENCE TO BREAK PURSUIT";
+      hole.stateBannerTimer = 2.5;
+      hole.stateBannerLockTimer = 2.5;
+      setHoleMessage(
+        `APPEAL WINDOW — file ${appeal.code} now to force a ${appeal.reviewSeconds.toFixed(1)}s review, but lose +${appeal.forfeitedBonus}.`,
+        3.4,
+      );
+      playUiTone(
+        392,
+        0.08,
+        0.026,
+      );
+    }
+    hole.appealWindowWasEligible =
+      appeal.eligible;
+  }
+
+  function statusRequestCanIssue() {
+    const hole = state.hole;
+    const request = hole.statusRequest;
+    return Boolean(
+      !request.issued &&
+      !request.resolved &&
+      state.player.y >=
+        request.triggerY &&
+      hole.elapsed >= 22 &&
+      hole.joe.mode !== "chase" &&
+      hole.detection < 0.48 &&
+      hole.noise < 0.62 &&
+      !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
+      !hole.ballAim.active &&
+      !hole.ballFlight &&
+      !hole.distraction &&
+      hole.distractionTimer <= 0 &&
+      hole.appealReviewTimer <= 0 &&
+      !hole.riskAward &&
+      !hole.deliveryAward &&
+      hole.crosswind.phase ===
+        "calm" &&
+      !hole.tensionDirector
+        .pendingIntercept &&
+      !hole.tutorialVisible
+    );
+  }
+
+  function issueStatusRequest() {
+    const hole = state.hole;
+    const request = hole.statusRequest;
+    request.issued = true;
+    request.active = true;
+    request.resolved = false;
+    request.outcome = null;
+    request.timer = request.duration;
+    request.responding = false;
+    request.responseProgress = 0;
+    request.urgentCuePlayed = false;
+    request.issuedAt = hole.elapsed;
+    triggerJoeBark(
+      hole.joe.mode,
+      "status_request",
+    );
+    request.joeLine = hole.joeBark;
+    hole.stateBanner =
+      `${request.label} // ACKNOWLEDGE OR EXPECT ESCALATION`;
+    hole.stateBannerTimer = 2.8;
+    hole.stateBannerLockTimer = 2.8;
+    setHoleMessage(
+      `${request.code} — acknowledge and hold still for ${request.responseDuration.toFixed(2)}s, or keep moving and let Joe search your sector.`,
+      4.6,
+    );
+    hole.detectionPulse = Math.max(
+      hole.detectionPulse,
+      0.42,
+    );
+    playStatusRequestCue(false);
+  }
+
+  function beginStatusResponse() {
+    const request =
+      state.hole.statusRequest;
+    if (!request.active) {
+      return false;
+    }
+    if (!request.responding) {
+      request.responding = true;
+      request.responseProgress = 0;
+      state.hole.stateBanner =
+        "SUBMITTING STATUS // HOLD POSITION";
+      state.hole.stateBannerTimer = 1.7;
+      state.hole.stateBannerLockTimer =
+        1.7;
+      setHoleMessage(
+        "STATUS DRAFT OPEN — movement cancels the response; the deadline keeps running.",
+        2.2,
+      );
+      playUiTone(
+        330,
+        0.08,
+        0.024,
+      );
+    }
+    return true;
+  }
+
+  function statusRequestLocation(
+    gridSize,
+  ) {
+    return {
+      x: clamp(
+        Math.round(
+          state.player.x / gridSize,
+        ) * gridSize,
+        -COURSE_MAX_X,
+        COURSE_MAX_X,
+      ),
+      y: clamp(
+        Math.round(
+          state.player.y / gridSize,
+        ) * gridSize,
+        4,
+        COURSE_LENGTH,
+      ),
+    };
+  }
+
+  function resolveStatusAcknowledged() {
+    const hole = state.hole;
+    const request = hole.statusRequest;
+    const location =
+      statusRequestLocation(14);
+    request.active = false;
+    request.resolved = true;
+    request.responding = false;
+    request.responseProgress =
+      request.responseDuration;
+    request.outcome = "acknowledged";
+    request.location = location;
+    request.resolvedAt = hole.elapsed;
+    hole.distraction = {
+      ...location,
+      kind: "status_ack",
+      code: request.code,
+      searchSeconds: 2.8,
+    };
+    hole.distractionTimer =
+      STATUS_ACK_PING_SECONDS;
+    hole.lastSeenPlayer = {
+      ...location,
+    };
+    hole.joe.mode = "investigate";
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.34,
+    );
+    hole.detection = Math.max(
+      hole.detection,
+      0.2,
+    );
+    hole.tensionDirector.pressure =
+      clamp(
+        hole.tensionDirector.pressure +
+          0.05,
+        0,
+        1,
+      );
+    awardDeliveryBeat(
+      "STATUS ACKNOWLEDGED",
+      115,
+    );
+    hole.stateBanner =
+      "STATUS ACKNOWLEDGED // ROUGH LOCATION SHARED";
+    hole.stateBannerTimer = 2.7;
+    hole.stateBannerLockTimer = 2.7;
+    setHoleMessage(
+      "STATUS ACCEPTED — you kept control, but the check-in shared your rough grid. Leave it.",
+      3.6,
+    );
+    addWorldEffect(
+      "status_ack",
+      location.x,
+      location.y,
+      2.2,
+    );
+    playStatusResolveCue(false);
+    announceJoeState(
+      "investigate",
+      "status_request",
+    );
+  }
+
+  function resolveStatusEscalated() {
+    const hole = state.hole;
+    const request = hole.statusRequest;
+    const location =
+      statusRequestLocation(8);
+    request.active = false;
+    request.resolved = true;
+    request.responding = false;
+    request.outcome = "escalated";
+    request.location = location;
+    request.resolvedAt = hole.elapsed;
+    hole.distraction = {
+      ...location,
+      kind: "status_escalation",
+      code: request.code,
+      searchSeconds: 5.6,
+    };
+    hole.distractionTimer =
+      STATUS_ESCALATION_PING_SECONDS;
+    hole.lastSeenPlayer = {
+      ...location,
+    };
+    hole.joe.mode = "investigate";
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.64,
+    );
+    hole.detection = Math.max(
+      hole.detection,
+      0.44,
+    );
+    hole.tensionDirector.pressure =
+      clamp(
+        hole.tensionDirector.pressure +
+          0.18,
+        0,
+        1,
+      );
+    hole.horrorDirector.fogSurgeSeconds =
+      Math.max(
+        hole.horrorDirector
+          .fogSurgeSeconds,
+        3.8,
+      );
+    hole.stateBanner =
+      "STAKEHOLDER ESCALATION // JOE HAS YOUR SECTOR";
+    hole.stateBannerTimer = 3.2;
+    hole.stateBannerLockTimer = 3.2;
+    setHoleMessage(
+      "STATUS MISSED — Joe escalated the silence into a precise sector search. Break away now.",
+      4,
+    );
+    addWorldEffect(
+      "status_escalation",
+      location.x,
+      location.y,
+      3,
+    );
+    playStatusResolveCue(true);
+    announceJoeState(
+      "investigate",
+      "status_request",
+    );
+  }
+
+  function supersedeStatusRequest() {
+    const request =
+      state.hole.statusRequest;
+    request.active = false;
+    request.resolved = true;
+    request.responding = false;
+    request.outcome =
+      "superseded_by_pursuit";
+    request.resolvedAt =
+      state.hole.elapsed;
+    setHoleMessage(
+      "STATUS REQUEST CLOSED — direct pursuit superseded the check-in.",
+      1.8,
+    );
+  }
+
+  function updateStatusRequest(
+    dt,
+    moving,
+  ) {
+    const hole = state.hole;
+    const request = hole.statusRequest;
+    if (!request.issued) {
+      if (statusRequestCanIssue()) {
+        issueStatusRequest();
+      }
+      return;
+    }
+    if (!request.active) {
+      return;
+    }
+    if (hole.joe.mode === "chase") {
+      supersedeStatusRequest();
+      return;
+    }
+    request.timer = Math.max(
+      0,
+      request.timer - dt,
+    );
+    if (
+      request.timer <= 2 &&
+      !request.urgentCuePlayed
+    ) {
+      request.urgentCuePlayed = true;
+      playStatusRequestCue(true);
+    }
+    if (request.responding) {
+      if (moving) {
+        request.responding = false;
+        request.responseProgress = 0;
+        request.responseCancels += 1;
+        hole.stateBanner =
+          "STATUS DRAFT CANCELLED // DEADLINE CONTINUES";
+        hole.stateBannerTimer = 1.7;
+        hole.stateBannerLockTimer =
+          1.7;
+        setHoleMessage(
+          "MOVEMENT CANCELLED THE UPDATE — stop and interact again, or accept escalation.",
+          2.4,
+        );
+        playUiTone(
+          196,
+          0.1,
+          0.025,
+        );
+      } else {
+        request.responseProgress =
+          Math.min(
+            request.responseDuration,
+            request.responseProgress +
+              dt,
+          );
+        if (
+          request.responseProgress >=
+          request.responseDuration
+        ) {
+          resolveStatusAcknowledged();
+          return;
+        }
+      }
+    }
+    if (request.timer <= 0) {
+      resolveStatusEscalated();
+    }
+  }
+
   function collectChangeRequest(request) {
     const hole = state.hole;
     if (
       hole.changeRequestCollected ||
+      hole.appealUsed ||
       !request
     ) {
       return false;
@@ -11515,7 +12210,7 @@
       0.34,
     );
     hole.stateBanner =
-      `UNFILED CHANGE SECURED // +${CHANGE_REQUEST_BONUS} IF YOU ESCAPE`;
+      `UNFILED CHANGE SECURED // BANK +${CHANGE_REQUEST_BONUS} OR APPEAL`;
     hole.stateBannerTimer = 3;
     hole.stateBannerLockTimer = 3;
     awardDeliveryBeat(
@@ -11523,8 +12218,8 @@
       180,
     );
     setHoleMessage(
-      `${request.code} SECURED — Joe heard the paperwork. The bonus files only if you escape.`,
-      3.7,
+      `${request.code} SECURED — escape to bank +${CHANGE_REQUEST_BONUS}, or sacrifice it during a close pursuit to force Joe into review.`,
+      4.4,
     );
     addWorldEffect(
       "change_request",
@@ -11669,6 +12364,12 @@
     if (state.hole.escapeFiling.sealing) {
       return;
     }
+    if (activateEmergencyAppeal()) {
+      return;
+    }
+    if (beginStatusResponse()) {
+      return;
+    }
     const key = activeKeyPoint();
     const sprinkler = activeSprinklerPoint();
     const changeRequest =
@@ -11756,6 +12457,7 @@
 
     if (
       !state.hole.changeRequestCollected &&
+      !state.hole.appealUsed &&
       worldDistance(
         state.player,
         changeRequest,
@@ -12285,6 +12987,14 @@
     const distractionActive =
       hole.distraction &&
       hole.distractionTimer > 0;
+    const compelledAppealReview =
+      distractionActive &&
+      hole.distraction.kind ===
+        "appeal" &&
+      hole.appealReviewTimer > 0;
+    const actionableSight =
+      visibleNow &&
+      !compelledAppealReview;
     const trailEvidence =
       !distractionActive &&
       joe.mode !== "chase" &&
@@ -12383,7 +13093,7 @@
       !distractionActive;
     const detectionGain =
       (
-        visibleNow
+        actionableSight
           ? (moving ? 1.9 : 1.18) *
             lerp(
               1,
@@ -12400,7 +13110,7 @@
       ) *
       (
         hole.overtime &&
-        (visibleNow || directSound)
+        (actionableSight || directSound)
           ? OVERTIME_DETECTION_MULTIPLIER
           : 1
       );
@@ -12413,7 +13123,7 @@
       hole.maxDetection,
       hole.detection,
     );
-    hole.detectionSource = visibleNow
+    hole.detectionSource = actionableSight
       ? "sight"
       : directSound
         ? "sound"
@@ -12422,7 +13132,7 @@
           ? "trail"
           : null;
     hole.playerAudible = directSound;
-    if (visibleNow) {
+    if (actionableSight) {
       snapshotJoeContact(
         "sight",
         environment,
@@ -12450,18 +13160,19 @@
       hole.detection >= 0.55 ||
       playerDistance < 11;
     const canSee =
-      visibleNow &&
+      actionableSight &&
       (confirmedDetection || joe.mode === "chase");
     const canHear =
       directSound &&
       (confirmedDetection || joe.mode === "chase");
-    hole.hasLineOfSight = visibleNow;
+    hole.hasLineOfSight = actionableSight;
     hole.lineBlockedBy = blocker;
 
     if (
       hole.detection >= 0.2 &&
       !hole.detectionWarning &&
-      joe.mode !== "chase"
+      joe.mode !== "chase" &&
+      !compelledAppealReview
     ) {
       hole.detectionWarning = true;
       hole.detectionPulse = Math.max(
@@ -12470,7 +13181,7 @@
       );
       if (!trailEvidence) {
         setHoleMessage(
-          visibleNow
+          actionableSight
             ? "JOE IS LOOKING — break the sightline before attention locks."
             : "JOE HEARD THAT — stop, crouch, or change direction.",
           2.2,
@@ -12479,7 +13190,7 @@
           "investigate",
         );
         pushThreatCaption(
-          visibleNow
+          actionableSight
             ? "MOWER TURNS TOWARD YOU"
             : "MOWER REACTS TO NOISE",
           joe,
@@ -12514,7 +13225,10 @@
     if (
       hole.distractionTimer > 0 &&
       hole.distraction &&
-      !(canSee && playerDistance < 15)
+      (
+        compelledAppealReview ||
+        !(canSee && playerDistance < 15)
+      )
     ) {
       hole.trailTarget = null;
       hole.trailApproachTimer = 0;
@@ -12523,10 +13237,23 @@
       moveJoeToward(hole.distraction, 23, dt);
       joe.alert = Math.max(0.18, joe.alert - dt * 0.12);
       if (hole.distractionTimer === 0) {
-        hole.lastSeenPlayer = { ...hole.distraction };
+        const completedDistraction =
+          hole.distraction;
+        hole.lastSeenPlayer = {
+          x: completedDistraction.x,
+          y: completedDistraction.y,
+        };
         hole.distraction = null;
         joe.mode = "search";
-        hole.searchTimer = Math.max(2.8, 5.1 - hole.ballThrowsUsed * 0.45);
+        hole.searchTimer =
+          completedDistraction
+            .searchSeconds ??
+          Math.max(
+            2.8,
+            5.1 -
+              hole.ballThrowsUsed *
+                0.45,
+          );
       }
     } else if (canSee || canHear) {
       hole.trailTarget = null;
@@ -14377,7 +15104,277 @@
       hash(
         horror.eventCount * 41 +
           hole.zoneIndex * 23,
-      ) * 3.5;
+        ) * 3.5;
+  }
+
+  function crosswindDirectionLabel() {
+    return state.hole.crosswind.direction > 0
+      ? "EAST"
+      : "WEST";
+  }
+
+  function crosswindStrength() {
+    const wind =
+      state.hole?.crosswind;
+    if (!wind || wind.phase === "calm") {
+      return 0;
+    }
+    if (wind.phase === "warning") {
+      return clamp(
+        0.18 +
+          (
+            1 -
+            wind.timer /
+              CROSSWIND_WARNING_SECONDS
+          ) *
+            0.52,
+        0,
+        0.7,
+      );
+    }
+    return clamp(
+      Math.min(
+        (
+          CROSSWIND_ACTIVE_SECONDS -
+          wind.timer
+        ) /
+          0.28,
+        wind.timer / 0.52,
+      ),
+      0,
+      1,
+    );
+  }
+
+  function crosswindMasksFootsteps(
+    environment,
+  ) {
+    const hole = state.hole;
+    return Boolean(
+      hole.crosswind.phase === "active" &&
+      !environment.sand &&
+      !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
+      hole.joe.mode !== "chase" &&
+      hole.detection < 0.72
+    );
+  }
+
+  function crosswindCanStart() {
+    const hole = state.hole;
+    return Boolean(
+      hole.crosswind.phase === "calm" &&
+      hole.crosswind.timer <= 0 &&
+      hole.elapsed >= 16 &&
+      state.player.y >= 90 &&
+      state.player.y <= 660 &&
+      hole.zoneIndex !==
+        hole.crosswind.lastZone &&
+      hole.joe.mode === "patrol" &&
+      hole.detection < 0.34 &&
+      hole.noise < 0.56 &&
+      hole.zoneBannerTimer <= 0 &&
+      hole.stateBannerLockTimer <= 0 &&
+      !hole.statusRequest.active &&
+      !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
+      !hole.ballAim.active &&
+      !hole.ballFlight &&
+      !hole.distraction &&
+      !hole.appealReviewTimer &&
+      !hole.riskAward &&
+      !hole.deliveryAward &&
+      !hole.blindsideTransfer &&
+      !hole.tensionDirector
+        .pendingIntercept
+    );
+  }
+
+  function startCrosswindWarning() {
+    const hole = state.hole;
+    const wind = hole.crosswind;
+    wind.phase = "warning";
+    wind.timer =
+      CROSSWIND_WARNING_SECONDS;
+    wind.direction =
+      (
+        wind.eventCount +
+        hole.variantIndex
+      ) %
+        2 ===
+      0
+        ? 1
+        : -1;
+    wind.lastZone =
+      hole.zoneIndex;
+    wind.lastOutcome =
+      "warning";
+    wind.currentDistance = 0;
+    wind.awardGiven = false;
+    wind.lastTravelDistance =
+      hole.travelDistance;
+    hole.stateBanner =
+      `CROSSWIND BUILDING // GRASS LEANS ${crosswindDirectionLabel()}`;
+    hole.stateBannerTimer = 1.55;
+    setHoleMessage(
+      "THE ROUGH BOWS BEFORE THE GUST — move with the rush to hide your footfalls.",
+      2.2,
+    );
+    pushThreatCaption(
+      "CROSSWIND BUILDS THROUGH THE ROUGH",
+      null,
+      "world",
+      2.1,
+      "crosswind_weather",
+    );
+    playCrosswindCue(false);
+  }
+
+  function beginCrosswindCover() {
+    const hole = state.hole;
+    const wind = hole.crosswind;
+    wind.phase = "active";
+    wind.timer =
+      CROSSWIND_ACTIVE_SECONDS;
+    wind.eventCount += 1;
+    wind.currentDistance = 0;
+    wind.awardGiven = false;
+    wind.lastTravelDistance =
+      hole.travelDistance;
+    wind.lastOutcome =
+      "cover_open";
+    hole.stateBanner =
+      "CROSSWIND COVER // FOOTSTEPS MASKED";
+    hole.stateBannerTimer = 2.1;
+    setHoleMessage(
+      `WIND COVER — cross ${CROSSWIND_RUN_DISTANCE}m. Steps drop to 42%; sight and tracks remain.`,
+      3.4,
+    );
+    pushThreatCaption(
+      "WIND RUSHES ACROSS THE FAIRWAY",
+      null,
+      "world",
+      2.4,
+      "crosswind_weather",
+    );
+    playCrosswindCue(true);
+  }
+
+  function completeCrosswindRun() {
+    const hole = state.hole;
+    const wind = hole.crosswind;
+    if (wind.awardGiven) {
+      return;
+    }
+    wind.awardGiven = true;
+    wind.windRuns += 1;
+    wind.lastOutcome =
+      "wind_run";
+    const award = awardDeliveryBeat(
+      "CROSSWIND TRAVERSE",
+      CROSSWIND_RUN_BONUS,
+    );
+    hole.stateBanner = award
+      ? "WIND RUN // DELIVERY LINKED"
+      : "WIND RUN // WEATHER CAP REACHED";
+    hole.stateBannerTimer = 2.2;
+    setHoleMessage(
+      `WIND RUN — ${Math.round(wind.currentDistance)}m crossed inside the gust without giving Joe a clean sound.`,
+      2.8,
+    );
+    addWorldEffect(
+      "crosswind_run",
+      state.player.x,
+      state.player.y,
+      1.5,
+    );
+    playCrosswindRunCue();
+  }
+
+  function finishCrosswindCover() {
+    const hole = state.hole;
+    const wind = hole.crosswind;
+    wind.phase = "calm";
+    wind.timer =
+      15 +
+      hash(
+        wind.eventCount * 47 +
+          hole.variantIndex * 19,
+      ) *
+        6;
+    wind.lastOutcome =
+      wind.awardGiven
+        ? "wind_run"
+        : "cover_expired";
+    if (
+      !wind.awardGiven &&
+      hole.joe.mode !== "chase" &&
+      hole.stateBannerLockTimer <= 0
+    ) {
+      setHoleMessage(
+        "THE CROSSWIND FALLS AWAY — every new footstep is audible again.",
+        2.1,
+      );
+    }
+  }
+
+  function updateCrosswind(
+    dt,
+    moving,
+    environment,
+  ) {
+    const hole = state.hole;
+    const wind = hole.crosswind;
+    if (wind.phase === "calm") {
+      wind.timer = Math.max(
+        0,
+        wind.timer - dt,
+      );
+      if (crosswindCanStart()) {
+        startCrosswindWarning();
+      }
+      return;
+    }
+    wind.timer = Math.max(
+      0,
+      wind.timer - dt,
+    );
+    if (wind.phase === "warning") {
+      if (wind.timer <= 0) {
+        beginCrosswindCover();
+      }
+      return;
+    }
+    const travelDelta = Math.max(
+      0,
+      hole.travelDistance -
+        wind.lastTravelDistance,
+    );
+    wind.lastTravelDistance =
+      hole.travelDistance;
+    if (
+      moving &&
+      crosswindMasksFootsteps(
+        environment,
+      )
+    ) {
+      wind.maskedSeconds += dt;
+      wind.currentDistance +=
+        travelDelta;
+      wind.totalMaskedDistance +=
+        travelDelta;
+      if (
+        !wind.awardGiven &&
+        wind.currentDistance >=
+          CROSSWIND_RUN_DISTANCE &&
+        hole.detection < 0.36
+      ) {
+        completeCrosswindRun();
+      }
+    }
+    if (wind.timer <= 0) {
+      finishCrosswindCover();
+    }
   }
 
   function joeCoursePressureMultiplier() {
@@ -17927,7 +18924,10 @@
 
   function drawChangeRequest() {
     const hole = state.hole;
-    if (hole.changeRequestCollected) {
+    if (
+      hole.changeRequestCollected ||
+      hole.appealUsed
+    ) {
       return;
     }
     const request =
@@ -18079,7 +19079,7 @@
       );
       if (distance < 42) {
         drawText(
-          `+${CHANGE_REQUEST_BONUS} ON ESCAPE`,
+          `+${CHANGE_REQUEST_BONUS} ON ESCAPE // CHASE APPEAL`,
           point.x,
           point.y -
             height,
@@ -18105,6 +19105,150 @@
           true,
         );
       }
+    }
+  }
+
+  function drawAppealDocument() {
+    const hole = state.hole;
+    const document =
+      hole.appealDocument;
+    if (!document) {
+      return;
+    }
+    const point = worldToScreen(
+      document.x,
+      document.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -100 ||
+      point.x > WIDTH + 100
+    ) {
+      return;
+    }
+    const active =
+      hole.appealReviewTimer > 0;
+    const progress = clamp(
+      hole.appealReviewTimer /
+        document.duration,
+      0,
+      1,
+    );
+    const scale = clamp(
+      point.scale,
+      0.58,
+      1.45,
+    );
+    const height = 42 * scale;
+    const width = 29 * scale;
+    const pulse =
+      state.reducedMotion || !active
+        ? 0
+        : Math.sin(
+            hole.elapsed * 7,
+          ) *
+          2.4;
+    ctx.save();
+    ctx.globalAlpha = active
+      ? 1
+      : 0.48;
+    ctx.fillStyle = active
+      ? "rgba(14,5,2,0.62)"
+      : "rgba(4,7,4,0.42)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 2,
+      width * 0.88,
+      height * 0.18,
+      -0.16,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    if (active) {
+      ctx.strokeStyle =
+        "rgba(240,151,72,0.82)";
+      ctx.lineWidth = Math.max(
+        1,
+        2 * scale,
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        width *
+          (0.92 + pulse * 0.01),
+        height * 0.24,
+        0,
+        Math.PI * 2 *
+          (1 - progress),
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    }
+    ctx.translate(
+      point.x,
+      point.y - height * 0.25,
+    );
+    ctx.rotate(-0.3);
+    if (
+      interactablePropArt.complete &&
+      interactablePropArt.naturalWidth > 0
+    ) {
+      const cell =
+        INTERACTABLE_PROP_CELLS[1];
+      ctx.drawImage(
+        interactablePropArt,
+        cell.x,
+        cell.y,
+        cell.width,
+        cell.height,
+        -width * 0.5,
+        -height * 0.78,
+        width,
+        height,
+      );
+    } else {
+      ctx.fillStyle = "#d8c9a4";
+      ctx.fillRect(
+        -width * 0.5,
+        -height * 0.72,
+        width,
+        height * 0.72,
+      );
+      ctx.fillStyle = "#b14e2c";
+      ctx.fillRect(
+        -width * 0.5,
+        -height * 0.72,
+        width,
+        height * 0.16,
+      );
+    }
+    ctx.restore();
+    if (
+      active ||
+      (
+        hole.focus &&
+        worldDistance(
+          state.player,
+          document,
+        ) < 50
+      )
+    ) {
+      drawText(
+        active
+          ? `APPEAL REVIEW ${hole.appealReviewTimer.toFixed(1)}s`
+          : "APPEAL FILED // EVIDENCE SPENT",
+        point.x,
+        point.y - height - 8,
+        9,
+        active
+          ? "#f1b36d"
+          : "#98735d",
+        "center",
+        true,
+      );
     }
   }
 
@@ -19076,6 +20220,15 @@
             1.9,
             drawHeight * 0.018,
           );
+    const weatherSway =
+      crosswindStrength() *
+      state.hole.crosswind.direction *
+      Math.min(
+        state.reducedMotion
+          ? 2.4
+          : 6.4,
+        drawHeight * 0.045,
+      );
     const proximitySway =
       state.reducedMotion
         ? 0
@@ -19095,7 +20248,8 @@
           );
     const sway = clamp(
       ambientSway +
-        proximitySway,
+        proximitySway +
+        weatherSway,
       -7.2,
       7.2,
     );
@@ -20761,7 +21915,8 @@
     drawMapInteractionRange(
       changeRequest,
       "#e37842",
-      !state.hole.changeRequestCollected,
+      !state.hole.changeRequestCollected &&
+        !state.hole.appealUsed,
     );
     for (
       let index = 0;
@@ -20827,7 +21982,8 @@
       ctx.stroke();
     }
     if (
-      !state.hole.changeRequestCollected
+      !state.hole.changeRequestCollected &&
+      !state.hole.appealUsed
     ) {
       ctx.fillStyle = "#d96532";
       polygon([
@@ -20856,6 +22012,39 @@
         8,
         8,
       );
+    }
+    if (state.hole.appealDocument) {
+      const appealPoint = mapPoint(
+        state.hole.appealDocument.x,
+        state.hole.appealDocument.y,
+      );
+      ctx.strokeStyle =
+        state.hole.appealReviewTimer > 0
+          ? "#f0a05a"
+          : "#8f6851";
+      ctx.lineWidth =
+        state.hole.appealReviewTimer > 0
+          ? 2
+          : 1;
+      ctx.strokeRect(
+        appealPoint.x - 4,
+        appealPoint.y - 3,
+        8,
+        6,
+      );
+      if (
+        state.hole.appealReviewTimer > 0
+      ) {
+        ctx.beginPath();
+        ctx.arc(
+          appealPoint.x,
+          appealPoint.y,
+          7,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
     }
     for (
       let index = 0;
@@ -20973,11 +22162,20 @@
         state.hole.ballAim.active;
       const inFlight =
         Boolean(state.hole.ballFlight);
-      ctx.strokeStyle = aiming
-        ? "#f0cf65"
-        : inFlight
-          ? "#eee7c9"
-          : "#c9863f";
+      const statusSignal =
+        shotTarget.kind === "status_ack" ||
+        shotTarget.kind ===
+          "status_escalation";
+      ctx.strokeStyle = statusSignal
+        ? shotTarget.kind ===
+          "status_escalation"
+          ? "#df6242"
+          : "#76c1a4"
+        : aiming
+          ? "#f0cf65"
+          : inFlight
+            ? "#eee7c9"
+            : "#c9863f";
       ctx.lineWidth = aiming ? 2 : 1.5;
       ctx.setLineDash(
         aiming ? [4, 4] : [2, 4],
@@ -21061,11 +22259,20 @@
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
     drawText(
-      "SOLID SHAPES  •  AMBER REVIEW  •  GLOW USE",
+      state.hole.crosswind.phase ===
+        "active"
+        ? `WIND ${crosswindDirectionLabel()}  •  ${Math.round(state.hole.crosswind.currentDistance)}/${CROSSWIND_RUN_DISTANCE}m  •  STEPS 42%`
+        : state.hole.crosswind.phase ===
+            "warning"
+          ? `CROSSWIND BUILDING ${crosswindDirectionLabel()}`
+          : "SOLID SHAPES  •  AMBER REVIEW  •  GLOW USE",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
-      "#9eaa88",
+      state.hole.crosswind.phase !==
+        "calm"
+        ? "#9ed8b8"
+        : "#9eaa88",
       "center",
       true,
     );
@@ -22192,20 +23399,30 @@
           Math.PI * 2,
         );
         ctx.fill();
-      } else if (effect.kind === "change_request") {
+      } else if (
+        effect.kind === "change_request" ||
+        effect.kind === "emergency_appeal"
+      ) {
+        const emergencyAppeal =
+          effect.kind ===
+          "emergency_appeal";
+        const rayCount =
+          emergencyAppeal ? 14 : 10;
         ctx.strokeStyle =
-          `rgba(238,124,62,${0.82 * alpha})`;
+          emergencyAppeal
+            ? `rgba(249,165,78,${0.92 * alpha})`
+            : `rgba(238,124,62,${0.82 * alpha})`;
         ctx.lineWidth = Math.max(
           1,
           2 * scale,
         );
         for (
           let ray = 0;
-          ray < 10;
+          ray < rayCount;
           ray += 1
         ) {
           const angle =
-            ray / 10 *
+            ray / rayCount *
               Math.PI *
               2 +
             effect.seed;
@@ -22277,6 +23494,203 @@
             pageWidth,
             pageWidth * 0.72,
           );
+        }
+        if (emergencyAppeal) {
+          const stampWidth =
+            (82 - progress * 18) *
+            scale;
+          const stampHeight =
+            30 * scale;
+          ctx.strokeStyle =
+            `rgba(226,91,45,${0.92 * alpha})`;
+          ctx.lineWidth = Math.max(
+            2,
+            4 * scale,
+          );
+          ctx.strokeRect(
+            point.x - stampWidth * 0.5,
+            point.y -
+              30 * scale -
+              stampHeight * 0.5,
+            stampWidth,
+            stampHeight,
+          );
+          drawText(
+            "APPEAL",
+            point.x,
+            point.y - 30 * scale,
+            Math.max(
+              8,
+              12 * scale,
+            ),
+            `rgba(250,187,104,${alpha})`,
+            "center",
+            true,
+          );
+        }
+      } else if (
+        effect.kind ===
+          "crosswind_run"
+      ) {
+        const runProgress =
+          state.reducedMotion
+            ? 0.46
+            : progress;
+        const direction =
+          state.hole.crosswind
+            .direction;
+        ctx.strokeStyle =
+          `rgba(152,220,179,${0.82 * alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          2.2 * scale,
+        );
+        for (
+          let lane = 0;
+          lane < 4;
+          lane += 1
+        ) {
+          const spread =
+            (
+              22 +
+              lane * 13 +
+              runProgress * 46
+            ) *
+            scale;
+          const y =
+            point.y -
+            lane * 4 * scale;
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x -
+              direction *
+                spread,
+            y + 6 * scale,
+          );
+          ctx.quadraticCurveTo(
+            point.x,
+            y - 7 * scale,
+            point.x +
+              direction *
+                spread,
+            y,
+          );
+          ctx.stroke();
+        }
+        ctx.fillStyle =
+          `rgba(211,235,171,${0.76 * alpha})`;
+        const arrow =
+          direction *
+          (
+            18 +
+            runProgress * 20
+          ) *
+          scale;
+        polygon([
+          [
+            point.x + arrow,
+            point.y - 6 * scale,
+          ],
+          [
+            point.x +
+              arrow +
+              direction *
+                13 * scale,
+            point.y,
+          ],
+          [
+            point.x + arrow,
+            point.y + 6 * scale,
+          ],
+        ]);
+      } else if (
+        effect.kind === "status_ack" ||
+        effect.kind ===
+          "status_escalation"
+      ) {
+        const escalated =
+          effect.kind ===
+          "status_escalation";
+        const signalProgress =
+          state.reducedMotion
+            ? 0.48
+            : progress;
+        const signalColor = escalated
+          ? "222,91,55"
+          : "111,194,157";
+        ctx.strokeStyle =
+          `rgba(${signalColor},${0.84 * alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          (escalated ? 3 : 2) *
+            scale,
+        );
+        for (
+          let ring = 0;
+          ring < (escalated ? 4 : 3);
+          ring += 1
+        ) {
+          const radius =
+            (
+              10 +
+              ring * 10 +
+              signalProgress *
+                (escalated ? 62 : 42)
+            ) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y,
+            radius,
+            radius * 0.25,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+        const bracketWidth =
+          (28 +
+            signalProgress * 38) *
+          scale;
+        const bracketHeight =
+          (16 +
+            signalProgress * 22) *
+          scale;
+        ctx.strokeRect(
+          point.x - bracketWidth * 0.5,
+          point.y -
+            28 * scale -
+            bracketHeight * 0.5,
+          bracketWidth,
+          bracketHeight,
+        );
+        if (escalated) {
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x -
+              bracketWidth * 0.5,
+            point.y - 28 * scale,
+          );
+          ctx.lineTo(
+            point.x +
+              bracketWidth * 0.5,
+            point.y - 28 * scale,
+          );
+          ctx.moveTo(
+            point.x,
+            point.y -
+              28 * scale -
+              bracketHeight * 0.5,
+          );
+          ctx.lineTo(
+            point.x,
+            point.y -
+              28 * scale +
+              bracketHeight * 0.5,
+          );
+          ctx.stroke();
         }
       } else if (effect.kind === "filing_stamp") {
         const stampScale =
@@ -23322,7 +24736,7 @@
         number: "1",
         title: "CHOOSE + FILE EXIT",
         detail: "KEY → SHED  •  VALVE → DRAIN",
-        subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS}`,
+        subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS} / CHASE APPEAL`,
       },
       {
         x: 500,
@@ -23700,6 +25114,7 @@
       );
     if (
       !state.hole.changeRequestCollected &&
+      !state.hole.appealUsed &&
       changeRequestDistance < 150
     ) {
       const requestDeltaX =
@@ -24288,11 +25703,17 @@
       directionFromPlayer(
         hole.joe,
       ) || "NEARBY";
+    const appeal =
+      emergencyAppealState();
     const panel = {
       x: WIDTH * 0.5 - 176,
-      y: HEIGHT * 0.67,
+      y: HEIGHT *
+        (appeal.eligible
+          ? 0.63
+          : 0.67),
       width: 352,
-      height: 54,
+      height:
+        appeal.eligible ? 94 : 54,
     };
     ctx.save();
     ctx.fillStyle = "rgba(8,3,2,0.86)";
@@ -24342,6 +25763,260 @@
       breaking ? "#b8d6ad" : "#ffad78",
       "center",
       true,
+    );
+    if (appeal.eligible) {
+      ctx.fillStyle =
+        "rgba(71,29,10,0.72)";
+      ctx.fillRect(
+        panel.x + 2,
+        panel.y + 52,
+        panel.width - 4,
+        40,
+      );
+      ctx.strokeStyle =
+        "rgba(240,158,79,0.72)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(
+        panel.x + 14,
+        panel.y + 53,
+      );
+      ctx.lineTo(
+        panel.x + panel.width - 14,
+        panel.y + 53,
+      );
+      ctx.stroke();
+      drawText(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — FILE EMERGENCY APPEAL`,
+          "A — FILE EMERGENCY APPEAL",
+          "TAP USE — FILE EMERGENCY APPEAL",
+        ),
+        WIDTH * 0.5,
+        panel.y + 69,
+        10,
+        "#ffd08b",
+        "center",
+        true,
+      );
+      drawText(
+        `${appeal.code} // FORFEIT +${appeal.forfeitedBonus} // REVIEW ${appeal.reviewSeconds.toFixed(1)}s`,
+        WIDTH * 0.5,
+        panel.y + 85,
+        9,
+        "#dba470",
+        "center",
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawAppealReviewFeedback() {
+    const hole = state.hole;
+    const document =
+      hole.appealDocument;
+    if (
+      !document ||
+      hole.appealReviewTimer <= 0
+    ) {
+      return;
+    }
+    const progress = clamp(
+      hole.appealReviewTimer /
+        document.duration,
+      0,
+      1,
+    );
+    const panel = {
+      x: WIDTH * 0.5 - 190,
+      y: HEIGHT * 0.64,
+      width: 380,
+      height: 72,
+    };
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(
+          hole.elapsed * 6.5,
+        ) *
+        0.08;
+    ctx.save();
+    ctx.fillStyle = "rgba(12,6,3,0.91)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      `rgba(235,139,68,${0.82 + pulse})`,
+      2,
+    );
+    drawText(
+      `JOE REVIEWING ${document.code}  //  ${hole.appealReviewTimer.toFixed(1)}s`,
+      WIDTH * 0.5,
+      panel.y + 23,
+      12,
+      "#ffd193",
+      "center",
+      true,
+    );
+    ctx.fillStyle = "#28170e";
+    ctx.fillRect(
+      panel.x + 24,
+      panel.y + 34,
+      panel.width - 48,
+      7,
+    );
+    ctx.fillStyle = "#e98645";
+    ctx.fillRect(
+      panel.x + 24,
+      panel.y + 34,
+      (panel.width - 48) *
+        progress,
+      7,
+    );
+    drawText(
+      `EVIDENCE +${CHANGE_REQUEST_BONUS} FORFEITED  //  MOVE NOW`,
+      WIDTH * 0.5,
+      panel.y + 59,
+      10,
+      "#dfa36f",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
+  function drawStatusRequestFeedback() {
+    const request =
+      state.hole.statusRequest;
+    if (!request.active) {
+      return;
+    }
+    const deadlineProgress = clamp(
+      request.timer /
+        request.duration,
+      0,
+      1,
+    );
+    const responseProgress = clamp(
+      request.responseProgress /
+        request.responseDuration,
+      0,
+      1,
+    );
+    const urgent = request.timer < 2;
+    const color = request.responding
+      ? "#83c8aa"
+      : urgent
+        ? "#e36b45"
+        : "#e4b35d";
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(
+          state.hole.elapsed *
+            (urgent ? 8 : 4.5),
+        ) *
+        0.08;
+    const panel = {
+      x: WIDTH * 0.5 - 222,
+      y: HEIGHT * 0.59,
+      width: 444,
+      height: 128,
+    };
+    ctx.save();
+    ctx.fillStyle = "rgba(5,10,7,0.94)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      color,
+      2,
+    );
+    ctx.strokeStyle =
+      `rgba(232,180,91,${0.45 + pulse})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(
+      panel.x + 18,
+      panel.y + 31,
+    );
+    ctx.lineTo(
+      panel.x + panel.width - 18,
+      panel.y + 31,
+    );
+    ctx.stroke();
+    drawText(
+      `JOE // ${request.code} — ${request.label}  ${request.timer.toFixed(1)}s`,
+      WIDTH * 0.5,
+      panel.y + 22,
+      12,
+      color,
+      "center",
+      true,
+    );
+    drawText(
+      `“${request.joeLine || request.request}”`,
+      WIDTH * 0.5,
+      panel.y + 48,
+      10,
+      "#ded8bd",
+      "center",
+    );
+    ctx.fillStyle = "#182119";
+    ctx.fillRect(
+      panel.x + 28,
+      panel.y + 61,
+      panel.width - 56,
+      8,
+    );
+    ctx.fillStyle = color;
+    ctx.fillRect(
+      panel.x + 28,
+      panel.y + 61,
+      (panel.width - 56) *
+        (
+          request.responding
+            ? responseProgress
+            : deadlineProgress
+        ),
+      8,
+    );
+    drawText(
+      request.responding
+        ? `SUBMITTING ${Math.round(responseProgress * 100)}% // MOVEMENT CANCELS`
+        : inputCopy(
+            `${keyboardBindingLabel("interact")} — ACKNOWLEDGE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+            `A — ACKNOWLEDGE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+            `TAP USE — ACKNOWLEDGE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+          ),
+      WIDTH * 0.5,
+      panel.y + 88,
+      11,
+      request.responding
+        ? "#a8dec4"
+        : "#f0d69c",
+      "center",
+      true,
+    );
+    drawText(
+      "ACKNOWLEDGE = ROUGH PING + DELIVERY  //  IGNORE = SECTOR SEARCH",
+      WIDTH * 0.5,
+      panel.y + 110,
+      9,
+      "#b6a47f",
+      "center",
     );
     ctx.restore();
   }
@@ -24762,8 +26437,12 @@
         variant.id,
       ).length;
     const changeRequestStatus =
-      hole.changeRequestCollected
-        ? "CR ✓ BANKED"
+      hole.appealUsed
+        ? "CR X APPEALED"
+        : hole.changeRequestCollected
+        ? emergencyAppealState().eligible
+          ? "CR ! APPEAL READY"
+          : `CR ✓ +${CHANGE_REQUEST_BONUS}`
         : `CR ◇ +${CHANGE_REQUEST_BONUS}`;
     const masteryStatus =
       hole.overtime
@@ -24778,12 +26457,18 @@
       hole.sprinklerSoakTimer > 0
         ? `  •  WATER ${Math.ceil(hole.sprinklerSoakTimer)}s`
         : "";
+    const windStatus =
+      hole.crosswind.phase === "active"
+        ? `  •  WIND ${Math.ceil(hole.crosswind.timer)}s`
+        : hole.crosswind.phase === "warning"
+          ? "  •  WIND BUILDING"
+          : "";
     const reviewStatus =
       `  •  REVIEWS ${hole.reviewsCleared.length}/${activeSprintReviews().length}`;
     const terrainStatus =
       expandedHud
-        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}${reviewStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}`
-        : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}`;
+        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}${windStatus}${reviewStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}`
+        : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}${windStatus}`;
     const terrainColor =
       environment.sand
         ? "#e3b96f"
@@ -24817,8 +26502,12 @@
         446,
         75,
         11,
-        hole.changeRequestCollected
-          ? "#8fc58b"
+        hole.appealUsed
+          ? "#b98062"
+          : hole.changeRequestCollected
+          ? emergencyAppealState().eligible
+            ? "#f2bd67"
+            : "#8fc58b"
           : "#e69355",
         "right",
         true,
@@ -24895,8 +26584,12 @@
         420,
         65,
         10,
-        hole.changeRequestCollected
-          ? "#8fc58b"
+        hole.appealUsed
+          ? "#b98062"
+          : hole.changeRequestCollected
+          ? emergencyAppealState().eligible
+            ? "#f2bd67"
+            : "#8fc58b"
           : "#e69355",
         "right",
         true,
@@ -25009,6 +26702,9 @@
     const directorWarning =
       hole.tensionDirector
         .pendingIntercept;
+    const crosswindVisible =
+      hole.crosswind.phase !==
+      "calm";
     const attentionStatus =
       hole.joe.mode === "chase"
         ? "PURSUIT LOCK"
@@ -25020,6 +26716,12 @@
         : hole.joe.mode ===
               "investigate"
           ? "VERIFYING DISTURBANCE"
+        : hole.crosswind.phase ===
+            "active"
+          ? `WIND ${Math.round(hole.crosswind.currentDistance)}/${CROSSWIND_RUN_DISTANCE}m // ${hole.crosswind.timer.toFixed(1)}s`
+        : hole.crosswind.phase ===
+            "warning"
+          ? `CROSSWIND // ${hole.crosswind.timer.toFixed(1)}s`
         : hole.blindsideTransfer
           ? `BLINDSIDE // ${hole.blindsideTransfer.timer.toFixed(1)}s`
         : hole.trailColdTimer > 0
@@ -25048,6 +26750,8 @@
       11,
       attention > 0.68
         ? "#ff7045"
+        : crosswindVisible
+          ? "#9ed8b8"
         : attention > 0.2 ||
             directorWarning
           ? "#e8a55d"
@@ -25652,7 +27356,14 @@
                 state.hole.elapsed * 2.4 +
                   layer * 1.13,
               ) *
-              (38 + depth * 44);
+              (38 + depth * 44) +
+            crosswindStrength() *
+              state.hole.crosswind.direction *
+              (
+                state.reducedMotion
+                  ? 18 + depth * 14
+                  : 42 + depth * 56
+              );
       const fog =
         ctx.createLinearGradient(
           0,
@@ -25759,6 +27470,214 @@
         );
         ctx.restore();
       }
+    }
+    ctx.restore();
+  }
+
+  function drawCrosswindWeather(
+    progress,
+    walkBob,
+  ) {
+    const wind =
+      state.hole.crosswind;
+    const strength =
+      crosswindStrength();
+    if (strength <= 0.01) {
+      return;
+    }
+    const direction =
+      wind.direction;
+    const motionTime =
+      state.reducedMotion
+        ? 0
+        : state.hole.elapsed;
+    const quality =
+      effectQualityScale();
+    const ribbonCount =
+      quality < 0.55
+        ? 4
+        : quality < 0.85
+          ? 6
+          : 8;
+    const fleckCount =
+      state.reducedMotion
+        ? 7
+        : quality < 0.55
+          ? 10
+          : quality < 0.85
+            ? 16
+            : 22;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(
+      24,
+      116,
+      WIDTH - 48,
+      HEIGHT - 150,
+    );
+    ctx.clip();
+    ctx.globalCompositeOperation =
+      "screen";
+    for (
+      let band = 0;
+      band < ribbonCount;
+      band += 1
+    ) {
+      const seed =
+        hash(
+          band * 71 +
+            wind.eventCount * 43,
+        );
+      const span =
+        WIDTH + 520;
+      const sweep =
+        state.reducedMotion
+          ? seed * span
+          : (
+              motionTime *
+                (
+                  150 +
+                  seed * 120
+                ) +
+              seed * span
+            ) % span;
+      const x =
+        direction > 0
+          ? -260 + sweep
+          : WIDTH + 260 - sweep;
+      const y =
+        238 +
+        band *
+          (
+            36 +
+            progress * 7
+          ) +
+        hash(band * 29 + 11) *
+          28 +
+        walkBob * 0.04;
+      const reach =
+        direction *
+        (
+          130 +
+          seed * 150
+        );
+      ctx.strokeStyle =
+        `rgba(183,210,188,${strength * (0.045 + seed * 0.045)})`;
+      ctx.lineWidth =
+        1 + seed * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(
+        x - reach * 0.34,
+        y + 8,
+      );
+      ctx.quadraticCurveTo(
+        x,
+        y - 7,
+        x + reach,
+        y,
+      );
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation =
+      "source-over";
+    for (
+      let index = 0;
+      index < fleckCount;
+      index += 1
+    ) {
+      const seed = hash(
+        index * 53 +
+          wind.eventCount * 97,
+      );
+      const span =
+        WIDTH + 280;
+      const sweep =
+        state.reducedMotion
+          ? seed * span
+          : (
+              motionTime *
+                (
+                  210 +
+                  seed * 170
+                ) +
+              seed * span
+            ) % span;
+      const x =
+        direction > 0
+          ? -140 + sweep
+          : WIDTH + 140 - sweep;
+      const y =
+        250 +
+        hash(index * 31 + 5) *
+          390;
+      const size =
+        2 + seed * 3;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(
+        direction *
+          (
+            0.28 +
+            seed * 0.34
+          ),
+      );
+      ctx.globalAlpha =
+        strength *
+        (
+          0.26 +
+          seed * 0.34
+        );
+      ctx.fillStyle =
+        index % 4 === 0
+          ? "#bbc89a"
+          : index % 3 === 0
+            ? "#6f845a"
+            : "#8fa278";
+      ctx.fillRect(
+        -size * 1.8,
+        -1,
+        size * 3.6,
+        Math.max(1, size * 0.55),
+      );
+      ctx.restore();
+    }
+    ctx.strokeStyle =
+      `rgba(116,145,91,${strength * 0.2})`;
+    ctx.lineWidth = 1.5;
+    for (
+      let blade = 0;
+      blade < 30;
+      blade += 1
+    ) {
+      const seed = hash(
+        blade * 37 + 19,
+      );
+      const x =
+        34 +
+        blade / 29 *
+          (WIDTH - 68);
+      const baseY =
+        438 +
+        hash(blade * 43 + 7) *
+          250;
+      const height =
+        13 + seed * 26;
+      const lean =
+        direction *
+        strength *
+        (
+          8 +
+          seed * 17
+        );
+      ctx.beginPath();
+      ctx.moveTo(x, baseY);
+      ctx.quadraticCurveTo(
+        x + lean * 0.38,
+        baseY - height * 0.58,
+        x + lean,
+        baseY - height,
+      );
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -27318,9 +29237,14 @@
     drawCourseEchoTrail();
     drawRecoverableGolfBalls();
     drawChangeRequest();
+    drawAppealDocument();
     drawSpectralCourseFigures();
 
     drawGroundFog(
+      progress,
+      walkBob,
+    );
+    drawCrosswindWeather(
       progress,
       walkBob,
     );
@@ -27361,18 +29285,45 @@
       );
     }
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
+      const distraction =
+        state.hole.distraction;
+      const statusAck =
+        distraction.kind ===
+        "status_ack";
+      const statusEscalation =
+        distraction.kind ===
+        "status_escalation";
       drawWorldMarker(
-        state.hole.distraction.x,
-        state.hole.distraction.y,
-        "DISTRACTION",
-        "#d6a74c",
-        "!",
+        distraction.x,
+        distraction.y,
+        distraction.kind === "appeal"
+          ? `APPEAL REVIEW // ${state.hole.appealReviewTimer.toFixed(1)}s`
+          : statusAck
+            ? `STATUS PING // ${state.hole.distractionTimer.toFixed(1)}s`
+            : statusEscalation
+              ? `ESCALATED SECTOR // ${state.hole.distractionTimer.toFixed(1)}s`
+          : "DISTRACTION",
+        distraction.kind === "appeal"
+          ? "#ef9653"
+          : statusAck
+            ? "#76c1a4"
+            : statusEscalation
+              ? "#df6242"
+          : "#d6a74c",
+        distraction.kind === "appeal"
+          ? "CR"
+          : statusAck
+            ? "SR"
+            : statusEscalation
+              ? "!!"
+          : "!",
       );
     }
     const changeRequest =
       activeChangeRequest();
     if (
       !state.hole.changeRequestCollected &&
+      !state.hole.appealUsed &&
       (state.hole.focus ||
         worldDistance(
           state.player,
@@ -27450,6 +29401,8 @@
     drawListeningFocus();
     drawCutTraceMemory();
     drawContactBreakFeedback();
+    drawAppealReviewFeedback();
+    drawStatusRequestFeedback();
     drawBlindsideTransferFeedback();
     drawGolfBallTactics();
     drawFirstHoleOverlay();
@@ -28069,6 +30022,24 @@
       scoreNotes.push({
         text: `+${result.breakdown.changeRequest.toLocaleString()} UNFILED CHANGE REQUEST`,
         color: "#ef9b5f",
+      });
+    }
+    if (result.appealUsed) {
+      scoreNotes.push({
+        text: `EMERGENCY APPEAL // +${result.appealForfeitedBonus.toLocaleString()} EVIDENCE FORFEITED`,
+        color: "#d98255",
+      });
+    }
+    if (result.statusAcknowledged) {
+      scoreNotes.push({
+        text: "STATUS ACKNOWLEDGED // ROUGH LOCATION SHARED",
+        color: "#78d3bf",
+      });
+    }
+    if (result.statusEscalated) {
+      scoreNotes.push({
+        text: "STATUS MISSED // STAKEHOLDER ESCALATION",
+        color: "#ed746a",
       });
     }
     if (
@@ -28726,6 +30697,14 @@
           0,
           hole.secondWindTimer - dt,
         );
+      hole.appealReviewTimer =
+        Math.max(
+          0,
+          hole.appealReviewTimer - dt,
+        );
+      if (hole.appealDocument) {
+        hole.appealDocument.age += dt;
+      }
       hole.sprinklerSoakTimer = Math.max(
         0,
         hole.sprinklerSoakTimer - dt,
@@ -28912,6 +30891,16 @@
             getPlayerEnvironmentState();
           const inStepRough =
             stepEnvironment.effectiveRough;
+          const stepNoiseMultiplier =
+            crosswindMasksFootsteps(
+              stepEnvironment,
+            )
+              ? CROSSWIND_NOISE_MULTIPLIER
+              : hole.counterRouteQuietTimer >
+                    0 &&
+                  !stepEnvironment.sand
+                ? 0.54
+                : 1;
           hole.lastStepDistance = hole.travelDistance;
           playFootstep(
             inStepRough,
@@ -28919,9 +30908,7 @@
             hole.crouched,
             stepEnvironment.wet,
             stepEnvironment.sand,
-            hole.counterRouteQuietTimer >
-              0 &&
-              !stepEnvironment.sand,
+            stepNoiseMultiplier,
           );
           addPlayerGroundResponse(
             stepEnvironment,
@@ -29033,6 +31020,11 @@
         dt,
         environment,
       );
+      updateCrosswind(
+        dt,
+        moving,
+        environment,
+      );
       if (environment.sand) {
         hole.sandSeconds += dt;
         const currentSandZoneId =
@@ -29122,9 +31114,18 @@
         !environment.sand
           ? 0.54
           : 1;
+      const crosswindNoise =
+        crosswindMasksFootsteps(
+          environment,
+        )
+          ? CROSSWIND_NOISE_MULTIPLIER
+          : 1;
       const targetNoise = Math.max(
         movementNoise *
-          counterRouteNoise,
+          Math.min(
+            counterRouteNoise,
+            crosswindNoise,
+          ),
         filingNoise,
       );
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
@@ -29156,6 +31157,11 @@
         );
       }
 
+      updateStatusRequest(
+        dt,
+        moving,
+      );
+
       const key = activeKeyPoint();
       const sprinkler = activeSprinklerPoint();
       const changeRequest =
@@ -29164,6 +31170,8 @@
       const drain = DRAIN_EXIT;
       const nearestBall =
         nearestRecoverableBall();
+      const appeal =
+        emergencyAppealState();
       if (hole.ballAim.active) {
         hole.prompt = inputCopy(
           `RELEASE ${keyboardBindingLabel("chip")} TO CHIP`,
@@ -29186,6 +31194,28 @@
               hole.escapeFiling.duration *
               100,
           )}% // STAY STILL`;
+      } else if (appeal.eligible) {
+        hole.prompt = inputCopy(
+          `${keyboardBindingLabel("interact")} — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+          `A — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+          `TAP USE — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+        );
+      } else if (
+        hole.statusRequest.active
+      ) {
+        const request =
+          hole.statusRequest;
+        hole.prompt = request.responding
+          ? `SUBMITTING STATUS ${Math.round(
+              request.responseProgress /
+                request.responseDuration *
+                100,
+            )}% // STAY STILL`
+          : inputCopy(
+              `${keyboardBindingLabel("interact")} — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `A — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `TAP USE — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+            );
       } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy(
           `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
@@ -29220,6 +31250,7 @@
         );
       } else if (
         !hole.changeRequestCollected &&
+        !hole.appealUsed &&
         worldDistance(
           state.player,
           changeRequest,
@@ -29283,6 +31314,7 @@
         );
         updateJoe(dt);
         if (state.mode === "first_hole") {
+          updateEmergencyAppealWindow();
           updateEscapeFiling(dt);
         }
       }
@@ -30156,7 +32188,7 @@
     crouched = false,
     wet = false,
     sand = false,
-    quiet = false,
+    quiet = 1,
   ) {
     const panicWeight =
       crouched
@@ -30182,7 +32214,11 @@
       ) *
       panicWeight;
     const quietGain =
-      quiet ? 0.54 : 1;
+      typeof quiet === "number"
+        ? clamp(quiet, 0, 1)
+        : quiet
+          ? 0.54
+          : 1;
     playTransientTone(
       sand
         ? 138
@@ -30373,6 +32409,148 @@
       0.025,
       "sine",
       0.22,
+    );
+  }
+
+  function playEmergencyAppealCue() {
+    playNoiseBurst(
+      0.38,
+      0.052,
+      1550,
+      "highpass",
+    );
+    playTransientTone(
+      523,
+      392,
+      0.18,
+      0.048,
+      "square",
+    );
+    playTransientTone(
+      392,
+      262,
+      0.26,
+      0.044,
+      "triangle",
+      0.11,
+    );
+    playTransientTone(
+      196,
+      147,
+      0.34,
+      0.036,
+      "sawtooth",
+      0.22,
+    );
+  }
+
+  function playStatusRequestCue(
+    urgent,
+  ) {
+    const base = urgent ? 392 : 330;
+    playTransientTone(
+      base,
+      base * 1.25,
+      0.12,
+      0.032,
+      "square",
+    );
+    playTransientTone(
+      base * 1.5,
+      base * 1.5,
+      0.1,
+      0.024,
+      "sine",
+      0.16,
+    );
+    playNoiseBurst(
+      0.12,
+      0.018,
+      1250,
+      "bandpass",
+      0,
+      0.08,
+    );
+  }
+
+  function playStatusResolveCue(
+    escalated,
+  ) {
+    if (escalated) {
+      playTransientTone(
+        294,
+        117,
+        0.38,
+        0.052,
+        "sawtooth",
+      );
+      playNoiseBurst(
+        0.34,
+        0.038,
+        620,
+        "lowpass",
+      );
+      return;
+    }
+    playTransientTone(
+      392,
+      523,
+      0.2,
+      0.036,
+      "triangle",
+    );
+    playTransientTone(
+      523,
+      659,
+      0.18,
+      0.026,
+      "sine",
+      0.12,
+    );
+  }
+
+  function playCrosswindCue(active) {
+    const pan =
+      state.hole.crosswind.direction *
+      0.48;
+    playNoiseBurst(
+      active ? 0.92 : 0.48,
+      active ? 0.052 : 0.026,
+      active ? 980 : 720,
+      "bandpass",
+      -pan,
+      0,
+      ambienceBusGain,
+    );
+    playNoiseBurst(
+      active ? 1.18 : 0.56,
+      active ? 0.042 : 0.022,
+      active ? 1480 : 1050,
+      "highpass",
+      pan,
+      active ? 0.08 : 0.04,
+      ambienceBusGain,
+    );
+  }
+
+  function playCrosswindRunCue() {
+    playTransientTone(
+      330,
+      494,
+      0.19,
+      0.028,
+      "triangle",
+      0,
+      effectsBusGain,
+    );
+    playTransientTone(
+      494,
+      659,
+      0.22,
+      0.024,
+      "sine",
+      0.11,
+      effectsBusGain,
     );
   }
 
@@ -32708,6 +34886,16 @@
               waypoint:
                 activeRunVariant().joeStart.patrolIndex,
             },
+            statusRequest: {
+              code:
+                activeRunVariant().statusRequest.code,
+              label:
+                activeRunVariant().statusRequest.label,
+              request:
+                activeRunVariant().statusRequest.request,
+              triggerY:
+                activeRunVariant().statusRequest.triggerY,
+            },
           },
           phase: state.hole.phase,
           overtime: state.hole.overtime,
@@ -33015,18 +35203,142 @@
           changeRequest: {
             collected:
               state.hole.changeRequestCollected,
-            filesOnEscape: true,
+            consumedByAppeal:
+              state.hole.appealUsed,
+            filesOnEscape:
+              !state.hole.appealUsed,
             bonus: CHANGE_REQUEST_BONUS,
-            distance: Math.round(
-              worldDistance(
-                state.player,
-                activeChangeRequest(),
-              ),
-            ),
+            distance:
+              state.hole.appealUsed
+                ? null
+                : Math.round(
+                    worldDistance(
+                      state.player,
+                      activeChangeRequest(),
+                    ),
+                  ),
             filedForThisOrder:
               state.career.filedChangeRequests.includes(
                 activeRunVariant().id,
               ),
+          },
+          emergencyAppeal: {
+            eligible:
+              emergencyAppealState()
+                .eligible,
+            blockedReason:
+              emergencyAppealState()
+                .blockedReason,
+            used: state.hole.appealUsed,
+            oneUsePerRun: true,
+            joeDistance: Number(
+              emergencyAppealState()
+                .joeDistance.toFixed(2),
+            ),
+            distanceWindow: {
+              minimum:
+                EMERGENCY_APPEAL_MIN_DISTANCE,
+              maximum:
+                EMERGENCY_APPEAL_MAX_DISTANCE,
+            },
+            reviewSeconds:
+              EMERGENCY_APPEAL_REVIEW_SECONDS,
+            reviewRemainingSeconds:
+              Number(
+                state.hole
+                  .appealReviewTimer.toFixed(
+                    2,
+                  ),
+              ),
+            forfeitedBonus:
+              state.hole.appealUsed
+                ? CHANGE_REQUEST_BONUS
+                : 0,
+            activationDistance:
+              state.hole
+                .appealActivationDistance ===
+              null
+                ? null
+                : Number(
+                    state.hole
+                      .appealActivationDistance.toFixed(
+                        2,
+                      ),
+                  ),
+            document:
+              state.hole.appealDocument
+                ? {
+                    code:
+                      state.hole
+                        .appealDocument.code,
+                    x: Number(
+                      state.hole
+                        .appealDocument.x.toFixed(
+                          2,
+                        ),
+                    ),
+                    y: Number(
+                      state.hole
+                        .appealDocument.y.toFixed(
+                          2,
+                        ),
+                    ),
+                  }
+                : null,
+            counterplay:
+              "file Interact during a close chase to trade the unfiled-change escape bonus for a short mandatory Joe review; keep moving because point-blank contact still captures",
+          },
+          statusRequest: {
+            code:
+              state.hole.statusRequest.code,
+            label:
+              state.hole.statusRequest.label,
+            request:
+              state.hole.statusRequest.request,
+            issued:
+              state.hole.statusRequest.issued,
+            active:
+              state.hole.statusRequest.active,
+            resolved:
+              state.hole.statusRequest.resolved,
+            outcome:
+              state.hole.statusRequest.outcome,
+            countdownSeconds: Number(
+              state.hole.statusRequest.timer.toFixed(2),
+            ),
+            responseProgressPercent: Math.round(
+              clamp(
+                state.hole.statusRequest.responseProgress /
+                  state.hole.statusRequest.responseDuration,
+                0,
+                1,
+              ) * 100,
+            ),
+            responseSeconds:
+              state.hole.statusRequest.responseDuration,
+            responseCancels:
+              state.hole.statusRequest.responseCancels,
+            location:
+              state.hole.statusRequest.location
+                ? {
+                    ...state.hole.statusRequest.location,
+                  }
+                : null,
+            input:
+              state.hole.statusRequest.active
+                ? inputCopy(
+                    `press ${keyboardBindingLabel("interact")}, then stay still`,
+                    "press A and stay still",
+                    "tap Use and stay still",
+                  )
+                : null,
+            options: {
+              acknowledge:
+                "hold still for 1.15 seconds; earn a Delivery beat and share a rough location ping",
+              ignore:
+                "allow the deadline to expire; Joe escalates to a longer, more precise sector search",
+            },
+            onePerRun: true,
           },
           sprintReviews: {
             cleared:
@@ -33212,6 +35524,50 @@
           distractionSecondsRemaining: Number(
             state.hole.distractionTimer.toFixed(2),
           ),
+          crosswind: {
+            phase:
+              state.hole.crosswind.phase,
+            secondsRemaining: Number(
+              state.hole.crosswind.timer.toFixed(2),
+            ),
+            direction:
+              crosswindDirectionLabel().toLowerCase(),
+            strength: Number(
+              crosswindStrength().toFixed(2),
+            ),
+            masksFootsteps:
+              crosswindMasksFootsteps(
+                state.hole.environment ||
+                  getPlayerEnvironmentState(),
+              ),
+            noiseMultiplier:
+              CROSSWIND_NOISE_MULTIPLIER,
+            sandException: true,
+            pursuitException: true,
+            sightlinesRemainActive: true,
+            turfTracksRemainActive: true,
+            currentTraverseMeters: Number(
+              state.hole.crosswind.currentDistance.toFixed(2),
+            ),
+            traverseTargetMeters:
+              CROSSWIND_RUN_DISTANCE,
+            windRuns:
+              state.hole.crosswind.windRuns,
+            scoredWindRunCap:
+              DELIVERY_FAMILY_CAPS.weather,
+            maskedSeconds: Number(
+              state.hole.crosswind.maskedSeconds.toFixed(2),
+            ),
+            maskedDistance: Number(
+              state.hole.crosswind.totalMaskedDistance.toFixed(2),
+            ),
+            eventCount:
+              state.hole.crosswind.eventCount,
+            lastOutcome:
+              state.hole.crosswind.lastOutcome,
+            rule:
+              "After a readable warning, a 4.4-second gust reduces non-sand movement noise to 42%; cross 30 meters before it fades for a capped Weather-family Delivery beat. Joe can still see movement and later inspect tracks, while active pursuit receives no masking.",
+          },
           sprinklers: {
             used: state.hole.sprinklerUsed,
             soakSecondsRemaining: Number(
@@ -33925,7 +36281,11 @@
                 activeHudPresentationFocus() ===
                   "pursuit" ||
                 activeHudPresentationFocus() ===
-                  "blindside_transfer"
+                  "blindside_transfer" ||
+                activeHudPresentationFocus() ===
+                  "emergency_appeal" ||
+                activeHudPresentationFocus() ===
+                  "status_request"
               )
                 ? 0
                 : activeHudPresentationFocus() ===
@@ -33941,7 +36301,11 @@
                 !state.hole
                   .deliveryAward &&
                 activeHudPresentationFocus() !==
-                  "trail_evidence",
+                  "trail_evidence" &&
+                activeHudPresentationFocus() !==
+                  "emergency_appeal" &&
+                activeHudPresentationFocus() !==
+                  "status_request",
               ),
           },
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
@@ -34754,7 +37118,7 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       keyboard: {
@@ -34762,13 +37126,13 @@
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
         result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, reclaims a ball, or starts Final Filing at an open exit; movement aborts filing; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
         result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
       },
@@ -34776,7 +37140,7 @@
         gate: "Tap to begin",
         intro: "Tap to skip",
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
-        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact, reclaim a ball, or start Final Filing at an open exit; movement aborts filing; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
         result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
