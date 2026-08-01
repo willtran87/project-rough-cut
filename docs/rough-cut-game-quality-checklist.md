@@ -70,6 +70,7 @@
 - [x] Let the player break contact, crouch in deep rough, become concealed, survive Joe’s last-known-position search, and recover to patrol.
 - [x] Give active pursuit one readable information owner: a directional contact card communicates whether Joe can see or hear the player, the immediate counterplay, break progress, and live Risk preview without competing caption stacks.
 - [x] Turn safe waiting into an optional observation challenge: when Joe moves away, collision-clear mint hard-cover and deep-rough lanes preview in the world and map with first-person off-screen bearings; rough destinations explicitly require crouching and expose concealment progress. Leaving shelter opens a 5.5-second Blindside Transfer, and reaching different shelter after 14 meters adds a capped maneuver-family Delivery beat.
+- [x] Make close-range hiding active rather than passive: when Joe searches behind a real sightline blocker, a concealed player can hold Crouch and Listening Focus motionless for 1.65 seconds to complete Hold Your Nerve. Show progress, distance, threat state, cancellation conditions, and a short visible grace for blocker-edge flicker; limit scoring to one per zone and two per run without lowering survival difficulty. On success, expose a 4.4-second mint Blindside exit window through the reward feedback so dangerous stillness immediately becomes a route choice.
 - [x] Make repeated golf-ball distractions progressively shorter so one tactic cannot be repeated without consequence.
 - [x] Show Joe with the generated front-facing lawn-mower sprite during pursuit.
 - [x] Provide a mower-proximity meter and contextual interaction prompts.
@@ -130,7 +131,7 @@ This loop is the foundation for the larger game: **enter a course, read its gras
 - [x] The capture screen selects from 50 original lines across six expression portraits, avoids an immediate repeat, and treats each failure as a fresh Joe performance.
 - Dialogue is subtitle-only in the current build. If spoken dialogue is added later, it should be sparse and human-performed; do not reintroduce a robot voice.
 - [x] Reward linked smart play with a 14-second Delivery Chain: progress, recoveries, bunker baits, optional Change Requests, contact breaks, and capped Evidence Denied recoveries raise a score multiplier without weakening Joe.
-- [x] Surface the Delivery Chain through a live timer, event award, File Projection, text-state contract, and post-run peak so it is legible without forcing score play.
+- [x] Surface the Delivery Chain through a live timer, ordered event-award queue, File Projection, text-state contract, and post-run peak so it is legible without forcing score play; simultaneous beats must never replace one another visually or disappear from the ledger.
 
 ## Image Generation for Asset Creation and Polish
 
@@ -461,7 +462,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Telegraph grabs, tackles, blocked exits, thrown objects, or other capture attempts clearly enough to react.
 - [ ] Avoid instant-kill attacks without strong setup and obvious counterplay.
 - [x] Make close calls produce strong visual, audio, animation, and environmental feedback, including Risk Premium presentation and a brief Second Wind movement reward after close contact is broken.
-- [x] Sequence chase recovery feedback so Risk Premium, Delivery, threat direction, and concealment guidance remain legible instead of drawing over one another.
+- [x] Sequence chase recovery feedback so Risk Premium, simultaneous Delivery cards, threat direction, and concealment guidance remain legible instead of drawing over one another; Risk pauses the active Delivery card and queued awards retain their order.
 - [ ] Let Joe cut off predictable routes when he has enough information, but preserve alternative escape options.
 - [ ] Avoid silently spawning Joe directly in front of or behind the player.
 - [ ] Make Joe's re-entry routes physically plausible or distinctly signaled.
@@ -810,6 +811,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Avoid long mandatory waits for Joe to leave an area.
 - [ ] Give patient players active observation, preparation, or alternate-route decisions while waiting.
 - [x] In the current slice, surface a readable Blindside opportunity while sheltered through grounded hard-cover and rough-lane rings, crouch/concealment guidance, off-screen field bearings, matching map diamonds, and a shared text-state contract, so patient observation can convert into a timed shelter transfer without weakening Joe or requiring map-only navigation.
+- [x] Give concealed players a bounded close-search decision through Hold Your Nerve, with input-aware stillness guidance and a short score-chain reward that cancels on movement or exposure, then hands presentation priority back through a short mint Blindside exit window instead of leaving the player parked after success.
 - [ ] Escalate pressure when the player remains in one area too long only through readable systems.
 - [ ] Avoid invisible anti-camping timers that force irrational movement.
 - [ ] Use objective progress, course time, weather, project deadlines, and Joe's information to shape escalation.
