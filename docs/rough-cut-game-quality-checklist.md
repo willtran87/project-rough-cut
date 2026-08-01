@@ -61,6 +61,7 @@
 - [x] Give the player a limited supply of four golf balls for aimed chip-shot distractions.
 - [x] Make fairway travel quieter but more exposed.
 - [x] Make rough travel noisier but more concealed.
+- [x] Turn course weather into a readable stealth opportunity: a 1.35-second grass-and-fog Crosswind warning opens 4.4 seconds of 42%-noise non-sand travel, preserves sight and physical tracks, excludes active pursuit and bunker sand, and rewards a 30-meter Wind Run through a capped Delivery family.
 - [x] Give Joe patrol, investigate, search, and chase states, including paced print-to-print turf investigation that physically routes him through discovered evidence.
 - [x] Make deduction bidirectional: Listening Focus interprets recent Joe mower cuts through bounded age, distance, freshness, and travel-heading clues without adding permanent live map tracking.
 - [x] Turn mower-cut interpretation into a deliberate observation: hold Listening Focus for 0.55 seconds to log an unrecorded Cut Trace and retain its historical heading for six seconds after release.
@@ -199,7 +200,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - **Spatial model:** The slice has authored collision, projected boundaries, line-of-sight occlusion, hiding terrain, multiple traversable routes, obstacle-aware Joe navigation, and first-person route guidance generated from the same collision model. The image-generated shed, hedge hides, stone cover, and grounds cart now have broad terrain bases and projected ground sockets matched to their gameplay footprints. Nearby solid props reveal their footprint and name before contact; contact feedback points to the blocker and recommends a physically valid escape direction. The distant scene now uses a dedicated sky plate, eight individually animated cloud instances sourced from six transparent sprites, clubhouse, tree line, alpha-cut course foreground, and mist in explicit back-to-front order. Different drift, wrap, bob, scale, and parallax ratios keep the golf course visually grounded while the horizon feels alive. Production work still needs richer authored path choices and multi-area navigation.
 - **Boundary contract:** The maintained-course limits are explicitly outlined on the persistent mini-map and report named edge contact instead of silently clamping movement. World art, terrain socket, collision radius, cover radius, use radius, and mini-map geometry share one coordinate source so a decorative prop cannot quietly disagree with traversal.
 - **Golf depth:** The current golf mechanic now supports pressure-based charge, lateral aim, readable trajectory, delayed impact, and Joe redirection. It still stops short of the planned club choice, lie, spin, bounce, roll, wind, and deeper ball-physics system.
-- **Grass depth:** Fairway, concealment-bearing rough, persistent mower-cut strips, temporary player trails, and golf divots now form a readable information system. The larger turf taxonomy, samples, player-operated cutting, recovery, and environmental reactions remain future work.
+- **Grass depth:** Fairway, concealment-bearing rough, persistent mower-cut strips, temporary player trails, golf divots, and Crosswind-driven sound masking now form a readable information system. Wind visibly leans the layered vegetation and fog while leaving rough/wet/sand evidence intact. The larger turf taxonomy, samples, player-operated cutting, recovery, and broader environmental reactions remain future work.
 - **Audio:** Current sound is procedural and functional. Joe's new state barks and capture lines are delivered through scalable subtitles only. The full game still needs authored ambience, spatial layering, stronger mower-state transitions, and a proper mix; any future Joe voice should be human-performed.
 - **Input:** Keyboard, pointer, and standard gamepad play are implemented with automatic prompt switching and controller-navigable settings. Touch controls, rebinding, non-standard controller glyph sets, and remapping accessibility remain future work.
 - **Campaign systems:** Persistent route records, rotating-order mastery, and an unlockable Overtime Audit challenge are implemented. Saves/checkpoints, multiple holes, broader progression, additional difficulty modes, and the larger narrative arc remain future work.
@@ -370,7 +371,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make grass height, density, moisture, movement, and disturbance affect concealment in understandable ways.
 - [ ] Make crouching, moving slowly, and choosing soft terrain meaningfully reduce detection risk.
 - [ ] Make sprinting, swinging, striking a ball, opening metal doors, starting machinery, and driving carts produce distinct noise profiles.
-- [ ] Allow wind, rain, sprinklers, machinery, announcements, and distant maintenance work to mask player noise.
+- [ ] Allow wind, rain, sprinklers, machinery, announcements, and distant maintenance work to mask player noise. The current slice now provides two systemic masking layers—sprinkler-soaked turf and clearly telegraphed Crosswind Cover—but rain, announcements, and distant work remain future variants. Wind never suppresses bunker noise or active pursuit and does not erase physical evidence.
 - [ ] Let the player deliberately create noise to redirect Joe.
 - [ ] Make thrown, rolled, chipped, or driven golf balls function as materially different distractions.
 - [ ] Make Joe investigate a sound's source rather than instantly knowing the player's location.
@@ -475,7 +476,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Turn backlog ownership, product goals, sprint commitments, dependencies, stakeholder pressure, and acceptance criteria into spatial, systemic, and threatening mechanics.
 - [ ] Use **scope lock** to close, redefine, or constrain routes in ways the player can anticipate and counter.
 - [ ] Use **action items** to mark objectives, locations, or player obligations that increase danger when ignored.
-- [ ] Use **status requests** to create timed responses, audible devices, forced choices, or escalating searches.
+- [x] Use **status requests** to create timed responses, audible devices, forced choices, or escalating searches. Each Night Order now issues one 5.4-second mid-course request: a 1.15-second stationary acknowledgment earns a Delivery beat but shares a rough location ping, movement cancels the response while the deadline runs, ignoring triggers a longer precise-sector search, and active pursuit supersedes the request without penalty.
 - [ ] Use **risk registers** to reveal, distort, prioritize, or weaponize hazards across the course.
 - [ ] Use **change requests** to alter objectives, access rules, or route requirements after the player has committed.
 - [ ] Use **stakeholder escalation** to activate cameras, staff, gates, lights, announcements, or additional surveillance.
@@ -483,7 +484,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Use **acceptance exceptions** to temporarily disable expected protections or safe routes, with fair warning.
 - [ ] Use **deductibles** as explicit costs paid in resources, time, exposure, or objective progress.
 - [ ] Use **change rejection** to revoke an apparent solution and force dangerous refinement or an alternate route.
-- [ ] Use **appeals** as high-risk opportunities to reverse Joe's control or recover a lost option.
+- [x] Use **appeals** as high-risk opportunities to reverse Joe's control or recover a lost option. A carried Change Request can be sacrificed once inside a 10–26m pursuit window to compel a 3.6-second Joe review; the player permanently loses its +650 evidence value and filing credit, receives no Risk Premium, and remains vulnerable at point blank.
 - [ ] Use **incident reports** to preserve evidence of the player's mistakes and change later searches.
 - [ ] Use **dependency blockers** to connect course machinery, keys, permissions, and objectives in understandable ways.
 - [ ] Use **rebaselining** to change timing or route conditions without arbitrarily deleting completed progress.
