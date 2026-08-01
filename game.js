@@ -329,6 +329,14 @@
   foregroundFringeArt.src = "./assets/rough-cut-foreground-fringe-v1.png";
   const defeatArt = new Image();
   defeatArt.src = "./assets/rough-cut-joe-capture-v1.png";
+  const shedEscapeTableauArt =
+    new Image();
+  shedEscapeTableauArt.src =
+    "./assets/rough-cut-shed-escape-tableau-v1.png";
+  const drainEscapeTableauArt =
+    new Image();
+  drainEscapeTableauArt.src =
+    "./assets/rough-cut-drain-escape-tableau-v1.png";
   const joeExpressionArt = new Image();
   joeExpressionArt.src = "./assets/rough-cut-joe-expressions-v1.png";
   const drainArt = new Image();
@@ -779,6 +787,19 @@
     radius: 18,
   };
   const TEE_PRACTICE_EXIT_Y = 80;
+  const CAPTURE_REVIEW_IDS = new Set([
+    "unsafe_filing",
+    "floodlight_exposure",
+    "open_lane_sprint",
+    "upright_rough",
+    "held_sightline",
+    "bunker_noise",
+    "sprint_noise",
+    "rough_rustle",
+    "audible_movement",
+    "trail_chain",
+    "blind_corner",
+  ]);
   const OVERTIME_SCORE_MULTIPLIER = 1.3;
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
@@ -1941,6 +1962,24 @@
           : 0,
         golfLessonCompleted:
           parsed.golfLessonCompleted === true,
+        lastCaptureCause:
+          CAPTURE_REVIEW_IDS.has(
+            parsed.lastCaptureCause,
+          )
+            ? parsed.lastCaptureCause
+            : null,
+        captureCauseStreak:
+          Number.isFinite(
+            parsed.captureCauseStreak,
+          )
+            ? clamp(
+                Math.round(
+                  parsed.captureCauseStreak,
+                ),
+                0,
+                99,
+              )
+            : 0,
         completedVariants: Array.isArray(
           parsed.completedVariants,
         )
@@ -2013,6 +2052,8 @@
         escapes: 0,
         captures: 0,
         golfLessonCompleted: false,
+        lastCaptureCause: null,
+        captureCauseStreak: 0,
         completedVariants: [],
         filedChangeRequests: [],
         selectedVariantId: null,
@@ -2228,6 +2269,8 @@
       joeBarkContext: null,
       joeBarkHistory: [],
       captureDialogue: null,
+      captureReview: null,
+      lastJoeContact: null,
       stateBanner: "",
       stateBannerTimer: 0,
       stateBannerLockTimer: 0,
@@ -3356,10 +3399,225 @@
     saveCareer();
   }
 
-  function recordCapture() {
+  function snapshotJoeContact(
+    source,
+    environment,
+    playerDistance,
+    moving,
+  ) {
+    state.hole.lastJoeContact = {
+      source,
+      at: state.hole.elapsed,
+      zoneId: environment.zone.id,
+      zoneName: environment.zone.name,
+      surface: environment.turfLabel,
+      sprinting:
+        moving &&
+        !state.hole.crouched &&
+        sprintHeld(),
+      crouched: state.hole.crouched,
+      rough: environment.effectiveRough,
+      sand: environment.sand,
+      wet: environment.wet,
+      hardCover: environment.hardCover,
+      lightExposure: Number(
+        environment.lightExposure.toFixed(
+          2,
+        ),
+      ),
+      noise: Number(
+        state.hole.noise.toFixed(2),
+      ),
+      distance: Number(
+        playerDistance.toFixed(1),
+      ),
+    };
+  }
+
+  function createCaptureReview(
+    capturedDuringFiling,
+  ) {
+    const hole = state.hole;
+    const currentZone =
+      courseZoneAt(state.player.y);
+    const contact =
+      hole.lastJoeContact &&
+      hole.elapsed -
+          hole.lastJoeContact.at <=
+        6.5
+        ? hole.lastJoeContact
+        : null;
+    const zoneName =
+      contact?.zoneName ||
+      currentZone.name;
+    const makeReview = (
+      id,
+      label,
+      shortLabel,
+      source,
+      evidence,
+      counterplay,
+    ) => ({
+      id,
+      label,
+      shortLabel,
+      source,
+      zoneId:
+        contact?.zoneId ||
+        currentZone.id,
+      zoneName,
+      evidence,
+      counterplay,
+      repeatCount: 1,
+    });
+
+    if (capturedDuringFiling) {
+      return makeReview(
+        "unsafe_filing",
+        "UNSAFE FINAL FILING",
+        "CLEAR FILING",
+        "objective_commitment",
+        `Joe reached the exit while Final Filing was active in ${zoneName}.`,
+        "Create distance or divert Joe before filing; movement can abort the attempt.",
+      );
+    }
+    if (
+      contact?.source === "sight"
+    ) {
+      if (
+        contact.lightExposure >= 0.36
+      ) {
+        return makeReview(
+          "floodlight_exposure",
+          "FLOODLIGHT EXPOSURE",
+          "LEAVE LIGHT",
+          "sight",
+          `The ${zoneName} light held your silhouette at ${Math.round(contact.distance)}m.`,
+          "Leave the lit lane, crouch in rough, or put solid cover between you and Joe.",
+        );
+      }
+      if (contact.sprinting) {
+        return makeReview(
+          "open_lane_sprint",
+          "OPEN-LANE SPRINT",
+          "COVER SPRINT",
+          "sight",
+          `Joe held sight while you sprinted across ${zoneName}.`,
+          "Sprint between cover, not through Joe's view; stop once attention begins rising.",
+        );
+      }
+      if (
+        contact.rough &&
+        !contact.crouched
+      ) {
+        return makeReview(
+          "upright_rough",
+          "UPRIGHT IN ROUGH",
+          "CROUCH ROUGH",
+          "sight",
+          `Standing movement exposed you inside ${contact.surface}.`,
+          "Crouch to use rough concealment, then move only after the mower turns away.",
+        );
+      }
+      return makeReview(
+        "held_sightline",
+        "SIGHTLINE HELD",
+        "BREAK SIGHT",
+        "sight",
+        `Joe maintained visual contact through ${zoneName}.`,
+        "Cut behind solid cover and remain quiet until the contact-break meter clears.",
+      );
+    }
+    if (
+      contact?.source === "sound"
+    ) {
+      if (contact.sand) {
+        return makeReview(
+          "bunker_noise",
+          "BUNKER NOISE",
+          "LEAVE SAND",
+          "sound",
+          `Your ${contact.surface} crossing stayed audible at ${Math.round(contact.distance)}m.`,
+          "Cross sand only after a lure; crouch or return to fairway when Joe reacts.",
+        );
+      }
+      if (contact.sprinting) {
+        return makeReview(
+          "sprint_noise",
+          "SPRINT NOISE",
+          "CROUCH / STOP",
+          "sound",
+          `Your sprint remained inside Joe's hearing range in ${zoneName}.`,
+          "Stop or crouch when the mower reacts; resume only after attention falls.",
+        );
+      }
+      if (contact.rough) {
+        return makeReview(
+          "rough_rustle",
+          "ROUGH RUSTLE",
+          "CHANGE TURF",
+          "sound",
+          `Upright movement made ${contact.surface} betray your route.`,
+          "Crouch through rough or cross onto Joe's quieter cut strip to end the noise.",
+        );
+      }
+      return makeReview(
+        "audible_movement",
+        "AUDIBLE MOVEMENT",
+        "STOP / LISTEN",
+        "sound",
+        `Joe followed movement noise through ${zoneName}.`,
+        "Stop, crouch, or change direction when the mower reacts to sound.",
+      );
+    }
+    if (
+      contact?.source === "trail" ||
+      hole.trailChain > 0 ||
+      hole.trailWarningTimer > 0
+    ) {
+      return makeReview(
+        "trail_chain",
+        "TRAIL CHAIN",
+        "CROSS CUT",
+        "trail",
+        `Joe followed ${Math.max(1, hole.trailChain)} physical print${hole.trailChain === 1 ? "" : "s"} into ${zoneName}.`,
+        "Cross fairway or Joe's cut turf to break the print chain before hiding.",
+      );
+    }
+    return makeReview(
+      "blind_corner",
+      "BLIND CORNER",
+      "LISTEN FIRST",
+      "proximity",
+      `Joe reached you without a fresh sight, sound, or trail signal in ${zoneName}.`,
+      "Use Listening Focus before blind turns and keep a second cover route available.",
+    );
+  }
+
+  function recordCapture(
+    review,
+  ) {
     state.career.captures += 1;
     if (state.hole.overtime) {
       state.career.overtimeCaptures += 1;
+    }
+    if (review) {
+      const repeated =
+        state.career
+          .lastCaptureCause ===
+        review.id;
+      state.career.captureCauseStreak =
+        repeated
+          ? Math.min(
+              99,
+              state.career
+                .captureCauseStreak + 1,
+            )
+          : 1;
+      state.career.lastCaptureCause =
+        review.id;
+      review.repeatCount =
+        state.career.captureCauseStreak;
     }
     saveCareer();
   }
@@ -3398,6 +3656,10 @@
       (result.score === previous.score &&
         result.timeSeconds < previous.timeSeconds);
     state.career.escapes += 1;
+    state.career.lastCaptureCause =
+      null;
+    state.career.captureCauseStreak =
+      0;
     if (result.overtime) {
       state.career.overtimeEscapes += 1;
     } else if (
@@ -6568,6 +6830,8 @@
       joeBarkContext: null,
       joeBarkHistory: [],
       captureDialogue: null,
+      captureReview: null,
+      lastJoeContact: null,
       stateBanner: "",
       stateBannerTimer: 0,
       stateBannerLockTimer: 0,
@@ -12158,6 +12422,28 @@
           ? "trail"
           : null;
     hole.playerAudible = directSound;
+    if (visibleNow) {
+      snapshotJoeContact(
+        "sight",
+        environment,
+        playerDistance,
+        moving,
+      );
+    } else if (directSound) {
+      snapshotJoeContact(
+        "sound",
+        environment,
+        playerDistance,
+        moving,
+      );
+    } else if (trailEvidence) {
+      snapshotJoeContact(
+        "trail",
+        environment,
+        playerDistance,
+        moving,
+      );
+    }
     hole.visibilityRange = visibilityRange;
     hole.hearingRange = hearingRange;
     const confirmedDetection =
@@ -12596,13 +12882,21 @@
     }
     hole.previousJoeMode = joe.mode;
     if (worldDistance(joe, state.player) < 8.2) {
-      if (hole.escapeFiling.active) {
+      const capturedDuringFiling =
+        hole.escapeFiling.active;
+      if (capturedDuringFiling) {
         hole.escapeFiling.active = false;
         hole.escapeFiling.capturedDuringFiling = true;
         hole.escapeFiling.lastInterruption =
           "CAPTURED";
       }
-      recordCapture();
+      hole.captureReview =
+        createCaptureReview(
+          capturedDuringFiling,
+        );
+      recordCapture(
+        hole.captureReview,
+      );
       hole.captureDialogue =
         selectJoeCaptureDialogue();
       state.resultIndex = 0;
@@ -27250,6 +27544,10 @@
   ) {
     const target =
       nextPerformanceTarget();
+    const captureReview =
+      outcome === "defeat"
+        ? state.hole.captureReview
+        : null;
     const nextVariant =
       nextNightOrderVariant();
     return [
@@ -27260,8 +27558,13 @@
             ? "RETRY FILE"
             : "REMATCH FILE",
         detail:
-          `TARGET // ${target.shortName}`,
+          captureReview
+            ? `COUNTER // ${captureReview.shortLabel}`
+            : `TARGET // ${target.shortName}`,
         description:
+          captureReview
+            ? captureReview.counterplay
+            :
           `${target.name} — ${target.hint}.`,
       },
       {
@@ -27345,8 +27648,14 @@
         : 0.86 +
           Math.sin(state.time * 5.2) *
             0.14;
+    const actionDescription =
+      outcome === "defeat" &&
+      state.resultIndex === 0 &&
+      state.hole.captureReview
+        ? "RETRY FILE LOADS THIS COUNTERPLAN INTO THE NEXT ATTEMPT."
+        : selected.description;
     drawText(
-      `NEXT ACTION // ${selected.description}`,
+      `NEXT ACTION // ${actionDescription}`,
       WIDTH * 0.5,
       588,
       11,
@@ -27451,8 +27760,156 @@
     );
   }
 
+  function escapeTableauArt(
+    usedDrain,
+  ) {
+    return usedDrain
+      ? drainEscapeTableauArt
+      : shedEscapeTableauArt;
+  }
+
+  function drawVictoryTableau(
+    usedDrain,
+    reveal,
+  ) {
+    const tableau =
+      escapeTableauArt(usedDrain);
+    const driftX =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.time * 0.22,
+          ) * 3.2;
+    const driftY =
+      state.reducedMotion
+        ? 0
+        : Math.cos(
+            state.time * 0.17,
+          ) * 1.4;
+    const zoom =
+      1.008 +
+      reveal * 0.014 +
+      (state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.time * 0.13,
+          ) * 0.0015);
+    const generatedArtDrawn =
+      drawImageCover(
+        ctx,
+        tableau,
+        driftX,
+        driftY,
+        zoom,
+      );
+    if (!generatedArtDrawn) {
+      drawImageCover(
+        ctx,
+        holeArt,
+        0,
+        8,
+        1.05 + reveal * 0.018,
+      );
+    }
+
+    const routeWash =
+      ctx.createLinearGradient(
+        0,
+        0,
+        WIDTH,
+        HEIGHT,
+      );
+    if (usedDrain) {
+      routeWash.addColorStop(
+        0,
+        "rgba(2,14,17,0.32)",
+      );
+      routeWash.addColorStop(
+        0.52,
+        "rgba(4,18,18,0.12)",
+      );
+      routeWash.addColorStop(
+        1,
+        "rgba(2,12,9,0.34)",
+      );
+    } else {
+      routeWash.addColorStop(
+        0,
+        "rgba(18,9,2,0.24)",
+      );
+      routeWash.addColorStop(
+        0.5,
+        "rgba(4,13,8,0.13)",
+      );
+      routeWash.addColorStop(
+        1,
+        "rgba(2,10,8,0.34)",
+      );
+    }
+    ctx.fillStyle = routeWash;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const refugeGlow =
+      usedDrain
+        ? ctx.createRadialGradient(
+            WIDTH * 0.53,
+            HEIGHT * 0.28,
+            10,
+            WIDTH * 0.53,
+            HEIGHT * 0.28,
+            WIDTH * 0.55,
+          )
+        : ctx.createRadialGradient(
+            WIDTH * 0.13,
+            HEIGHT * 0.48,
+            8,
+            WIDTH * 0.13,
+            HEIGHT * 0.48,
+            WIDTH * 0.46,
+          );
+    refugeGlow.addColorStop(
+      0,
+      usedDrain
+        ? `rgba(96,198,190,${0.035 + reveal * 0.025})`
+        : `rgba(230,151,66,${0.045 + reveal * 0.035})`,
+    );
+    refugeGlow.addColorStop(
+      1,
+      "rgba(0,0,0,0)",
+    );
+    ctx.fillStyle = refugeGlow;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const vignette =
+      ctx.createRadialGradient(
+        WIDTH * 0.5,
+        HEIGHT * 0.45,
+        HEIGHT * 0.18,
+        WIDTH * 0.5,
+        HEIGHT * 0.45,
+        WIDTH * 0.7,
+      );
+    vignette.addColorStop(
+      0,
+      "rgba(0,0,0,0)",
+    );
+    vignette.addColorStop(
+      1,
+      "rgba(0,2,1,0.48)",
+    );
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    return generatedArtDrawn;
+  }
+
   function drawVictory() {
-    const reveal = smoothstep(state.time / 0.48);
+    const sceneReveal =
+      smoothstep(
+        state.time / 0.52,
+      );
+    const reveal = smoothstep(
+      (state.time - 0.5) / 0.56,
+    );
     const usedDrain = state.hole.escapeRoute === "drain";
     const routeAccent = usedDrain ? "#73c9aa" : "#91ad62";
     const result =
@@ -27463,13 +27920,18 @@
       ? state.career.overtimeBest
       : state.career.routes[result.route];
     const scoreReveal = smoothstep(
-      (state.time - 0.12) / 0.78,
+      (state.time - 0.74) / 0.78,
     );
     const displayedScore = Math.round(
       result.score * scoreReveal,
     );
-    drawImageCover(ctx, holeArt, 0, 8, 1.05 + reveal * 0.018);
-    ctx.fillStyle = `rgba(1,8,4,${0.42 + reveal * 0.18})`;
+    drawVictoryTableau(
+      usedDrain,
+      sceneReveal,
+    );
+    ctx.fillStyle = usedDrain
+      ? `rgba(1,8,9,${0.2 + reveal * 0.1})`
+      : `rgba(1,7,3,${0.2 + reveal * 0.11})`;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     drawMotes(
       state.time,
@@ -27481,10 +27943,38 @@
     const panel = { x: 220, y: 70, width: 840, height: 632 };
     ctx.save();
     ctx.globalAlpha = reveal;
-    ctx.translate(0, (1 - reveal) * 28);
-    ctx.fillStyle = usedDrain
-      ? "rgba(3,17,14,0.92)"
-      : "rgba(3,15,8,0.92)";
+    ctx.translate(
+      0,
+      state.reducedMotion
+        ? 0
+        : (1 - reveal) * 28,
+    );
+    const panelFill =
+      ctx.createLinearGradient(
+        0,
+        panel.y,
+        0,
+        panel.y + panel.height,
+      );
+    panelFill.addColorStop(
+      0,
+      usedDrain
+        ? "rgba(3,17,17,0.76)"
+        : "rgba(8,14,6,0.76)",
+    );
+    panelFill.addColorStop(
+      0.58,
+      usedDrain
+        ? "rgba(3,15,14,0.87)"
+        : "rgba(3,13,7,0.87)",
+    );
+    panelFill.addColorStop(
+      1,
+      usedDrain
+        ? "rgba(2,10,9,0.96)"
+        : "rgba(2,9,5,0.96)",
+    );
+    ctx.fillStyle = panelFill;
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, routeAccent, 3);
     strokeRect(
@@ -27787,7 +28277,9 @@
     );
     ctx.restore();
 
-    const barHeight = Math.round((1 - reveal) * 92 + 18);
+    const barHeight = Math.round(
+      (1 - sceneReveal) * 92 + 18,
+    );
     ctx.fillStyle = "#010201";
     ctx.fillRect(0, 0, WIDTH, barHeight);
     ctx.fillRect(0, HEIGHT - barHeight, WIDTH, barHeight);
@@ -27857,10 +28349,24 @@
     }
 
     const textReveal = smoothstep((state.time - 0.18) / 0.38);
-    const panelY = lerp(504, 418, textReveal);
+    const panelY = lerp(504, 342, textReveal);
     const captureDialogue =
       state.hole.captureDialogue ||
       JOE_CAPTURE_LINES[0];
+    const captureReview =
+      state.hole.captureReview || {
+        label: "UNEXPLAINED CONTACT",
+        source: "unknown",
+        zoneName:
+          courseZoneAt(
+            state.player.y,
+          ).name,
+        evidence:
+          "Joe closed the final distance before the route was clear.",
+        counterplay:
+          "Use Listening Focus, preserve cover, and keep a second route available.",
+        repeatCount: 1,
+      };
     ctx.save();
     ctx.globalAlpha = textReveal;
     ctx.fillStyle = "rgba(10,2,1,0.9)";
@@ -27965,6 +28471,62 @@
       10,
       "#a99688",
       "right",
+    );
+    const reviewX = dialogueX;
+    const reviewY =
+      dialogueY + 96;
+    const reviewWidth =
+      dialogueWidth;
+    const reviewHeight = 64;
+    ctx.fillStyle =
+      "rgba(7,15,10,0.94)";
+    ctx.fillRect(
+      reviewX,
+      reviewY,
+      reviewWidth,
+      reviewHeight,
+    );
+    strokeRect(
+      reviewX,
+      reviewY,
+      reviewWidth,
+      reviewHeight,
+      captureReview.repeatCount > 1
+        ? "#d88b3d"
+        : "#66795e",
+      captureReview.repeatCount > 1
+        ? 2
+        : 1,
+    );
+    drawText(
+      captureReview.repeatCount > 1
+        ? `INCIDENT REVIEW // ${captureReview.label} // REPEAT ISSUE x${captureReview.repeatCount}`
+        : `INCIDENT REVIEW // ${captureReview.label} // ${captureReview.zoneName}`,
+      reviewX + 14,
+      reviewY + 17,
+      10,
+      captureReview.repeatCount > 1
+        ? "#efb35c"
+        : "#9fbb90",
+      "left",
+      true,
+    );
+    drawText(
+      `EVIDENCE // ${captureReview.evidence}`,
+      reviewX + 14,
+      reviewY + 38,
+      11,
+      "#e5ddc8",
+      "left",
+    );
+    drawText(
+      `NEXT RUN // ${captureReview.counterplay}`,
+      reviewX + 14,
+      reviewY + 57,
+      10,
+      "#d5a15e",
+      "left",
+      true,
     );
     drawResultActions(
       "defeat",
@@ -30653,8 +31215,25 @@
   ) {
     const retryVariant =
       activeRunVariant();
-    const target =
+    const captureReview =
       quickStart
+        ? state.hole.captureReview
+        : null;
+    const target =
+      captureReview
+        ? {
+            id:
+              `counter_${captureReview.id}`,
+            name:
+              "INCIDENT COUNTERPLAN",
+            shortName:
+              captureReview.shortLabel,
+            hint:
+              captureReview.counterplay,
+            source:
+              "capture_review",
+          }
+        : quickStart
         ? nextPerformanceTarget()
         : null;
     state.mode = "first_hole";
@@ -30680,9 +31259,15 @@
       hole.controlHintTimer = 4.2;
       hole.controlHintSource = "rematch";
       hole.message =
+        captureReview
+          ? `COUNTERPLAN // ${target.hint}${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`
+          :
         `${target.name} — ${target.hint}.${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`;
       hole.messageTimer = 4.2;
       hole.stateBanner =
+        captureReview
+          ? `FILE REOPENED // COUNTER ${target.shortName}`
+          :
         `FILE REOPENED // ${target.name}`;
       hole.stateBannerTimer = 3.4;
       hole.stateBannerLockTimer = 1.4;
@@ -31687,6 +32272,10 @@
       captures: state.career.captures,
       golfLessonCompleted:
         state.career.golfLessonCompleted,
+      lastCaptureCause:
+        state.career.lastCaptureCause,
+      captureCauseStreak:
+        state.career.captureCauseStreak,
       overtimeEscapes:
         state.career.overtimeEscapes,
       overtimeCaptures:
@@ -32391,6 +32980,37 @@
               : null,
           },
           result: state.hole.result,
+          victoryPresentation:
+            state.mode === "victory"
+              ? {
+                  route:
+                    state.hole.escapeRoute,
+                  generatedTableau:
+                    state.hole.escapeRoute ===
+                    "drain"
+                      ? "rough-cut-drain-escape-tableau-v1.png"
+                      : "rough-cut-shed-escape-tableau-v1.png",
+                  loaded:
+                    escapeTableauArt(
+                      state.hole.escapeRoute ===
+                        "drain",
+                    ).complete,
+                  scorecardTreatment:
+                    "route-colored translucent after-action ledger over dedicated escape tableau",
+                  ambientMotion:
+                    state.reducedMotion
+                      ? "static"
+                      : "restrained camera drift and refuge glow",
+                  fallback:
+                    "existing course tableau while generated image loads",
+                }
+              : null,
+          captureReview:
+            state.hole.captureReview
+              ? {
+                  ...state.hole.captureReview,
+                }
+              : null,
           keyCollected: state.hole.keyCollected,
           changeRequest: {
             collected:
