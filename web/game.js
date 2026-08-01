@@ -69,6 +69,15 @@
     384;
   const atlasCellCache =
     new Map();
+  const CLOUD_ALPHA_MASK_SIZE = 16;
+  const CLOUD_ALPHA_MASK_ROWS = [
+    [0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x5e00, 0x3f80, 0x3ff0, 0x0ff0, 0x07fc, 0x01fe, 0x0000, 0x0000, 0x0000, 0x0000],
+    [0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0040, 0x0fe8, 0x1ffc, 0x7ffc, 0xffff, 0xffff, 0x0000, 0x0000, 0x0000, 0x0000],
+    [0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0780, 0x07c0, 0x0ff0, 0x1ff8, 0x3ffc, 0x1ffd, 0x0ff0, 0x0180, 0x0000, 0x0000, 0x0000],
+    [0x0100, 0x0380, 0x0f80, 0x1f80, 0x0fe0, 0x07e0, 0x07e0, 0x3ff8, 0x1ff8, 0x7ff8, 0x3ff0, 0x07c0, 0x0000, 0x0000, 0x0000, 0x0000],
+    [0x0000, 0x0000, 0x0000, 0x0000, 0x1800, 0x3f00, 0x3c00, 0x3fe0, 0x1ff8, 0x031c, 0x000c, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000],
+    [0x0000, 0x0000, 0x0000, 0x01c0, 0x03e0, 0x07e8, 0x1ff8, 0x3f7c, 0x3efe, 0x0cfc, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000],
+  ];
 
   function buildScreenTexture() {
     screenTextureCtx.clearRect(
@@ -855,6 +864,7 @@
     intel: 3,
     maneuver: 3,
     nerve: 2,
+    cadence: 3,
     status: 1,
     weather: 3,
   };
@@ -885,6 +895,13 @@
   const NERVE_HOLD_COOLDOWN = 11;
   const NERVE_HOLD_BONUS = 105;
   const NERVE_EXIT_WINDOW_SECONDS = 4.4;
+  const LISTENING_SEARCH_READ_MAX_DISTANCE = 126;
+  const CADENCE_READ_SECONDS = 1.25;
+  const CADENCE_READ_MIN_JOE_DISTANCE = 34;
+  const CADENCE_READ_MAX_JOE_DISTANCE = 118;
+  const CADENCE_FORECAST_SECONDS = 7;
+  const CADENCE_READ_COOLDOWN = 9;
+  const CADENCE_READ_BONUS = 90;
   const TENSION_DIRECTOR_GRACE_SECONDS = 8;
   const TENSION_DIRECTOR_MIN_JOE_DISTANCE = 108;
   const TENSION_DIRECTOR_WARNING_SECONDS = 2.8;
@@ -1828,6 +1845,22 @@
     };
   }
 
+  function freshCadenceRead() {
+    return {
+      progress: 0,
+      armed: false,
+      active: false,
+      completions: 0,
+      cooldown: 0,
+      lastZone: null,
+      joeDistance: null,
+      blockedReason:
+        "not_in_shelter",
+      tutorialShown: false,
+      forecast: null,
+    };
+  }
+
   function defaultKeyboardBindings() {
     return Object.fromEntries(
       KEYBOARD_BINDING_ROWS.map((binding) => [
@@ -2449,6 +2482,8 @@
       blindsideTutorialShown: false,
       nerveHold:
         freshNerveHold(),
+      cadenceRead:
+        freshCadenceRead(),
       zoneIndex: 0,
       zoneBannerTimer: 0,
       zoneVisits: COURSE_ZONES.map(
@@ -3107,6 +3142,8 @@
           ? "maneuver"
         : label.includes("NERVE HELD")
           ? "nerve"
+        : label.includes("CADENCE")
+          ? "cadence"
         : label.includes("RECOVERY") ||
             label.includes("BALL RECOVERED")
           ? "recovery"
@@ -3340,6 +3377,8 @@
       razorCuts: hole.razorCuts || 0,
       nerveHolds:
         hole.nerveHold.completions,
+      cadenceReads:
+        hole.cadenceRead.completions,
       riskPremiumBanked: recoveryBonus,
       riskBreakBonuses:
         hole.riskBreakBonuses?.slice() || [],
@@ -4489,6 +4528,352 @@
     );
   }
 
+  function cloudAlphaAt(
+    cell,
+    normalizedX,
+    normalizedY,
+  ) {
+    if (
+      normalizedX < 0 ||
+      normalizedX >= 1 ||
+      normalizedY < 0 ||
+      normalizedY >= 1
+    ) {
+      return 0;
+    }
+    const maskX =
+      normalizedX *
+      (
+        CLOUD_ALPHA_MASK_SIZE - 1
+      );
+    const maskY =
+      normalizedY *
+      (
+        CLOUD_ALPHA_MASK_SIZE - 1
+      );
+    const x0 = Math.floor(maskX);
+    const y0 = Math.floor(maskY);
+    const x1 = Math.min(
+      CLOUD_ALPHA_MASK_SIZE - 1,
+      x0 + 1,
+    );
+    const y1 = Math.min(
+      CLOUD_ALPHA_MASK_SIZE - 1,
+      y0 + 1,
+    );
+    const blendX = maskX - x0;
+    const blendY = maskY - y0;
+    const rows =
+      CLOUD_ALPHA_MASK_ROWS[cell];
+    if (!rows) {
+      return 0;
+    }
+    const topLeft =
+      (
+        rows[y0] &
+        (
+          1 << x0
+        )
+      ) !== 0
+        ? 1
+        : 0;
+    const topRight =
+      (
+        rows[y0] &
+        (
+          1 << x1
+        )
+      ) !== 0
+        ? 1
+        : 0;
+    const bottomLeft =
+      (
+        rows[y1] &
+        (
+          1 << x0
+        )
+      ) !== 0
+        ? 1
+        : 0;
+    const bottomRight =
+      (
+        rows[y1] &
+        (
+          1 << x1
+        )
+      ) !== 0
+        ? 1
+        : 0;
+    return lerp(
+      lerp(
+        topLeft,
+        topRight,
+        blendX,
+      ),
+      lerp(
+        bottomLeft,
+        bottomRight,
+        blendX,
+      ),
+      blendY,
+    );
+  }
+
+  function cloudLayerPlacement(
+    cloud,
+    progress,
+    panX,
+    walkBob,
+  ) {
+    const depthScale =
+      1 +
+      progress *
+        cloud.parallax *
+        0.28;
+    const width =
+      cloud.width *
+      depthScale;
+    const ambientDrift =
+      state.reducedMotion
+        ? 0
+        : state.hole.elapsed *
+          cloud.speed;
+    const span =
+      WIDTH +
+      width +
+      440;
+    const rawX =
+      cloud.x +
+      ambientDrift +
+      panX *
+        cloud.parallax *
+        3.8;
+    const x =
+      (
+        (
+          rawX +
+          width +
+          220
+        ) %
+          span +
+        span
+      ) %
+        span -
+      width -
+      220;
+    const bob =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              (
+                0.11 +
+                cloud.parallax *
+                  0.24
+              ) +
+              cloud.phase,
+          ) *
+          (
+            2.5 +
+            cloud.parallax *
+              16
+          );
+    return {
+      x,
+      y:
+        cloud.y -
+        progress *
+          (
+            3 +
+            cloud.parallax *
+              12
+          ) +
+        bob +
+        walkBob *
+          cloud.parallax *
+          0.08,
+      width,
+      height: width,
+    };
+  }
+
+  function moonLayerPlacement(
+    progress,
+    panX,
+    walkBob,
+  ) {
+    const size =
+      126 +
+      progress * 7;
+    const x =
+      814 +
+      panX * 0.02 -
+      progress * 3;
+    const y =
+      42 -
+      progress * 2 +
+      walkBob * 0.008;
+    return {
+      x,
+      y,
+      size,
+      centerX: x + size * 0.5,
+      centerY: y + size * 0.5,
+    };
+  }
+
+  function cloudMoonlightState(
+    progress,
+    panX,
+    walkBob,
+  ) {
+    const motion =
+      state.reducedMotion
+        ? "static"
+        : "cloud_driven";
+    if (
+      !cloudAtlasArt.complete ||
+      cloudAtlasArt.naturalWidth === 0
+    ) {
+      return {
+        coverage: 0,
+        intensity: 1,
+        coveringClouds: 0,
+        motion,
+        gameplayEffect: "none",
+      };
+    }
+    const moon =
+      moonLayerPlacement(
+        progress,
+        panX,
+        walkBob,
+      );
+    const sampleOffsets = [
+      -0.26,
+      0,
+      0.26,
+    ];
+    const transmissions =
+      new Float32Array(9);
+    transmissions.fill(1);
+    let coveringClouds = 0;
+    for (
+      let index = 0;
+      index <
+      CLOUD_INSTANCES.length;
+      index += 1
+    ) {
+      const cloud =
+        CLOUD_INSTANCES[index];
+      const placement =
+        cloudLayerPlacement(
+          cloud,
+          progress,
+          panX,
+          walkBob,
+        );
+      let maximumDensity = 0;
+      let sampleIndex = 0;
+      for (
+        let yIndex = 0;
+        yIndex <
+          sampleOffsets.length;
+        yIndex += 1
+      ) {
+        for (
+          let xIndex = 0;
+          xIndex <
+            sampleOffsets.length;
+          xIndex += 1
+        ) {
+          const sampleX =
+            moon.centerX +
+            sampleOffsets[xIndex] *
+              moon.size;
+          const sampleY =
+            moon.centerY +
+            sampleOffsets[yIndex] *
+              moon.size;
+          const density = clamp(
+            cloudAlphaAt(
+              cloud.cell,
+              (
+                sampleX -
+                placement.x
+              ) /
+                placement.width,
+              (
+                sampleY -
+                placement.y
+              ) /
+                placement.height,
+            ) *
+              cloud.alpha *
+              2.7,
+            0,
+            0.76,
+          );
+          transmissions[sampleIndex] *=
+            1 - density;
+          maximumDensity = Math.max(
+            maximumDensity,
+            density,
+          );
+          sampleIndex += 1;
+        }
+      }
+      if (maximumDensity > 0.025) {
+        coveringClouds += 1;
+      }
+    }
+    let coverageSum = 0;
+    for (
+      let index = 0;
+      index <
+        transmissions.length;
+      index += 1
+    ) {
+      coverageSum +=
+        1 - transmissions[index];
+    }
+    const coverage = clamp(
+      coverageSum /
+        transmissions.length,
+      0,
+      0.82,
+    );
+    return {
+      coverage,
+      intensity:
+        1 -
+        coverage * 0.62,
+      coveringClouds,
+      motion,
+      gameplayEffect: "none",
+    };
+  }
+
+  function courseMoonlightState(
+    progress,
+    walkBob,
+  ) {
+    const cameraShift =
+      courseCameraMotion()
+        .offsetX;
+    const panX = clamp(
+      -state.player.x * 0.5 +
+        cameraShift * 0.18,
+      -96,
+      96,
+    );
+    return cloudMoonlightState(
+      progress,
+      panX,
+      walkBob,
+    );
+  }
+
   function drawIndependentClouds(
     progress,
     panX,
@@ -4514,60 +4899,13 @@
         Math.floor(
           cloud.cell / 3,
         );
-      const depthScale =
-        1 +
-        progress *
-          cloud.parallax *
-          0.28;
-      const width =
-        cloud.width *
-        depthScale;
-      const height = width;
-      const ambientDrift =
-        state.reducedMotion
-          ? 0
-          : state.hole.elapsed *
-            cloud.speed;
-      const span =
-        WIDTH +
-        width +
-        440;
-      const rawX =
-        cloud.x +
-        ambientDrift +
-        panX *
-          cloud.parallax *
-          3.8;
-      const x =
-        (
-          (
-            rawX +
-            width +
-            220
-          ) %
-            span +
-          span
-        ) %
-          span -
-        width -
-        220;
-      const bob =
-        state.reducedMotion
-          ? 0
-          : Math.sin(
-              state.hole.elapsed *
-                (
-                  0.11 +
-                  cloud.parallax *
-                    0.24
-                ) +
-                cloud.phase,
-            ) *
-            (
-              2.5 +
-              cloud.parallax *
-                16
-            );
+      const placement =
+        cloudLayerPlacement(
+          cloud,
+          progress,
+          panX,
+          walkBob,
+        );
       drawParallaxAsset(
         cloudAtlasArt,
         {
@@ -4582,20 +4920,10 @@
           height:
             CLOUD_ATLAS_CELL,
         },
-        x,
-        cloud.y -
-          progress *
-            (
-              3 +
-              cloud.parallax *
-                12
-            ) +
-          bob +
-          walkBob *
-            cloud.parallax *
-            0.08,
-        width,
-        height,
+        placement.x,
+        placement.y,
+        placement.width,
+        placement.height,
         cloud.alpha,
       );
     }
@@ -4606,30 +4934,41 @@
     panX,
     walkBob,
   ) {
-    const moonSize =
-      126 +
-      progress * 7;
-    const moonX =
-      814 +
-      panX * 0.02 -
-      progress * 3;
-    const moonY =
-      42 -
-      progress * 2 +
-      walkBob * 0.008;
+    const moon =
+      moonLayerPlacement(
+        progress,
+        panX,
+        walkBob,
+      );
+    const moonlight =
+      cloudMoonlightState(
+        progress,
+        panX,
+        walkBob,
+      );
+    const moonSize = moon.size;
+    const moonX = moon.x;
+    const moonY = moon.y;
     const centerX =
-      moonX + moonSize * 0.5;
+      moon.centerX;
     const centerY =
-      moonY + moonSize * 0.5;
+      moon.centerY;
     const pulse =
-      state.reducedMotion
-        ? 0.12
-        : 0.105 +
-          Math.sin(
-            state.hole.elapsed *
-              0.16,
-          ) *
-            0.012;
+      (
+        state.reducedMotion
+          ? 0.12
+          : 0.105 +
+            Math.sin(
+              state.hole.elapsed *
+                0.16,
+            ) *
+              0.012
+      ) *
+      (
+        0.25 +
+        moonlight.intensity *
+          0.75
+      );
     const halo =
       ctx.createRadialGradient(
         centerX,
@@ -4667,8 +5006,81 @@
       moonY,
       moonSize,
       moonSize,
-      0.9,
+      0.9 *
+        Math.pow(
+          moonlight.intensity,
+          1.55,
+        ),
     );
+  }
+
+  function drawCloudMoonlightGrade(
+    progress,
+    walkBob,
+  ) {
+    const moonlight =
+      courseMoonlightState(
+        progress,
+        walkBob,
+      );
+    if (moonlight.coverage < 0.015) {
+      return;
+    }
+    const shadowAlpha = clamp(
+      moonlight.coverage * 0.145,
+      0,
+      0.115,
+    );
+    ctx.save();
+    const passingShadow =
+      ctx.createLinearGradient(
+        0,
+        HEIGHT * 0.18,
+        WIDTH,
+        HEIGHT,
+      );
+    passingShadow.addColorStop(
+      0,
+      `rgba(2,8,15,${shadowAlpha * 0.34})`,
+    );
+    passingShadow.addColorStop(
+      0.52,
+      `rgba(2,8,14,${shadowAlpha})`,
+    );
+    passingShadow.addColorStop(
+      1,
+      `rgba(3,10,13,${shadowAlpha * 0.62})`,
+    );
+    ctx.fillStyle = passingShadow;
+    ctx.fillRect(
+      -96,
+      -96,
+      WIDTH + 192,
+      HEIGHT + 192,
+    );
+    const coldAir =
+      ctx.createLinearGradient(
+        0,
+        HEIGHT * 0.48,
+        0,
+        HEIGHT,
+      );
+    coldAir.addColorStop(
+      0,
+      "rgba(34,63,69,0)",
+    );
+    coldAir.addColorStop(
+      1,
+      `rgba(34,63,69,${moonlight.coverage * 0.035})`,
+    );
+    ctx.fillStyle = coldAir;
+    ctx.fillRect(
+      -96,
+      HEIGHT * 0.42,
+      WIDTH + 192,
+      HEIGHT * 0.68,
+    );
+    ctx.restore();
   }
 
   function drawAtmosphericFogBand(
@@ -7107,6 +7519,8 @@
       blindsideTutorialShown: false,
       nerveHold:
         freshNerveHold(),
+      cadenceRead:
+        freshCadenceRead(),
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
       zoneVisits: COURSE_ZONES.map(
@@ -7703,6 +8117,18 @@
         hole.cutTraceMemory =
           null;
       }
+    }
+    if (
+      !hole.cutTraceMemory &&
+      (
+        hole.cadenceRead?.armed ||
+        hole.cadenceRead?.active
+      )
+    ) {
+      hole.cutTraceCandidateId =
+        null;
+      hole.cutTraceProgress = 0;
+      return;
     }
     const cut =
       environment.recentJoeCut;
@@ -8781,6 +9207,296 @@
       587,
       0.14,
       0.018,
+    );
+  }
+
+  function cadenceReadEligibility(
+    environment,
+    moving,
+  ) {
+    const hole = state.hole;
+    const cadence =
+      hole.cadenceRead;
+    const zone = courseZoneAt(
+      state.player.y,
+    );
+    const joeDistance =
+      worldDistance(
+        hole.joe,
+        state.player,
+      );
+    let blockedReason = null;
+    if (cadence.forecast) {
+      blockedReason =
+        "forecast_active";
+    } else if (
+      cadence.completions >=
+      DELIVERY_FAMILY_CAPS.cadence
+    ) {
+      blockedReason =
+        "run_cap_reached";
+    } else if (
+      cadence.cooldown > 0
+    ) {
+      blockedReason = "cooldown";
+    } else if (
+      cadence.lastZone === zone.id
+    ) {
+      blockedReason =
+        "zone_already_read";
+    } else if (
+      !environment.hardCover &&
+      !environment.effectiveRough
+    ) {
+      blockedReason =
+        "not_in_shelter";
+    } else if (!hole.crouched) {
+      blockedReason = "not_crouched";
+    } else if (
+      hole.concealment < 0.56
+    ) {
+      blockedReason =
+        "concealment_building";
+    } else if (moving) {
+      blockedReason = "movement";
+    } else if (
+      hole.joe.mode !== "patrol"
+    ) {
+      blockedReason =
+        "joe_not_patrolling";
+    } else if (
+      hole.hasLineOfSight ||
+      hole.detection >= 0.2
+    ) {
+      blockedReason = "exposed";
+    } else if (
+      joeDistance <
+        CADENCE_READ_MIN_JOE_DISTANCE
+    ) {
+      blockedReason = "too_close";
+    } else if (
+      joeDistance >
+        CADENCE_READ_MAX_JOE_DISTANCE
+    ) {
+      blockedReason = "too_far";
+    } else if (
+      hole.escapeFiling.active ||
+      hole.escapeFiling.sealing ||
+      hole.statusRequest.active ||
+      hole.blindsideTransfer ||
+      hole.ballAim.active ||
+      hole.ballFlight ||
+      hole.riskAward ||
+      hole.deliveryAward ||
+      hole.cutTraceMemory ||
+      hole.tensionDirector
+        .pendingIntercept
+    ) {
+      blockedReason =
+        "another_action_active";
+    }
+    return {
+      eligible:
+        blockedReason === null,
+      blockedReason,
+      zone,
+      joeDistance,
+    };
+  }
+
+  function cadenceForecastPath() {
+    const hole = state.hole;
+    const joe = hole.joe;
+    const target =
+      JOE_PATROL_ROUTE[
+        joe.patrolIndex
+      ];
+    const candidates = [
+      {
+        x: joe.x,
+        y: joe.y,
+      },
+      ...joe.routePath.slice(0, 7),
+      {
+        x: target.x,
+        y: target.y,
+      },
+    ];
+    const path = [];
+    for (
+      let index = 0;
+      index < candidates.length;
+      index += 1
+    ) {
+      const point = candidates[index];
+      const previous =
+        path[path.length - 1];
+      if (
+        !previous ||
+        worldDistance(
+          previous,
+          point,
+        ) > 1.25
+      ) {
+        path.push({
+          x: point.x,
+          y: point.y,
+        });
+      }
+    }
+    return path;
+  }
+
+  function updateCadenceRead(
+    dt,
+    environment,
+    moving,
+  ) {
+    const hole = state.hole;
+    const cadence =
+      hole.cadenceRead;
+    cadence.cooldown = Math.max(
+      0,
+      cadence.cooldown - dt,
+    );
+    if (cadence.forecast) {
+      cadence.forecast.timer =
+        Math.max(
+          0,
+          cadence.forecast.timer - dt,
+        );
+      if (
+        cadence.forecast.timer <= 0 ||
+        hole.joe.mode !== "patrol"
+      ) {
+        cadence.forecast = null;
+      }
+    }
+    const eligibility =
+      cadenceReadEligibility(
+        environment,
+        moving,
+      );
+    cadence.joeDistance = Number(
+      eligibility.joeDistance.toFixed(
+        2,
+      ),
+    );
+    cadence.blockedReason =
+      eligibility.blockedReason;
+    const wasActive =
+      cadence.active;
+    cadence.armed =
+      eligibility.eligible;
+    cadence.active = Boolean(
+      eligibility.eligible &&
+      hole.focus,
+    );
+    if (!eligibility.eligible) {
+      cadence.progress = 0;
+      return;
+    }
+    if (
+      !cadence.tutorialShown &&
+      hole.stateBannerLockTimer <= 0 &&
+      hole.messageTimer < 0.8
+    ) {
+      cadence.tutorialShown = true;
+      setHoleMessage(
+        "MOWER CADENCE -- stay crouched, hold Listening Focus, and read Joe's next turn.",
+        3.2,
+      );
+    }
+    if (!cadence.active) {
+      cadence.progress = Math.max(
+        0,
+        cadence.progress - dt * 1.6,
+      );
+      cadence.blockedReason =
+        "hold_listening_focus";
+      return;
+    }
+    if (!wasActive) {
+      playUiTone(
+        132,
+        0.08,
+        0.014,
+      );
+    }
+    cadence.progress = Math.min(
+      CADENCE_READ_SECONDS,
+      cadence.progress + dt,
+    );
+    if (
+      cadence.progress <
+      CADENCE_READ_SECONDS
+    ) {
+      return;
+    }
+    const targetIndex =
+      hole.joe.patrolIndex;
+    const target =
+      JOE_PATROL_ROUTE[
+        targetIndex
+      ];
+    const path =
+      cadenceForecastPath();
+    cadence.completions += 1;
+    cadence.lastZone =
+      eligibility.zone.id;
+    cadence.cooldown =
+      CADENCE_READ_COOLDOWN;
+    cadence.progress = 0;
+    cadence.active = false;
+    cadence.armed = false;
+    cadence.blockedReason =
+      "forecast_active";
+    cadence.forecast = {
+      targetIndex,
+      target: {
+        x: target.x,
+        y: target.y,
+      },
+      path,
+      timer:
+        CADENCE_FORECAST_SECONDS,
+      duration:
+        CADENCE_FORECAST_SECONDS,
+      zone:
+        courseZoneAt(
+          target.y,
+        ).id,
+    };
+    const deliveryAward =
+      awardDeliveryBeat(
+        "MOWER CADENCE READ",
+        CADENCE_READ_BONUS,
+      );
+    hole.stateBanner =
+      deliveryAward
+        ? `CADENCE READ // +${deliveryAward.amount} DELIVERY`
+        : "CADENCE READ // ROUTE FORECAST";
+    hole.stateBannerTimer = 2.3;
+    hole.stateBannerLockTimer = 2.3;
+    setHoleMessage(
+      `ROUTE FORECAST -- Joe committed to ${courseZoneAt(target.y).name}. Move before the cadence changes.`,
+      3.2,
+    );
+    addWorldEffect(
+      "cadence_read",
+      target.x,
+      target.y,
+      1.8,
+    );
+    playUiTone(
+      294,
+      0.1,
+      0.02,
+    );
+    playUiTone(
+      440,
+      0.14,
+      0.016,
     );
   }
 
@@ -11461,6 +12177,9 @@
     if (hole.blindsideTransfer) {
       return "blindside_transfer";
     }
+    if (hole.cadenceRead?.active) {
+      return "cadence_read";
+    }
     if (hole.zoneBannerTimer > 0) {
       return "zone_arrival";
     }
@@ -11540,7 +12259,9 @@
       activeHudPresentationFocus() ===
         "emergency_appeal" ||
       activeHudPresentationFocus() ===
-        "status_request"
+        "status_request" ||
+      activeHudPresentationFocus() ===
+        "cadence_read"
     ) {
       return;
     }
@@ -22885,6 +23606,86 @@
       }
       ctx.globalAlpha = 1;
     }
+    const cadenceForecast =
+      state.hole.cadenceRead
+        ?.forecast;
+    if (cadenceForecast) {
+      const fade = clamp(
+        cadenceForecast.timer / 0.5,
+        0,
+        1,
+      );
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle =
+        "#79d7b5";
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      for (
+        let index = 0;
+        index <
+          cadenceForecast.path.length;
+        index += 1
+      ) {
+        const point = mapPoint(
+          cadenceForecast.path[index]
+            .x,
+          cadenceForecast.path[index]
+            .y,
+        );
+        if (index === 0) {
+          ctx.moveTo(
+            point.x,
+            point.y,
+          );
+        } else {
+          ctx.lineTo(
+            point.x,
+            point.y,
+          );
+        }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const targetPoint = mapPoint(
+        cadenceForecast.target.x,
+        cadenceForecast.target.y,
+      );
+      ctx.fillStyle =
+        "#8de2c1";
+      polygon([
+        [
+          targetPoint.x,
+          targetPoint.y - 5,
+        ],
+        [
+          targetPoint.x + 5,
+          targetPoint.y,
+        ],
+        [
+          targetPoint.x,
+          targetPoint.y + 5,
+        ],
+        [
+          targetPoint.x - 5,
+          targetPoint.y,
+        ],
+      ]);
+      ctx.strokeStyle =
+        "#d0f1e2";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(
+        targetPoint.x,
+        targetPoint.y,
+        7,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
     ctx.fillStyle = "rgba(161,145,61,0.55)";
     for (
       let index = 0;
@@ -23459,7 +24260,9 @@
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
     drawText(
-      state.hole.crosswind.phase ===
+      cadenceForecast
+        ? `CADENCE ${Math.ceil(cadenceForecast.timer)}s  â€¢  MINT = JOE'S COMMITTED ROUTE`
+        : state.hole.crosswind.phase ===
         "active"
         ? `WIND ${crosswindDirectionLabel()}  •  ${Math.round(state.hole.crosswind.currentDistance)}/${CROSSWIND_RUN_DISTANCE}m  •  STEPS 42%`
         : state.hole.crosswind.phase ===
@@ -23474,7 +24277,8 @@
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
-      state.hole.crosswind.phase !==
+      cadenceForecast ||
+        state.hole.crosswind.phase !==
           "calm" ||
         blindsideLaneState()
         ? "#9ed8b8"
@@ -24141,6 +24945,78 @@
           lockSize,
           lockSize,
         );
+      } else if (
+        effect.kind ===
+          "cadence_read"
+      ) {
+        ctx.strokeStyle =
+          `rgba(121,215,181,${
+            0.82 * alpha
+          })`;
+        ctx.lineWidth = Math.max(
+          1,
+          2.2 * scale,
+        );
+        ctx.setLineDash([
+          7 * scale,
+          5 * scale,
+        ]);
+        for (
+          let ring = 0;
+          ring < 3;
+          ring += 1
+        ) {
+          const radius =
+            (
+              12 +
+              ring * 10 +
+              progress * 28
+            ) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y,
+            radius,
+            radius * 0.25,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.fillStyle =
+          `rgba(184,238,216,${
+            0.8 * alpha
+          })`;
+        const markerSize =
+          Math.max(
+            3,
+            5 * scale,
+          );
+        polygon([
+          [
+            point.x,
+            point.y -
+              markerSize,
+          ],
+          [
+            point.x +
+              markerSize,
+            point.y,
+          ],
+          [
+            point.x,
+            point.y +
+              markerSize,
+          ],
+          [
+            point.x -
+              markerSize,
+            point.y,
+          ],
+        ]);
       } else if (
         effect.kind ===
           "counter_route"
@@ -26244,6 +27120,107 @@
     );
   }
 
+  function listeningSearchRead() {
+    const hole = state.hole;
+    const joe = hole?.joe;
+    const trailCheck =
+      hole?.trailTarget &&
+      hole.trailApproachTimer > 0;
+    const locus = trailCheck
+      ? hole.trailTarget
+      : hole?.lastSeenPlayer;
+    const joeDistance = joe
+      ? worldDistance(
+          joe,
+          state.player,
+        )
+      : Infinity;
+    const active = Boolean(
+      hole?.focus &&
+      joe?.mode === "search" &&
+      locus &&
+      joeDistance <=
+        LISTENING_SEARCH_READ_MAX_DISTANCE &&
+      !hole.escapeFiling.active &&
+      !hole.ballAim.active &&
+      !hole.riskAward &&
+      !hole.deliveryAward &&
+      !hole.blindsideTransfer &&
+      !hole.nerveHold?.armed &&
+      !hole.nerveHold?.active &&
+      !(
+        hole.nerveHold?.exitWindow > 0
+      ),
+    );
+    let trend = "unknown";
+    let alignment = 0;
+    if (joe) {
+      const deltaX =
+        (state.player.x - joe.x) *
+        0.72;
+      const deltaY =
+        state.player.y - joe.y;
+      const distance = Math.max(
+        0.01,
+        Math.hypot(
+          deltaX,
+          deltaY,
+        ),
+      );
+      const headingX =
+        Math.cos(
+          joe.effectHeading,
+        ) * 0.72;
+      const headingY = Math.sin(
+        joe.effectHeading,
+      );
+      const headingLength = Math.max(
+        0.01,
+        Math.hypot(
+          headingX,
+          headingY,
+        ),
+      );
+      alignment =
+        (
+          headingX * deltaX +
+          headingY * deltaY
+        ) /
+        (
+          headingLength *
+          distance
+        );
+      trend =
+        joe.effectSpeed < 0.4
+          ? "paused"
+          : alignment > 0.28
+            ? "closing"
+            : alignment < -0.28
+              ? "receding"
+              : "crossing";
+    }
+    return {
+      active,
+      trend,
+      alignment,
+      joeDistance,
+      secondsRemaining:
+        hole?.searchTimer || 0,
+      locus,
+      locusKind: trailCheck
+        ? "trail_check"
+        : "last_signal",
+      locusDistance: locus
+        ? worldDistance(
+            state.player,
+            locus,
+          )
+        : null,
+      maximumDistance:
+        LISTENING_SEARCH_READ_MAX_DISTANCE,
+    };
+  }
+
   function drawListeningFocus() {
     if (!state.hole.focus) {
       return;
@@ -26257,6 +27234,10 @@
     const centerY = HEIGHT * 0.51;
     const radius = 116;
     const pulse = state.reducedMotion ? 0.76 : 0.68 + Math.sin(state.time * 5.2) * 0.16;
+    const searchRead =
+      listeningSearchRead();
+    const cadence =
+      state.hole.cadenceRead;
 
     ctx.save();
     const focusShade = ctx.createRadialGradient(
@@ -26300,7 +27281,9 @@
       direction = "BEHIND";
     }
     drawText(
-      `JOE ${direction}  •  ${Math.round(joeDistance)}m`,
+      searchRead.active
+        ? `JOE ${direction} // ${Math.round(joeDistance)}m // ${searchRead.trend.toUpperCase()}`
+        : `JOE ${direction}  •  ${Math.round(joeDistance)}m`,
       centerX,
       centerY + radius + 34,
       13,
@@ -26308,6 +27291,192 @@
       "center",
       true,
     );
+
+    if (
+      cadence.active ||
+      cadence.armed ||
+      cadence.forecast
+    ) {
+      const cadenceProgress =
+        cadence.active
+          ? clamp(
+              cadence.progress /
+                CADENCE_READ_SECONDS,
+              0,
+              1,
+            )
+          : cadence.forecast
+            ? clamp(
+                cadence.forecast.timer /
+                  cadence.forecast.duration,
+                0,
+                1,
+              )
+            : 0;
+      const cadenceColor =
+        cadence.forecast
+          ? "#8de2c1"
+          : "#d8c879";
+      ctx.strokeStyle =
+        cadenceColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(
+        centerX,
+        centerY,
+        radius + 17,
+        -Math.PI * 0.5,
+        -Math.PI * 0.5 +
+          Math.PI * 2 *
+            cadenceProgress,
+      );
+      ctx.stroke();
+      drawText(
+        cadence.active
+          ? `READING MOWER CADENCE // ${Math.round(cadenceProgress * 100)}%`
+          : cadence.forecast
+            ? `ROUTE FORECAST // ${Math.ceil(cadence.forecast.timer)}s`
+            : inputCopy(
+                `CADENCE READY // HOLD ${keyboardBindingLabel("focus")}`,
+                "CADENCE READY // HOLD LT",
+                "CADENCE READY // HOLD LISTEN",
+              ),
+        centerX,
+        centerY -
+          radius -
+          24,
+        10,
+        cadenceColor,
+        "center",
+        true,
+      );
+      if (cadence.forecast) {
+        const targetDeltaX =
+          cadence.forecast.target.x -
+          state.player.x;
+        const targetDeltaY =
+          cadence.forecast.target.y -
+          state.player.y;
+        const targetAngle = Math.atan2(
+          targetDeltaX * 0.72,
+          -targetDeltaY,
+        );
+        const targetX =
+          centerX +
+          Math.sin(targetAngle) *
+            (radius - 25);
+        const targetY =
+          centerY -
+          Math.cos(targetAngle) *
+            (radius - 25);
+        ctx.fillStyle =
+          cadenceColor;
+        polygon([
+          [targetX, targetY - 6],
+          [targetX + 6, targetY],
+          [targetX, targetY + 6],
+          [targetX - 6, targetY],
+        ]);
+      }
+    }
+
+    if (searchRead.active) {
+      const trendColor =
+        searchRead.trend === "closing"
+          ? "#ef7c4d"
+          : searchRead.trend ===
+                "receding"
+            ? "#8fc99c"
+            : searchRead.trend ===
+                  "crossing"
+              ? "#e0bc68"
+              : "#b4b69a";
+      ctx.strokeStyle = trendColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(
+        centerX,
+        centerY,
+        radius + 9,
+        angle -
+          Math.PI * 0.5 -
+          0.34,
+        angle -
+          Math.PI * 0.5 +
+          0.34,
+      );
+      ctx.stroke();
+
+      const projectedLocus =
+        worldToScreen(
+          searchRead.locus.x,
+          searchRead.locus.y,
+        );
+      const locusPoint =
+        transformCourseScreenPoint(
+          projectedLocus,
+        );
+      const locusOnScreen =
+        projectedLocus.visible &&
+        locusPoint.x > 70 &&
+        locusPoint.x < WIDTH - 330 &&
+        locusPoint.y > 104 &&
+        locusPoint.y < HEIGHT - 96;
+      if (locusOnScreen) {
+        const sweepPhase =
+          state.reducedMotion
+            ? 0.42
+            : (
+                state.time * 0.62
+              ) % 1;
+        const locusScale = clamp(
+          projectedLocus.scale,
+          0.62,
+          1.35,
+        );
+        const sweepRadius =
+          (
+            20 +
+            sweepPhase * 18
+          ) *
+          locusScale;
+        ctx.strokeStyle =
+          `rgba(224,188,104,${0.58 - sweepPhase * 0.28})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 6]);
+        ctx.beginPath();
+        ctx.ellipse(
+          locusPoint.x,
+          locusPoint.y,
+          sweepRadius,
+          sweepRadius * 0.34,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle =
+          "rgba(224,188,104,0.74)";
+        ctx.fillRect(
+          locusPoint.x - 2,
+          locusPoint.y - 2,
+          4,
+          4,
+        );
+        drawText(
+          `${searchRead.locusKind === "trail_check" ? "TRAIL CHECK" : "LAST TRACE"} // ${Math.round(searchRead.locusDistance)}m // ${Math.ceil(searchRead.secondsRemaining)}s`,
+          locusPoint.x,
+          locusPoint.y -
+            sweepRadius * 0.48 -
+            12,
+          9,
+          "#e5cd8c",
+          "center",
+          true,
+        );
+      }
+    }
 
     if (environment.nearestCover) {
       const coverDeltaX = environment.nearestCover.x - state.player.x;
@@ -26750,6 +27919,273 @@
         true,
       );
     }
+    ctx.restore();
+  }
+
+  function drawCadenceForecast() {
+    const forecast =
+      state.hole.cadenceRead
+        ?.forecast;
+    if (!forecast) {
+      return;
+    }
+    const fade = clamp(
+      Math.min(
+        forecast.timer / 0.55,
+        (
+          forecast.duration -
+          forecast.timer
+        ) /
+          0.22,
+      ),
+      0,
+      1,
+    );
+    const pulse = state.reducedMotion
+      ? 0.72
+      : 0.66 +
+        Math.sin(
+          state.time * 4.2,
+        ) *
+          0.12;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.strokeStyle =
+      `rgba(121,215,181,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 7]);
+    for (
+      let index = 1;
+      index < forecast.path.length;
+      index += 1
+    ) {
+      const previous =
+        worldToScreen(
+          forecast.path[index - 1]
+            .x,
+          forecast.path[index - 1]
+            .y,
+        );
+      const current = worldToScreen(
+        forecast.path[index].x,
+        forecast.path[index].y,
+      );
+      if (
+        !previous.visible &&
+        !current.visible
+      ) {
+        continue;
+      }
+      ctx.beginPath();
+      ctx.moveTo(
+        previous.x,
+        previous.y,
+      );
+      ctx.lineTo(
+        current.x,
+        current.y,
+      );
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    const targetPoint =
+      worldToScreen(
+        forecast.target.x,
+        forecast.target.y,
+      );
+    if (
+      targetPoint.visible &&
+      targetPoint.x > 68 &&
+      targetPoint.x < WIDTH - 316
+    ) {
+      const scale = clamp(
+        targetPoint.scale,
+        0.58,
+        1.55,
+      );
+      const ringPulse =
+        state.reducedMotion
+          ? 0
+          : Math.sin(
+              state.time * 4.2,
+            ) *
+            4 *
+            scale;
+      ctx.strokeStyle =
+        "#79d7b5";
+      ctx.lineWidth = Math.max(
+        1,
+        2.2 * scale,
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        targetPoint.x,
+        targetPoint.y,
+        18 * scale + ringPulse,
+        6 * scale +
+          ringPulse * 0.2,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.fillStyle =
+        "rgba(121,215,181,0.88)";
+      polygon([
+        [
+          targetPoint.x,
+          targetPoint.y -
+            9 * scale,
+        ],
+        [
+          targetPoint.x +
+            7 * scale,
+          targetPoint.y,
+        ],
+        [
+          targetPoint.x,
+          targetPoint.y +
+            9 * scale,
+        ],
+        [
+          targetPoint.x -
+            7 * scale,
+          targetPoint.y,
+        ],
+      ]);
+      drawText(
+        `NEXT TURN // ${Math.ceil(forecast.timer)}s`,
+        targetPoint.x,
+        targetPoint.y -
+          18 * scale,
+        9,
+        "#a8ead1",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawCadenceForecastCompass() {
+    const forecast =
+      state.hole.cadenceRead
+        ?.forecast;
+    if (
+      !forecast ||
+      state.hole.focus ||
+      state.hole.riskAward ||
+      state.hole.deliveryAward ||
+      state.hole.joe.mode !==
+        "patrol"
+    ) {
+      return;
+    }
+    const projected = worldToScreen(
+      forecast.target.x,
+      forecast.target.y,
+    );
+    const screenPoint =
+      transformCourseScreenPoint(
+        projected,
+      );
+    if (
+      projected.visible &&
+      screenPoint.x > 76 &&
+      screenPoint.x < WIDTH - 316 &&
+      screenPoint.y > 104 &&
+      screenPoint.y < HEIGHT - 92
+    ) {
+      return;
+    }
+    const deltaX =
+      forecast.target.x -
+      state.player.x;
+    const deltaY =
+      forecast.target.y -
+      state.player.y;
+    const angle = Math.atan2(
+      deltaX * 0.72,
+      -deltaY,
+    );
+    const direction =
+      directionFromPlayer(
+        forecast.target,
+      ) || "AHEAD";
+    const centerX =
+      WIDTH * 0.5;
+    const centerY =
+      HEIGHT * 0.5;
+    const anchorX = clamp(
+      centerX +
+        Math.sin(angle) * 205,
+      500,
+      WIDTH - 360,
+    );
+    const anchorY = clamp(
+      centerY -
+        Math.cos(angle) * 112,
+      224,
+      HEIGHT - 158,
+    );
+    const fade = clamp(
+      forecast.timer / 0.5,
+      0,
+      1,
+    );
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(
+          state.time * 4.2,
+        ) *
+        2;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle =
+      "rgba(3,12,8,0.82)";
+    ctx.fillRect(
+      anchorX - 94,
+      anchorY - 16,
+      188,
+      32,
+    );
+    strokeRect(
+      anchorX - 94,
+      anchorY - 16,
+      188,
+      32,
+      "#79d7b5",
+      1,
+    );
+    ctx.fillStyle =
+      "#8de2c1";
+    polygon([
+      [
+        anchorX - 76,
+        anchorY - 6 - pulse,
+      ],
+      [
+        anchorX - 70 + pulse,
+        anchorY,
+      ],
+      [
+        anchorX - 76,
+        anchorY + 6 + pulse,
+      ],
+      [
+        anchorX - 82 - pulse,
+        anchorY,
+      ],
+    ]);
+    drawText(
+      `JOE NEXT ${direction} // ${Math.round(worldDistance(state.player, forecast.target))}m`,
+      anchorX + 10,
+      anchorY + 4,
+      9,
+      "#b7ead5",
+      "center",
+      true,
+    );
     ctx.restore();
   }
 
@@ -28067,6 +29503,10 @@
     const crosswindVisible =
       hole.crosswind.phase !==
       "calm";
+    const searchRead =
+      listeningSearchRead();
+    const cadence =
+      hole.cadenceRead;
     const attentionStatus =
       hole.joe.mode === "chase"
         ? "PURSUIT LOCK"
@@ -28085,10 +29525,22 @@
           ? `EXIT WINDOW // ${hole.nerveHold.exitWindow.toFixed(1)}s`
         : hole.joe.mode ===
               "search"
-          ? "SEARCHING LAST SIGNAL"
+          ? searchRead.active
+            ? `SEARCH ${searchRead.trend.toUpperCase()} // ${Math.ceil(searchRead.secondsRemaining)}s`
+            : "SEARCHING LAST SIGNAL"
         : hole.joe.mode ===
               "investigate"
           ? "VERIFYING DISTURBANCE"
+        : cadence.active
+          ? `CADENCE READ // ${Math.round(cadence.progress / CADENCE_READ_SECONDS * 100)}%`
+        : cadence.forecast
+          ? `ROUTE FORECAST // ${cadence.forecast.timer.toFixed(1)}s`
+        : cadence.armed
+          ? inputCopy(
+              `CADENCE READY // ${keyboardBindingLabel("focus")} LISTEN`,
+              "CADENCE READY // LT LISTEN",
+              "CADENCE READY // LISTEN",
+            )
         : hole.crosswind.phase ===
             "active"
           ? `WIND ${Math.round(hole.crosswind.currentDistance)}/${CROSSWIND_RUN_DISTANCE}m // ${hole.crosswind.timer.toFixed(1)}s`
@@ -30637,6 +32089,7 @@
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
     drawCourseWayfindingStakes();
     drawWorldNavigationRibbon();
+    drawCadenceForecast();
     drawCourseCollisionFootprints();
     drawMowerWorldParticles(
       "behind",
@@ -30647,6 +32100,10 @@
       "front",
     );
     drawFloodlightMoths();
+    drawCloudMoonlightGrade(
+      progress,
+      walkBob,
+    );
     drawWorldEffects();
     drawNearbyBlockerCallouts();
 
@@ -30782,6 +32239,7 @@
     drawConcealmentEffects();
     drawListeningFocus();
     drawCutTraceMemory();
+    drawCadenceForecastCompass();
     drawContactBreakFeedback();
     drawAppealReviewFeedback();
     drawStatusRequestFeedback();
@@ -32745,6 +34203,31 @@
                   `HOLD ${keyboardBindingLabel("focus")} // HOLD YOUR NERVE`,
                   "HOLD LT // HOLD YOUR NERVE",
                   "HOLD LISTEN // HOLD YOUR NERVE",
+                );
+        }
+        updateCadenceRead(
+          dt,
+          getPlayerEnvironmentState(),
+          moving,
+        );
+        if (
+          !hole.prompt &&
+          (
+            hole.cadenceRead.active ||
+            hole.cadenceRead.armed
+          )
+        ) {
+          hole.prompt =
+            hole.cadenceRead.active
+              ? inputCopy(
+                  `READING CADENCE ${Math.round(hole.cadenceRead.progress / CADENCE_READ_SECONDS * 100)}% // DO NOT MOVE`,
+                  `READING CADENCE ${Math.round(hole.cadenceRead.progress / CADENCE_READ_SECONDS * 100)}% // DO NOT MOVE`,
+                  `READING CADENCE ${Math.round(hole.cadenceRead.progress / CADENCE_READ_SECONDS * 100)}% // DO NOT MOVE`,
+                )
+              : inputCopy(
+                  `HOLD ${keyboardBindingLabel("focus")} // READ MOWER CADENCE`,
+                  "HOLD LT // READ MOWER CADENCE",
+                  "HOLD LISTEN // READ MOWER CADENCE",
                 );
         }
         updateBlindsideTransfer(
@@ -36480,6 +37963,9 @@
             nerveHolds:
               state.hole
                 .nerveHold.completions,
+            cadenceReads:
+              state.hole
+                .cadenceRead.completions,
             fileProjection:
               state.hole.liveProjection
                 ? {
@@ -37695,6 +39181,134 @@
             rule:
               "While concealed in deep rough and Joe is searching 11-42m away without line of sight, stay still and hold crouch plus Listening Focus for 1.65 seconds. Brief sightline or range flicker freezes progress for up to 0.24 seconds; movement or sustained exposure resets it. Completion opens 4.4 seconds of mint Blindside guidance during reward feedback when Joe is moving away or laterally, without changing detection or movement. Each zone can score once, with two Nerve-family awards per run.",
           },
+          cadenceRead: {
+            id: "mower_cadence",
+            armed:
+              state.hole
+                .cadenceRead.armed,
+            active:
+              state.hole
+                .cadenceRead.active,
+            progressPercent:
+              Number(
+                clamp(
+                  state.hole
+                    .cadenceRead.progress /
+                    CADENCE_READ_SECONDS,
+                  0,
+                  1,
+                ).toFixed(2),
+              ),
+            requiredSeconds:
+              CADENCE_READ_SECONDS,
+            completions:
+              state.hole
+                .cadenceRead.completions,
+            runCap:
+              DELIVERY_FAMILY_CAPS
+                .cadence,
+            cooldownSeconds:
+              Number(
+                state.hole
+                  .cadenceRead.cooldown.toFixed(
+                    2,
+                  ),
+              ),
+            lastZone:
+              state.hole
+                .cadenceRead.lastZone,
+            joeDistance:
+              state.hole
+                .cadenceRead.joeDistance,
+            distanceWindow: {
+              minimum:
+                CADENCE_READ_MIN_JOE_DISTANCE,
+              maximum:
+                CADENCE_READ_MAX_JOE_DISTANCE,
+            },
+            blockedReason:
+              state.hole
+                .cadenceRead.blockedReason,
+            forecast:
+              state.hole
+                .cadenceRead.forecast
+                ? {
+                    targetIndex:
+                      state.hole
+                        .cadenceRead
+                        .forecast
+                        .targetIndex,
+                    target: {
+                      x: Number(
+                        state.hole
+                          .cadenceRead
+                          .forecast
+                          .target.x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        state.hole
+                          .cadenceRead
+                          .forecast
+                          .target.y.toFixed(
+                            2,
+                          ),
+                      ),
+                    },
+                    targetZone:
+                      state.hole
+                        .cadenceRead
+                        .forecast.zone,
+                    secondsRemaining:
+                      Number(
+                        state.hole
+                          .cadenceRead
+                          .forecast.timer.toFixed(
+                            2,
+                          ),
+                      ),
+                    durationSeconds:
+                      state.hole
+                        .cadenceRead
+                        .forecast.duration,
+                    path:
+                      state.hole
+                        .cadenceRead
+                        .forecast.path.map(
+                          (point) => ({
+                            x: Number(
+                              point.x.toFixed(
+                                2,
+                              ),
+                            ),
+                            y: Number(
+                              point.y.toFixed(
+                                2,
+                              ),
+                            ),
+                          }),
+                        ),
+                    revocation:
+                      "expires_or_joe_leaves_patrol",
+                  }
+                : null,
+            input:
+              inputCopy(
+                `${keyboardBindingLabel("crouch")} + ${keyboardBindingLabel("focus")}`,
+                "LB + LT",
+                "CROUCH + LISTEN",
+              ),
+            deliveryBonus:
+              CADENCE_READ_BONUS,
+            deliveryFamilyCap:
+              DELIVERY_FAMILY_CAPS
+                .cadence,
+            gameplayEffect:
+              "information_only",
+            rule:
+              "While concealed and Joe patrols 34-118m away, stay crouched and still with Listening Focus for 1.25 seconds. Success snapshots Joe's immediate collision-aware patrol path for seven seconds in the world and map; movement, detection, speed, and pathing are unchanged. Each zone can score once, with three Cadence-family awards per run.",
+          },
           suspense: {
             blackoutSeconds: Number(
               state.hole.blackoutTimer.toFixed(2),
@@ -38113,6 +39727,45 @@
             dedicatedSkyLayer:
               "moonless_night_sky",
             moonOwnLayer: true,
+            cloudMoonlight: (() => {
+              const progress = clamp(
+                state.player.y /
+                  COURSE_LENGTH,
+                0,
+                1,
+              );
+              const moonlight =
+                courseMoonlightState(
+                  progress,
+                  courseLocomotionState()
+                    .bob,
+                );
+              return {
+                coverage: Number(
+                  moonlight.coverage.toFixed(
+                    3,
+                  ),
+                ),
+                intensity: Number(
+                  moonlight.intensity.toFixed(
+                    3,
+                  ),
+                ),
+                coveringClouds:
+                  moonlight.coveringClouds,
+                motion:
+                  moonlight.motion,
+                gameplayEffect:
+                  moonlight.gameplayEffect,
+                protectedLayers: [
+                  "hud",
+                  "objective_markers",
+                  "interaction_prompts",
+                  "collision_cues",
+                  "stealth_exposure",
+                ],
+              };
+            })(),
             animatedLayers: [
               {
                 id:
@@ -38594,6 +40247,51 @@
             lineBlockedBy: state.hole.lineBlockedBy,
             lostSightSeconds: Number(state.hole.lostSightTimer.toFixed(2)),
             searchSecondsRemaining: Number(state.hole.searchTimer.toFixed(2)),
+            listeningSearchRead: (() => {
+              const read =
+                listeningSearchRead();
+              return {
+                active: read.active,
+                requiresFocus: true,
+                maximumJoeDistance:
+                  read.maximumDistance,
+                movementTrend:
+                  read.active
+                    ? read.trend
+                    : null,
+                movementAlignment:
+                  read.active
+                    ? Number(
+                        read.alignment.toFixed(
+                          2,
+                        ),
+                      )
+                    : null,
+                locus: read.active
+                  ? {
+                      kind:
+                        read.locusKind,
+                      x: Math.round(
+                        read.locus.x,
+                      ),
+                      y: Math.round(
+                        read.locus.y,
+                      ),
+                      distance: Math.round(
+                        read.locusDistance,
+                      ),
+                      searchSecondsRemaining:
+                        Number(
+                          read.secondsRemaining.toFixed(
+                            2,
+                          ),
+                        ),
+                    }
+                  : null,
+                purpose:
+                  "turn_search_waiting_into_a_tactical_read_without_changing_joe_detection_speed_or_pathing",
+              };
+            })(),
             navigation: {
               routeObstacle: state.hole.joe.routeObstacle,
               routeSide: state.hole.joe.routeSide,
