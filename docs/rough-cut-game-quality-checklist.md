@@ -159,18 +159,18 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 
 ### Required Image-Generation Workflow
 
-- [ ] Begin with a written asset brief covering purpose, camera angle, pose, silhouette, palette, lighting, intended screen size, and required transparency.
-- [ ] Use the established Joe reference and existing game frames to preserve character identity and costume continuity.
-- [ ] Generate at high resolution while preserving deliberate pixel clusters, hard-edged forms, and limited-palette cohesion.
-- [ ] Inspect every candidate at native size and at actual in-game display size.
-- [ ] Reject unintended text, logos, malformed anatomy, duplicated tools, inconsistent mower geometry, muddy silhouettes, and faux-pixel blur.
-- [ ] Remove chroma backgrounds or create clean alpha only after selecting the strongest source.
-- [ ] Crop, scale, and anchor assets consistently so animation does not jitter.
+- [x] Begin with a written asset brief covering purpose, camera angle, pose, silhouette, palette, lighting, intended screen size, and required transparency. The route-specific victory brief and final prompts are recorded in `design/escape-tableaux-v1.md`.
+- [x] Use the established Joe reference and existing game frames to preserve character identity and costume continuity. The canonical capture tableau was supplied as a style, palette, pixel-density, and lighting reference without reusing its composition.
+- [x] Generate at high resolution while preserving deliberate pixel clusters, hard-edged forms, and limited-palette cohesion. Both escape scenes are `1672x941` opaque PNGs with route-specific restrained palettes.
+- [x] Inspect every candidate at native size and at actual in-game display size. Both originals and their `1280x720` runtime composites were reviewed.
+- [x] Reject unintended text, logos, malformed anatomy, duplicated tools, inconsistent mower geometry, muddy silhouettes, and faux-pixel blur. The selected environmental scenes contain no people, baked UI, watermark, or readable text and retain a coherent distant mower silhouette.
+- [x] Remove chroma backgrounds or create clean alpha only after selecting the strongest source. The victory scenes deliberately require opaque cinematic backgrounds, so no chroma or alpha pass is needed.
+- [x] Crop, scale, and anchor assets consistently so animation does not jitter. Both tableaux share the same 16:9 dimensions and cover transform; Reduced Camera Motion removes all drift.
 - [ ] Store original generation, cleaned master, and optimized runtime derivative separately.
-- [ ] Use clear versioned names and record the prompt or visual brief beside the canonical asset.
-- [ ] Integrate the asset into the actual game before approval; a good standalone image can still fail in motion, lighting, contrast, or gameplay readability.
-- [ ] Capture an in-game screenshot and compare it against the visual target before marking the asset complete.
-- [ ] Verify that image assets remain legible with subtitles, HUD elements, reduced motion, and common browser scaling.
+- [x] Use clear versioned names and record the prompt or visual brief beside the canonical asset. The canonical files use `rough-cut-*-escape-tableau-v1.png`, with both exact prompts stored beside the design record.
+- [x] Integrate the asset into the actual game before approval; a good standalone image can still fail in motion, lighting, contrast, or gameplay readability. Shed and drain tableaux now drive the live route-specific victory renderer with a safe fallback.
+- [x] Capture an in-game screenshot and compare it against the visual target before marking the asset complete. Tableau-only, full-scorecard, and Reduced Motion screenshots were reviewed for both route identities.
+- [x] Verify that image assets remain legible with subtitles, HUD elements, reduced motion, and common browser scaling. The translucent ledger retains readable runtime typography and all three result actions at the canonical browser viewport.
 
 ### Priority Image-Generation Targets
 
@@ -292,7 +292,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Alternate slow dread, investigation, near discovery, active search, pursuit, and decompression.
 - [ ] Make scares emerge from systems and player decisions as often as from authored sequences.
 - [ ] Use scripted scares sparingly so they remain surprising and do not undermine trust in the game's rules.
-- [ ] Ensure the player usually understands why Joe found them after the danger has passed.
+- [x] Ensure the player usually understands why Joe found them after the danger has passed. The Sprint Terminated screen now files a cause-specific Incident Review using the last trustworthy sight, sound, turf-evidence, proximity, or objective-commitment signal.
 - [ ] Allow mistakes to escalate danger without making every small error immediately fatal.
 - [ ] Give the player opportunities to recover from partial detection, lost resources, or a poor route choice.
 - [ ] Avoid long stretches of routine traversal with no new information, decisions, or tension.
@@ -316,7 +316,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Make progress visible through opened routes, completed holes, recovered grass, altered course systems, or revealed project records.
 - [ ] Avoid objectives that are disconnected fetch quests with no relationship to Joe, grass, golf, or insurance.
 - [ ] Avoid requiring the player to repeat a solved low-risk process many times.
-- [ ] Make failure teach something about Joe, the terrain, the objective, or the available tools.
+- [x] Make failure teach something about Joe, the terrain, the objective, or the available tools. Each Incident Review pairs physical evidence with one concise counter-plan tied to cover, lighting, turf, noise, Listening Focus, or Final Filing.
 - [ ] Keep recovery and re-entry quick enough that tension is preserved after failure.
 - [ ] Make the loop deepen over time without replacing its original appeal with unrelated systems.
 
@@ -467,7 +467,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Ensure doors, ladders, crawlspaces, carts, and transitions behave reliably during chase conditions.
 - [ ] Make capture sequences concise, frightening, and consistent with Joe's corporate identity.
 - [ ] Avoid overusing the same capture animation or dialogue.
-- [ ] Make failure and restart fast enough that the player remains willing to experiment.
+- [x] Make failure and restart fast enough that the player remains willing to experiment. Retry File remains a one-action restart and now carries the selected counter-plan into the reopened run without replaying the briefing.
 - [ ] Preserve meaningful consequences for capture without requiring excessive replay of solved content.
 
 ## Joe's Software-Product and Agile Tactics
@@ -989,7 +989,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Avoid jokes, spectacle, or excessive action that make the confrontation emotionally weightless.
 - [ ] Provide rapid retries near the start of difficult confrontation phases.
 - [ ] Make the final confrontation resolve the project's rules and Joe's pursuit, not only his physical location.
-- [ ] Make victory feel like escaping, exposing, redefining, or ending the system rather than simply dealing enough damage.
+- [x] Make victory feel like escaping, exposing, redefining, or ending the system rather than simply dealing enough damage. Each route now resolves into a distinct temporary refuge with Joe's mower still searching outside before the bureaucratic scorecard files the survival result.
 
 ## Difficulty Design
 
@@ -1033,7 +1033,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Maintain backups or recovery paths where practical.
 - [ ] Test save and load during every Joe state, objective state, interior transition, weather condition, and machinery interaction.
 - [ ] Ensure chapter replay cannot corrupt the primary campaign state.
-- [ ] Make failure encourage another plan rather than resignation.
+- [x] Make failure encourage another plan rather than resignation. The defeat card, selected Retry action, reopening banner, and first-run message all preserve the same actionable counter-plan.
 
 ## Visual Direction
 
@@ -1202,7 +1202,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Avoid large text boxes during moments when the player should be listening for Joe.
 - [ ] Pause or protect the player while reading unavoidable tutorial information.
 - [ ] Allow tutorials to be skipped, revisited, or reset individually.
-- [ ] Provide contextual reminders after repeated failures without repeatedly interrupting skilled players.
+- [x] Provide contextual reminders after repeated failures without repeatedly interrupting skilled players. Consecutive captures from the same cause are tracked in the career save and highlighted only on the defeat review; a successful escape clears the streak.
 - [ ] Introduce advanced golf shots, trail manipulation, policy exploits, and machinery through optional practice or low-risk situations.
 - [ ] Make the opening representative of the full game's horror, grass, golf, and Joe premise.
 - [ ] Avoid withholding the central pursuit for so long that players misread the genre.
