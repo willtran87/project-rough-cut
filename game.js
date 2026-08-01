@@ -2415,6 +2415,8 @@
       blindsideTransfer: null,
       blindsideTransferCooldown: 0,
       blindsidePreviousShelter: null,
+      blindsidePreview: null,
+      blindsidePreviewRefresh: 0,
       blindsideTutorialShown: false,
       zoneIndex: 0,
       zoneBannerTimer: 0,
@@ -7034,6 +7036,8 @@
       blindsideTransfer: null,
       blindsideTransferCooldown: 0,
       blindsidePreviousShelter: null,
+      blindsidePreview: null,
+      blindsidePreviewRefresh: 0,
       blindsideTutorialShown: false,
       zoneIndex: 0,
       zoneBannerTimer: 2.8,
@@ -7842,6 +7846,337 @@
     );
   }
 
+  function blindsideCoverLanding(
+    obstacle,
+  ) {
+    const joe = state.hole.joe;
+    const metricX =
+      (obstacle.x - joe.x) * 0.72;
+    const metricY =
+      obstacle.y - joe.y;
+    const joeDistance = Math.hypot(
+      metricX,
+      metricY,
+    );
+    if (joeDistance < 4) {
+      return null;
+    }
+    const directionX =
+      metricX / joeDistance;
+    const directionY =
+      metricY / joeDistance;
+    const axes =
+      obstacleFootprintAxes(
+        obstacle,
+      );
+    const boundaryDistance =
+      1 /
+      Math.max(
+        0.001,
+        Math.hypot(
+          directionX / axes.x,
+          directionY / axes.y,
+        ),
+      );
+    const landingDistance =
+      boundaryDistance +
+      PLAYER_COLLISION_RADIUS +
+      2.2;
+    const point = {
+      x:
+        obstacle.x +
+        directionX / 0.72 *
+          landingDistance,
+      y:
+        obstacle.y +
+        directionY *
+          landingDistance,
+    };
+    if (
+      point.x <
+        -COURSE_MAX_X +
+          PLAYER_COLLISION_RADIUS ||
+      point.x >
+        COURSE_MAX_X -
+          PLAYER_COLLISION_RADIUS ||
+      point.y <
+        COURSE_MIN_Y +
+          PLAYER_COLLISION_RADIUS ||
+      point.y >
+        COURSE_LENGTH -
+          PLAYER_COLLISION_RADIUS ||
+      obstacleAtPosition(
+        point.x,
+        point.y,
+      ) ||
+      worldDistance(
+        point,
+        obstacle,
+      ) >
+        obstacle.coverRadius - 0.8 ||
+      lineBlockerBetween(
+        joe,
+        point,
+      ) !== obstacle.id
+    ) {
+      return null;
+    }
+    return point;
+  }
+
+  function blindsideDestinationOptions(
+    startShelterId,
+    origin = state.player,
+  ) {
+    const candidates = [];
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (
+        !obstacle.blocks ||
+        !obstacle.sight ||
+        !obstacle.coverRadius ||
+        `cover:${obstacle.id}` ===
+          startShelterId
+      ) {
+        continue;
+      }
+      const point =
+        blindsideCoverLanding(
+          obstacle,
+        );
+      if (!point) {
+        continue;
+      }
+      const distance =
+        worldDistance(
+          origin,
+          point,
+        );
+      if (
+        distance <
+          BLINDSIDE_TRANSFER_DISTANCE +
+            1.5 ||
+        distance > 92
+      ) {
+        continue;
+      }
+      const behindDistance =
+        Math.max(
+          0,
+          origin.y - point.y,
+        );
+      candidates.push({
+        id: `cover:${obstacle.id}`,
+        kind: "hard_cover",
+        obstacleId: obstacle.id,
+        label:
+          obstacle.landmark ||
+          "hard cover",
+        x: point.x,
+        y: point.y,
+        distance,
+        remainingDistance:
+          distance,
+        score:
+          distance +
+          behindDistance * 0.42 +
+          (point.y < origin.y - 4
+            ? 9
+            : 0),
+        requiresCrouch: false,
+      });
+    }
+    const roughCandidatesById =
+      new Map();
+    const roughOffsets = [
+      24,
+      42,
+      60,
+      -30,
+    ];
+    const roughLanes = [
+      {
+        id: "west",
+        direction: -1,
+      },
+      {
+        id: "east",
+        direction: 1,
+      },
+    ];
+    for (
+      let offsetIndex = 0;
+      offsetIndex <
+      roughOffsets.length;
+      offsetIndex += 1
+    ) {
+      const pointY = clamp(
+        origin.y +
+          roughOffsets[offsetIndex],
+        COURSE_MIN_Y + 8,
+        COURSE_LENGTH - 8,
+      );
+      const zone =
+        courseZoneAt(pointY);
+      for (
+        let laneIndex = 0;
+        laneIndex <
+        roughLanes.length;
+        laneIndex += 1
+      ) {
+        const lane =
+          roughLanes[laneIndex];
+        const point = {
+          x:
+            lane.direction *
+            Math.min(
+              COURSE_MAX_X - 7,
+              Math.max(
+                48,
+                zone.fairwayHalfWidth +
+                  14,
+              ),
+            ),
+          y: pointY,
+        };
+        const shelterId =
+          `rough:${zone.id}:${lane.id}`;
+        const distance =
+          worldDistance(
+            origin,
+            point,
+          );
+        if (
+          shelterId ===
+            startShelterId ||
+          distance <
+            BLINDSIDE_TRANSFER_DISTANCE +
+              1.5 ||
+          distance > 92 ||
+          obstacleAtPosition(
+            point.x,
+            point.y,
+          ) ||
+          sandStateAt(point).active ||
+          turfStateAt(point).mowed
+        ) {
+          continue;
+        }
+        const behindDistance =
+          Math.max(
+            0,
+            origin.y - point.y,
+          );
+        const candidate = {
+          id: shelterId,
+          kind: "rough",
+          obstacleId: null,
+          label:
+            `${lane.id} rough`,
+          x: point.x,
+          y: point.y,
+          distance,
+          remainingDistance:
+            distance,
+          score:
+            distance +
+            behindDistance * 0.42 +
+            (point.y < origin.y - 4
+              ? 9
+              : 0) +
+            4,
+          requiresCrouch: true,
+          concealmentRequired: 0.56,
+        };
+        const previous =
+          roughCandidatesById.get(
+            shelterId,
+          );
+        if (
+          !previous ||
+          candidate.score <
+            previous.score
+        ) {
+          roughCandidatesById.set(
+            shelterId,
+            candidate,
+          );
+        }
+      }
+    }
+    candidates.push(
+      ...roughCandidatesById.values(),
+    );
+    candidates.sort(
+      (a, b) => a.score - b.score,
+    );
+    const selected = [];
+    for (
+      let index = 0;
+      index < candidates.length &&
+      selected.length < 3;
+      index += 1
+    ) {
+      const candidate =
+        candidates[index];
+      if (
+        selected.some(
+          (existing) =>
+            worldDistance(
+              existing,
+              candidate,
+            ) < 11,
+        )
+      ) {
+        continue;
+      }
+      selected.push(candidate);
+    }
+    const preferredRough =
+      candidates.find(
+        (candidate) =>
+          candidate.kind ===
+          "rough",
+      );
+    if (
+      preferredRough &&
+      !selected.some(
+        (candidate) =>
+          candidate.kind ===
+          "rough",
+      )
+    ) {
+      const insertionIndex =
+        selected.length < 3
+          ? selected.length
+          : 2;
+      const distinct =
+        selected
+          .slice(
+            0,
+            insertionIndex,
+          )
+          .every(
+            (candidate) =>
+              worldDistance(
+                candidate,
+                preferredRough,
+              ) >= 11,
+          );
+      if (distinct) {
+        selected[
+          insertionIndex
+        ] = preferredRough;
+      }
+    }
+    return selected;
+  }
+
   function updateBlindsideTransfer(
     dt,
     environment,
@@ -7865,6 +8200,13 @@
     const active =
       hole.blindsideTransfer;
 
+    hole.blindsidePreviewRefresh =
+      Math.max(
+        0,
+        hole.blindsidePreviewRefresh -
+          dt,
+      );
+
     if (active) {
       active.timer = Math.max(
         0,
@@ -7887,6 +8229,22 @@
         alignment;
       active.joeDistance =
         joeDistance;
+      for (
+        let index = 0;
+        index <
+        active.destinations.length;
+        index += 1
+      ) {
+        active.destinations[
+          index
+        ].remainingDistance =
+          worldDistance(
+            state.player,
+            active.destinations[
+              index
+            ],
+          );
+      }
 
       if (
         joe.mode === "chase" ||
@@ -7982,6 +8340,15 @@
         previousShelter,
       )
     ) {
+      const previewOptions =
+        hole.blindsidePreview
+          ?.startShelterId ===
+        previousShelter.id
+          ? hole.blindsidePreview
+              .options
+          : blindsideDestinationOptions(
+              previousShelter.id,
+            );
       hole.blindsideTransfer = {
         timer:
           BLINDSIDE_TRANSFER_WINDOW,
@@ -8000,7 +8367,16 @@
         joeAlignment:
           alignment,
         joeDistance,
+        destinations:
+          previewOptions.map(
+            (option) => ({
+              ...option,
+            }),
+          ),
       };
+      hole.blindsidePreview = null;
+      hole.blindsidePreviewRefresh =
+        0;
       addWorldEffect(
         "blindside_open",
         state.player.x,
@@ -8022,6 +8398,41 @@
           3.2,
         );
       }
+    }
+
+    const previewReady =
+      !hole.blindsideTransfer &&
+      blindsideWindowEligible(
+        shelter,
+      );
+    if (previewReady) {
+      if (
+        !hole.blindsidePreview ||
+        hole.blindsidePreview
+          .startShelterId !==
+          shelter.id ||
+        hole.blindsidePreviewRefresh <=
+          0
+      ) {
+        hole.blindsidePreview = {
+          startShelterId:
+            shelter.id,
+          startShelterLabel:
+            shelter.label,
+          options:
+            blindsideDestinationOptions(
+              shelter.id,
+            ),
+        };
+        hole.blindsidePreviewRefresh =
+          0.72;
+      }
+    } else if (
+      !hole.blindsideTransfer
+    ) {
+      hole.blindsidePreview = null;
+      hole.blindsidePreviewRefresh =
+        0;
     }
 
     hole.blindsidePreviousShelter =
@@ -9450,113 +9861,425 @@
     ctx.restore();
   }
 
+  function blindsideLaneState() {
+    const hole = state.hole;
+    if (hole.blindsideTransfer) {
+      return {
+        active: true,
+        options:
+          hole.blindsideTransfer
+            .destinations || [],
+      };
+    }
+    if (
+      hole.blindsidePreview
+        ?.options?.length > 0
+    ) {
+      return {
+        active: false,
+        options:
+          hole.blindsidePreview
+            .options,
+      };
+    }
+    return null;
+  }
+
+  function blindsideLaneDirection(
+    option,
+  ) {
+    if (!option) {
+      return "COVER";
+    }
+    const deltaX =
+      option.x - state.player.x;
+    const deltaY =
+      option.y - state.player.y;
+    const lateral =
+      Math.abs(deltaX) > 12
+        ? deltaX < 0
+          ? "LEFT"
+          : "RIGHT"
+        : "";
+    if (deltaY < -5) {
+      return lateral
+        ? `BACK ${lateral}`
+        : "BEHIND";
+    }
+    return lateral || "AHEAD";
+  }
+
+  function drawBlindsideEdgeCue(
+    option,
+    active,
+    danger,
+  ) {
+    const direction =
+      blindsideLaneDirection(
+        option,
+      );
+    const distance =
+      option.remainingDistance ??
+      option.distance;
+    const x =
+      direction.includes("LEFT")
+        ? 196
+        : direction.includes(
+              "RIGHT",
+            )
+          ? WIDTH - 454
+          : WIDTH * 0.5;
+    const y = HEIGHT - 286;
+    const color = danger
+      ? "#e09d4f"
+      : "#75cda9";
+    const arrowX = x - 111;
+    const arrowY = y;
+    ctx.save();
+    ctx.globalAlpha = active
+      ? 0.94
+      : 0.82;
+    ctx.fillStyle =
+      "rgba(3,13,10,0.92)";
+    ctx.fillRect(
+      x - 137,
+      y - 20,
+      274,
+      40,
+    );
+    strokeRect(
+      x - 137,
+      y - 20,
+      274,
+      40,
+      color,
+      active ? 2 : 1.5,
+    );
+    ctx.fillStyle = color;
+    const arrowPoints =
+      direction.includes("LEFT")
+        ? [
+            [arrowX - 8, arrowY],
+            [arrowX + 5, arrowY - 8],
+            [arrowX + 5, arrowY + 8],
+          ]
+        : direction.includes(
+              "RIGHT",
+            )
+          ? [
+              [arrowX + 8, arrowY],
+              [arrowX - 5, arrowY - 8],
+              [arrowX - 5, arrowY + 8],
+            ]
+          : direction === "BEHIND"
+            ? [
+                [arrowX, arrowY + 8],
+                [arrowX - 8, arrowY - 5],
+                [arrowX + 8, arrowY - 5],
+              ]
+            : [
+                [arrowX, arrowY - 8],
+                [arrowX - 8, arrowY + 5],
+                [arrowX + 8, arrowY + 5],
+              ];
+    polygon(arrowPoints);
+    const cueText =
+      option.requiresCrouch
+        ? inputCopy(
+            `${keyboardBindingLabel("crouch")} CROUCH LANE // ${direction}  ${Math.ceil(distance)}m`,
+            `LB CROUCH LANE // ${direction}  ${Math.ceil(distance)}m`,
+            `CROUCH LANE // ${direction}  ${Math.ceil(distance)}m`,
+          )
+        : `MINT LANE A // ${direction}  ${Math.ceil(distance)}m`;
+    drawText(
+      cueText,
+      x + 11,
+      y + 4,
+      10,
+      danger
+        ? "#f1bc78"
+        : "#c7f0dc",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawBlindsideTransferPath() {
     const transfer =
       state.hole.blindsideTransfer;
-    if (!transfer) {
+    const lane =
+      blindsideLaneState();
+    if (!lane) {
       return;
     }
-    const start =
-      worldToScreen(
-        transfer.startX,
-        transfer.startY,
-      );
     const player =
       worldToScreen(
         state.player.x,
         state.player.y,
       );
-    if (
-      !start.visible ||
-      !player.visible
-    ) {
-      return;
-    }
-    const progress = clamp(
-      transfer.distance /
-        BLINDSIDE_TRANSFER_DISTANCE,
-      0,
-      1,
+    const progress = transfer
+      ? clamp(
+          transfer.distance /
+            BLINDSIDE_TRANSFER_DISTANCE,
+          0,
+          1,
+        )
+      : 0;
+    const danger = Boolean(
+      transfer &&
+      transfer.joeAlignment > 0.12,
     );
-    const danger =
-      transfer.joeAlignment > 0.12;
     const color = danger
       ? "224,157,79"
       : "117,205,169";
     ctx.save();
-    ctx.globalAlpha =
-      0.32 +
-      progress * 0.36;
-    ctx.strokeStyle =
-      `rgba(${color},0.88)`;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([9, 7]);
-    ctx.lineDashOffset =
-      state.reducedMotion
-        ? 0
-        : -state.hole.elapsed * 22;
-    ctx.beginPath();
-    ctx.moveTo(
-      start.x,
-      start.y,
-    );
-    ctx.quadraticCurveTo(
-      (
-        start.x +
-        player.x
-      ) *
-        0.5,
-      Math.min(
-        start.y,
-        player.y,
-      ) -
-        20,
-      player.x,
-      player.y,
-    );
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const markerCount = 4;
-    for (
-      let index = 1;
-      index <= markerCount;
-      index += 1
-    ) {
-      const ratio =
-        index /
-        (
-          markerCount +
-          1
+    if (transfer) {
+      const start =
+        worldToScreen(
+          transfer.startX,
+          transfer.startY,
         );
-      const x = lerp(
-        start.x,
-        player.x,
-        ratio,
-      );
-      const y =
-        lerp(
+      if (
+        start.visible &&
+        player.visible
+      ) {
+        ctx.globalAlpha =
+          0.28 +
+          progress * 0.28;
+        ctx.strokeStyle =
+          `rgba(${color},0.76)`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([8, 7]);
+        ctx.lineDashOffset =
+          state.reducedMotion
+            ? 0
+            : -state.hole.elapsed *
+                18;
+        ctx.beginPath();
+        ctx.moveTo(
+          start.x,
           start.y,
+        );
+        ctx.quadraticCurveTo(
+          (
+            start.x +
+            player.x
+          ) *
+            0.5,
+          Math.min(
+            start.y,
+            player.y,
+          ) -
+            16,
+          player.x,
           player.y,
-          ratio,
-        ) -
-        Math.sin(
-          ratio * Math.PI,
-        ) *
-          20;
-      const size =
-        3 +
-        ratio * 2;
+        );
+        ctx.stroke();
+      }
+    }
+    for (
+      let index =
+        lane.options.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      const option =
+        lane.options[index];
+      const point =
+        worldToScreen(
+          option.x,
+          option.y,
+        );
+      if (
+        !point.visible ||
+        point.x < 70 ||
+        point.x > WIDTH - 70
+      ) {
+        if (index === 0) {
+          drawBlindsideEdgeCue(
+            option,
+            lane.active,
+            danger,
+          );
+        }
+        continue;
+      }
+      const primary = index === 0;
+      const alpha = lane.active
+        ? primary
+          ? 0.9
+          : 0.55
+        : primary
+          ? 0.7
+          : 0.36;
+      const radiusX = clamp(
+        15 * point.scale,
+        6,
+        26,
+      );
+      const radiusY = clamp(
+        6 * point.scale,
+        3,
+        12,
+      );
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle =
+        `rgba(${color},0.96)`;
+      ctx.lineWidth = primary
+        ? 2.5
+        : 1.5;
+      ctx.setLineDash(
+        primary ? [] : [4, 5],
+      );
+      ctx.beginPath();
+      ctx.moveTo(
+        player.x,
+        player.y - 6,
+      );
+      ctx.lineTo(
+        point.x,
+        point.y,
+      );
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        radiusX,
+        radiusY,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      if (option.requiresCrouch) {
+        ctx.strokeStyle =
+          "rgba(151,205,126,0.9)";
+        ctx.lineWidth = primary
+          ? 2
+          : 1.2;
+        const bladeHeight = clamp(
+          13 * point.scale,
+          6,
+          18,
+        );
+        for (
+          let blade = -2;
+          blade <= 2;
+          blade += 1
+        ) {
+          const rootX =
+            point.x +
+            blade *
+              radiusX *
+              0.23;
+          ctx.beginPath();
+          ctx.moveTo(
+            rootX,
+            point.y,
+          );
+          ctx.lineTo(
+            rootX +
+              blade * 0.7,
+            point.y -
+              bladeHeight *
+                (
+                  0.72 +
+                  (
+                    2 -
+                    Math.abs(blade)
+                  ) *
+                    0.1
+                ),
+          );
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+      const diamondSize = primary
+        ? 7
+        : 4.5;
       ctx.fillStyle =
-        `rgba(${color},${
-          0.44 +
-          ratio * 0.34
-        })`;
+        `rgba(${color},0.92)`;
       polygon([
-        [x, y - size],
-        [x + size, y],
-        [x, y + size],
-        [x - size, y],
+        [
+          point.x,
+          point.y -
+            diamondSize,
+        ],
+        [
+          point.x +
+            diamondSize,
+          point.y,
+        ],
+        [
+          point.x,
+          point.y +
+            diamondSize,
+        ],
+        [
+          point.x -
+            diamondSize,
+          point.y,
+        ],
       ]);
+      if (primary) {
+        const distance =
+          lane.active
+            ? option.remainingDistance
+            : option.distance;
+        const labelX = clamp(
+          point.x,
+          172,
+          WIDTH - 322,
+        );
+        const labelY = clamp(
+          point.y -
+            radiusY -
+            18,
+          COURSE_CAMERA.horizonY +
+            24,
+          HEIGHT - 242,
+        );
+        ctx.globalAlpha =
+          lane.active ? 0.94 : 0.82;
+        ctx.fillStyle =
+          "rgba(3,13,10,0.9)";
+        ctx.fillRect(
+          labelX - 105,
+          labelY - 14,
+          210,
+          26,
+        );
+        strokeRect(
+          labelX - 105,
+          labelY - 14,
+          210,
+          26,
+          danger
+            ? "#e09d4f"
+            : "#75cda9",
+          1.5,
+        );
+        drawText(
+          option.requiresCrouch
+            ? inputCopy(
+                `ROUGH A // ${keyboardBindingLabel("crouch")} CROUCH  ${Math.ceil(distance)}m`,
+                `ROUGH A // LB CROUCH  ${Math.ceil(distance)}m`,
+                `ROUGH A // CROUCH  ${Math.ceil(distance)}m`,
+              )
+            : `LANE A // ${option.label.toUpperCase()}  ${Math.ceil(distance)}m`,
+          labelX,
+          labelY + 4,
+          9,
+          danger
+            ? "#f1bc78"
+            : "#c7f0dc",
+          "center",
+          true,
+        );
+      }
     }
     ctx.restore();
   }
@@ -9599,10 +10322,45 @@
     const color = danger
       ? "#e09d4f"
       : "#75cda9";
+    const primaryDestination =
+      transfer.destinations?.[0];
+    const primaryEnvironment =
+      getPlayerEnvironmentState();
+    const roughConcealmentProgress =
+      primaryDestination
+        ?.requiresCrouch &&
+      primaryEnvironment.effectiveRough
+        ? clamp(
+            hole.concealment /
+              (
+                primaryDestination
+                  .concealmentRequired ||
+                0.56
+              ),
+            0,
+            1,
+          )
+        : 0;
     const instruction =
       transfer.distance >=
         BLINDSIDE_TRANSFER_DISTANCE
-        ? "ENTER DIFFERENT COVER"
+        ? primaryDestination
+          ? primaryDestination
+              .requiresCrouch
+            ? primaryEnvironment
+                .effectiveRough
+              ? inputCopy(
+                  `${keyboardBindingLabel("crouch")} CROUCH // CONCEAL ${Math.round(roughConcealmentProgress * 100)}%`,
+                  `LB CROUCH // CONCEAL ${Math.round(roughConcealmentProgress * 100)}%`,
+                  `HOLD CROUCH // CONCEAL ${Math.round(roughConcealmentProgress * 100)}%`,
+                )
+              : inputCopy(
+                  `${keyboardBindingLabel("crouch")} CROUCH IN ROUGH ${Math.ceil(primaryDestination.remainingDistance)}m`,
+                  `LB CROUCH IN ROUGH ${Math.ceil(primaryDestination.remainingDistance)}m`,
+                  `CROUCH IN ROUGH ${Math.ceil(primaryDestination.remainingDistance)}m`,
+                )
+            : `MINT COVER ${Math.ceil(primaryDestination.remainingDistance)}m`
+          : "ENTER DIFFERENT COVER"
         : `NEW COVER ${Math.floor(
             transfer.distance,
           )}/${BLINDSIDE_TRANSFER_DISTANCE}m`;
@@ -21685,6 +22443,103 @@
       ctx.fill();
       ctx.stroke();
     }
+    const blindsideLane =
+      blindsideLaneState();
+    if (blindsideLane) {
+      for (
+        let index =
+          blindsideLane.options.length -
+          1;
+        index >= 0;
+        index -= 1
+      ) {
+        const option =
+          blindsideLane.options[index];
+        const optionPoint =
+          mapPoint(
+            option.x,
+            option.y,
+          );
+        const primary = index === 0;
+        ctx.globalAlpha =
+          blindsideLane.active
+            ? primary
+              ? 0.95
+              : 0.62
+            : primary
+              ? 0.75
+              : 0.42;
+        ctx.strokeStyle =
+          "#75cda9";
+        ctx.lineWidth = primary
+          ? 1.8
+          : 1;
+        ctx.setLineDash(
+          primary ? [3, 3] : [2, 4],
+        );
+        ctx.beginPath();
+        ctx.moveTo(
+          playerPoint.x,
+          playerPoint.y,
+        );
+        ctx.lineTo(
+          optionPoint.x,
+          optionPoint.y,
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const size = primary
+          ? 5
+          : 3.5;
+        ctx.fillStyle =
+          option.requiresCrouch
+            ? primary
+              ? "#9ace78"
+              : "#668f58"
+            : primary
+              ? "#8ce0bd"
+              : "#568f78";
+        polygon([
+          [
+            optionPoint.x,
+            optionPoint.y -
+              size,
+          ],
+          [
+            optionPoint.x +
+              size,
+            optionPoint.y,
+          ],
+          [
+            optionPoint.x,
+            optionPoint.y +
+              size,
+          ],
+          [
+            optionPoint.x -
+              size,
+            optionPoint.y,
+          ],
+        ]);
+        if (option.requiresCrouch) {
+          ctx.strokeStyle =
+            "#9ace78";
+          ctx.lineWidth = primary
+            ? 1.5
+            : 1;
+          ctx.beginPath();
+          ctx.arc(
+            optionPoint.x,
+            optionPoint.y,
+            size + 2.5,
+            Math.PI,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = "rgba(161,145,61,0.55)";
     for (
       let index = 0;
@@ -22265,12 +23120,18 @@
         : state.hole.crosswind.phase ===
             "warning"
           ? `CROSSWIND BUILDING ${crosswindDirectionLabel()}`
+          : state.hole.blindsideTransfer
+            ? `BLINDSIDE ${state.hole.blindsideTransfer.timer.toFixed(1)}s  •  MINT DIAMONDS ARE COVER LANES`
+            : state.hole.blindsidePreview
+                ?.options?.length > 0
+              ? `BLINDSIDE READY  •  ${state.hole.blindsidePreview.options.length} MINT COVER LANES`
           : "SOLID SHAPES  •  AMBER REVIEW  •  GLOW USE",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
       state.hole.crosswind.phase !==
-        "calm"
+          "calm" ||
+        blindsideLaneState()
         ? "#9ed8b8"
         : "#9eaa88",
       "center",
@@ -26699,6 +27560,11 @@
           environment,
         ),
       );
+    const blindsidePrimary =
+      hole.blindsidePreview
+        ?.options?.[0] ||
+      hole.blindsideTransfer
+        ?.destinations?.[0];
     const directorWarning =
       hole.tensionDirector
         .pendingIntercept;
@@ -26730,7 +27596,16 @@
             0
           ? `QUIET LANE // ${hole.counterRouteQuietTimer.toFixed(1)}s`
         : blindsideReady
-          ? "BLINDSIDE READY // MOVE"
+          ? blindsidePrimary
+            ? blindsidePrimary
+                .requiresCrouch
+              ? inputCopy(
+                  `BLINDSIDE // ${keyboardBindingLabel("crouch")} ROUGH ${blindsideLaneDirection(blindsidePrimary)} ${Math.ceil(blindsidePrimary.distance)}m`,
+                  `BLINDSIDE // LB ROUGH ${blindsideLaneDirection(blindsidePrimary)} ${Math.ceil(blindsidePrimary.distance)}m`,
+                  `BLINDSIDE // ROUGH ${blindsideLaneDirection(blindsidePrimary)} ${Math.ceil(blindsidePrimary.distance)}m`,
+                )
+              : `BLINDSIDE // ${blindsideLaneDirection(blindsidePrimary)} ${Math.ceil(blindsidePrimary.distance)}m`
+            : "BLINDSIDE READY // MOVE"
         : hole.detectionSource === "sight"
           ? "SIGHTLINE BUILDING"
           : hole.detectionSource === "sound"
@@ -35990,6 +36865,68 @@
                   .environment ||
                   getPlayerEnvironmentState(),
               ).id,
+            laneStatus:
+              state.hole
+                .blindsideTransfer
+                ? "active"
+                : state.hole
+                    .blindsidePreview
+                    ?.options?.length >
+                    0
+                  ? "preview"
+                  : "none",
+            coverLanes:
+              (
+                state.hole
+                  .blindsideTransfer
+                  ?.destinations ||
+                state.hole
+                  .blindsidePreview
+                  ?.options ||
+                []
+              ).map(
+                (
+                  option,
+                  index,
+                ) => ({
+                  priority:
+                    index === 0
+                      ? "primary"
+                      : "alternate",
+                  id: option.id,
+                  label:
+                    option.label,
+                  kind:
+                    option.kind ||
+                    "hard_cover",
+                  requiresCrouch:
+                    Boolean(
+                      option.requiresCrouch,
+                    ),
+                  completionRequirement:
+                    option.requiresCrouch
+                      ? "hold_crouch_in_effective_rough_until_concealment_reaches_0.56"
+                      : "enter_line_of_sight_blocking_hard_cover",
+                  x: Number(
+                    option.x.toFixed(
+                      2,
+                    ),
+                  ),
+                  y: Number(
+                    option.y.toFixed(
+                      2,
+                    ),
+                  ),
+                  distance: Number(
+                    (
+                      option.remainingDistance ??
+                      option.distance
+                    ).toFixed(2),
+                  ),
+                  visual:
+                    "mint_world_ring_and_map_diamond",
+                }),
+              ),
             active:
               state.hole
                 .blindsideTransfer
@@ -36032,6 +36969,31 @@
                             2,
                           ),
                       ),
+                    guidedCoverLanes:
+                      state.hole
+                        .blindsideTransfer
+                        .destinations
+                        .length,
+                    primaryLaneKind:
+                      state.hole
+                        .blindsideTransfer
+                        .destinations?.[0]
+                        ?.kind ||
+                      "hard_cover",
+                    primaryRequiresCrouch:
+                      Boolean(
+                        state.hole
+                          .blindsideTransfer
+                          .destinations?.[0]
+                          ?.requiresCrouch,
+                      ),
+                    concealment:
+                      Number(
+                        state.hole
+                          .concealment.toFixed(
+                            2,
+                          ),
+                      ),
                   }
                 : null,
             deliveryBonus:
@@ -36040,7 +37002,7 @@
               DELIVERY_FAMILY_CAPS
                 .maneuver,
             rule:
-              "Leave shelter while Joe is moving away, travel 14m, and enter different shelter within 5.5 seconds without triggering pursuit.",
+              "When Joe moves away, mint lanes preview safe destinations. Leave shelter, travel 14m, and enter different shelter within 5.5 seconds without triggering pursuit; rough lanes require crouching until concealment reaches 0.56.",
           },
           suspense: {
             blackoutSeconds: Number(
