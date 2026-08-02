@@ -69,6 +69,8 @@
     384;
   const atlasCellCache =
     new Map();
+  const horrorOverlayCache =
+    new Map();
   const CLOUD_ALPHA_MASK_SIZE = 16;
   const CLOUD_ALPHA_MASK_ROWS = [
     [0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x5e00, 0x3f80, 0x3ff0, 0x0ff0, 0x07fc, 0x01fe, 0x0000, 0x0000, 0x0000, 0x0000],
@@ -256,6 +258,7 @@
     { id: "sprint", label: "SPRINT", defaultCode: "ShiftLeft" },
     { id: "crouch", label: "CROUCH", defaultCode: "KeyC" },
     { id: "focus", label: "LISTENING FOCUS", defaultCode: "KeyQ" },
+    { id: "look_back", label: "LOOK BEHIND", defaultCode: "KeyR" },
     { id: "interact", label: "INTERACT / RECLAIM", defaultCode: "Enter" },
     { id: "chip", label: "AIM / CHIP", defaultCode: "Space" },
     { id: "controls", label: "SHOW CONTROLS", defaultCode: "KeyH" },
@@ -274,6 +277,7 @@
   ]);
   const TOUCH_CONTROLS = {
     move: { x: 116, y: 594, radius: 78 },
+    lookBack: { x: 218, y: 502, radius: 30 },
     interact: { x: 1008, y: 568, radius: 38 },
     aim: { x: 1106, y: 606, radius: 54 },
     focus: { x: 1201, y: 548, radius: 32 },
@@ -308,6 +312,10 @@
     new Image();
   estatePerimeterArt.src =
     "./assets/rough-cut-estate-perimeter-v2.png";
+  const rearServiceBoundaryArt =
+    new Image();
+  rearServiceBoundaryArt.src =
+    "./assets/rough-cut-rear-service-boundary-v1.png";
   const signageAtlasArt = new Image();
   signageAtlasArt.src = "./assets/rough-cut-signage-atlas-v1.png";
   const bunkerAtlasArt = new Image();
@@ -318,12 +326,22 @@
   joeMowerAnimatedArt.src = "./assets/joe-mower-animated-v1.png";
   const joeMowerErraticHeadArt = new Image();
   joeMowerErraticHeadArt.src = "./assets/joe-mower-erratic-head-v1.png";
+  const shadowJoeArt = new Image();
+  shadowJoeArt.src = "./assets/rough-cut-shadow-joe-v1.png";
+  const horrorFlashJoeArt = new Image();
+  horrorFlashJoeArt.src =
+    "./assets/rough-cut-horror-flash-joe-v2.png";
+  const screenTearCourseArt = new Image();
+  screenTearCourseArt.src =
+    "./assets/rough-cut-screen-tear-course-v2.png";
   const fieldKitArt = new Image();
   fieldKitArt.src = "./assets/rough-cut-field-kit-v1.png";
   const courseObstacleArt = new Image();
   courseObstacleArt.src = "./assets/rough-cut-course-obstacle-kit-v1.png";
   const expandedCourseArt = new Image();
   expandedCourseArt.src = "./assets/rough-cut-expanded-course-kit-v1.png";
+  const hedgeTunnelArt = new Image();
+  hedgeTunnelArt.src = "./assets/rough-cut-hedge-tunnel-v1.png";
   const maintenanceShedArt = new Image();
   maintenanceShedArt.src = "./assets/rough-cut-maintenance-shed-v2.png";
   const hedgeHideArt = new Image();
@@ -357,6 +375,14 @@
     new Image();
   interactablePropArt.src =
     "./assets/rough-cut-interactable-props-v1.png";
+  const courseMechanicsArt =
+    new Image();
+  courseMechanicsArt.src =
+    "./assets/rough-cut-course-mechanics-atlas-v1.png";
+  const turfEvidenceArt =
+    new Image();
+  turfEvidenceArt.src =
+    "./assets/rough-cut-turf-evidence-atlas-v1.png";
   const courseClutterArt =
     new Image();
   courseClutterArt.src =
@@ -387,6 +413,12 @@
     maxRollRadians: 0.009,
     sprintRollRadians: 0.012,
   };
+  const SIGHT_COVER_MIN_HEIGHT_METERS =
+    2.05;
+  const SIGHT_COVER_FOOTPRINT_WIDTH =
+    1.82;
+  const SIGHT_COVER_OCCLUSION_DISTANCE =
+    34;
 
   function freshCourseCameraMotion() {
     return {
@@ -396,6 +428,17 @@
       roll: 0,
       targetRoll: 0,
       response: 0,
+    };
+  }
+
+  function freshLookBackState() {
+    return {
+      amount: 0,
+      target: 0,
+      held: false,
+      direction: -1,
+      previousHeld: false,
+      glances: 0,
     };
   }
 
@@ -566,6 +609,20 @@
       name: "scope_escalation",
     },
   };
+  const JOE_ANIMATION_FRAME_CELLS =
+    Array.from(
+      { length: 10 },
+      (_, frame) => ({
+        x:
+          frame *
+          JOE_ANIMATION_FRAME_SIZE,
+        y: 0,
+        width:
+          JOE_ANIMATION_FRAME_SIZE,
+        height:
+          JOE_ANIMATION_FRAME_SIZE,
+      }),
+    );
   const BASE_JOE_CAPTURE_LINES = [
     { id: "scope", expression: 0, tone: "SATISFIED", lines: ["I moved this course into scope.", "You moved into my path."] },
     { id: "acceptance", expression: 1, tone: "DISAPPOINTED", lines: ["You missed the acceptance criteria.", "I did not."] },
@@ -772,14 +829,45 @@
     width: 2172,
     height: 320,
   };
+  const REAR_SERVICE_BOUNDARY_SOURCE = {
+    x: 0,
+    y: 206,
+    width: 2172,
+    height: 342,
+  };
   const SIGNAGE_ATLAS_CELL = 512;
-  const BUNKER_ATLAS_SOURCES = [
-    { x: 0, y: 105, width: 430, height: 510 },
-    { x: 415, y: 100, width: 490, height: 520 },
-    { x: 890, y: 95, width: 405, height: 525 },
-    { x: 1260, y: 125, width: 460, height: 470 },
-    { x: 1670, y: 100, width: 502, height: 520 },
+  const SIGNAGE_ATLAS_CELLS = [
+    {
+      x: 0,
+      y: 0,
+      width: SIGNAGE_ATLAS_CELL,
+      height: SIGNAGE_ATLAS_CELL,
+    },
+    ...Array.from(
+      { length: 3 },
+      (_, column) => ({
+        x:
+          column *
+          SIGNAGE_ATLAS_CELL,
+        y: SIGNAGE_ATLAS_CELL,
+        width: SIGNAGE_ATLAS_CELL,
+        height: SIGNAGE_ATLAS_CELL,
+      }),
+    ),
   ];
+  const BUNKER_ATLAS_SOURCES = [
+    { x: 18, y: 176, width: 395, height: 397 },
+    { x: 435, y: 185, width: 488, height: 397 },
+    { x: 934, y: 171, width: 373, height: 422 },
+    { x: 1334, y: 237, width: 384, height: 303 },
+    { x: 1728, y: 170, width: 426, height: 424 },
+  ];
+  const SHADOW_JOE_SOURCE = {
+    x: 232,
+    y: 42,
+    width: 547,
+    height: 1476,
+  };
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
   const COURSE_LENGTH = 720;
@@ -791,6 +879,9 @@
   const BALL_CHARGE_SECONDS = 0.8;
   const BALL_MAX_AIM_ANGLE = 1.12;
   const BALL_RECOVERY_RADIUS = 8;
+  const BALL_COLLISION_RADIUS = 0.72;
+  const BALL_ROLL_STEP = 0.72;
+  const BALL_ROLL_MAX_DISTANCE = 24;
   const TEE_PRACTICE_TARGET = {
     x: 0,
     y: 94,
@@ -837,6 +928,39 @@
   const DELIVERY_AWARD_QUEUE_MAX = 5;
   const DELIVERY_AWARD_QUEUED_DURATION =
     1.7;
+  const SHOT_CRAFT_PRESSURE_MIN_DISTANCE =
+    12;
+  const SHOT_CRAFT_PRESSURE_MAX_DISTANCE =
+    32;
+  const SHOT_CRAFT_BANK_MIN_ROLL = 3;
+  const SHOT_CRAFT_LIE_SWITCH_MIN_ROLL =
+    4.5;
+  const SHOT_CRAFT_BOOK = [
+    {
+      id: "pressure",
+      code: "P",
+      label: "PRESSURE CHIP",
+      bonus: 145,
+      color: "#f2bd69",
+      hint: "Release with Joe chasing 12–32m away",
+    },
+    {
+      id: "bank",
+      code: "B",
+      label: "DELIVERABLE BANK",
+      bonus: 120,
+      color: "#8fd3a5",
+      hint: "Bank from a solid with at least 3m run",
+    },
+    {
+      id: "lieSwitch",
+      code: "L",
+      label: "LIE SWITCH",
+      bonus: 95,
+      color: "#79c8bd",
+      hint: "Cross two lies over at least 4.5m",
+    },
+  ];
   const SECOND_WIND_CLOSE_SECONDS =
     2.6;
   const SECOND_WIND_RAZOR_SECONDS =
@@ -850,6 +974,8 @@
   const ONBOARDING_CONTROL_COLLAPSE_DELAY =
     0.65;
   const MANUAL_CONTROL_HINT_SECONDS = 8;
+  const LOOK_BACK_TURN_IN_RESPONSE = 13.5;
+  const LOOK_BACK_TURN_OUT_RESPONSE = 10.5;
   const TRAIL_BREAK_MIN_CHAIN = 3;
   const TRAIL_BREAK_BONUS = 125;
   const TRAIL_COLD_SECONDS = 3.2;
@@ -867,11 +993,16 @@
     cadence: 3,
     status: 1,
     weather: 3,
+    shotcraft: 3,
   };
   const MOWED_MARK_SPACING = 5.2;
   const PLAYER_TRACK_SPACING = 5.6;
   const MAX_MOWED_MARKS = 150;
   const MAX_PLAYER_TRACKS = 72;
+  const LIVING_ROADMAP_SPEED_MULTIPLIER =
+    1.08;
+  const LIVING_ROADMAP_SECTION_METERS =
+    64;
   const JOE_CUT_CLUE_MAX_AGE = 28;
   const JOE_CUT_CLUE_MAX_DISTANCE =
     120;
@@ -907,6 +1038,22 @@
   const TENSION_DIRECTOR_WARNING_SECONDS = 2.8;
   const TENSION_DIRECTOR_RELIEF_SECONDS = 5.5;
   const TENSION_DIRECTOR_MAX_INTERCEPTS = 4;
+  const TENSION_OMEN_SECONDS = 3.2;
+  const SILENT_STALK_WARNING_SECONDS = 1.65;
+  const SILENT_STALK_MIN_SECONDS = 3.4;
+  const SILENT_STALK_MAX_SECONDS = 4.8;
+  const SILENT_STALK_COOLDOWN_SECONDS = 24;
+  const REAR_SIGHTING_COOLDOWN_SECONDS = 14;
+  const COVER_AUDIT_WARNING_SECONDS = 2.6;
+  const COVER_AUDIT_SEARCH_SECONDS = 10.5;
+  const COVER_AUDIT_ENTRENCHED_SECONDS = 9.5;
+  const COVER_AUDIT_REPEAT_VISITS = 3;
+  const COVER_AUDIT_MAX_PER_RUN = 4;
+  const COVER_AUDIT_COOLDOWN_SECONDS = 12;
+  const PREDATOR_TACTIC_COOLDOWN_SECONDS = 10.5;
+  const PREDATOR_TACTIC_MIN_DISTANCE = 18;
+  const PREDATOR_TACTIC_MAX_DISTANCE = 76;
+  const COMPOSURE_LOW_THRESHOLD = 0.42;
   const HORROR_DIRECTOR_GRACE_SECONDS = 11;
   const HORROR_DIRECTOR_MIN_EVENT_SECONDS = 7.5;
   const MAX_MOWER_WORLD_PARTICLES = 190;
@@ -921,6 +1068,14 @@
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: -18, y: 710, radius: 16 };
   const DRAIN_EXIT = { x: -78, y: 699, radius: 17 };
+  const SHED_FILING_TERMINAL = {
+    x: SHED_EXIT.x + 11,
+    y: SHED_EXIT.y + 1,
+  };
+  const DRAIN_RELEASE_CONTROL = {
+    x: DRAIN_EXIT.x + 11,
+    y: DRAIN_EXIT.y + 1,
+  };
   const SPRINT_REVIEW_RADIUS = 13;
   const SPRINT_REVIEW_FILING_REDUCTION = 0.18;
   const ESCAPE_FILING_DURATION = {
@@ -1064,7 +1219,49 @@
       end: COURSE_LENGTH + 1,
       fairwayHalfWidth: 50,
       tint: "48,21,14",
-      cue: "RELEASE CORRIDOR — the exits are close, the lanes are narrow, and Joe is cutting across them.",
+      cue: "RELEASE CORRIDOR — both exits are close. Narrow lanes. Keep moving.",
+    },
+  ];
+  const ZONE_SET_PIECES = [
+    {
+      id: "boundary_knock",
+      label: "SOUTH GATE // SOMETHING KNOCKS BACK",
+      duration: 4.2,
+    },
+    {
+      id: "hedge_breath",
+      label: "AUDIT HEDGE // BREATHING",
+      duration: 4.4,
+    },
+    {
+      id: "submerged_lights",
+      label: "WATER HAZARD // LIGHTS BELOW",
+      duration: 5.2,
+    },
+    {
+      id: "door_cycle",
+      label: "CLUBHOUSE // ACCESS CYCLE",
+      duration: 4.6,
+    },
+    {
+      id: "hedge_breach",
+      label: "SERVICE MAZE // CUTTING THROUGH",
+      duration: 4.4,
+    },
+    {
+      id: "black_sprinklers",
+      label: "DEAD GREEN // IRRIGATION FAULT",
+      duration: 5.4,
+    },
+    {
+      id: "range_volley",
+      label: "NIGHT RANGE // INCOMING",
+      duration: 5,
+    },
+    {
+      id: "release_sweep",
+      label: "RELEASE CORRIDOR // LOCKDOWN",
+      duration: 5.2,
     },
   ];
   const REACTIVE_SCORE_ZONES = [
@@ -1196,6 +1393,46 @@
       height: 575,
       heightMeters: 0.3,
     },
+  ];
+  const COURSE_MECHANIC_CELLS = [
+    {
+      x: 141,
+      y: 31,
+      width: 363,
+      height: 568,
+      heightMeters: 2.4,
+    },
+    {
+      x: 719,
+      y: 20,
+      width: 401,
+      height: 585,
+      heightMeters: 2.15,
+    },
+    {
+      x: 110,
+      y: 642,
+      width: 412,
+      height: 548,
+      heightMeters: 2.05,
+    },
+    {
+      x: 665,
+      y: 644,
+      width: 475,
+      height: 556,
+      heightMeters: 1.55,
+    },
+  ];
+  const TURF_EVIDENCE_CELLS = [
+    { x: 7, y: 167, width: 431, height: 249 },
+    { x: 437, y: 185, width: 442, height: 229 },
+    { x: 859, y: 187, width: 442, height: 224 },
+    { x: 1311, y: 164, width: 330, height: 254 },
+    { x: 85, y: 477, width: 269, height: 335 },
+    { x: 500, y: 482, width: 279, height: 334 },
+    { x: 917, y: 476, width: 288, height: 347 },
+    { x: 1293, y: 507, width: 308, height: 287 },
   ];
   const COURSE_CLUTTER_CELLS = [
     {
@@ -1371,9 +1608,9 @@
     { id: "mid-boundary", asset: "stone-cover", kit: "base", type: 1, x: 55, y: 72, radius: 17, radiusX: 18, radiusY: 8, coverRadius: 24, scale: 0.94, blocks: true, sight: true, landmark: "stone cover" },
     { id: "north-hedge", asset: "hedge-hide", kit: "base", type: 0, x: 86, y: 84, radius: 17, radiusX: 20, radiusY: 7, coverRadius: 25, scale: 0.92, blocks: true, sight: true, landmark: "hedge hide" },
     { id: "north-pine", kit: "base", type: 2, x: -94, y: 90, radius: 19, radiusX: 7, radiusY: 7, coverRadius: 28, scale: 0.9, blocks: true, sight: true, landmark: "pine" },
-    { id: "audit-arch", kit: "expanded", type: 0, x: 0, y: 116, radius: 0, scale: 1.05, blocks: false, sight: false, landmark: "hedge tunnel" },
-    { id: "audit-arch-left", x: -35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
-    { id: "audit-arch-right", x: 35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 0, y: 116, radius: 0, scale: 1.05, blocks: false, sight: false, landmark: "hedge tunnel" },
+    { id: "audit-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.05, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
+    { id: "audit-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 35, y: 116, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.05, blocks: true, sight: true, draw: false, landmark: "hedge tunnel" },
     { id: "audit-cart", kit: "expanded", type: 1, x: -58, y: 145, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.08, blocks: true, sight: true, landmark: "overturned cart" },
     { id: "audit-board", kit: "expanded", type: 4, x: 72, y: 174, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.94, blocks: true, sight: true, landmark: "audit board" },
     { id: "audit-hedge", asset: "hedge-hide", kit: "base", type: 0, x: -94, y: 174, radius: 18, radiusX: 21, radiusY: 7.5, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "hedge hide" },
@@ -1383,42 +1620,42 @@
     { id: "pond-east", kit: "expanded", type: 2, x: 70, y: 260, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "pond edge" },
     { id: "bunker-wall", kit: "expanded", type: 3, x: -18, y: 274, radius: 19, radiusX: 25, radiusY: 8, coverRadius: 27, scale: 1.12, blocks: true, sight: true, landmark: "bunker wall" },
     { id: "clubhouse-cart", kit: "expanded", type: 1, x: 78, y: 293, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned cart" },
-    { id: "clubhouse-arch", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "clubhouse hedge tunnel" },
-    { id: "clubhouse-arch-left", x: -35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
-    { id: "clubhouse-arch-right", x: 35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 0, y: 310, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.02, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
+    { id: "clubhouse-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 35, y: 310, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.02, blocks: true, sight: true, draw: false, landmark: "clubhouse hedge tunnel" },
     { id: "clubhouse-board", kit: "expanded", type: 4, x: -77, y: 317, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "audit board" },
     { id: "clubhouse-stone", asset: "stone-cover", kit: "base", type: 1, x: 54, y: 343, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 0.96, blocks: true, sight: true, landmark: "clubhouse stone cover" },
     { id: "service-hedge-west", asset: "hedge-hide", kit: "base", type: 0, x: -87, y: 382, radius: 18, radiusX: 22, radiusY: 8, coverRadius: 28, scale: 1.04, blocks: true, sight: true, landmark: "service hedge" },
     { id: "service-pine-east", kit: "base", type: 2, x: 91, y: 397, radius: 19, radiusX: 7.5, radiusY: 7.5, coverRadius: 28, scale: 0.95, blocks: true, sight: true, landmark: "service pine" },
     { id: "maze-cart", kit: "expanded", type: 1, x: -58, y: 409, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "abandoned service cart" },
-    { id: "service-arch", kit: "expanded", type: 0, x: 12, y: 421, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "service hedge tunnel" },
-    { id: "service-arch-left", x: -23, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
-    { id: "service-arch-right", x: 47, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
+    { id: "service-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 12, y: 421, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "service hedge tunnel" },
+    { id: "service-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -23, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
+    { id: "service-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 47, y: 421, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "service hedge tunnel" },
     { id: "service-board", kit: "expanded", type: 4, x: 72, y: 444, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.92, blocks: true, sight: true, landmark: "sprint board" },
     { id: "service-pond", kit: "expanded", type: 2, x: -74, y: 451, radius: 22, radiusX: 25, radiusY: 11, coverRadius: 29, scale: 1.08, blocks: true, sight: true, landmark: "service runoff" },
-    { id: "final-arch", kit: "expanded", type: 0, x: 0, y: 478, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-left", x: -35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
-    { id: "final-arch-right", x: 35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 0, y: 478, radius: 0, scale: 1.02, blocks: false, sight: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.02, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
+    { id: "final-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 35, y: 478, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.02, blocks: true, sight: true, draw: false, landmark: "final hedge tunnel" },
     { id: "final-board", kit: "expanded", type: 4, x: -77, y: 497, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.88, blocks: true, sight: true, landmark: "final audit board" },
     { id: "dead-green-pine", kit: "base", type: 2, x: 94, y: 514, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.03, blocks: true, sight: true, landmark: "dead pine" },
-    { id: "range-entry-arch", kit: "expanded", type: 0, x: 0, y: 552, radius: 0, scale: 1.08, blocks: false, sight: false, landmark: "night range arch" },
-    { id: "range-entry-left", x: -35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "night range arch" },
-    { id: "range-entry-right", x: 35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "night range arch" },
+    { id: "range-entry-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 0, y: 552, radius: 0, scale: 1.08, blocks: false, sight: false, landmark: "night range arch" },
+    { id: "range-entry-left", kit: "expanded", type: 0, tunnelWing: "left", x: -35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.08, blocks: true, sight: true, draw: false, landmark: "night range arch" },
+    { id: "range-entry-right", kit: "expanded", type: 0, tunnelWing: "right", x: 35, y: 552, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.08, blocks: true, sight: true, draw: false, landmark: "night range arch" },
     { id: "range-cart-west", kit: "expanded", type: 1, x: -63, y: 573, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.04, blocks: true, sight: true, landmark: "range cart" },
     { id: "range-light-west", kit: "expanded", type: 5, x: -72, y: 592, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 54, scale: 0.98, blocks: true, sight: false, landmark: "west range floodlight" },
     { id: "range-light-center", kit: "expanded", type: 5, x: 0, y: 594, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 61, scale: 1.08, blocks: true, sight: false, landmark: "center range floodlight" },
     { id: "range-light-east", kit: "expanded", type: 5, x: 72, y: 592, radius: 6, radiusX: 4.5, radiusY: 4.5, coverRadius: 11, lightRadius: 54, scale: 0.98, blocks: true, sight: false, landmark: "east range floodlight" },
     { id: "range-cart-east", kit: "expanded", type: 1, x: 60, y: 610, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 0.98, blocks: true, sight: true, landmark: "overturned range cart" },
-    { id: "range-exit-arch", kit: "expanded", type: 0, x: 24, y: 627, radius: 0, scale: 1.06, blocks: false, sight: false, landmark: "release intake" },
-    { id: "range-exit-left", x: -11, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "release intake" },
-    { id: "range-exit-right", x: 59, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "release intake" },
+    { id: "range-exit-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: 24, y: 627, radius: 0, scale: 1.06, blocks: false, sight: false, landmark: "release intake" },
+    { id: "range-exit-left", kit: "expanded", type: 0, tunnelWing: "left", x: -11, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.06, blocks: true, sight: true, draw: false, landmark: "release intake" },
+    { id: "range-exit-right", kit: "expanded", type: 0, tunnelWing: "right", x: 59, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.06, blocks: true, sight: true, draw: false, landmark: "release intake" },
     { id: "release-hedge-west", asset: "hedge-hide", kit: "base", type: 0, x: -88, y: 646, radius: 18, radiusX: 22, radiusY: 8, coverRadius: 28, scale: 1.06, blocks: true, sight: true, landmark: "release hedge" },
     { id: "release-cart", kit: "expanded", type: 1, x: -44, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
     { id: "release-board", kit: "expanded", type: 4, x: 76, y: 670, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.96, blocks: true, sight: true, landmark: "release board" },
     { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 42, y: 680, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
-    { id: "release-arch", kit: "expanded", type: 0, x: -18, y: 694, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
-    { id: "release-arch-left", x: -53, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final release gate" },
-    { id: "release-arch-right", x: 17, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: -18, y: 694, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
+    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
     { id: "release-pine", kit: "base", type: 2, x: 94, y: 702, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.04, blocks: true, sight: true, landmark: "release pine" },
     { id: "shed-left-wall", x: -42, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
     { id: "shed-right-wall", x: 6, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
@@ -1452,6 +1689,8 @@
   const JOE_NAVIGATION_CLEARANCE = 2.2;
   const JOE_NAVIGATION_GRID = 6;
   const JOE_NAVIGATION_REPATH_SECONDS = 0.42;
+  const JOE_NAVIGATION_FAILURE_REPATH_SECONDS =
+    0.36;
   const JOE_PATROL_ROUTE = [
     { x: 44, y: 185 },
     { x: 45, y: 215 },
@@ -1731,6 +1970,9 @@
       holdSeconds: 0,
       power: 0,
       target: null,
+      preview: null,
+      craftPreview: null,
+      craftCueIds: [],
     };
   }
 
@@ -1748,6 +1990,21 @@
       attempts: 0,
       misses: 0,
       landedBallId: null,
+    };
+  }
+
+  function freshLivingRoadmap() {
+    return {
+      totalCutMeters: 0,
+      activeLaneMeters: 0,
+      longestLaneMeters: 0,
+      laneId: 1,
+      sectionsPublished: 0,
+      playerEntries: 0,
+      playerOnCut: false,
+      tutorialShown: false,
+      pulseTimer: 0,
+      publishedMarkId: null,
     };
   }
 
@@ -1769,6 +2026,9 @@
 
   function freshTensionDirector() {
     return {
+      phase: "quiet",
+      phaseSeconds: 0,
+      phaseChanges: 0,
       pressure: 0.08,
       quietSeconds: 0,
       beatTimer: 10.5,
@@ -1783,6 +2043,53 @@
       observedZone: 0,
       lastBeat: "opening_grace",
       lastBeatSeconds: 0,
+      omen: null,
+      omenCount: 0,
+      silentStalk: null,
+      silentStalkCount: 0,
+      silentStalkCooldownSeconds: 10,
+      rearSighting: null,
+      rearSightingCount: 0,
+      rearSightingCooldownSeconds: 7,
+      coverAudit: null,
+      coverAuditCount: 0,
+      coverAuditCooldownSeconds: 6,
+    };
+  }
+
+  function freshShelterMemory() {
+    return {
+      currentId: null,
+      currentLabel: null,
+      currentTarget: null,
+      currentSeconds: 0,
+      settleSeconds: 0,
+      countedCurrentVisit: false,
+      visits: {},
+      auditedShelters: [],
+      warnings: 0,
+      investigations: 0,
+      escapesBeforeArrival: 0,
+      lastOutcome: null,
+    };
+  }
+
+  function freshMowerAcoustics() {
+    return {
+      occluded: false,
+      blockerId: null,
+      blockerCount: 0,
+      material: "open_air",
+      filterHz: 6200,
+      transmission: 1,
+      reflection: 0.008,
+      pan: 0,
+      direction: "center",
+      distance: null,
+      previousDistance: null,
+      radialVelocity: 0,
+      dopplerMultiplier: 1,
+      source: "joe",
     };
   }
 
@@ -1793,6 +2100,11 @@
       fogSurgeSeconds: 0,
       lightFailureSeconds: 0,
       manifestation: null,
+      visualFlashTimer: 14.5,
+      visualFlash: null,
+      visualFlashCount: 0,
+      joeFlashCount: 0,
+      courseTearCount: 0,
       eventCount: 0,
       apparitionCount: 0,
       fogSurgeCount: 0,
@@ -1800,6 +2112,56 @@
       observedZone: 0,
       lastEvent: "opening_stillness",
       lastEventSeconds: 0,
+    };
+  }
+
+  function freshPredatorTactics() {
+    return {
+      active: null,
+      phase: "idle",
+      timer: 0,
+      duration: 0,
+      cooldown:
+        PREDATOR_TACTIC_COOLDOWN_SECONDS,
+      target: null,
+      seed: 0,
+      starts: 0,
+      completions: 0,
+      cancellations: 0,
+      falseRetreats: 0,
+      coverShreds: 0,
+      interceptsObserved: 0,
+      lastTactic: null,
+      lastOutcome: null,
+      history: [],
+    };
+  }
+
+  function freshZoneSetPieceState() {
+    return {
+      active: null,
+      timer: 0,
+      duration: 0,
+      seed: 0,
+      triggered:
+        COURSE_ZONES.map(() => false),
+      counts:
+        COURSE_ZONES.map(() => 0),
+      total: 0,
+    };
+  }
+
+  function freshComposureState() {
+    return {
+      value: 1,
+      target: 1,
+      lowest: 1,
+      state: "steady",
+      previousState: "steady",
+      lowSeconds: 0,
+      recoveries: 0,
+      shocks: 0,
+      pulse: 0,
     };
   }
 
@@ -1895,6 +2257,12 @@
   }
 
   function readSavedPreferences() {
+    const systemReducedMotion =
+      typeof window.matchMedia ===
+        "function" &&
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
     try {
       const parsed = JSON.parse(
         window.localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}",
@@ -1939,7 +2307,7 @@
         reducedMotion:
           typeof parsed.reducedMotion === "boolean"
             ? parsed.reducedMotion
-            : false,
+            : systemReducedMotion,
         keyboardBindings:
           validKeyboardBindings(
             parsed.keyboardBindings,
@@ -1957,7 +2325,8 @@
         subtitleSize: 1,
         captionBackground: 0.78,
         threatCaptions: true,
-        reducedMotion: false,
+        reducedMotion:
+          systemReducedMotion,
         keyboardBindings:
           defaultKeyboardBindings(),
       };
@@ -2101,6 +2470,24 @@
     return stamps;
   }
 
+  function validShotCraftBook(savedBook) {
+    if (!Array.isArray(savedBook)) {
+      return [];
+    }
+    const validIds = new Set(
+      SHOT_CRAFT_BOOK.map(
+        (entry) => entry.id,
+      ),
+    );
+    return [
+      ...new Set(
+        savedBook.filter((id) =>
+          validIds.has(id),
+        ),
+      ),
+    ];
+  }
+
   function readSavedCareer() {
     try {
       const parsed = JSON.parse(
@@ -2177,6 +2564,10 @@
           validPerformanceStamps(
             parsed.performanceStamps,
           ),
+        shotCraftBook:
+          validShotCraftBook(
+            parsed.shotCraftBook,
+          ),
         overtimeEnabled:
           parsed.overtimeEnabled === true,
         overtimeEscapes: Number.isFinite(
@@ -2216,6 +2607,7 @@
         selectedVariantId: null,
         performanceStamps:
           emptyPerformanceStamps(),
+        shotCraftBook: [],
         overtimeEnabled: false,
         overtimeEscapes: 0,
         overtimeCaptures: 0,
@@ -2280,6 +2672,7 @@
       crouch: false,
       sprint: false,
       focus: false,
+      lookBack: false,
       previousButtons: [],
       previousDirections: { up: false, down: false, left: false, right: false },
     },
@@ -2294,6 +2687,7 @@
       sprintPointerId: null,
       crouchPointerId: null,
       focusPointerId: null,
+      lookBackPointerId: null,
     },
     player: { x: 0, y: 0, heading: 0 },
     hole: {
@@ -2386,12 +2780,13 @@
       ballThrowsUsed: 0,
       ballAim: freshBallAimState(),
       ballFlight: null,
+      ballRoll: null,
       practiceDrill:
         freshPracticeDrill(
           !savedCareer.golfLessonCompleted,
         ),
       prompt: "",
-      message: "South gate locked. Find the shed key — or open the drain.",
+      message: "South gate locked. Find the shed key — or open the drain valve.",
       messageTimer: 4,
       elapsed: 0,
       tutorialVisible: true,
@@ -2401,6 +2796,8 @@
       hasMoved: false,
       cameraMotion:
         freshCourseCameraMotion(),
+      lookBack:
+        freshLookBackState(),
       panicMomentum: 0,
       panicTarget: 0,
       moveVector: { x: 0, y: 0 },
@@ -2451,6 +2848,8 @@
       groundResponses: [],
       playerStepSerial: 0,
       turfMarks: [],
+      livingRoadmap:
+        freshLivingRoadmap(),
       nextTurfMarkId: 1,
       lastPlayerTrackDistance: 0,
       tracksCreated: 0,
@@ -2494,8 +2893,18 @@
       dreadTimer: 0,
       tensionDirector:
         freshTensionDirector(),
+      shelterMemory:
+        freshShelterMemory(),
+      mowerAcoustics:
+        freshMowerAcoustics(),
       horrorDirector:
         freshHorrorDirector(),
+      predatorTactics:
+        freshPredatorTactics(),
+      zoneSetPiece:
+        freshZoneSetPieceState(),
+      composure:
+        freshComposureState(),
       crosswind:
         freshCrosswind(0),
       statusRequest:
@@ -2538,6 +2947,12 @@
       deliveryAward: null,
       deliveryAwardQueue: [],
       deliveryAwardOverflowMerges: 0,
+      shotCraftEvents: [],
+      shotCraftCounts: {
+        pressure: 0,
+        bank: 0,
+        lieSwitch: 0,
+      },
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -2564,6 +2979,9 @@
   let noiseSource = null;
   let noiseGain = null;
   let motorPanNode = null;
+  let motorOcclusionFilter = null;
+  let motorReflectionDelay = null;
+  let motorReflectionGain = null;
   let ambienceSource = null;
   let ambienceGain = null;
   let ambienceFilter = null;
@@ -2655,6 +3073,28 @@
     return (
       state.career.filedChangeRequests.length >=
       RUN_VARIANTS.length
+    );
+  }
+
+  function shotCraftDefinition(id) {
+    return (
+      SHOT_CRAFT_BOOK.find(
+        (entry) =>
+          entry.id === id,
+      ) || null
+    );
+  }
+
+  function shotCraftDiscovered(id) {
+    return state.career.shotCraftBook.includes(
+      id,
+    );
+  }
+
+  function shotCraftBookComplete() {
+    return (
+      state.career.shotCraftBook.length >=
+      SHOT_CRAFT_BOOK.length
     );
   }
 
@@ -3134,6 +3574,10 @@
           ? "review"
         : label.includes("STATUS ACKNOWLEDGED")
           ? "status"
+        : label.includes("PRESSURE CHIP") ||
+            label.includes("DELIVERABLE BANK") ||
+            label.includes("LIE SWITCH")
+          ? "shotcraft"
         : label.includes("CROSSWIND")
           ? "weather"
         : label.includes("COUNTER-ROUTE")
@@ -3243,6 +3687,232 @@
         1;
     }
     return award;
+  }
+
+  function shotCraftCandidate(
+    shot,
+    joeMode,
+    joeDistance,
+  ) {
+    if (!shot) {
+      return null;
+    }
+    if (
+      joeMode === "chase" &&
+      Number.isFinite(joeDistance) &&
+      joeDistance >=
+        SHOT_CRAFT_PRESSURE_MIN_DISTANCE &&
+      joeDistance <=
+        SHOT_CRAFT_PRESSURE_MAX_DISTANCE
+    ) {
+      return {
+        ...shotCraftDefinition(
+          "pressure",
+        ),
+      };
+    }
+    if (
+      shot.impactObstacle &&
+      shot.distance >=
+        SHOT_CRAFT_BANK_MIN_ROLL
+    ) {
+      return {
+        ...shotCraftDefinition(
+          "bank",
+        ),
+      };
+    }
+    const distinctSurfaces =
+      new Set(
+        shot.surfaceSequence || [],
+      );
+    if (
+      distinctSurfaces.size >= 2 &&
+      shot.distance >=
+        SHOT_CRAFT_LIE_SWITCH_MIN_ROLL
+    ) {
+      return {
+        ...shotCraftDefinition(
+          "lieSwitch",
+        ),
+      };
+    }
+    return null;
+  }
+
+  function shotCraftForRoll(roll) {
+    if (
+      !roll ||
+      roll.drillAttempt ||
+      roll.shotCraftAwarded
+    ) {
+      return null;
+    }
+    return shotCraftCandidate(
+      roll,
+      roll.joeModeAtCommit,
+      roll.joeDistanceAtCommit,
+    );
+  }
+
+  function shotCraftAimPreview(plan) {
+    if (!plan) {
+      return null;
+    }
+    const hole = state.hole;
+    const joeDistance =
+      worldDistance(
+        hole.joe,
+        state.player,
+      );
+    const candidate =
+      shotCraftCandidate(
+        plan,
+        hole.joe.mode,
+        joeDistance,
+      );
+    if (!candidate) {
+      return null;
+    }
+    const familyCount =
+      hole.deliveryFamilyCounts
+        .shotcraft || 0;
+    const runCap =
+      DELIVERY_FAMILY_CAPS.shotcraft;
+    const practiceBlocked =
+      practiceDrillActive();
+    const capped =
+      familyCount >= runCap;
+    return {
+      ...candidate,
+      eligible:
+        !practiceBlocked && !capped,
+      blockedReason:
+        practiceBlocked
+          ? "practice"
+          : capped
+            ? "run_cap"
+            : null,
+      joeDistance: Number(
+        joeDistance.toFixed(2),
+      ),
+      familyCount,
+      runCap,
+      newDiscovery:
+        !shotCraftDiscovered(
+          candidate.id,
+        ),
+    };
+  }
+
+  function refreshShotCraftAimPreview(
+    allowCue = true,
+  ) {
+    const aim = state.hole.ballAim;
+    if (!aim.active) {
+      return null;
+    }
+    const craft =
+      shotCraftAimPreview(
+        aim.preview,
+      );
+    aim.craftPreview = craft;
+    if (
+      allowCue &&
+      craft?.eligible &&
+      !aim.craftCueIds.includes(
+        craft.id,
+      )
+    ) {
+      aim.craftCueIds.push(craft.id);
+      playShotCraftReadyCue(
+        craft.id,
+      );
+    }
+    return craft;
+  }
+
+  function awardShotCraft(
+    roll,
+    landedBall,
+  ) {
+    const craft =
+      shotCraftForRoll(roll);
+    roll.shotCraftAwarded = true;
+    if (!craft) {
+      return null;
+    }
+    const newDiscovery =
+      !shotCraftDiscovered(
+        craft.id,
+      );
+    const bookCompleteBefore =
+      shotCraftBookComplete();
+    const award =
+      awardDeliveryBeat(
+        newDiscovery
+          ? `${craft.label} DISCOVERED`
+          : craft.label,
+        craft.bonus,
+      );
+    if (!award) {
+      return null;
+    }
+    const event = {
+      id: craft.id,
+      label: craft.label,
+      ballId: landedBall.id,
+      amount: award.amount,
+      chain: award.chain,
+      x: landedBall.x,
+      y: landedBall.y,
+      previewMatched:
+        landedBall.shotCraftPreview
+          ?.eligible === true &&
+        landedBall.shotCraftPreview
+          .id === craft.id,
+      newDiscovery,
+      bookProgress:
+        state.career.shotCraftBook
+          .length +
+        (newDiscovery ? 1 : 0),
+      bookCompleted:
+        newDiscovery &&
+        !bookCompleteBefore &&
+        state.career.shotCraftBook
+          .length +
+            1 >=
+          SHOT_CRAFT_BOOK.length,
+    };
+    landedBall.shotCraft = {
+      ...event,
+    };
+    state.hole.shotCraftEvents.push(
+      event,
+    );
+    state.hole.shotCraftCounts[
+      craft.id
+    ] += 1;
+    if (newDiscovery) {
+      state.career.shotCraftBook.push(
+        craft.id,
+      );
+      saveCareer();
+    }
+    addWorldEffect(
+      "shot_craft",
+      landedBall.x,
+      landedBall.y,
+      1.65,
+      {
+        label: newDiscovery
+          ? `SHOT BOOK // ${craft.code}`
+          : craft.label,
+        color: craft.color,
+      },
+    );
+    playShotCraftCue(craft.id);
+    return event;
   }
 
   function calculateRunResult(route) {
@@ -3387,6 +4057,35 @@
         hole.deliveryPeak || 0,
       deliveryEvents:
         hole.deliveryEvents?.slice() || [],
+      shotCraftCount:
+        hole.shotCraftEvents?.length || 0,
+      shotCraftCounts: {
+        ...(hole.shotCraftCounts || {
+          pressure: 0,
+          bank: 0,
+          lieSwitch: 0,
+        }),
+      },
+      shotCraftEvents:
+        hole.shotCraftEvents?.map(
+          (event) => ({ ...event }),
+        ) || [],
+      newShotCraftDiscoveries:
+        hole.shotCraftEvents
+          ?.filter(
+            (event) =>
+              event.newDiscovery,
+          )
+          .map((event) => event.id) ||
+        [],
+      shotCraftBookProgress:
+        state.career.shotCraftBook
+          .length,
+      shotCraftBookCompleted:
+        hole.shotCraftEvents?.some(
+          (event) =>
+            event.bookCompleted,
+        ) || false,
       closestJoeDistance: Number.isFinite(
         hole.closestJoeDistance,
       )
@@ -4423,6 +5122,41 @@
     return true;
   }
 
+  function cachedHorrorOverlay(image) {
+    if (
+      !image.complete ||
+      image.naturalWidth <= 0
+    ) {
+      return null;
+    }
+    if (horrorOverlayCache.has(image)) {
+      return horrorOverlayCache.get(image);
+    }
+    const buffer =
+      document.createElement("canvas");
+    buffer.width = WIDTH;
+    buffer.height = HEIGHT;
+    const bufferCtx =
+      buffer.getContext("2d");
+    bufferCtx.imageSmoothingEnabled =
+      false;
+    bufferCtx.clearRect(
+      0,
+      0,
+      WIDTH,
+      HEIGHT,
+    );
+    drawImageCover(
+      bufferCtx,
+      image,
+    );
+    horrorOverlayCache.set(
+      image,
+      buffer,
+    );
+    return buffer;
+  }
+
   function drawParallaxAsset(
     image,
     source,
@@ -4459,7 +5193,7 @@
     cell,
   ) {
     const key =
-      `${image.src}|${cell.x}|${cell.y}|${cell.width}|${cell.height}`;
+      `${image.src}|${cell.x}|${cell.y}|${cell.width}|${cell.height}|${cell.cacheMaxDimension ?? ATLAS_CELL_CACHE_MAX_DIMENSION}`;
     if (atlasCellCache.has(key)) {
       return atlasCellCache.get(key);
     }
@@ -4472,7 +5206,8 @@
       );
     const cacheScale = Math.min(
       1,
-      ATLAS_CELL_CACHE_MAX_DIMENSION /
+      (cell.cacheMaxDimension ??
+        ATLAS_CELL_CACHE_MAX_DIMENSION) /
         sourceMaximumDimension,
     );
     const cacheWidth = Math.max(
@@ -5254,6 +5989,89 @@
     );
   }
 
+  function drawRearServiceBoundaryLayer(
+    progress,
+    panX,
+    walkBob,
+    alpha,
+  ) {
+    if (
+      alpha <= 0.002 ||
+      !rearServiceBoundaryArt.complete ||
+      rearServiceBoundaryArt.naturalWidth === 0
+    ) {
+      return;
+    }
+    const reverseProgress =
+      1 - progress;
+    const width =
+      1580 *
+      (
+        1 +
+        reverseProgress * 0.055
+      );
+    const height =
+      width *
+      REAR_SERVICE_BOUNDARY_SOURCE
+        .height /
+      REAR_SERVICE_BOUNDARY_SOURCE
+        .width;
+    const drift =
+      state.reducedMotion
+        ? 0
+        : Math.sin(
+            state.hole.elapsed *
+              0.041 +
+              1.7,
+          ) *
+          1.1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawParallaxAsset(
+      rearServiceBoundaryArt,
+      REAR_SERVICE_BOUNDARY_SOURCE,
+      (
+        WIDTH -
+        width
+      ) *
+        0.5 -
+        panX * 0.11 +
+        drift +
+        progress * 5,
+      94 +
+        reverseProgress * 8 +
+        walkBob * 0.018,
+      width,
+      height,
+      0.82,
+    );
+    const gateGlow =
+      ctx.createRadialGradient(
+        WIDTH * 0.5,
+        286,
+        4,
+        WIDTH * 0.5,
+        286,
+        190,
+      );
+    gateGlow.addColorStop(
+      0,
+      `rgba(218,139,55,${0.11 * alpha})`,
+    );
+    gateGlow.addColorStop(
+      1,
+      "rgba(218,139,55,0)",
+    );
+    ctx.fillStyle = gateGlow;
+    ctx.fillRect(
+      WIDTH * 0.5 - 210,
+      150,
+      420,
+      230,
+    );
+    ctx.restore();
+  }
+
   function drawNearCanopyShoulders(
     progress,
     panX,
@@ -5346,6 +6164,20 @@
     const zoom =
       1.08 +
       progress * 0.16;
+    const rearBlend =
+      smoothstep(
+        clamp(
+          (
+            lookBackView().amount -
+            0.18
+          ) /
+            0.68,
+          0,
+          1,
+        ),
+      );
+    const frontBlend =
+      1 - rearBlend;
     drawImageCover(
       ctx,
       nightSkyArt,
@@ -5411,11 +6243,14 @@
       0.67,
     );
 
+    ctx.save();
+    ctx.globalAlpha = frontBlend;
     drawEstatePerimeterLayer(
       progress,
       panX,
       walkBob,
     );
+    ctx.restore();
 
     const villasWidth =
       1190 *
@@ -5427,6 +6262,8 @@
       villasWidth *
       DISTANT_VILLAS_SOURCE.height /
       DISTANT_VILLAS_SOURCE.width;
+    ctx.save();
+    ctx.globalAlpha = frontBlend;
     drawParallaxAsset(
       distantVillasArt,
       DISTANT_VILLAS_SOURCE,
@@ -5444,6 +6281,7 @@
       villasHeight,
       0.62,
     );
+    ctx.restore();
 
     drawAtmosphericFogBand(
       204,
@@ -5507,6 +6345,8 @@
       1,
       "rgba(217,145,62,0)",
     );
+    ctx.save();
+    ctx.globalAlpha = frontBlend;
     ctx.fillStyle = windowGlow;
     ctx.fillRect(
       clubhouseX -
@@ -5527,6 +6367,7 @@
       clubhouseHeight,
       0.72,
     );
+    ctx.restore();
 
     const treeWidth =
       1450 *
@@ -5563,6 +6404,13 @@
       treeWidth,
       treeHeight,
       0.58,
+    );
+
+    drawRearServiceBoundaryLayer(
+      progress,
+      panX,
+      walkBob,
+      rearBlend,
     );
 
     drawNearCanopyShoulders(
@@ -6090,13 +6938,71 @@
       true,
     );
     drawText(
-      `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}  //  ORDERS ${state.career.completedVariants.length}/${RUN_VARIANTS.length}  //  PERFORMANCE STAMPS ${totalPerformanceStamps()}/${PERFORMANCE_STAMPS.length * RUN_VARIANTS.length}`,
+      `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}  //  ORDERS ${state.career.completedVariants.length}/${RUN_VARIANTS.length}  //  STAMPS ${totalPerformanceStamps()}/${PERFORMANCE_STAMPS.length * RUN_VARIANTS.length}`,
       panel.x + 24,
       panel.y + 57,
-      10,
+      9,
       unlocked ? "#b9c99e" : "#748171",
       "left",
     );
+    drawText(
+      "SHOT BOOK",
+      panel.x + 432,
+      panel.y + 57,
+      9,
+      shotCraftBookComplete()
+        ? "#f0d276"
+        : "#8ea28a",
+      "left",
+      shotCraftBookComplete(),
+    );
+    for (
+      let index = 0;
+      index < SHOT_CRAFT_BOOK.length;
+      index += 1
+    ) {
+      const entry =
+        SHOT_CRAFT_BOOK[index];
+      const discovered =
+        shotCraftDiscovered(
+          entry.id,
+        );
+      const sealX =
+        panel.x + 532 +
+        index * 31;
+      const sealY =
+        panel.y + 53;
+      ctx.fillStyle = discovered
+        ? `${entry.color}42`
+        : "#142019";
+      ctx.beginPath();
+      ctx.arc(
+        sealX,
+        sealY,
+        9,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle = discovered
+        ? entry.color
+        : "#465347";
+      ctx.lineWidth = discovered
+        ? 2
+        : 1;
+      ctx.stroke();
+      drawText(
+        entry.code,
+        sealX,
+        sealY + 4,
+        8,
+        discovered
+          ? "#f4efd4"
+          : "#657166",
+        "center",
+        discovered,
+      );
+    }
 
     for (
       let index = 0;
@@ -6681,14 +7587,16 @@
 
   function bindingRowGeometry(index) {
     const column =
-      index < 5 ? 0 : 1;
+      index < 6 ? 0 : 1;
     const rowIndex =
-      index % 5;
+      column === 0
+        ? index
+        : index - 6;
     return {
       x: column === 0 ? 194 : 664,
-      y: 198 + rowIndex * 64,
+      y: 198 + rowIndex * 54,
       width: 422,
-      height: 52,
+      height: 44,
     };
   }
 
@@ -6787,7 +7695,7 @@
       drawText(
         binding.label,
         row.x + 18,
-        row.y + 31,
+        row.y + 27,
         13,
         selected
           ? "#f2e7bd"
@@ -6803,15 +7711,15 @@
         : "#17271a";
       ctx.fillRect(
         capX - capWidth * 0.5,
-        row.y + 8,
+        row.y + 5,
         capWidth,
-        36,
+        34,
       );
       strokeRect(
         capX - capWidth * 0.5,
-        row.y + 8,
+        row.y + 5,
         capWidth,
-        36,
+        34,
         capturing
           ? "#ffc06f"
           : "#788a65",
@@ -6824,7 +7732,7 @@
               binding.id,
             ),
         capX,
-        row.y + 32,
+        row.y + 28,
         capturing ? 11 : 13,
         capturing
           ? "#fff0bd"
@@ -6971,9 +7879,9 @@
           ? "Hold CROUCH near cover or in rough."
           : controllerActive
             ? "Hold LB near hard cover or in rough."
-            : "Hold C near hard cover or in rough.",
+            : `Hold ${keyboardBindingLabel("crouch")} near hard cover or in rough.`,
         subdetail:
-          "Link breaks, baits, progress, and recoveries for Delivery bonuses.",
+          "Hold LOOK BACK while running; it never changes your movement direction.",
       },
     ];
     for (const step of steps) {
@@ -7010,10 +7918,23 @@
           ? "LB CROUCH  •  LT LISTENING FOCUS"
           : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTENING FOCUS`,
       205,
-      548,
+      542,
       14,
       "#9fc98a",
       "left",
+    );
+    drawText(
+      touchActive
+        ? "HOLD REAR  LOOK BEHIND"
+        : controllerActive
+          ? "R3  LOOK BEHIND"
+          : `${keyboardBindingLabel("look_back")}  LOOK BEHIND`,
+      205,
+      566,
+      12,
+      "#82c8bc",
+      "left",
+      true,
     );
     drawText(
       controllerActive
@@ -7022,7 +7943,7 @@
           ? "RUN IS FAST, LOUD, AND EXPOSED."
           : `${keyboardBindingLabel("sprint")} SPRINTS — FAST, LOUD, AND EXPOSED.`,
       205,
-      587,
+      590,
       12,
       "#d98946",
       "left",
@@ -7419,6 +8340,7 @@
       ballThrowsUsed: 0,
       ballAim: freshBallAimState(),
       ballFlight: null,
+      ballRoll: null,
       practiceDrill:
         freshPracticeDrill(
           !state.career
@@ -7428,7 +8350,7 @@
       prompt: "",
       message: overtime
         ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
-        : "South gate locked. Find the shed key — or open the drain.",
+        : "South gate locked. Find the shed key — or open the drain valve.",
       messageTimer: 4,
       elapsed: 0,
       tutorialVisible: true,
@@ -7438,6 +8360,8 @@
       hasMoved: false,
       cameraMotion:
         freshCourseCameraMotion(),
+      lookBack:
+        freshLookBackState(),
       panicMomentum: 0,
       panicTarget: 0,
       moveVector: { x: 0, y: 0 },
@@ -7488,6 +8412,8 @@
       groundResponses: [],
       playerStepSerial: 0,
       turfMarks: [],
+      livingRoadmap:
+        freshLivingRoadmap(),
       nextTurfMarkId: 1,
       lastPlayerTrackDistance: 0,
       tracksCreated: 0,
@@ -7531,8 +8457,18 @@
       dreadTimer: 0,
       tensionDirector:
         freshTensionDirector(),
+      shelterMemory:
+        freshShelterMemory(),
+      mowerAcoustics:
+        freshMowerAcoustics(),
       horrorDirector:
         freshHorrorDirector(),
+      predatorTactics:
+        freshPredatorTactics(),
+      zoneSetPiece:
+        freshZoneSetPieceState(),
+      composure:
+        freshComposureState(),
       crosswind:
         freshCrosswind(
           variantIndex,
@@ -7575,6 +8511,12 @@
       deliveryAward: null,
       deliveryAwardQueue: [],
       deliveryAwardOverflowMerges: 0,
+      shotCraftEvents: [],
+      shotCraftCounts: {
+        pressure: 0,
+        bank: 0,
+        lieSwitch: 0,
+      },
       liveProjectionTimer: 0,
       liveProjection: null,
       scorePhase: 0,
@@ -7831,6 +8773,84 @@
     );
   }
 
+  function lookBackHeld() {
+    return (
+      keyboardBindingDown("look_back") ||
+      state.gamepad.lookBack ||
+      state.touch.lookBackPointerId !== null
+    );
+  }
+
+  function lookBackState() {
+    if (!state.hole.lookBack) {
+      state.hole.lookBack =
+        freshLookBackState();
+    }
+    return state.hole.lookBack;
+  }
+
+  function updateLookBack(
+    dt,
+    lateralInput,
+  ) {
+    const glance = lookBackState();
+    const held =
+      lookBackHeld() &&
+      !state.hole.tutorialVisible &&
+      !state.hole.ballAim.active &&
+      !state.hole.escapeFiling.sealing;
+    if (held && !glance.previousHeld) {
+      glance.direction =
+        Math.abs(lateralInput) > 0.2
+          ? Math.sign(lateralInput)
+          : -glance.direction;
+      glance.glances += 1;
+      maybeStageRearSighting();
+      playNoiseBurst(
+        0.07,
+        0.012,
+        920,
+        "bandpass",
+        glance.direction * 0.28,
+      );
+    }
+    glance.held = held;
+    glance.target = held ? 1 : 0;
+    glance.previousHeld = held;
+    const response = held
+      ? LOOK_BACK_TURN_IN_RESPONSE
+      : LOOK_BACK_TURN_OUT_RESPONSE;
+    glance.amount = lerp(
+      glance.amount,
+      glance.target,
+      1 - Math.exp(-dt * response),
+    );
+    if (!held && glance.amount < 0.002) {
+      glance.amount = 0;
+    }
+  }
+
+  function lookBackView() {
+    const glance = lookBackState();
+    const amount = smoothstep(
+      clamp(glance.amount, 0, 1),
+    );
+    const angle =
+      amount *
+      Math.PI *
+      glance.direction;
+    return {
+      amount,
+      angle,
+      sine: Math.sin(angle),
+      cosine: Math.cos(angle),
+      rear: amount >= 0.82,
+      transitioning:
+        amount > 0.02 &&
+        amount < 0.98,
+    };
+  }
+
   function clearTouchInputs(cancelAim = false) {
     if (
       cancelAim &&
@@ -7848,6 +8868,7 @@
     state.touch.sprintPointerId = null;
     state.touch.crouchPointerId = null;
     state.touch.focusPointerId = null;
+    state.touch.lookBackPointerId = null;
   }
 
   function courseZoneAt(y) {
@@ -7881,6 +8902,8 @@
       length: options.length ?? null,
       laneWidth:
         options.laneWidth ?? null,
+      laneId:
+        options.laneId ?? null,
       discovered: false,
       wet: Boolean(options.wet),
       sand: Boolean(options.sand),
@@ -7910,6 +8933,46 @@
     return mark;
   }
 
+  function pointInsideMowedMark(
+    point,
+    mark,
+  ) {
+    const deltaX = point.x - mark.x;
+    const deltaY = point.y - mark.y;
+    const headingX =
+      Math.cos(mark.heading);
+    const headingY =
+      Math.sin(mark.heading);
+    const along = Math.abs(
+      deltaX * headingX +
+        deltaY * headingY,
+    );
+    const across = Math.abs(
+      -deltaX * headingY +
+        deltaY * headingX,
+    );
+    const halfLength =
+      (mark.length ||
+        MOWED_MARK_SPACING + 1.4) *
+        0.5 +
+      0.7;
+    const halfWidth =
+      (mark.laneWidth || 4.4) *
+        0.5 +
+      0.6;
+    return (
+      Math.pow(
+        along / halfLength,
+        2,
+      ) +
+        Math.pow(
+          across / halfWidth,
+          2,
+        ) <=
+      1
+    );
+  }
+
   function turfStateAt(point) {
     const marks = state.hole?.turfMarks || [];
     let nearestMowed = null;
@@ -7921,6 +8984,7 @@
       Infinity;
     let recentJoeCutScore =
       Infinity;
+    let onMowed = false;
     for (let index = 0; index < marks.length; index += 1) {
       const mark = marks[index];
       const distance = worldDistance(point, mark);
@@ -7930,6 +8994,15 @@
       ) {
         nearestMowed = mark;
         mowedDistance = distance;
+      }
+      if (
+        mark.kind === "mowed" &&
+        pointInsideMowedMark(
+          point,
+          mark,
+        )
+      ) {
+        onMowed = true;
       }
       if (
         mark.kind === "mowed" &&
@@ -7962,10 +9035,7 @@
       }
     }
     return {
-      mowed: Boolean(
-        nearestMowed &&
-          mowedDistance <= nearestMowed.radius,
-      ),
+      mowed: onMowed,
       nearestMowed,
       nearestMowedDistance:
         nearestMowed ? mowedDistance : null,
@@ -9036,6 +10106,7 @@
       hole.blindsideTransfer ||
       hole.ballAim.active ||
       hole.ballFlight ||
+      hole.ballRoll ||
       hole.riskAward ||
       hole.deliveryAward
     ) {
@@ -9286,6 +10357,7 @@
       hole.blindsideTransfer ||
       hole.ballAim.active ||
       hole.ballFlight ||
+      hole.ballRoll ||
       hole.riskAward ||
       hole.deliveryAward ||
       hole.cutTraceMemory ||
@@ -9587,6 +10659,12 @@
 
   function updateTurfMarks(dt) {
     const hole = state.hole;
+    hole.livingRoadmap.pulseTimer =
+      Math.max(
+        0,
+        hole.livingRoadmap
+          .pulseTimer - dt,
+      );
     for (let index = 0; index < hole.turfMarks.length; index += 1) {
       hole.turfMarks[index].age += dt;
     }
@@ -9684,7 +10762,10 @@
   }
 
   function recordJoeCut() {
-    const joe = state.hole.joe;
+    const hole = state.hole;
+    const joe = hole.joe;
+    const roadmap =
+      hole.livingRoadmap;
     const previousCut =
       joe.lastCutPoint;
     const cutDistance =
@@ -9699,6 +10780,8 @@
       cutDistance >
       MOWED_MARK_SPACING * 3.2
     ) {
+      roadmap.laneId += 1;
+      roadmap.activeLaneMeters = 0;
       joe.lastCutPoint = {
         x: joe.x,
         y: joe.y,
@@ -9709,7 +10792,7 @@
       joe.y - previousCut.y,
       joe.x - previousCut.x,
     );
-    addTurfMark(
+    const mark = addTurfMark(
       "mowed",
       lerp(
         previousCut.x,
@@ -9730,12 +10813,88 @@
           8.2,
         ),
         laneWidth: 4.4,
+        laneId: roadmap.laneId,
       },
     );
+    roadmap.totalCutMeters +=
+      cutDistance;
+    roadmap.activeLaneMeters +=
+      cutDistance;
+    roadmap.longestLaneMeters =
+      Math.max(
+        roadmap.longestLaneMeters,
+        roadmap.activeLaneMeters,
+      );
+    const publishedSections =
+      Math.floor(
+        roadmap.totalCutMeters /
+          LIVING_ROADMAP_SECTION_METERS,
+      );
+    if (
+      publishedSections >
+      roadmap.sectionsPublished
+    ) {
+      roadmap.sectionsPublished =
+        publishedSections;
+      roadmap.pulseTimer = 2.8;
+      roadmap.publishedMarkId =
+        mark?.id || null;
+    }
     joe.lastCutPoint = {
       x: joe.x,
       y: joe.y,
     };
+  }
+
+  function livingRoadmapSpeedMultiplier(
+    environment,
+  ) {
+    return environment.mowed &&
+      !environment.sand
+      ? LIVING_ROADMAP_SPEED_MULTIPLIER
+      : 1;
+  }
+
+  function updateLivingRoadmapPlayerState(
+    environment,
+  ) {
+    const hole = state.hole;
+    const roadmap =
+      hole.livingRoadmap;
+    const onCut =
+      environment.mowed &&
+      !environment.sand;
+    if (
+      onCut &&
+      !roadmap.playerOnCut
+    ) {
+      roadmap.playerEntries += 1;
+    }
+    if (
+      onCut &&
+      !roadmap.tutorialShown &&
+      !hole.tutorialVisible &&
+      hole.hasMoved
+    ) {
+      roadmap.tutorialShown = true;
+      if (
+        hole.stateBannerLockTimer <= 0
+      ) {
+        hole.stateBanner =
+          "LIVING ROADMAP // FAST, QUIET, EXPOSED";
+        hole.stateBannerTimer = 3.1;
+      }
+      if (
+        hole.joe.mode !== "chase" &&
+        hole.messageTimer < 1.2
+      ) {
+        setHoleMessage(
+          "CUT LANE — 8% faster and quieter, but grass concealment is gone.",
+          4,
+        );
+      }
+    }
+    roadmap.playerOnCut = onCut;
   }
 
   function trailEvidenceNearJoe() {
@@ -10042,7 +11201,7 @@
         : sand.active
           ? "sand / exposed"
         : turf.mowed
-            ? "quiet / exposed"
+            ? "fast / quiet / exposed"
           : effectiveRough
             ? state.hole.crouched
               ? "rough concealment"
@@ -10070,6 +11229,11 @@
         turf.recentJoeCut,
       recentJoeCutDistance:
         turf.recentJoeCutDistance,
+      roadmapSpeedMultiplier:
+        livingRoadmapSpeedMultiplier({
+          mowed: turf.mowed,
+          sand: sand.active,
+        }),
       turfLabel: sand.active
         ? wet.active
           ? "SOAKED BUNKER"
@@ -10120,6 +11284,201 @@
       }
     }
     return null;
+  }
+
+  function acousticBlockersBetween(
+    start,
+    end,
+  ) {
+    const blockers = [];
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (
+        !obstacle.blocks ||
+        !obstacle.sight
+      ) {
+        continue;
+      }
+      const intersection =
+        segmentObstacleIntersection(
+          start,
+          end,
+          obstacle,
+        );
+      if (
+        intersection.startDistance >= 1 &&
+        intersection.closestDistance < 0.86
+      ) {
+        blockers.push({
+          obstacle,
+          amount: intersection.amount,
+        });
+      }
+    }
+    blockers.sort(
+      (a, b) => a.amount - b.amount,
+    );
+    return blockers;
+  }
+
+  function acousticMaterialForObstacle(
+    obstacle,
+  ) {
+    const identity = `${obstacle.id || ""} ${obstacle.asset || ""} ${obstacle.landmark || ""}`.toLowerCase();
+    if (
+      identity.includes("hedge") ||
+      identity.includes("reed") ||
+      identity.includes("tree") ||
+      identity.includes("rough")
+    ) {
+      return {
+        id: "vegetation",
+        filterHz: 1180,
+        transmission: 0.62,
+        reflection: 0.018,
+      };
+    }
+    if (
+      identity.includes("cart") ||
+      identity.includes("mower") ||
+      identity.includes("gate")
+    ) {
+      return {
+        id: "metal",
+        filterHz: 820,
+        transmission: 0.48,
+        reflection: 0.07,
+      };
+    }
+    if (
+      identity.includes("bunker") ||
+      identity.includes("berm")
+    ) {
+      return {
+        id: "earth",
+        filterHz: 690,
+        transmission: 0.52,
+        reflection: 0.032,
+      };
+    }
+    return {
+      id: "structure",
+      filterHz: 520,
+      transmission: 0.38,
+      reflection: 0.052,
+    };
+  }
+
+  function updateMowerAcoustics(dt) {
+    const hole = state.hole;
+    const acoustics =
+      hole.mowerAcoustics;
+    const intercept =
+      hole.tensionDirector
+        .pendingIntercept;
+    const source = intercept
+      ? {
+          x: intercept.x,
+          y: intercept.y,
+        }
+      : hole.joe;
+    const blockers =
+      acousticBlockersBetween(
+        source,
+        state.player,
+      );
+    const primary =
+      blockers.length > 0
+        ? blockers[0].obstacle
+        : null;
+    const material = primary
+      ? acousticMaterialForObstacle(
+          primary,
+        )
+      : {
+          id: "open_air",
+          filterHz: 6200,
+          transmission: 1,
+          reflection: 0.008,
+        };
+    const distance = worldDistance(
+      source,
+      state.player,
+    );
+    const previousDistance =
+      acoustics.previousDistance;
+    const radialVelocity =
+      previousDistance === null ||
+      dt <= 0.0001
+        ? 0
+        : clamp(
+            (
+              previousDistance - distance
+            ) / dt,
+            -22,
+            22,
+          );
+    const view = lookBackView();
+    const relativeX =
+      source.x - state.player.x;
+    const relativeY =
+      source.y - state.player.y;
+    const lateral =
+      relativeX * view.cosine -
+      relativeY * view.sine;
+    const pan = clamp(
+      lateral / Math.max(42, distance),
+      -0.9,
+      0.9,
+    );
+    const stackedTransmission =
+      material.transmission *
+      Math.pow(
+        0.82,
+        Math.max(0, blockers.length - 1),
+      );
+    acoustics.occluded =
+      blockers.length > 0;
+    acoustics.blockerId =
+      primary?.id || null;
+    acoustics.blockerCount =
+      blockers.length;
+    acoustics.material = material.id;
+    acoustics.filterHz =
+      material.filterHz;
+    acoustics.transmission =
+      clamp(stackedTransmission, 0.22, 1);
+    acoustics.reflection = clamp(
+      material.reflection +
+        Math.max(0, blockers.length - 1) *
+          0.012,
+      0,
+      0.11,
+    );
+    acoustics.pan = pan;
+    acoustics.direction =
+      pan < -0.16
+        ? "left"
+        : pan > 0.16
+          ? "right"
+          : "center";
+    acoustics.distance = distance;
+    acoustics.previousDistance = distance;
+    acoustics.radialVelocity =
+      radialVelocity;
+    acoustics.dopplerMultiplier = clamp(
+      1 + radialVelocity / 343,
+      0.94,
+      1.06,
+    );
+    acoustics.source = intercept
+      ? "warned_intercept"
+      : "joe";
   }
 
   function courseCameraMotion() {
@@ -10250,8 +11609,24 @@
       courseCameraMotion();
     const locomotion =
       courseLocomotionState();
+    const rearView =
+      lookBackView();
+    const turnEnvelope =
+      Math.sin(
+        rearView.amount *
+          Math.PI,
+      );
+    const turnDirection =
+      lookBackState().direction;
     const viewportShift =
-      courseViewportShiftX();
+      courseViewportShiftX() +
+      turnDirection *
+        turnEnvelope *
+        (
+          state.reducedMotion
+            ? 12
+            : 46
+        );
     const strength =
       clamp(
         Math.abs(
@@ -10264,7 +11639,14 @@
       );
     const frameRoll =
       motion.roll +
-      locomotion.roll;
+      locomotion.roll +
+      (
+        state.reducedMotion
+          ? 0
+          : turnDirection *
+            turnEnvelope *
+            0.018
+      );
     const scale =
       1 +
       Math.abs(
@@ -10279,7 +11661,13 @@
         HEIGHT +
       strength *
         0.004 +
-      locomotion.zoom;
+      locomotion.zoom +
+      turnEnvelope *
+        (
+          state.reducedMotion
+            ? 0.004
+            : 0.014
+        );
     renderFrameCache.cameraFrame = {
       viewportShift,
       verticalShift:
@@ -11511,7 +12899,17 @@
   function worldToScreen(x, y) {
     const cameraMotion =
       courseCameraMotion();
-    const forwardDistance = y - state.player.y;
+    const view = lookBackView();
+    const relativeX =
+      x - state.player.x;
+    const relativeY =
+      y - state.player.y;
+    const forwardDistance =
+      relativeX * view.sine +
+      relativeY * view.cosine;
+    const lateralDistance =
+      relativeX * view.cosine -
+      relativeY * view.sine;
     const positiveDistance = Math.max(0, forwardDistance);
     const pixelsPerMeter =
       COURSE_CAMERA.focalPixels /
@@ -11520,7 +12918,7 @@
     return {
       x:
         WIDTH * 0.5 +
-        (x - state.player.x) *
+        lateralDistance *
           COURSE_CAMERA.worldUnitMeters *
           pixelsPerMeter +
         cameraMotion.offsetX *
@@ -11532,6 +12930,8 @@
       scale,
       pixelsPerMeter,
       forwardDistance,
+      viewAngle: view.angle,
+      rearView: view.rear,
       visible: forwardDistance > -5 && forwardDistance < 122,
     };
   }
@@ -11696,6 +13096,26 @@
       const obstacle = COURSE_OBSTACLES[index];
       const point = worldToScreen(obstacle.x, obstacle.y);
       if (point.visible && point.x > -120 && point.x < WIDTH + 120) {
+        const dedicatedArt =
+          dedicatedObstacleImage(
+            obstacle.asset,
+          );
+        const cell =
+          obstacle.draw === false
+            ? null
+            : courseObstacleCell(
+                obstacle,
+                dedicatedArt,
+              );
+        const visualMetrics =
+          cell
+            ? courseObstacleVisualMetrics(
+                obstacle,
+                point,
+                cell,
+                dedicatedArt,
+              )
+            : null;
         visible.push({
           id: obstacle.id,
           landmark: obstacle.landmark,
@@ -11727,6 +13147,67 @@
           pixelsPerMeter: Math.round(point.pixelsPerMeter),
           screenX: Math.round(point.x),
           screenY: Math.round(point.y),
+          twoWayCover: {
+            blocksJoeSight:
+              obstacle.sight === true,
+            blocksPlayerView:
+              visualMetrics
+                ?.blocksPlayerView ===
+              true,
+            visualHeightMeters:
+              visualMetrics
+                ? Number(
+                    visualMetrics
+                      .visualHeightMeters
+                      .toFixed(2),
+                  )
+                : null,
+            minimumSightCoverHeightMeters:
+              obstacle.sight
+                ? SIGHT_COVER_MIN_HEIGHT_METERS
+                : null,
+            visualWidthPixels:
+              visualMetrics
+                ? Math.round(
+                    visualMetrics
+                      .drawWidth,
+                  )
+                : null,
+            visualHeightPixels:
+              visualMetrics
+                ? Math.round(
+                    visualMetrics
+                      .drawHeight,
+                  )
+                : null,
+            parentStructureArt:
+              obstacle.draw === false,
+            tunnelWing:
+              obstacle.tunnelWing ??
+              null,
+            sourcePixelsPerScreenPixel:
+              visualMetrics
+                ? Number(
+                    (visualMetrics
+                      .visualSourceWidth /
+                      visualMetrics
+                        .drawWidth)
+                      .toFixed(2),
+                  )
+                : null,
+            visualSource:
+              obstacle.tunnelWing
+                ? obstacle.draw === false
+                  ? "parent_dedicated_hedge_tunnel_art"
+                  : "density_matched_expanded_hedge_composite"
+                : dedicatedArt
+                  ? "dedicated_obstacle_art"
+                  : "course_obstacle_atlas",
+            contract:
+              obstacle.sight
+                ? "same_authored_cover_blocks_joe_and_nearby_player_view"
+                : "collision_only_or_non_cover_prop",
+          },
         });
       }
     }
@@ -11754,7 +13235,7 @@
       },
       {
         id: "sprinkler",
-        label: "SPRINKLER",
+        label: "DRAIN VALVE",
         target: sprinkler,
         available:
           !state.hole.sprinklerUsed,
@@ -12293,7 +13774,13 @@
     ctx.restore();
   }
 
-  function addWorldEffect(kind, x, y, duration = 1.4) {
+  function addWorldEffect(
+    kind,
+    x,
+    y,
+    duration = 1.4,
+    details = {},
+  ) {
     state.hole.worldEffects.push({
       kind,
       x,
@@ -12301,6 +13788,7 @@
       age: 0,
       duration,
       seed: hash(state.hole.elapsed * 97 + x * 3 + y),
+      ...details,
     });
   }
 
@@ -12795,7 +14283,11 @@
     }
   }
 
-  function addBallImpactParticles(target) {
+  function addBallImpactParticles(
+    target,
+    terrain = null,
+    blocked = false,
+  ) {
     const point = worldToScreen(target.x, target.y);
     if (
       !point.visible ||
@@ -12809,7 +14301,16 @@
       492,
       WIDTH - 326,
     );
-    for (let index = 0; index < 18; index += 1) {
+    const count = state.reducedMotion
+      ? 9
+      : blocked
+        ? 15
+        : terrain?.id === "bunker" ||
+            terrain?.id ===
+              "soaked_bunker"
+          ? 14
+          : 18;
+    for (let index = 0; index < count; index += 1) {
       const seed =
         hash(
           state.hole.elapsed * 41 +
@@ -12833,10 +14334,27 @@
         size:
           2 +
           hash(seed * 53 + index * 3) * 3,
-        color:
-          index % 4 === 0
-            ? "#ded0a2"
-            : "#84934f",
+        color: blocked
+          ? index % 4 === 0
+            ? "#e7d18b"
+            : "#7d8278"
+          : terrain?.id === "wet"
+            ? index % 4 === 0
+              ? "#d4ede0"
+              : "#638b79"
+            : terrain?.id === "bunker" ||
+                terrain?.id ===
+                  "soaked_bunker"
+              ? index % 4 === 0
+                ? "#ede0ae"
+                : "#a88955"
+              : terrain?.id === "rough"
+                ? index % 4 === 0
+                  ? "#c4c799"
+                  : "#657b47"
+                : index % 4 === 0
+                  ? "#ded0a2"
+                  : "#84934f",
       });
     }
   }
@@ -13515,7 +15033,8 @@
       blockedReason = "final_filing_locked";
     } else if (
       hole.ballAim.active ||
-      hole.ballFlight
+      hole.ballFlight ||
+      hole.ballRoll
     ) {
       blockedReason = "golf_ball_committed";
     } else if (
@@ -13702,6 +15221,7 @@
       !hole.escapeFiling.sealing &&
       !hole.ballAim.active &&
       !hole.ballFlight &&
+      !hole.ballRoll &&
       !hole.distraction &&
       hole.distractionTimer <= 0 &&
       hole.appealReviewTimer <= 0 &&
@@ -14398,7 +15918,8 @@
     if (
       !drill.active ||
       drill.completed ||
-      state.hole.ballFlight
+      state.hole.ballFlight ||
+      state.hole.ballRoll
     ) {
       return;
     }
@@ -14422,6 +15943,383 @@
         state.hole.stateBannerTimer = 0;
       }
     }
+  }
+
+  function golfBallInMotion() {
+    return Boolean(
+      state.hole?.ballFlight ||
+      state.hole?.ballRoll,
+    );
+  }
+
+  function golfBallTerrainAt(point) {
+    const wet = wetStateAt(point);
+    const sand = sandStateAt(point);
+    const turf = turfStateAt(point);
+    const rough =
+      playerInRough(point) &&
+      !turf.mowed &&
+      !sand.active;
+    if (sand.active) {
+      return {
+        id: wet.active
+          ? "soaked_bunker"
+          : "bunker",
+        terrainLabel: wet.active
+          ? "SOAKED BUNKER"
+          : "BUNKER SAND",
+        outcomeLabel: wet.active
+          ? "SOAKED PLUG"
+          : "BUNKER PLUG",
+        friction: wet.active ? 5.4 : 4.8,
+        bounce: wet.active ? 0.035 : 0.07,
+        lureMultiplier:
+          wet.active ? 0.72 : 0.78,
+        lureLabel: "MUTED",
+        color: wet.active
+          ? "#9eb9a7"
+          : "#d2ba7b",
+      };
+    }
+    if (wet.active) {
+      return {
+        id: "wet",
+        terrainLabel: turf.mowed
+          ? "SOAKED CUT"
+          : rough
+            ? "SOAKED ROUGH"
+            : "SOAKED FAIRWAY",
+        outcomeLabel: "WET CHECK",
+        friction: 1.72,
+        bounce: 0.1,
+        lureMultiplier: 0.86,
+        lureLabel: "SOFT",
+        color: "#9fd0c1",
+      };
+    }
+    if (rough) {
+      return {
+        id: "rough",
+        terrainLabel: "BENT ROUGH",
+        outcomeLabel: "ROUGH CATCH",
+        friction: 2.05,
+        bounce: 0.16,
+        lureMultiplier: 0.9,
+        lureLabel: "MUFFLED",
+        color: "#8ba16b",
+      };
+    }
+    if (turf.mowed) {
+      return {
+        id: "mowed",
+        terrainLabel: "MOWED STRIP",
+        outcomeLabel: "CUT-STRIP RUN",
+        friction: 0.56,
+        bounce: 0.44,
+        lureMultiplier: 1.08,
+        lureLabel: "CRISP",
+        color: "#b9c98a",
+      };
+    }
+    return {
+      id: "fairway",
+      terrainLabel: "FAIRWAY",
+      outcomeLabel: "FAIRWAY RUN",
+      friction: 0.82,
+      bounce: 0.32,
+      lureMultiplier: 1,
+      lureLabel: "CLEAR",
+      color: "#b6c184",
+    };
+  }
+
+  function golfBallTravelDirection(start, end) {
+    const physicalX =
+      (end.x - start.x) * 0.72;
+    const physicalY = end.y - start.y;
+    const distance = Math.max(
+      0.001,
+      Math.hypot(
+        physicalX,
+        physicalY,
+      ),
+    );
+    return {
+      x: physicalX / distance / 0.72,
+      y: physicalY / distance,
+    };
+  }
+
+  function golfBallImpactPlan(
+    start,
+    requestedTarget,
+    incomingDirection,
+  ) {
+    const requested = {
+      x: clamp(
+        requestedTarget.x,
+        -COURSE_MAX_X +
+          BALL_COLLISION_RADIUS,
+        COURSE_MAX_X -
+          BALL_COLLISION_RADIUS,
+      ),
+      y: clamp(
+        requestedTarget.y,
+        COURSE_MIN_Y +
+          BALL_COLLISION_RADIUS,
+        COURSE_LENGTH -
+          BALL_COLLISION_RADIUS,
+      ),
+    };
+    const obstacle = obstacleAtPosition(
+      requested.x,
+      requested.y,
+      BALL_COLLISION_RADIUS,
+    );
+    if (!obstacle) {
+      return {
+        point: requested,
+        obstacle: null,
+        banked: false,
+        rollDirection: {
+          ...incomingDirection,
+        },
+      };
+    }
+    let point = { ...requested };
+    for (
+      let distance = BALL_ROLL_STEP;
+      distance <= 48;
+      distance += BALL_ROLL_STEP
+    ) {
+      const candidate = {
+        x:
+          requested.x -
+          incomingDirection.x *
+            distance,
+        y:
+          requested.y -
+          incomingDirection.y *
+            distance,
+      };
+      if (
+        worldDistance(candidate, start) <
+        BALL_COLLISION_RADIUS
+      ) {
+        break;
+      }
+      if (
+        !obstacleAtPosition(
+          candidate.x,
+          candidate.y,
+          BALL_COLLISION_RADIUS,
+        )
+      ) {
+        point = candidate;
+        break;
+      }
+    }
+    return {
+      point,
+      obstacle,
+      banked: true,
+      rollDirection: {
+        x: -incomingDirection.x,
+        y: -incomingDirection.y,
+      },
+    };
+  }
+
+  function golfBallRollPlan(
+    impact,
+    direction,
+    power,
+    impactObstacle = null,
+  ) {
+    let energy =
+      (7 + power * 7.5) *
+      (impactObstacle ? 0.38 : 1);
+    let point = { ...impact };
+    let distance = 0;
+    let blockedBy = impactObstacle;
+    let boundary = null;
+    const surfaceSequence = [];
+    let steps = 0;
+    while (
+      energy > 0.01 &&
+      distance <
+        BALL_ROLL_MAX_DISTANCE &&
+      steps < 48
+    ) {
+      const surface =
+        golfBallTerrainAt(point);
+      if (
+        surfaceSequence[
+          surfaceSequence.length - 1
+        ] !== surface.id
+      ) {
+        surfaceSequence.push(
+          surface.id,
+        );
+      }
+      const stepDistance = Math.min(
+        BALL_ROLL_STEP,
+        BALL_ROLL_MAX_DISTANCE -
+          distance,
+        energy /
+          surface.friction,
+      );
+      if (stepDistance <= 0.01) {
+        break;
+      }
+      const candidate = {
+        x:
+          point.x +
+          direction.x * stepDistance,
+        y:
+          point.y +
+          direction.y * stepDistance,
+      };
+      if (
+        candidate.x <
+          -COURSE_MAX_X +
+            BALL_COLLISION_RADIUS ||
+        candidate.x >
+          COURSE_MAX_X -
+            BALL_COLLISION_RADIUS ||
+        candidate.y <
+          COURSE_MIN_Y +
+            BALL_COLLISION_RADIUS ||
+        candidate.y >
+          COURSE_LENGTH -
+            BALL_COLLISION_RADIUS
+      ) {
+        boundary =
+          candidate.y >=
+          COURSE_LENGTH -
+            BALL_COLLISION_RADIUS
+            ? "END OF COURSE"
+            : candidate.y <=
+                COURSE_MIN_Y +
+                  BALL_COLLISION_RADIUS
+              ? "CLUBHOUSE EDGE"
+              : candidate.x < 0
+                ? "WEST BOUNDARY"
+                : "EAST BOUNDARY";
+        break;
+      }
+      const obstacle = obstacleAtPosition(
+        candidate.x,
+        candidate.y,
+        BALL_COLLISION_RADIUS,
+      );
+      if (obstacle) {
+        blockedBy = obstacle;
+        break;
+      }
+      point = candidate;
+      distance += stepDistance;
+      energy -=
+        stepDistance *
+        surface.friction;
+      steps += 1;
+    }
+    const initialSurface =
+      golfBallTerrainAt(impact);
+    const finalSurface =
+      golfBallTerrainAt(point);
+    if (
+      surfaceSequence[
+        surfaceSequence.length - 1
+      ] !== finalSurface.id
+    ) {
+      surfaceSequence.push(
+        finalSurface.id,
+      );
+    }
+    const contactedAfterRun =
+      Boolean(blockedBy) &&
+      blockedBy !== impactObstacle;
+    let outcomeLabel =
+      finalSurface.outcomeLabel;
+    if (impactObstacle) {
+      outcomeLabel = "SOLID BANK";
+    } else if (contactedAfterRun) {
+      outcomeLabel = "SOLID STOP";
+    } else if (boundary) {
+      outcomeLabel = "BOUNDARY STOP";
+    } else if (
+      finalSurface.id !==
+      initialSurface.id
+    ) {
+      outcomeLabel =
+        finalSurface.outcomeLabel;
+    }
+    const solidContact =
+      Boolean(
+        impactObstacle ||
+        contactedAfterRun,
+      );
+    return {
+      start: { ...impact },
+      target: { ...point },
+      distance,
+      duration: clamp(
+        0.34 + distance / 15,
+        0.4,
+        1.65,
+      ),
+      initialSurface,
+      finalSurface,
+      surfaceSequence,
+      blockedBy,
+      impactObstacle,
+      boundary,
+      outcomeLabel,
+      lureMultiplier: solidContact
+        ? impactObstacle
+          ? 1.18
+          : 1.12
+        : initialSurface.lureMultiplier,
+      lureLabel: solidContact
+        ? impactObstacle
+          ? "LOUD BANK"
+          : "SHARP"
+        : initialSurface.lureLabel,
+      direction: { ...direction },
+    };
+  }
+
+  function golfBallShotPlan(
+    start,
+    target,
+    power,
+  ) {
+    const incomingDirection =
+      golfBallTravelDirection(
+        start,
+        target,
+      );
+    const impact = golfBallImpactPlan(
+      start,
+      target,
+      incomingDirection,
+    );
+    const roll = golfBallRollPlan(
+      impact.point,
+      impact.rollDirection,
+      power,
+      impact.obstacle,
+    );
+    return {
+      requestedTarget: { ...target },
+      impact: { ...impact.point },
+      incomingDirection,
+      banked: impact.banked,
+      impactObstacle:
+        impact.obstacle,
+      ...roll,
+    };
   }
 
   function golfBallAimTarget() {
@@ -14457,9 +16355,9 @@
     ) {
       return;
     }
-    if (state.hole.ballFlight) {
+    if (golfBallInMotion()) {
       setHoleMessage(
-        "BALL IN FLIGHT — wait for the impact.",
+        "BALL STILL MOVING — wait for it to settle.",
         1.3,
       );
       return;
@@ -14486,6 +16384,7 @@
       }
     }
     state.hole.ballAim = {
+      ...freshBallAimState(),
       active: true,
       source,
       angle: openingAngle,
@@ -14494,6 +16393,15 @@
       target: null,
     };
     state.hole.ballAim.target = golfBallAimTarget();
+    state.hole.ballAim.preview =
+      golfBallShotPlan(
+        state.player,
+        state.hole.ballAim.target,
+        state.hole.ballAim.power,
+      );
+    refreshShotCraftAimPreview(
+      false,
+    );
     state.hole.messageTimer = 0;
     state.hole.prompt = "";
     playBallReadyCue();
@@ -14522,9 +16430,30 @@
     ) {
       return;
     }
-    const target =
+    const requestedTarget =
       hole.ballAim.target ||
       golfBallAimTarget();
+    refreshShotCraftAimPreview(
+      false,
+    );
+    const preview =
+      hole.ballAim.preview ||
+      golfBallShotPlan(
+        state.player,
+        requestedTarget,
+        hole.ballAim.power,
+      );
+    const craftPreview =
+      hole.ballAim.craftPreview ||
+      shotCraftAimPreview(preview);
+    const target = preview.impact;
+    const shotPlan =
+      hole.ballAim.preview ||
+      golfBallShotPlan(
+        state.player,
+        target,
+        hole.ballAim.power,
+      );
     const distance = worldDistance(
       state.player,
       target,
@@ -14543,6 +16472,20 @@
       duration: flightDuration,
       distance,
       power: hole.ballAim.power,
+      shotPlan,
+      joeModeAtCommit:
+        hole.joe.mode,
+      joeDistanceAtCommit:
+        worldDistance(
+          hole.joe,
+          state.player,
+        ),
+      shotCraftPreview:
+        craftPreview
+          ? {
+              ...craftPreview,
+            }
+          : null,
     };
     const direction = Math.sign(
       target.x - state.player.x,
@@ -14556,14 +16499,134 @@
     playBallSwingCue(direction);
   }
 
-  function landGolfBall(target) {
+  function beginGolfBallLanding(flight) {
     const hole = state.hole;
+    const plan =
+      flight.shotPlan ||
+      golfBallShotPlan(
+        flight.start,
+        flight.target,
+        flight.power,
+      );
     const drillAttempt =
       practiceDrillActive();
     const practiceHit =
       drillAttempt &&
-      practiceShotLocked(target);
+      practiceShotLocked(plan.impact);
     hole.ballFlight = null;
+    hole.ballRoll = {
+      ...plan,
+      elapsed: 0,
+      power: flight.power,
+      drillAttempt,
+      practiceHit,
+      ballId:
+        hole.nextRecoverableBallId,
+      joeModeAtCommit:
+        flight.joeModeAtCommit ||
+        "patrol",
+      joeDistanceAtCommit:
+        flight.joeDistanceAtCommit,
+      shotCraftPreviewAtCommit:
+        flight.shotCraftPreview
+          ? {
+              ...flight.shotCraftPreview,
+            }
+          : null,
+    };
+    addTurfMark(
+      "divot",
+      plan.impact.x,
+      plan.impact.y,
+      {
+        heading:
+          Math.atan2(
+            plan.incomingDirection.y,
+            plan.incomingDirection.x,
+          ),
+        radius: 4.8,
+        strength: 1,
+      },
+    );
+    addWorldEffect(
+      "ball_impact",
+      plan.impact.x,
+      plan.impact.y,
+      1.1,
+      {
+        surface:
+          plan.initialSurface.id,
+        color:
+          plan.initialSurface.color,
+        blocked:
+          Boolean(plan.impactObstacle),
+      },
+    );
+    addBallImpactParticles(
+      plan.impact,
+      plan.initialSurface,
+      Boolean(plan.impactObstacle),
+    );
+    playBallCue(
+      Math.sign(
+        plan.impact.x -
+          state.player.x,
+      ),
+      plan.initialSurface.id,
+      Boolean(plan.impactObstacle),
+    );
+    const contactLabel =
+      plan.impactObstacle
+        ? plan.impactObstacle.landmark ||
+          plan.impactObstacle.id
+        : null;
+    const distanceLabel =
+      Math.round(plan.distance);
+    setHoleMessage(
+      contactLabel
+        ? `SOLID BANK -- clipped ${contactLabel}; ball running ${distanceLabel}m back into play.`
+        : `${plan.outcomeLabel} -- ${distanceLabel}m of ground run before Joe commits.`,
+      2.1,
+    );
+    pushThreatCaption(
+      contactLabel
+        ? `BALL CLIPS ${contactLabel.toUpperCase()}`
+        : `${plan.initialSurface.terrainLabel} IMPACT // ${plan.outcomeLabel}`,
+      plan.impact,
+      "world",
+      1.75,
+      "ball_impact",
+    );
+  }
+
+  function landGolfBall(target, roll = null) {
+    if (!roll) {
+      const start = {
+        x: state.player.x,
+        y: state.player.y,
+      };
+      beginGolfBallLanding({
+        start,
+        target: { ...target },
+        distance:
+          worldDistance(start, target),
+        power: 0.72,
+        shotPlan:
+          golfBallShotPlan(
+            start,
+            target,
+            0.72,
+          ),
+      });
+      return;
+    }
+    const hole = state.hole;
+    const drillAttempt =
+      roll.drillAttempt;
+    const practiceHit =
+      roll.practiceHit;
+    hole.ballFlight = null;
+    hole.ballRoll = null;
     const landedBall = {
       id: hole.nextRecoverableBallId,
       x: target.x,
@@ -14572,28 +16635,55 @@
       throwNumber: hole.ballThrowsUsed,
       wet: wetStateAt(target).active,
       practiceHit,
+      surface:
+        roll.finalSurface.id,
+      surfaceLabel:
+        roll.finalSurface.terrainLabel,
+      rollDistance:
+        Number(roll.distance.toFixed(2)),
+      outcomeLabel:
+        roll.outcomeLabel,
+      lureLabel: roll.lureLabel,
+      lureMultiplier:
+        roll.lureMultiplier,
+      impactSurface:
+        roll.initialSurface.id,
+      surfaceSequence: [
+        ...roll.surfaceSequence,
+      ],
+      impact: { ...roll.impact },
+      blockedBy:
+        roll.blockedBy?.id ||
+        roll.boundary ||
+        null,
+      shotCraftPreview:
+        roll.shotCraftPreviewAtCommit
+          ? {
+              ...roll.shotCraftPreviewAtCommit,
+            }
+          : null,
     };
     hole.nextRecoverableBallId += 1;
     hole.recoverableBalls.push(
       landedBall,
     );
-    addTurfMark(
-      "divot",
-      target.x,
-      target.y,
-      {
-        heading: state.player.heading,
-        radius: 4.8,
-        strength: 1,
-      },
+    awardShotCraft(
+      roll,
+      landedBall,
     );
-    hole.distraction = { ...target };
+    hole.distraction = {
+      ...target,
+      kind: "golf_ball",
+      ballId: landedBall.id,
+    };
     hole.distractionTimer = Math.max(
       hole.overtime ? 1.65 : 2.25,
       (
         4.2 -
         (hole.ballThrowsUsed - 1) * 0.85
-      ) * (hole.overtime ? 0.72 : 1),
+      ) *
+        (hole.overtime ? 0.72 : 1) *
+        roll.lureMultiplier,
     );
     hole.joe.mode = "investigate";
     announceJoeState("investigate");
@@ -14630,19 +16720,19 @@
       hole.distractionTimer,
     );
     addWorldEffect(
-      "ball_impact",
+      "ball_settle",
       target.x,
       target.y,
-      1.1,
+      0.9,
     );
-    addBallImpactParticles(target);
-    playBallCue(
+    playBallSettleCue(
+      roll.finalSurface.id,
       Math.sign(target.x - state.player.x),
     );
     pushThreatCaption(
       practiceHit
         ? "STARTER BELL RINGS // JOE DIVERTED"
-        : "GOLF BALL STRIKES TURF",
+        : `${roll.outcomeLabel} // RESTS ON ${roll.finalSurface.terrainLabel}`,
       target,
       "world",
       2.1,
@@ -14757,6 +16847,13 @@
         BALL_MAX_AIM_ANGLE,
       );
       hole.ballAim.target = golfBallAimTarget();
+      hole.ballAim.preview =
+        golfBallShotPlan(
+          state.player,
+          hole.ballAim.target,
+          hole.ballAim.power,
+        );
+      refreshShotCraftAimPreview();
     }
     if (hole.ballFlight) {
       hole.ballFlight.elapsed += dt;
@@ -14764,12 +16861,389 @@
         hole.ballFlight.elapsed >=
         hole.ballFlight.duration
       ) {
-        const target = {
-          ...hole.ballFlight.target,
-        };
-        landGolfBall(target);
+        const flight =
+          hole.ballFlight;
+        beginGolfBallLanding(flight);
       }
     }
+    if (hole.ballRoll) {
+      hole.ballRoll.elapsed += dt;
+      if (
+        hole.ballRoll.elapsed >=
+        hole.ballRoll.duration
+      ) {
+        const roll = hole.ballRoll;
+        landGolfBall(
+          { ...roll.target },
+          roll,
+        );
+      }
+    }
+  }
+
+  function finishPredatorTactic(
+    outcome,
+  ) {
+    const tactics =
+      state.hole.predatorTactics;
+    if (!tactics.active) {
+      return;
+    }
+    const completed =
+      outcome === "completed";
+    if (completed) {
+      tactics.completions += 1;
+    } else {
+      tactics.cancellations += 1;
+    }
+    tactics.lastOutcome = outcome;
+    tactics.history.unshift({
+      id: tactics.active,
+      outcome,
+      zone:
+        courseZoneAt(
+          state.player.y,
+        ).id,
+    });
+    tactics.history.length =
+      Math.min(
+        tactics.history.length,
+        5,
+      );
+    tactics.active = null;
+    tactics.phase = "idle";
+    tactics.timer = 0;
+    tactics.duration = 0;
+    tactics.target = null;
+    tactics.cooldown =
+      PREDATOR_TACTIC_COOLDOWN_SECONDS +
+      hash(
+        tactics.starts * 43 +
+          state.hole.zoneIndex * 17,
+      ) *
+        5.5;
+  }
+
+  function startPredatorTactic(type) {
+    const hole = state.hole;
+    const tactics =
+      hole.predatorTactics;
+    if (tactics.active) {
+      return;
+    }
+    const joe = hole.joe;
+    const dx =
+      joe.x - state.player.x;
+    const dy =
+      joe.y - state.player.y;
+    const length = Math.max(
+      1,
+      Math.hypot(dx, dy),
+    );
+    const awayX = dx / length;
+    const awayY = dy / length;
+    const side =
+      hash(
+        tactics.starts * 31 +
+          hole.zoneIndex * 13,
+      ) < 0.5
+        ? -1
+        : 1;
+    tactics.active = type;
+    tactics.phase = "telegraph";
+    tactics.timer =
+      type === "false_retreat"
+        ? 1.25
+        : 1.05;
+    tactics.duration = tactics.timer;
+    tactics.seed =
+      tactics.starts * 47 +
+      hole.zoneIndex * 29 +
+      Math.floor(hole.elapsed);
+    tactics.starts += 1;
+    tactics.lastTactic = type;
+    if (type === "false_retreat") {
+      tactics.falseRetreats += 1;
+      tactics.target = {
+        x: clamp(
+          joe.x +
+            awayX * 28 +
+            -awayY * side * 11,
+          -COURSE_MAX_X + 8,
+          COURSE_MAX_X - 8,
+        ),
+        y: clamp(
+          joe.y +
+            awayY * 28 +
+            awayX * side * 11,
+          COURSE_MIN_Y + 8,
+          COURSE_LENGTH - 12,
+        ),
+        returnX:
+          hole.lastSeenPlayer?.x ??
+          state.player.x,
+        returnY:
+          hole.lastSeenPlayer?.y ??
+          state.player.y,
+      };
+      hole.stateBanner =
+        "FALSE RETREAT // MOWER THROTTLE DROPPING";
+      setHoleMessage(
+        "JOE IS YIELDING THE LANE — the mower is still pointed at your last position.",
+        3.1,
+      );
+      pushThreatCaption(
+        "MOWER FALLS BACK // WATCH FOR THE RETURN",
+        joe,
+        "mower",
+        2.8,
+        "false_retreat",
+      );
+    } else {
+      tactics.coverShreds += 1;
+      tactics.target = {
+        x: clamp(
+          state.player.x +
+            side * 12,
+          -COURSE_MAX_X + 8,
+          COURSE_MAX_X - 8,
+        ),
+        y: clamp(
+          state.player.y + 7,
+          COURSE_MIN_Y + 8,
+          COURSE_LENGTH - 12,
+        ),
+      };
+      hole.stateBanner =
+        "COVER SHRED // ROUGH ENTERING SCOPE";
+      setHoleMessage(
+        "JOE IS MOWING YOUR HIDING LINE — leave the rough before the cut reaches you.",
+        3.2,
+      );
+      pushThreatCaption(
+        "MOWER DECK LOWERS TOWARD THE ROUGH",
+        tactics.target,
+        "danger",
+        2.9,
+        "cover_shred",
+      );
+      addWorldEffect(
+        "mower_sputter",
+        joe.x,
+        joe.y,
+        1.8,
+      );
+    }
+    hole.stateBannerTimer = 2.9;
+    hole.stateBannerLockTimer =
+      Math.max(
+        hole.stateBannerLockTimer,
+        2.9,
+      );
+    hole.dreadTimer = Math.max(
+      hole.dreadTimer,
+      3.4,
+    );
+    playThreatCue("search");
+  }
+
+  function updatePredatorTactics(
+    dt,
+  ) {
+    const hole = state.hole;
+    const tactics =
+      hole.predatorTactics;
+    tactics.cooldown = Math.max(
+      0,
+      tactics.cooldown - dt,
+    );
+    if (tactics.active) {
+      tactics.timer = Math.max(
+        0,
+        tactics.timer - dt,
+      );
+      if (tactics.timer > 0) {
+        return;
+      }
+      if (
+        tactics.active ===
+        "false_retreat"
+      ) {
+        if (
+          tactics.phase ===
+          "telegraph"
+        ) {
+          tactics.phase = "retreat";
+          tactics.timer = 1.65;
+          tactics.duration = 1.65;
+        } else if (
+          tactics.phase === "retreat"
+        ) {
+          tactics.phase = "snapback";
+          tactics.timer = 1.45;
+          tactics.duration = 1.45;
+          hole.stateBanner =
+            "FALSE RETREAT // JOE RECOMMITS";
+          hole.stateBannerTimer = 2;
+          playThreatCue(
+            "investigate",
+          );
+        } else {
+          finishPredatorTactic(
+            "completed",
+          );
+        }
+      } else if (
+        tactics.phase === "telegraph"
+      ) {
+        tactics.phase = "shred";
+        tactics.timer = 2.8;
+        tactics.duration = 2.8;
+      } else {
+        finishPredatorTactic(
+          "completed",
+        );
+      }
+      return;
+    }
+    if (
+      tactics.cooldown > 0 ||
+      hole.elapsed < 14 ||
+      hole.escapeFiling.active ||
+      hole.distraction ||
+      hole.joe.mode === "chase"
+    ) {
+      return;
+    }
+    const distance = worldDistance(
+      hole.joe,
+      state.player,
+    );
+    if (
+      distance <
+        PREDATOR_TACTIC_MIN_DISTANCE ||
+      distance >
+        PREDATOR_TACTIC_MAX_DISTANCE ||
+      ![
+        "search",
+        "investigate",
+      ].includes(hole.joe.mode)
+    ) {
+      return;
+    }
+    const environment =
+      getPlayerEnvironmentState();
+    if (
+      environment.effectiveRough &&
+      hole.zoneIndex > 0
+    ) {
+      startPredatorTactic(
+        "cover_shred",
+      );
+    } else if (
+      hole.joe.mode === "search" &&
+      hole.zoneIndex > 0
+    ) {
+      startPredatorTactic(
+        "false_retreat",
+      );
+    }
+  }
+
+  function applyPredatorTacticMovement(
+    dt,
+    canSee,
+    canHear,
+  ) {
+    const hole = state.hole;
+    const tactics =
+      hole.predatorTactics;
+    const joe = hole.joe;
+    if (!tactics.active) {
+      return false;
+    }
+    if (
+      canSee ||
+      canHear ||
+      worldDistance(
+        joe,
+        state.player,
+      ) < 12
+    ) {
+      finishPredatorTactic(
+        "contact_cancelled",
+      );
+      return false;
+    }
+    if (
+      tactics.active ===
+      "false_retreat"
+    ) {
+      joe.mode =
+        tactics.phase === "snapback"
+          ? "investigate"
+          : "search";
+      const target =
+        tactics.phase === "snapback"
+          ? {
+              x:
+                tactics.target
+                  .returnX,
+              y:
+                tactics.target
+                  .returnY,
+            }
+          : tactics.target;
+      const speed =
+        tactics.phase === "telegraph"
+          ? 7
+          : tactics.phase === "retreat"
+            ? 20
+            : 28;
+      moveJoeToward(
+        target,
+        speed,
+        dt,
+      );
+    } else {
+      joe.mode =
+        tactics.phase === "telegraph"
+          ? "search"
+          : "investigate";
+      moveJoeToward(
+        tactics.target,
+        tactics.phase === "telegraph"
+          ? 9
+          : 23,
+        dt,
+      );
+      if (
+        tactics.phase === "shred" &&
+        Math.floor(
+          tactics.timer * 5,
+        ) !==
+          Math.floor(
+            (
+              tactics.timer + dt
+            ) *
+              5,
+          )
+      ) {
+        addWorldEffect(
+          "mower_sputter",
+          joe.x,
+          joe.y,
+          0.8,
+        );
+      }
+    }
+    joe.alert = Math.max(
+      joe.alert,
+      tactics.phase === "telegraph"
+        ? 0.24
+        : 0.34,
+    );
+    return true;
   }
 
   function updateJoe(dt) {
@@ -15046,7 +17520,17 @@
       hole.lastSeenPlayer = { x: state.player.x, y: state.player.y };
     }
 
-    if (
+    const tacticMovementHandled =
+      applyPredatorTacticMovement(
+        dt,
+        canSee,
+        canHear,
+      );
+
+    if (tacticMovementHandled) {
+      hole.trailTarget = null;
+      hole.trailApproachTimer = 0;
+    } else if (
       hole.distractionTimer > 0 &&
       hole.distraction &&
       (
@@ -15463,10 +17947,51 @@
   function joeObstacleOnSegment(start, end, padding = JOE_NAVIGATION_CLEARANCE) {
     let nearest = null;
     let nearestAmount = Infinity;
+    const minimumX = Math.min(
+      start.x,
+      end.x,
+    );
+    const maximumX = Math.max(
+      start.x,
+      end.x,
+    );
+    const minimumY = Math.min(
+      start.y,
+      end.y,
+    );
+    const maximumY = Math.max(
+      start.y,
+      end.y,
+    );
 
     for (let index = 0; index < COURSE_OBSTACLES.length; index += 1) {
       const obstacle = COURSE_OBSTACLES[index];
       if (!obstacle.blocks) {
+        continue;
+      }
+      const radiusX =
+        (
+          (obstacle.radiusX ??
+            obstacle.radius ??
+            0) +
+          padding
+        ) /
+        0.72;
+      const radiusY =
+        (obstacle.radiusY ??
+          obstacle.radius ??
+          0) +
+        padding;
+      if (
+        maximumX <
+          obstacle.x - radiusX ||
+        minimumX >
+          obstacle.x + radiusX ||
+        maximumY <
+          obstacle.y - radiusY ||
+        minimumY >
+          obstacle.y + radiusY
+      ) {
         continue;
       }
       const intersection =
@@ -15530,10 +18055,50 @@
     ) {
       return false;
     }
-    return (
-      joeObstacleClearanceAt(point) >=
-      JOE_NAVIGATION_CLEARANCE
-    );
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (!obstacle.blocks) {
+        continue;
+      }
+      const radiusX =
+        obstacle.radiusX ??
+        obstacle.radius ??
+        0;
+      const radiusY =
+        obstacle.radiusY ??
+        obstacle.radius ??
+        0;
+      if (
+        Math.abs(
+          (point.x - obstacle.x) *
+            0.72,
+        ) >
+          radiusX +
+            JOE_NAVIGATION_CLEARANCE ||
+        Math.abs(
+          point.y - obstacle.y,
+        ) >
+          radiusY +
+            JOE_NAVIGATION_CLEARANCE
+      ) {
+        continue;
+      }
+      if (
+        obstacleClearance(
+          point,
+          obstacle,
+        ) <
+        JOE_NAVIGATION_CLEARANCE
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function wrapRadians(angle) {
@@ -15547,154 +18112,292 @@
     return wrapped;
   }
 
+  const JOE_NAVIGATION_X_COUNT =
+    Math.floor(
+      224 / JOE_NAVIGATION_GRID,
+    ) + 1;
+  const JOE_NAVIGATION_Y_COUNT =
+    Math.floor(
+      (COURSE_LENGTH - 4) /
+        JOE_NAVIGATION_GRID,
+    ) + 1;
+  const JOE_NAVIGATION_CELL_COUNT =
+    JOE_NAVIGATION_X_COUNT *
+    JOE_NAVIGATION_Y_COUNT;
+  const JOE_NAVIGATION_OFFSETS = [
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+    [-1, 0],
+    [1, 0],
+    [-1, 1],
+    [0, 1],
+    [1, 1],
+  ];
+  const JOE_NAVIGATION_REVERSE_OFFSET =
+    [7, 6, 5, 4, 3, 2, 1, 0];
+  const joeNavigationCellState =
+    new Int8Array(
+      JOE_NAVIGATION_CELL_COUNT,
+    );
+  joeNavigationCellState.fill(-1);
+  const joeNavigationEdgeState =
+    new Int8Array(
+      JOE_NAVIGATION_CELL_COUNT *
+        JOE_NAVIGATION_OFFSETS.length,
+    );
+  joeNavigationEdgeState.fill(-1);
+
+  function joeNavigationCellId(
+    xIndex,
+    yIndex,
+  ) {
+    return (
+      yIndex * JOE_NAVIGATION_X_COUNT +
+      xIndex
+    );
+  }
+
+  function joeNavigationCellPoint(cellId) {
+    const xIndex =
+      cellId % JOE_NAVIGATION_X_COUNT;
+    const yIndex = Math.floor(
+      cellId / JOE_NAVIGATION_X_COUNT,
+    );
+    return {
+      x:
+        -112 +
+        xIndex * JOE_NAVIGATION_GRID,
+      y:
+        4 +
+        yIndex * JOE_NAVIGATION_GRID,
+    };
+  }
+
+  function joeNavigationCellClear(cellId) {
+    const cached =
+      joeNavigationCellState[cellId];
+    if (cached >= 0) {
+      return cached === 1;
+    }
+    const clear = joeNavigationPointClear(
+      joeNavigationCellPoint(cellId),
+    );
+    joeNavigationCellState[cellId] =
+      clear ? 1 : 0;
+    return clear;
+  }
+
+  function joeNavigationEdgeClear(
+    cellId,
+    neighborId,
+    directionIndex,
+  ) {
+    const cacheIndex =
+      cellId *
+        JOE_NAVIGATION_OFFSETS.length +
+      directionIndex;
+    const cached =
+      joeNavigationEdgeState[cacheIndex];
+    if (cached >= 0) {
+      return cached === 1;
+    }
+    const clear = !joeObstacleOnSegment(
+      joeNavigationCellPoint(cellId),
+      joeNavigationCellPoint(neighborId),
+    );
+    const cacheValue = clear ? 1 : 0;
+    joeNavigationEdgeState[cacheIndex] =
+      cacheValue;
+    const reverseIndex =
+      neighborId *
+        JOE_NAVIGATION_OFFSETS.length +
+      JOE_NAVIGATION_REVERSE_OFFSET[
+        directionIndex
+      ];
+    joeNavigationEdgeState[reverseIndex] =
+      cacheValue;
+    return clear;
+  }
+
+  function pushNavigationHeap(
+    heap,
+    entry,
+  ) {
+    heap.push(entry);
+    let index = heap.length - 1;
+    while (index > 0) {
+      const parentIndex = Math.floor(
+        (index - 1) / 2,
+      );
+      if (
+        heap[parentIndex].estimate <=
+        entry.estimate
+      ) {
+        break;
+      }
+      heap[index] = heap[parentIndex];
+      index = parentIndex;
+    }
+    heap[index] = entry;
+  }
+
+  function popNavigationHeap(heap) {
+    const first = heap[0];
+    const last = heap.pop();
+    if (heap.length === 0) {
+      return first;
+    }
+    let index = 0;
+    while (true) {
+      const left = index * 2 + 1;
+      if (left >= heap.length) {
+        break;
+      }
+      const right = left + 1;
+      const child =
+        right < heap.length &&
+        heap[right].estimate <
+          heap[left].estimate
+          ? right
+          : left;
+      if (
+        heap[child].estimate >=
+        last.estimate
+      ) {
+        break;
+      }
+      heap[index] = heap[child];
+      index = child;
+    }
+    heap[index] = last;
+    return first;
+  }
+
   function planJoeRoute(
     start,
     target,
     finalLegPadding = 0.8,
   ) {
-    const xCount =
-      Math.floor(224 / JOE_NAVIGATION_GRID) + 1;
-    const yCount =
-      Math.floor((COURSE_LENGTH - 4) / JOE_NAVIGATION_GRID) + 1;
-    const cellKey = (xIndex, yIndex) =>
-      `${xIndex},${yIndex}`;
-    const cellPoint = (xIndex, yIndex) => ({
-      x: -112 + xIndex * JOE_NAVIGATION_GRID,
-      y: 4 + yIndex * JOE_NAVIGATION_GRID,
-    });
-    const pointForKey = (key) => {
-      if (key === "start") {
-        return start;
-      }
-      if (key === "goal") {
-        return target;
-      }
-      const parts = key.split(",");
-      return cellPoint(
-        Number(parts[0]),
-        Number(parts[1]),
+    if (
+      !joeObstacleOnSegment(
+        start,
+        target,
+        finalLegPadding,
+      )
+    ) {
+      return [
+        {
+          x: target.x,
+          y: target.y,
+        },
+      ];
+    }
+    const open = [];
+    const parents = new Int32Array(
+      JOE_NAVIGATION_CELL_COUNT,
+    );
+    parents.fill(-2);
+    const costs = new Float64Array(
+      JOE_NAVIGATION_CELL_COUNT,
+    );
+    costs.fill(Infinity);
+    const closed = new Uint8Array(
+      JOE_NAVIGATION_CELL_COUNT,
+    );
+    const startXIndex = Math.round(
+      (start.x + 112) /
+        JOE_NAVIGATION_GRID,
+    );
+    const startYIndex = Math.round(
+      (start.y - 4) /
+        JOE_NAVIGATION_GRID,
+    );
+    const startCellRadius = Math.ceil(
+      18 / JOE_NAVIGATION_GRID,
+    );
+    for (
+      let yIndex = Math.max(
+        0,
+        startYIndex - startCellRadius,
       );
-    };
-    const open = ["start"];
-    const openSet = new Set(open);
-    const parents = new Map();
-    const costs = new Map([["start", 0]]);
-    const estimates = new Map([
-      ["start", worldDistance(start, target)],
-    ]);
+      yIndex <=
+      Math.min(
+        JOE_NAVIGATION_Y_COUNT - 1,
+        startYIndex + startCellRadius,
+      );
+      yIndex += 1
+    ) {
+      for (
+        let xIndex = Math.max(
+          0,
+          startXIndex - startCellRadius,
+        );
+        xIndex <=
+        Math.min(
+          JOE_NAVIGATION_X_COUNT - 1,
+          startXIndex + startCellRadius,
+        );
+        xIndex += 1
+      ) {
+        const cellId =
+          joeNavigationCellId(
+            xIndex,
+            yIndex,
+          );
+        if (
+          !joeNavigationCellClear(cellId)
+        ) {
+          continue;
+        }
+        const point =
+          joeNavigationCellPoint(cellId);
+        const cost = worldDistance(
+          start,
+          point,
+        );
+        if (
+          cost > 18 ||
+          joeObstacleOnSegment(
+            start,
+            point,
+          )
+        ) {
+          continue;
+        }
+        costs[cellId] = cost;
+        parents[cellId] = -1;
+        pushNavigationHeap(open, {
+          id: cellId,
+          cost,
+          estimate:
+            cost +
+            worldDistance(
+              point,
+              target,
+            ),
+        });
+      }
+    }
     let iterations = 0;
+    let goalCellId = -1;
 
     while (open.length > 0 && iterations < 3600) {
       iterations += 1;
-      let bestIndex = 0;
-      for (let index = 1; index < open.length; index += 1) {
-        if (
-          (estimates.get(open[index]) || Infinity) <
-          (estimates.get(open[bestIndex]) || Infinity)
-        ) {
-          bestIndex = index;
-        }
+      const current =
+        popNavigationHeap(open);
+      const currentId = current.id;
+      if (
+        closed[currentId] ||
+        current.cost !== costs[currentId]
+      ) {
+        continue;
       }
-      const currentKey = open.splice(bestIndex, 1)[0];
-      openSet.delete(currentKey);
-      if (currentKey === "goal") {
-        const route = [];
-        let routeKey = currentKey;
-        while (
-          routeKey &&
-          routeKey !== "start"
-        ) {
-          if (routeKey !== "goal") {
-            route.push(pointForKey(routeKey));
-          }
-          routeKey = parents.get(routeKey);
-        }
-        route.reverse();
-        route.push({ x: target.x, y: target.y });
-
-        const simplified = [];
-        let anchor = start;
-        let routeIndex = 0;
-        while (routeIndex < route.length) {
-          let furthest = routeIndex;
-          for (
-            let testIndex = route.length - 1;
-            testIndex > routeIndex;
-            testIndex -= 1
-          ) {
-            const finalLeg =
-              testIndex === route.length - 1;
-            if (
-              !joeObstacleOnSegment(
-                anchor,
-                route[testIndex],
-                finalLeg
-                  ? finalLegPadding
-                  : JOE_NAVIGATION_CLEARANCE,
-              )
-            ) {
-              furthest = testIndex;
-              break;
-            }
-          }
-          simplified.push(route[furthest]);
-          anchor = route[furthest];
-          routeIndex = furthest + 1;
-        }
-        return simplified;
-      }
-
-      const currentPoint = pointForKey(currentKey);
-      const neighbors = [];
-      if (currentKey === "start") {
-        for (let yIndex = 0; yIndex < yCount; yIndex += 1) {
-          for (let xIndex = 0; xIndex < xCount; xIndex += 1) {
-            const point = cellPoint(xIndex, yIndex);
-            if (
-              worldDistance(start, point) <= 18 &&
-              joeNavigationPointClear(point) &&
-              !joeObstacleOnSegment(start, point)
-            ) {
-              neighbors.push({
-                key: cellKey(xIndex, yIndex),
-                point,
-              });
-            }
-          }
-        }
-      } else {
-        const parts = currentKey.split(",");
-        const currentX = Number(parts[0]);
-        const currentY = Number(parts[1]);
-        for (let yOffset = -1; yOffset <= 1; yOffset += 1) {
-          for (let xOffset = -1; xOffset <= 1; xOffset += 1) {
-            if (xOffset === 0 && yOffset === 0) {
-              continue;
-            }
-            const xIndex = currentX + xOffset;
-            const yIndex = currentY + yOffset;
-            if (
-              xIndex < 0 ||
-              xIndex >= xCount ||
-              yIndex < 0 ||
-              yIndex >= yCount
-            ) {
-              continue;
-            }
-            const point = cellPoint(xIndex, yIndex);
-            if (
-              joeNavigationPointClear(point) &&
-              !joeObstacleOnSegment(currentPoint, point)
-            ) {
-              neighbors.push({
-                key: cellKey(xIndex, yIndex),
-                point,
-              });
-            }
-          }
-        }
-      }
-
+      closed[currentId] = 1;
+      const currentPoint =
+        joeNavigationCellPoint(
+          currentId,
+        );
       if (
         worldDistance(currentPoint, target) <= 20 &&
         !joeObstacleOnSegment(
@@ -15703,35 +18406,141 @@
           finalLegPadding,
         )
       ) {
-        neighbors.push({ key: "goal", point: target });
+        goalCellId = currentId;
+        break;
       }
-
-      for (let index = 0; index < neighbors.length; index += 1) {
-        const neighbor = neighbors[index];
-        const tentativeCost =
-          (costs.get(currentKey) || 0) +
-          worldDistance(currentPoint, neighbor.point);
+      const currentX =
+        currentId %
+        JOE_NAVIGATION_X_COUNT;
+      const currentY = Math.floor(
+        currentId /
+          JOE_NAVIGATION_X_COUNT,
+      );
+      for (
+        let directionIndex = 0;
+        directionIndex <
+        JOE_NAVIGATION_OFFSETS.length;
+        directionIndex += 1
+      ) {
+        const offset =
+          JOE_NAVIGATION_OFFSETS[
+            directionIndex
+          ];
+        const xIndex =
+          currentX + offset[0];
+        const yIndex =
+          currentY + offset[1];
         if (
-          tentativeCost >=
-          (costs.get(neighbor.key) || Infinity)
+          xIndex < 0 ||
+          xIndex >=
+            JOE_NAVIGATION_X_COUNT ||
+          yIndex < 0 ||
+          yIndex >=
+            JOE_NAVIGATION_Y_COUNT
         ) {
           continue;
         }
-        parents.set(neighbor.key, currentKey);
-        costs.set(neighbor.key, tentativeCost);
-        estimates.set(
-          neighbor.key,
-          tentativeCost +
-            worldDistance(neighbor.point, target),
-        );
-        if (!openSet.has(neighbor.key)) {
-          open.push(neighbor.key);
-          openSet.add(neighbor.key);
+        const neighborId =
+          joeNavigationCellId(
+            xIndex,
+            yIndex,
+          );
+        if (
+          closed[neighborId] ||
+          !joeNavigationCellClear(
+            neighborId,
+          ) ||
+          !joeNavigationEdgeClear(
+            currentId,
+            neighborId,
+            directionIndex,
+          )
+        ) {
+          continue;
         }
+        const point =
+          joeNavigationCellPoint(
+            neighborId,
+          );
+        const tentativeCost =
+          costs[currentId] +
+          worldDistance(
+            currentPoint,
+            point,
+          );
+        if (
+          tentativeCost >=
+          costs[neighborId]
+        ) {
+          continue;
+        }
+        parents[neighborId] =
+          currentId;
+        costs[neighborId] =
+          tentativeCost;
+        pushNavigationHeap(open, {
+          id: neighborId,
+          cost: tentativeCost,
+          estimate:
+            tentativeCost +
+            worldDistance(
+              point,
+              target,
+            ),
+        });
       }
     }
-
-    return [];
+    if (goalCellId < 0) {
+      return [];
+    }
+    const route = [];
+    let routeCellId = goalCellId;
+    while (routeCellId >= 0) {
+      route.push(
+        joeNavigationCellPoint(
+          routeCellId,
+        ),
+      );
+      routeCellId =
+        parents[routeCellId];
+    }
+    route.reverse();
+    route.push({
+      x: target.x,
+      y: target.y,
+    });
+    const simplified = [];
+    let anchor = start;
+    let routeIndex = 0;
+    while (routeIndex < route.length) {
+      let furthest = routeIndex;
+      for (
+        let testIndex =
+          route.length - 1;
+        testIndex > routeIndex;
+        testIndex -= 1
+      ) {
+        const finalLeg =
+          testIndex ===
+          route.length - 1;
+        if (
+          !joeObstacleOnSegment(
+            anchor,
+            route[testIndex],
+            finalLeg
+              ? finalLegPadding
+              : JOE_NAVIGATION_CLEARANCE,
+          )
+        ) {
+          furthest = testIndex;
+          break;
+        }
+      }
+      simplified.push(route[furthest]);
+      anchor = route[furthest];
+      routeIndex = furthest + 1;
+    }
+    return simplified;
   }
 
   function activePlayerGuidanceTarget() {
@@ -15740,7 +18549,16 @@
     const sprinkler =
       activeSprinklerPoint();
     const choices = [];
-    if (!hole.keyCollected) {
+    const drainRouteCommitted =
+      hole.drainUnlocked &&
+      !hole.keyCollected;
+    const shedRouteCommitted =
+      hole.keyCollected &&
+      !hole.drainUnlocked;
+    if (
+      !hole.keyCollected &&
+      !drainRouteCommitted
+    ) {
       choices.push({
         id: "shed-key",
         label: "SHED KEY ROUTE",
@@ -15749,27 +18567,19 @@
         target: key,
       });
     }
-    if (!hole.sprinklerUsed) {
+    if (
+      !hole.sprinklerUsed &&
+      !shedRouteCommitted
+    ) {
       choices.push({
         id: "sprinkler",
-        label: "SPRINKLER ROUTE",
-        shortLabel: "SPRINKLER",
+        label: "DRAIN VALVE ROUTE",
+        shortLabel: "DRAIN VALVE",
         color: "#6fc4b5",
         target: sprinkler,
       });
     }
-    if (
-      hole.keyCollected &&
-      (!hole.drainUnlocked ||
-        worldDistance(
-          state.player,
-          SHED_EXIT,
-        ) <=
-          worldDistance(
-            state.player,
-            DRAIN_EXIT,
-          ))
-    ) {
+    if (hole.keyCollected) {
       choices.push({
         id: "maintenance-shed",
         label: "SHED EXIT ROUTE",
@@ -16398,6 +19208,8 @@
     hole.lastKnownJoeTimer = 5;
     director.pendingIntercept = null;
     director.interceptCount += 1;
+    hole.predatorTactics
+      .interceptsObserved += 1;
     director.lastBeat =
       "joe_intercept";
     director.lastBeatSeconds = 0;
@@ -16442,10 +19254,431 @@
     return true;
   }
 
+  function setTensionPhase(phase) {
+    const director =
+      state.hole.tensionDirector;
+    if (director.phase === phase) {
+      return;
+    }
+    director.phase = phase;
+    director.phaseSeconds = 0;
+    director.phaseChanges += 1;
+  }
+
+  function tensionOmenType() {
+    const hole = state.hole;
+    const sequence = [
+      "grass_line",
+      "birds_scatter",
+      "fog_wake",
+      "grass_line",
+    ];
+    return sequence[
+      (
+        hole.tensionDirector
+          .omenCount +
+        hole.zoneIndex
+      ) % sequence.length
+    ];
+  }
+
+  function stageEnvironmentalOmen(
+    type = null,
+    duration = TENSION_OMEN_SECONDS,
+  ) {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    const dx =
+      hole.joe.x - state.player.x;
+    const dy =
+      hole.joe.y - state.player.y;
+    const distance = Math.max(
+      0.01,
+      Math.hypot(dx, dy),
+    );
+    const seed =
+      director.omenCount * 71 +
+      hole.zoneIndex * 31 +
+      Math.floor(state.player.y);
+    const reach = clamp(
+      distance * 0.42,
+      24,
+      56,
+    );
+    const side =
+      hash(seed + 17) < 0.5
+        ? -1
+        : 1;
+    const lateralJitter =
+      side *
+      (8 + hash(seed + 29) * 11);
+    director.omen = {
+      type: type || tensionOmenType(),
+      x: clamp(
+        state.player.x +
+          dx / distance * reach -
+          dy / distance *
+            lateralJitter,
+        -COURSE_MAX_X + 7,
+        COURSE_MAX_X - 7,
+      ),
+      y: clamp(
+        state.player.y +
+          dy / distance * reach +
+          dx / distance *
+            lateralJitter,
+        COURSE_MIN_Y + 6,
+        COURSE_LENGTH - 8,
+      ),
+      side,
+      seed,
+      seconds: duration,
+      duration,
+    };
+    director.omenCount += 1;
+    const labels = {
+      grass_line:
+        "GRASS FOLDS TOWARD THE MOWER",
+      birds_scatter:
+        "BIRDS BREAK FROM THE TREE LINE",
+      fog_wake:
+        "SOMETHING PARTS THE GROUND FOG",
+    };
+    pushThreatCaption(
+      labels[director.omen.type],
+      director.omen,
+      "world",
+      Math.min(2.5, duration),
+      "tension_omen",
+    );
+  }
+
+  function stageSilentStalk() {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    if (director.silentStalk) {
+      return false;
+    }
+    const seed =
+      director.silentStalkCount * 83 +
+      hole.zoneIndex * 37 +
+      Math.floor(state.player.y);
+    director.silentStalk = {
+      phase: "warning",
+      seconds:
+        SILENT_STALK_WARNING_SECONDS,
+      duration:
+        SILENT_STALK_WARNING_SECONDS,
+      seed,
+    };
+    director.silentStalkCount += 1;
+    director.silentStalkCooldownSeconds =
+      SILENT_STALK_COOLDOWN_SECONDS;
+    director.lastBeat =
+      "mower_cough_warning";
+    director.lastBeatSeconds = 0;
+    director.beatTimer = Math.max(
+      director.beatTimer,
+      SILENT_STALK_WARNING_SECONDS +
+        SILENT_STALK_MAX_SECONDS +
+        4,
+    );
+    director.pressure = Math.max(
+      director.pressure,
+      0.5,
+    );
+    hole.dreadTimer = Math.max(
+      hole.dreadTimer,
+      3.8,
+    );
+    hole.stateBanner =
+      "MOWER COUGHS // ENGINE LOSING POWER";
+    hole.stateBannerTimer = 2.2;
+    hole.stateBannerLockTimer = Math.max(
+      hole.stateBannerLockTimer,
+      2.2,
+    );
+    setHoleMessage(
+      "THE ENGINE STUTTERS — mark Joe's direction before the course goes quiet.",
+      3,
+    );
+    stageEnvironmentalOmen(
+      "grass_line",
+      SILENT_STALK_WARNING_SECONDS +
+        SILENT_STALK_MAX_SECONDS,
+    );
+    playNoiseBurst(
+      0.28,
+      0.022,
+      460,
+      "bandpass",
+      clamp(
+        (hole.joe.x -
+          state.player.x) /
+          72,
+        -0.8,
+        0.8,
+      ),
+      0,
+      dangerBusGain,
+    );
+    return true;
+  }
+
+  function restartSilentStalk(
+    reason = "completed",
+  ) {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    if (!director.silentStalk) {
+      return;
+    }
+    director.silentStalk = null;
+    director.lastBeat =
+      reason === "threat_contact"
+        ? "mower_restart_on_contact"
+        : "mower_restart_ahead";
+    director.lastBeatSeconds = 0;
+    director.reliefSeconds = Math.max(
+      director.reliefSeconds,
+      reason === "threat_contact"
+        ? 0.8
+        : 1.8,
+    );
+    director.beatTimer = Math.max(
+      director.beatTimer,
+      7.5,
+    );
+    hole.detectionPulse = Math.max(
+      hole.detectionPulse,
+      0.28,
+    );
+    addWorldEffect(
+      "mower_sputter",
+      hole.joe.x,
+      hole.joe.y,
+      1.8,
+    );
+    playThreatCue(
+      reason === "threat_contact"
+        ? "chase"
+        : "investigate",
+    );
+    if (
+      reason !== "threat_contact" &&
+      hole.stateBannerLockTimer <= 0.2
+    ) {
+      hole.stateBanner =
+        "ENGINE RESTART // JOE KEPT MOVING";
+      hole.stateBannerTimer = 2.1;
+      setHoleMessage(
+        "THE MOWER RESTARTS FROM A NEW ANGLE.",
+        2.4,
+      );
+    }
+  }
+
+  function updateTensionBeatState(
+    dt,
+    directThreat,
+  ) {
+    const director =
+      state.hole.tensionDirector;
+    director.phaseSeconds += dt;
+    director.silentStalkCooldownSeconds =
+      Math.max(
+        0,
+        director.silentStalkCooldownSeconds -
+          dt,
+      );
+    director.rearSightingCooldownSeconds =
+      Math.max(
+        0,
+        director.rearSightingCooldownSeconds -
+          dt,
+      );
+    if (director.omen) {
+      director.omen.seconds = Math.max(
+        0,
+        director.omen.seconds - dt,
+      );
+      if (director.omen.seconds <= 0) {
+        director.omen = null;
+      }
+    }
+    if (director.rearSighting) {
+      director.rearSighting.seconds =
+        Math.max(
+          0,
+          director.rearSighting.seconds -
+            dt,
+        );
+      if (
+        director.rearSighting.seconds <= 0
+      ) {
+        director.rearSighting = null;
+      }
+    }
+    if (director.silentStalk) {
+      if (
+        directThreat &&
+        (
+          state.hole.joe.mode ===
+            "chase" ||
+          state.hole.detection > 0.5 ||
+          worldDistance(
+            state.hole.joe,
+            state.player,
+          ) < 28
+        )
+      ) {
+        restartSilentStalk(
+          "threat_contact",
+        );
+      } else {
+        director.silentStalk.seconds =
+          Math.max(
+            0,
+            director.silentStalk.seconds -
+              dt,
+          );
+        if (
+          director.silentStalk.seconds <= 0 &&
+          director.silentStalk.phase ===
+            "warning"
+        ) {
+          const duration = lerp(
+            SILENT_STALK_MIN_SECONDS,
+            SILENT_STALK_MAX_SECONDS,
+            hash(
+              director.silentStalk.seed +
+                47,
+            ),
+          );
+          director.silentStalk.phase =
+            "silent";
+          director.silentStalk.seconds =
+            duration;
+          director.silentStalk.duration =
+            duration;
+          director.lastBeat =
+            "silent_stalk";
+          director.lastBeatSeconds = 0;
+          state.hole.stateBanner =
+            "MOWER SILENT // WATCH THE GRASS";
+          state.hole.stateBannerTimer =
+            2.5;
+          state.hole.stateBannerLockTimer =
+            Math.max(
+              state.hole
+                .stateBannerLockTimer,
+              2.5,
+            );
+          setHoleMessage(
+            "NO ENGINE. Joe is still moving — use cover, fog, and disturbed turf.",
+            3.4,
+          );
+        } else if (
+          director.silentStalk.seconds <= 0
+        ) {
+          restartSilentStalk();
+        }
+      }
+    }
+    const phase = directThreat
+      ? "confrontation"
+      : director.reliefSeconds > 0
+        ? "recovery"
+        : director.pendingIntercept ||
+            director.silentStalk ||
+            director.coverAudit ||
+            director.omen
+          ? "warning"
+          : "quiet";
+    setTensionPhase(phase);
+  }
+
+  function maybeStageRearSighting() {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    if (
+      hole.elapsed < 12 ||
+      state.player.y < 48 ||
+      director.rearSighting ||
+      director.rearSightingCooldownSeconds >
+        0 ||
+      hole.joe.mode === "chase" ||
+      worldDistance(
+        hole.joe,
+        state.player,
+      ) < 38
+    ) {
+      return false;
+    }
+    const seed =
+      director.rearSightingCount * 97 +
+      hole.zoneIndex * 43 +
+      Math.floor(state.player.y * 1.3);
+    const side =
+      hash(seed + 11) < 0.5
+        ? -1
+        : 1;
+    const duration =
+      state.reducedMotion
+        ? 2.8
+        : 2.3;
+    director.rearSighting = {
+      type:
+        director.rearSightingCount %
+          2 ===
+        0
+          ? "rear_crossing"
+          : "rear_headlight",
+      x: clamp(
+        state.player.x +
+          side *
+            (30 + hash(seed + 23) * 18),
+        -COURSE_MAX_X + 8,
+        COURSE_MAX_X - 8,
+      ),
+      y: clamp(
+        state.player.y -
+          (40 + hash(seed + 37) * 18),
+        COURSE_MIN_Y + 6,
+        COURSE_LENGTH - 8,
+      ),
+      side,
+      seed,
+      seconds: duration,
+      duration,
+    };
+    director.rearSightingCount += 1;
+    director.rearSightingCooldownSeconds =
+      REAR_SIGHTING_COOLDOWN_SECONDS;
+    director.lastBeat =
+      director.rearSighting.type;
+    director.lastBeatSeconds = 0;
+    playNoiseBurst(
+      0.16,
+      0.012,
+      1500,
+      "highpass",
+      side * 0.62,
+      0,
+      dangerBusGain,
+    );
+    return true;
+  }
+
   function playAmbientTensionBeat() {
     const hole = state.hole;
     const director =
       hole.tensionDirector;
+    stageEnvironmentalOmen();
     director.lastBeat =
       "distant_mower_echo";
     director.lastBeatSeconds = 0;
@@ -16490,6 +19723,405 @@
       "director_echo",
     );
     playThreatCue("search");
+  }
+
+  function playerShelterIdentity(
+    environment,
+  ) {
+    if (
+      environment.nearestCover ||
+      (
+        environment.hardCover &&
+        environment.blocker
+      )
+    ) {
+      const obstacle =
+        environment.nearestCover ||
+        COURSE_OBSTACLES.find(
+          (candidate) =>
+            candidate.id ===
+            environment.blocker,
+        );
+      if (obstacle) {
+        return {
+          id: `cover:${obstacle.id}`,
+          label:
+            obstacle.landmark ||
+            environment.nearestCover
+              ?.landmark ||
+            "hard cover",
+          x: obstacle.x,
+          y: obstacle.y,
+          type: "hard_cover",
+        };
+      }
+    }
+    if (
+      state.hole.crouched &&
+      environment.effectiveRough &&
+      state.hole.concealment >= 0.56
+    ) {
+      const zone = environment.zone;
+      const sectorX = Math.round(
+        state.player.x / 28,
+      );
+      const sectorY = Math.round(
+        state.player.y / 34,
+      );
+      return {
+        id: `rough:${zone.id}:${sectorX}:${sectorY}`,
+        label: `${zone.name} rough`,
+        x: sectorX * 28,
+        y: sectorY * 34,
+        type: "deep_rough",
+      };
+    }
+    return null;
+  }
+
+  function cancelCoverAudit(reason) {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    if (!director.coverAudit) {
+      return;
+    }
+    hole.shelterMemory.lastOutcome =
+      reason;
+    director.coverAudit = null;
+    director.coverAuditCooldownSeconds =
+      Math.max(
+        director.coverAuditCooldownSeconds,
+        6,
+      );
+  }
+
+  function stageCoverAudit(
+    shelter,
+    reason,
+  ) {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    const memory = hole.shelterMemory;
+    if (
+      director.coverAudit ||
+      memory.auditedShelters.includes(
+        shelter.id,
+      )
+    ) {
+      return false;
+    }
+    director.coverAudit = {
+      phase: "warning",
+      seconds:
+        COVER_AUDIT_WARNING_SECONDS,
+      duration:
+        COVER_AUDIT_WARNING_SECONDS,
+      shelterId: shelter.id,
+      shelterLabel: shelter.label,
+      shelterType: shelter.type,
+      x: shelter.x,
+      y: shelter.y,
+      reason,
+      playerLeftBeforeArrival: false,
+    };
+    director.coverAuditCount += 1;
+    director.coverAuditCooldownSeconds =
+      COVER_AUDIT_COOLDOWN_SECONDS;
+    director.lastBeat =
+      reason === "repeated_use"
+        ? "cover_pattern_logged"
+        : "cover_audit_warning";
+    director.lastBeatSeconds = 0;
+    director.beatTimer = Math.max(
+      director.beatTimer,
+      COVER_AUDIT_WARNING_SECONDS +
+        COVER_AUDIT_SEARCH_SECONDS,
+    );
+    memory.auditedShelters.push(
+      shelter.id,
+    );
+    memory.warnings += 1;
+    hole.predatorTactics.cooldown =
+      Math.max(
+        hole.predatorTactics.cooldown,
+        COVER_AUDIT_WARNING_SECONDS +
+          COVER_AUDIT_SEARCH_SECONDS,
+      );
+    hole.stateBanner =
+      reason === "repeated_use"
+        ? "PATTERN LOGGED // JOE REMEMBERS THIS COVER"
+        : "COVER AGING // JOE IS AUDITING THE AREA";
+    hole.stateBannerTimer = 3;
+    hole.stateBannerLockTimer =
+      Math.max(
+        hole.stateBannerLockTimer,
+        3,
+      );
+    setHoleMessage(
+      reason === "repeated_use"
+        ? "YOU HAVE USED THIS SHELTER TOO OFTEN — the mower cadence is turning toward it. Leave now."
+        : "STAYING PUT LEFT A PATTERN — Joe is checking this shelter next.",
+      3.8,
+    );
+    addWorldEffect(
+      "cover_audit",
+      shelter.x,
+      shelter.y,
+      COVER_AUDIT_WARNING_SECONDS,
+      {
+        phase: "warning",
+      },
+    );
+    pushThreatCaption(
+      "MOWER CADENCE LOCKS TO THIS SHELTER",
+      shelter,
+      "danger",
+      2.35,
+      "cover_audit_warning",
+    );
+    playNoiseBurst(
+      0.22,
+      0.026,
+      780,
+      "bandpass",
+      clamp(
+        (shelter.x - state.player.x) /
+          64,
+        -0.75,
+        0.75,
+      ),
+      0,
+      dangerBusGain,
+    );
+    return true;
+  }
+
+  function executeCoverAudit() {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    const audit = director.coverAudit;
+    if (
+      !audit ||
+      audit.phase !== "warning"
+    ) {
+      return;
+    }
+    const currentShelter =
+      playerShelterIdentity(
+        hole.environment ||
+          getPlayerEnvironmentState(),
+      );
+    audit.phase = "investigate";
+    audit.seconds =
+      COVER_AUDIT_SEARCH_SECONDS;
+    audit.duration =
+      COVER_AUDIT_SEARCH_SECONDS;
+    audit.playerLeftBeforeArrival =
+      currentShelter?.id !==
+      audit.shelterId;
+    if (audit.playerLeftBeforeArrival) {
+      hole.shelterMemory
+        .escapesBeforeArrival += 1;
+    }
+    hole.shelterMemory.investigations += 1;
+    hole.shelterMemory.lastOutcome =
+      audit.playerLeftBeforeArrival
+        ? "old_shelter_checked_after_escape"
+        : "player_remained_for_audit";
+    hole.lastSeenPlayer = {
+      x: audit.x,
+      y: audit.y,
+    };
+    hole.searchTimer = Math.max(
+      hole.searchTimer,
+      COVER_AUDIT_SEARCH_SECONDS,
+    );
+    hole.joe.mode = "search";
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.34,
+    );
+    hole.detection = Math.max(
+      hole.detection,
+      0.16,
+    );
+    director.pressure = Math.max(
+      director.pressure,
+      0.48,
+    );
+    director.lastBeat =
+      "joe_checks_memorized_cover";
+    director.lastBeatSeconds = 0;
+    hole.stateBanner =
+      audit.playerLeftBeforeArrival
+        ? "COVER AUDIT // JOE CHECKS YOUR OLD POSITION"
+        : "COVER AUDIT // LEAVE THE SHELTER";
+    hole.stateBannerTimer = 2.8;
+    hole.stateBannerLockTimer =
+      Math.max(
+        hole.stateBannerLockTimer,
+        2.8,
+      );
+    setHoleMessage(
+      audit.playerLeftBeforeArrival
+        ? "THE MOWER TURNS TOWARD THE COVER YOU ABANDONED — keep changing the route."
+        : "JOE IS COMING TO THE SHELTER HE LEARNED — move before the search closes.",
+      3.4,
+    );
+    addWorldEffect(
+      "cover_audit",
+      audit.x,
+      audit.y,
+      2.4,
+      {
+        phase: "investigate",
+      },
+    );
+    pushThreatCaption(
+      "JOE AUDITS THE MEMORIZED COVER",
+      audit,
+      "danger",
+      3,
+      "cover_audit_arrival",
+    );
+    playThreatCue("search");
+  }
+
+  function updateShelterMemory(
+    dt,
+    moving,
+    environment,
+  ) {
+    const hole = state.hole;
+    const director =
+      hole.tensionDirector;
+    const memory = hole.shelterMemory;
+    director.coverAuditCooldownSeconds =
+      Math.max(
+        0,
+        director.coverAuditCooldownSeconds -
+          dt,
+      );
+    const shelter =
+      playerShelterIdentity(
+        environment,
+      );
+    if (
+      shelter?.id !== memory.currentId
+    ) {
+      memory.currentId =
+        shelter?.id || null;
+      memory.currentLabel =
+        shelter?.label || null;
+      memory.currentTarget = shelter
+        ? {
+            x: shelter.x,
+            y: shelter.y,
+            type: shelter.type,
+          }
+        : null;
+      memory.currentSeconds = 0;
+      memory.settleSeconds = 0;
+      memory.countedCurrentVisit = false;
+    }
+    if (shelter) {
+      memory.settleSeconds += dt;
+      if (!moving) {
+        memory.currentSeconds += dt;
+      } else {
+        memory.currentSeconds =
+          Math.max(
+            0,
+            memory.currentSeconds -
+              dt * 1.8,
+          );
+      }
+      if (
+        !memory.countedCurrentVisit &&
+        memory.settleSeconds >= 0.55
+      ) {
+        memory.countedCurrentVisit = true;
+        memory.visits[shelter.id] =
+          (memory.visits[shelter.id] ||
+            0) + 1;
+      }
+    }
+    if (director.coverAudit) {
+      const audit =
+        director.coverAudit;
+      if (
+        hole.joe.mode === "chase" ||
+        hole.detection > 0.5 ||
+        hole.escapeFiling.active ||
+        hole.escapeFiling.sealing
+      ) {
+        cancelCoverAudit(
+          "superseded_by_direct_contact",
+        );
+        return;
+      }
+      audit.seconds = Math.max(
+        0,
+        audit.seconds - dt,
+      );
+      if (
+        audit.phase === "warning" &&
+        audit.seconds <= 0
+      ) {
+        executeCoverAudit();
+      } else if (
+        audit.phase === "investigate" &&
+        audit.seconds <= 0
+      ) {
+        cancelCoverAudit(
+          "memorized_cover_checked",
+        );
+      }
+      return;
+    }
+    const joeDistance = worldDistance(
+      hole.joe,
+      state.player,
+    );
+    const visitCount = shelter
+      ? memory.visits[shelter.id] || 0
+      : 0;
+    const repeatedUse =
+      visitCount >=
+        COVER_AUDIT_REPEAT_VISITS &&
+      memory.currentSeconds >= 2.2;
+    const entrenched =
+      memory.currentSeconds >=
+      COVER_AUDIT_ENTRENCHED_SECONDS;
+    const eligible =
+      Boolean(shelter) &&
+      (repeatedUse || entrenched) &&
+      hole.elapsed >= 12 &&
+      hole.joe.mode === "patrol" &&
+      hole.detection < 0.14 &&
+      joeDistance >= 44 &&
+      director.reliefSeconds <= 0 &&
+      director.coverAuditCooldownSeconds <=
+        0 &&
+      director.coverAuditCount <
+        COVER_AUDIT_MAX_PER_RUN &&
+      !director.pendingIntercept &&
+      !director.silentStalk &&
+      !director.omen &&
+      !hole.distraction &&
+      !hole.predatorTactics.active &&
+      !hole.statusRequest.active;
+    if (eligible) {
+      stageCoverAudit(
+        shelter,
+        repeatedUse
+          ? "repeated_use"
+          : "entrenched",
+      );
+    }
   }
 
   function updateTensionDirector(
@@ -16546,6 +20178,10 @@
       hole.joe.mode === "search" ||
       hole.detection > 0.2 ||
       joeDistance < 78;
+    updateTensionBeatState(
+      dt,
+      directThreat,
+    );
     if (directThreat) {
       director.quietSeconds = 0;
       director.beatTimer = Math.max(
@@ -16657,7 +20293,9 @@
     }
     if (
       directThreat ||
-      director.reliefSeconds > 0
+      director.reliefSeconds > 0 ||
+      director.silentStalk ||
+      director.coverAudit
     ) {
       return;
     }
@@ -16698,7 +20336,24 @@
         intercept,
       );
     } else {
-      playAmbientTensionBeat();
+      const canStageSilence =
+        hole.joe.mode === "patrol" &&
+        joeDistance > 72 &&
+        director.quietSeconds > 4.5 &&
+        director.silentStalkCooldownSeconds <=
+          0 &&
+        director.silentStalkCount < 5 &&
+        (
+          director.beatCount +
+          hole.zoneIndex
+        ) % 2 ===
+          1;
+      if (
+        !canStageSilence ||
+        !stageSilentStalk()
+      ) {
+        playAmbientTensionBeat();
+      }
     }
   }
 
@@ -16749,6 +20404,35 @@
         "bandpass",
         side * 0.5,
         0.08,
+        dangerBusGain,
+      );
+    } else if (type === "joe_flash") {
+      playNoiseBurst(
+        0.18,
+        0.022,
+        2900,
+        "highpass",
+        side * 0.22,
+        0,
+        dangerBusGain,
+      );
+      playTransientTone(
+        92,
+        41,
+        0.24,
+        0.024,
+        "triangle",
+        0,
+        dangerBusGain,
+      );
+    } else if (type === "course_tear") {
+      playNoiseBurst(
+        0.2,
+        0.02,
+        1450,
+        "bandpass",
+        side * 0.34,
+        0.04,
         dangerBusGain,
       );
     }
@@ -16806,6 +20490,48 @@
     playHorrorCue(type, side);
   }
 
+  function triggerHorrorVisualFlash(
+    type,
+    seed,
+  ) {
+    const horror =
+      state.hole?.horrorDirector;
+    if (!horror) {
+      return;
+    }
+    const duration =
+      state.reducedMotion
+        ? 0.48
+        : type === "joe_flash"
+          ? 0.34 + hash(seed + 11) * 0.16
+          : 0.46 + hash(seed + 17) * 0.18;
+    const side =
+      hash(seed + 23) < 0.5
+        ? -1
+        : 1;
+    horror.visualFlash = {
+      type,
+      seed,
+      side,
+      seconds: duration,
+      duration,
+      strength: clamp(
+        0.52 +
+          horror.intensity * 0.34 +
+          hash(seed + 31) * 0.12,
+        0.5,
+        0.94,
+      ),
+    };
+    horror.visualFlashCount += 1;
+    if (type === "joe_flash") {
+      horror.joeFlashCount += 1;
+    } else {
+      horror.courseTearCount += 1;
+    }
+    playHorrorCue(type, side);
+  }
+
   function updateHorrorDirector(
     dt,
     moving,
@@ -16831,6 +20557,17 @@
       0,
       horror.lightFailureSeconds - dt,
     );
+    if (horror.visualFlash) {
+      horror.visualFlash.seconds = Math.max(
+        0,
+        horror.visualFlash.seconds - dt,
+      );
+      if (
+        horror.visualFlash.seconds <= 0
+      ) {
+        horror.visualFlash = null;
+      }
+    }
     if (horror.manifestation) {
       horror.manifestation.seconds = Math.max(
         0,
@@ -16889,9 +20626,44 @@
       hole.elapsed <
         HORROR_DIRECTOR_GRACE_SECONDS ||
       hole.escapeFiling.sealing ||
-      tension.reliefSeconds > 0
+      tension.reliefSeconds > 0 ||
+      tension.silentStalk
     ) {
       return;
+    }
+    horror.visualFlashTimer = Math.max(
+      0,
+      horror.visualFlashTimer -
+        dt *
+          (moving ? 1 : 0.74),
+    );
+    if (
+      horror.visualFlashTimer <= 0 &&
+      !horror.visualFlash &&
+      !horror.manifestation &&
+      tension.phase !==
+        "confrontation" &&
+      !hole.tutorialVisible &&
+      !hole.riskAward &&
+      !hole.deliveryAward
+    ) {
+      const flashSeed =
+        horror.visualFlashCount * 53 +
+        hole.zoneIndex * 29 +
+        Math.floor(state.player.y * 1.7);
+      const joeFlashChance =
+        0.38 + horror.intensity * 0.26;
+      triggerHorrorVisualFlash(
+        hash(flashSeed + 5) <
+          joeFlashChance
+          ? "joe_flash"
+          : "course_tear",
+        flashSeed,
+      );
+      horror.visualFlashTimer =
+        10.5 +
+        (1 - horror.intensity) * 7.5 +
+        hash(flashSeed + 47) * 6.5;
     }
     horror.eventTimer = Math.max(
       0,
@@ -16929,6 +20701,284 @@
         horror.eventCount * 41 +
           hole.zoneIndex * 23,
         ) * 3.5;
+  }
+
+  function triggerZoneSetPiece(
+    zoneIndex,
+  ) {
+    const hole = state.hole;
+    const setPieces =
+      hole.zoneSetPiece;
+    if (
+      zoneIndex < 0 ||
+      zoneIndex >=
+        ZONE_SET_PIECES.length ||
+      setPieces.triggered[zoneIndex]
+    ) {
+      return;
+    }
+    const definition =
+      ZONE_SET_PIECES[zoneIndex];
+    setPieces.active =
+      definition.id;
+    setPieces.timer =
+      definition.duration;
+    setPieces.duration =
+      definition.duration;
+    setPieces.seed =
+      zoneIndex * 71 +
+      Math.floor(hole.elapsed * 3);
+    setPieces.triggered[zoneIndex] =
+      true;
+    setPieces.counts[zoneIndex] += 1;
+    setPieces.total += 1;
+    hole.dreadTimer = Math.max(
+      hole.dreadTimer,
+      definition.duration,
+    );
+    hole.stateBanner =
+      definition.label;
+    hole.stateBannerTimer = Math.max(
+      hole.stateBannerTimer,
+      2.65,
+    );
+    hole.stateBannerLockTimer =
+      Math.max(
+        hole.stateBannerLockTimer,
+        2.65,
+      );
+    const captionPoint = {
+      x:
+        (
+          zoneIndex % 2 === 0
+            ? -1
+            : 1
+        ) *
+        (
+          28 +
+          zoneIndex * 5
+        ),
+      y: clamp(
+        state.player.y + 34,
+        10,
+        COURSE_LENGTH - 10,
+      ),
+    };
+    pushThreatCaption(
+      definition.label,
+      captionPoint,
+      zoneIndex >= 4
+        ? "danger"
+        : "world",
+      2.8,
+      `zone_set_piece_${definition.id}`,
+    );
+    if (
+      definition.id ===
+        "submerged_lights" ||
+      definition.id ===
+        "black_sprinklers"
+    ) {
+      triggerHorrorEvent(
+        "fog_surge",
+        definition.duration * 0.72,
+      );
+    } else if (
+      definition.id ===
+        "door_cycle" ||
+      definition.id ===
+        "release_sweep"
+    ) {
+      triggerHorrorEvent(
+        "light_failure",
+        definition.duration * 0.46,
+      );
+    } else {
+      playThreatCue(
+        zoneIndex >= 4
+          ? "search"
+          : "investigate",
+      );
+    }
+  }
+
+  function updateZoneSetPiece(dt) {
+    const hole = state.hole;
+    const setPieces =
+      hole.zoneSetPiece;
+    if (
+      !setPieces.triggered[0] &&
+      hole.travelDistance >= 10
+    ) {
+      triggerZoneSetPiece(0);
+    }
+    if (!setPieces.active) {
+      return;
+    }
+    setPieces.timer = Math.max(
+      0,
+      setPieces.timer - dt,
+    );
+    if (setPieces.timer <= 0) {
+      setPieces.active = null;
+      setPieces.duration = 0;
+    }
+  }
+
+  function composureStateLabel(value) {
+    if (value <= 0.22) {
+      return "panic";
+    }
+    if (value <= 0.52) {
+      return "frayed";
+    }
+    if (value <= 0.78) {
+      return "tense";
+    }
+    return "steady";
+  }
+
+  function updateComposure(
+    dt,
+    moving,
+    environment,
+  ) {
+    const hole = state.hole;
+    const composure =
+      hole.composure;
+    const distance = worldDistance(
+      hole.joe,
+      state.player,
+    );
+    const proximity = clamp(
+      1 - distance / 92,
+      0,
+      1,
+    );
+    const directThreat = Math.max(
+      hole.detection,
+      hole.joe.mode === "chase"
+        ? 1
+        : hole.joe.mode === "search"
+          ? 0.54
+          : hole.joe.mode ===
+                "investigate"
+            ? 0.3
+            : 0,
+      hole.tensionDirector.pressure *
+        0.58,
+      proximity * 0.82,
+    );
+    const uncertainty =
+      hole.predatorTactics.active
+        ? 0.13
+        : hole.tensionDirector
+              .pendingIntercept
+          ? 0.11
+          : 0;
+    const setPieceShock =
+      hole.zoneSetPiece.active
+        ? clamp(
+            hole.zoneSetPiece.timer /
+              Math.max(
+                0.01,
+                hole.zoneSetPiece
+                  .duration,
+              ),
+            0,
+            1,
+          ) *
+          0.08
+        : 0;
+    const rearView = lookBackView();
+    const rearRead =
+      rearView.rear &&
+      distance > 42
+        ? 0.07
+        : 0;
+    const recovery =
+      hole.joe.mode !== "chase" &&
+      hole.detection < 0.2
+        ? (
+            environment.hardCover
+              ? 0.17
+              : environment.effectiveRough &&
+                  hole.crouched
+                ? 0.11
+                : !moving
+                  ? 0.055
+                  : 0
+          ) + rearRead
+        : 0;
+    composure.target = clamp(
+      1 -
+        directThreat * 0.84 -
+        uncertainty -
+        setPieceShock +
+        recovery,
+      0.08,
+      1,
+    );
+    const response =
+      composure.target <
+      composure.value
+        ? 2.9
+        : 0.72;
+    composure.value = lerp(
+      composure.value,
+      composure.target,
+      1 - Math.exp(-dt * response),
+    );
+    composure.lowest = Math.min(
+      composure.lowest,
+      composure.value,
+    );
+    composure.pulse = Math.max(
+      0,
+      composure.pulse - dt * 1.8,
+    );
+    composure.previousState =
+      composure.state;
+    composure.state =
+      composureStateLabel(
+        composure.value,
+      );
+    if (
+      composure.value <
+      COMPOSURE_LOW_THRESHOLD
+    ) {
+      composure.lowSeconds += dt;
+    }
+    if (
+      composure.state !==
+      composure.previousState
+    ) {
+      if (
+        [
+          "frayed",
+          "panic",
+        ].includes(composure.state)
+      ) {
+        composure.shocks += 1;
+        composure.pulse = 1;
+        playNoiseBurst(
+          0.11,
+          0.009,
+          760,
+          "bandpass",
+          0,
+          0,
+          dangerBusGain,
+        );
+      } else if (
+        composure.previousState ===
+          "frayed" ||
+        composure.previousState ===
+          "panic"
+      ) {
+        composure.recoveries += 1;
+      }
+    }
   }
 
   function crosswindDirectionLabel() {
@@ -17004,6 +21054,7 @@
       !hole.escapeFiling.sealing &&
       !hole.ballAim.active &&
       !hole.ballFlight &&
+      !hole.ballRoll &&
       !hole.distraction &&
       !hole.appealReviewTimer &&
       !hole.riskAward &&
@@ -17379,7 +21430,8 @@
           JOE_NAVIGATION_REPATH_SECONDS;
         joe.rerouteCount += 1;
       } else {
-        joe.repathTimer = 0.12;
+        joe.repathTimer =
+          JOE_NAVIGATION_FAILURE_REPATH_SECONDS;
       }
       joe.routeObstacle = directBlocker.id;
     }
@@ -17690,6 +21742,28 @@
       "#e9b84f",
       false,
     );
+    if (
+      courseMechanicsArt.complete &&
+      courseMechanicsArt.naturalWidth > 0
+    ) {
+      drawCourseMechanicFixture(
+        target,
+        0,
+        {
+          active: true,
+          accent: "233,184,79",
+          maxHeight: 132,
+        },
+      );
+      drawWorldMarker(
+        target.x,
+        target.y,
+        "PRACTICE BELL // OPTIONAL",
+        "#e9b84f",
+        "â—Ž",
+      );
+      return;
+    }
     const height = clamp(
       point.pixelsPerMeter * 2.4,
       38,
@@ -17788,10 +21862,100 @@
     drawWorldMarker(
       target.x,
       target.y,
-      "OPTIONAL FIELD TEST // CHIP HERE",
+      "PRACTICE BELL // OPTIONAL",
       "#e9b84f",
       "◎",
     );
+  }
+
+  /** Draws one authored course-mechanic fixture anchored to the world ground plane. */
+  function drawCourseMechanicFixture(
+    target,
+    cellIndex,
+    options = {},
+  ) {
+    if (
+      !courseMechanicsArt.complete ||
+      courseMechanicsArt.naturalWidth === 0
+    ) {
+      return null;
+    }
+    const cell =
+      COURSE_MECHANIC_CELLS[cellIndex];
+    const point = worldToScreen(
+      target.x,
+      target.y,
+    );
+    if (
+      !cell ||
+      !point.visible ||
+      point.x < -220 ||
+      point.x > WIDTH + 220
+    ) {
+      return null;
+    }
+    const drawHeight = clamp(
+      cell.heightMeters *
+        (options.scale || 1) *
+        point.pixelsPerMeter,
+      options.minHeight || 18,
+      options.maxHeight || 146,
+    );
+    const drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    const accent =
+      options.accent || "108,201,175";
+    const activePulse =
+      state.reducedMotion
+        ? 0.64
+        : 0.54 +
+          Math.sin(
+            state.hole.elapsed * 3.8 +
+              cellIndex * 1.7,
+          ) *
+            0.12;
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.6 + point.scale * 0.44,
+      0.56,
+      1,
+    );
+    ctx.fillStyle = "rgba(0,3,2,0.48)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      drawWidth * 0.38,
+      Math.max(2, drawHeight * 0.035),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    if (options.active) {
+      ctx.shadowColor =
+        `rgba(${accent},${activePulse})`;
+      ctx.shadowBlur = Math.max(
+        8,
+        drawHeight * 0.1,
+      );
+    }
+    drawCachedAtlasCell(
+      courseMechanicsArt,
+      cell,
+      point.x - drawWidth * 0.5,
+      point.y - drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.restore();
+    return {
+      point,
+      width: drawWidth,
+      height: drawHeight,
+    };
   }
 
   function drawWorldInteractable(
@@ -18735,12 +22899,9 @@
       pathLanternArt.naturalWidth >
         0
     ) {
-      ctx.drawImage(
+      drawCachedAtlasCell(
         pathLanternArt,
-        cell.x,
-        cell.y,
-        cell.width,
-        cell.height,
+        cell,
         point.x -
           drawWidth * 0.5,
         point.y -
@@ -18925,12 +23086,9 @@
         signageAtlasArt.naturalWidth >
           0
       ) {
-        ctx.drawImage(
+        drawCachedAtlasCell(
           signageAtlasArt,
-          0,
-          0,
-          SIGNAGE_ATLAS_CELL,
-          SIGNAGE_ATLAS_CELL,
+          SIGNAGE_ATLAS_CELLS[0],
           point.x -
             width * 0.56,
           point.y -
@@ -20491,16 +24649,36 @@
             point.pixelsPerMeter,
         );
         ctx.globalAlpha = bedAlpha;
-        ctx.drawImage(
-          mowerWakeStamp(
-            freshness,
-            mark.id % 3,
-          ),
-          -wakeLength * 0.5,
-          -wakeWidth * 0.5,
-          wakeLength,
-          wakeWidth,
-        );
+        if (
+          turfEvidenceArt.complete &&
+          turfEvidenceArt.naturalWidth > 0
+        ) {
+          const evidenceIndex =
+            freshness === "fresh"
+              ? 0
+              : freshness === "warm"
+                ? 1
+                : 2;
+          drawCachedAtlasCell(
+            turfEvidenceArt,
+            TURF_EVIDENCE_CELLS[evidenceIndex],
+            -wakeLength * 0.5,
+            -wakeWidth * 0.5,
+            wakeLength,
+            wakeWidth,
+          );
+        } else {
+          ctx.drawImage(
+            mowerWakeStamp(
+              freshness,
+              mark.id % 3,
+            ),
+            -wakeLength * 0.5,
+            -wakeWidth * 0.5,
+            wakeLength,
+            wakeWidth,
+          );
+        }
       } else if (mark.kind === "track") {
         const life = clamp(
           1 - mark.age / mark.duration,
@@ -20519,40 +24697,66 @@
           0.08,
           0.88,
         );
-        ctx.strokeStyle = mark.discovered
-          ? "#d66b35"
-          : mark.sand
-            ? state.hole.focus
-              ? "#f0cf82"
-              : "#a47a43"
-          : mark.wet
-            ? state.hole.focus
-              ? "#a9e0d1"
-              : "#467e70"
-          : state.hole.focus
-            ? "#d5bc64"
-            : "#3c5c2d";
-        ctx.lineWidth = Math.max(
-          1,
-          point.scale * 1.6,
-        );
         const length = Math.max(
-          4,
-          worldWidth * 0.5,
+          9,
+          worldWidth * 1.1,
         );
-        for (let step = -1; step <= 1; step += 2) {
-          ctx.beginPath();
-          ctx.moveTo(
+        if (
+          turfEvidenceArt.complete &&
+          turfEvidenceArt.naturalWidth > 0
+        ) {
+          const evidenceIndex = mark.sand
+            ? 6
+            : mark.wet
+              ? 5
+              : 4;
+          const footprintWidth = Math.max(
+            6,
+            length * 0.62,
+          );
+          ctx.save();
+          ctx.rotate(Math.PI * 0.5);
+          drawCachedAtlasCell(
+            turfEvidenceArt,
+            TURF_EVIDENCE_CELLS[evidenceIndex],
+            -footprintWidth * 0.5,
             -length * 0.5,
-            step * worldWidth * 0.085,
+            footprintWidth,
+            length,
           );
-          ctx.quadraticCurveTo(
-            0,
-            -step * worldWidth * 0.06,
-            length * 0.5,
-            step * worldWidth * 0.085,
+          ctx.restore();
+        }
+        if (
+          !turfEvidenceArt.complete ||
+          turfEvidenceArt.naturalWidth === 0 ||
+          state.hole.focus ||
+          mark.discovered
+        ) {
+          ctx.strokeStyle = mark.discovered
+            ? "#d66b35"
+            : mark.sand
+              ? "#f0cf82"
+              : mark.wet
+                ? "#a9e0d1"
+                : "#d5bc64";
+          ctx.lineWidth = Math.max(
+            1,
+            point.scale * 1.6,
           );
-          ctx.stroke();
+          for (let step = -1; step <= 1; step += 2) {
+            ctx.beginPath();
+            ctx.moveTo(
+              -length * 0.5,
+              step * worldWidth * 0.085,
+            );
+            ctx.quadraticCurveTo(
+              0,
+              -step * worldWidth * 0.06,
+              length * 0.5,
+              step * worldWidth * 0.085,
+            );
+            ctx.stroke();
+          }
         }
       } else if (mark.kind === "divot") {
         ctx.globalAlpha = clamp(
@@ -20560,23 +24764,91 @@
           0.3,
           0.8,
         );
-        ctx.fillStyle = "#342917";
+        if (
+          turfEvidenceArt.complete &&
+          turfEvidenceArt.naturalWidth > 0
+        ) {
+          const divotWidth = Math.max(
+            8,
+            worldWidth * 1.25,
+          );
+          const divotCell =
+            TURF_EVIDENCE_CELLS[3];
+          const divotHeight =
+            divotWidth *
+            divotCell.height /
+            divotCell.width;
+          drawCachedAtlasCell(
+            turfEvidenceArt,
+            divotCell,
+            -divotWidth * 0.5,
+            -divotHeight * 0.5,
+            divotWidth,
+            divotHeight,
+          );
+        } else {
+          ctx.fillStyle = "#342917";
+          ctx.beginPath();
+          ctx.ellipse(
+            0,
+            0,
+            Math.max(4, worldWidth * 0.65),
+            Math.max(2, worldWidth * 0.2),
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+          ctx.strokeStyle = "#bd8b3d";
+          ctx.lineWidth = Math.max(1, point.scale);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+      if (
+        mark.kind === "mowed" &&
+        state.hole.livingRoadmap
+          .publishedMarkId === mark.id &&
+        state.hole.livingRoadmap
+          .pulseTimer > 0
+      ) {
+        const pulseProgress =
+          state.hole.livingRoadmap
+            .pulseTimer / 2.8;
+        const pulseRadius =
+          10 +
+          (1 - pulseProgress) * 18;
+        ctx.save();
+        ctx.globalAlpha = clamp(
+          pulseProgress,
+          0,
+          1,
+        );
+        ctx.strokeStyle =
+          "#cbd76f";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.ellipse(
-          0,
-          0,
-          Math.max(4, worldWidth * 0.65),
-          Math.max(2, worldWidth * 0.2),
+          point.x,
+          point.y,
+          pulseRadius * 1.8,
+          pulseRadius * 0.42,
           0,
           0,
           Math.PI * 2,
         );
-        ctx.fill();
-        ctx.strokeStyle = "#bd8b3d";
-        ctx.lineWidth = Math.max(1, point.scale);
         ctx.stroke();
+        drawText(
+          `ROADMAP ${String(state.hole.livingRoadmap.sectionsPublished).padStart(2, "0")} PUBLISHED`,
+          point.x,
+          point.y - 18,
+          9,
+          "#dfe889",
+          "center",
+          true,
+        );
+        ctx.restore();
       }
-      ctx.restore();
     }
   }
 
@@ -21086,7 +25358,143 @@
     if (asset === "service-cart") {
       return serviceCartArt;
     }
+    if (asset === "hedge-tunnel") {
+      return hedgeTunnelArt;
+    }
     return null;
+  }
+
+  function courseObstacleCell(
+    obstacle,
+    dedicatedArt,
+  ) {
+    if (dedicatedArt) {
+      return obstacle.asset ===
+        "service-cart"
+        ? {
+            x: 20,
+            y: 100,
+            width: 1490,
+            height: 875,
+            heightMeters: 3.25,
+          }
+        : obstacle.asset ===
+            "hedge-tunnel"
+          ? {
+              x: 63,
+              y: 119,
+              width: 2054,
+              height: 473,
+              heightMeters: 2.72,
+              cacheMaxDimension: 1536,
+            }
+        : obstacle.asset ===
+            "stone-cover"
+          ? {
+              x: 36,
+              y: 204,
+              width: 1464,
+              height: 672,
+              heightMeters: 2.85,
+            }
+          : {
+              x: 40,
+              y: 144,
+              width: 1456,
+              height: 784,
+              heightMeters: 3.6,
+            };
+    }
+    return obstacle.kit ===
+      "expanded"
+      ? EXPANDED_OBSTACLE_CELLS[
+          obstacle.type
+        ]
+      : COURSE_OBSTACLE_CELLS[
+          obstacle.type
+        ];
+  }
+
+  function courseObstacleVisualMetrics(
+    obstacle,
+    point,
+    cell,
+    dedicatedArt,
+  ) {
+    const authoredHeightMeters =
+      cell.heightMeters *
+      obstacle.scale;
+    const visualHeightMeters =
+      obstacle.sight
+        ? Math.max(
+            authoredHeightMeters,
+            obstacle.visualHeightMeters ??
+              SIGHT_COVER_MIN_HEIGHT_METERS,
+          )
+        : authoredHeightMeters;
+    let drawHeight =
+      visualHeightMeters *
+      point.pixelsPerMeter;
+    const visualSourceWidth =
+      cell.width;
+    let drawWidth =
+      drawHeight *
+      visualSourceWidth /
+      cell.height;
+    const footprint =
+      projectedObstacleFootprint(
+        obstacle,
+      );
+    const targetWidth =
+      footprint.radiusX *
+      (obstacle.sight
+        ? SIGHT_COVER_FOOTPRINT_WIDTH
+        : 1.72);
+    if (
+      (obstacle.sight ||
+        dedicatedArt) &&
+      drawWidth < targetWidth
+    ) {
+      if (dedicatedArt) {
+        const ratio =
+          targetWidth /
+          drawWidth;
+        drawWidth *= ratio;
+        drawHeight *= ratio;
+      } else {
+        drawWidth = targetWidth;
+      }
+    }
+    const left =
+      point.x - drawWidth * 0.5;
+    const right =
+      point.x + drawWidth * 0.5;
+    const top = point.y - drawHeight;
+    const overlapsViewCenter =
+      left < WIDTH * 0.62 &&
+      right > WIDTH * 0.38 &&
+      top < HEIGHT * 0.58 &&
+      point.y > HEIGHT * 0.34;
+    const blocksPlayerView =
+      obstacle.sight &&
+      point.forwardDistance > 0 &&
+      point.forwardDistance <
+        SIGHT_COVER_OCCLUSION_DISTANCE &&
+      overlapsViewCenter;
+    return {
+      drawWidth,
+      drawHeight,
+      visualHeightMeters,
+      visualSourceWidth,
+      targetWidth,
+      screenBounds: {
+        left,
+        right,
+        top,
+        bottom: point.y,
+      },
+      blocksPlayerView,
+    };
   }
 
   function drawGroundSocket(
@@ -21264,70 +25672,34 @@
       (obstacle.kit === "expanded"
         ? expandedCourseArt
         : courseObstacleArt);
-    const obstacleCells =
-      obstacle.kit === "expanded"
-        ? EXPANDED_OBSTACLE_CELLS
-        : COURSE_OBSTACLE_CELLS;
     if (!obstacleArt.complete || obstacleArt.naturalWidth === 0) {
       return;
     }
-    const point = worldToScreen(obstacle.x, obstacle.y);
+    const point = worldToScreen(
+      obstacle.x,
+      obstacle.y,
+    );
     if (!point.visible || point.x < -420 || point.x > WIDTH + 420) {
       return;
     }
-    const cell = dedicatedArt
-      ? obstacle.asset ===
-          "service-cart"
-        ? {
-            x: 20,
-            y: 100,
-            width: 1490,
-            height: 875,
-            heightMeters: 3.25,
-          }
-        : obstacle.asset ===
-            "stone-cover"
-          ? {
-              x: 36,
-              y: 204,
-              width: 1464,
-              height: 672,
-              heightMeters: 2.85,
-            }
-          : {
-              x: 40,
-              y: 144,
-              width: 1456,
-              height: 784,
-              heightMeters: 3.6,
-            }
-      : obstacleCells[obstacle.type];
+    const cell = courseObstacleCell(
+      obstacle,
+      dedicatedArt,
+    );
     if (!cell) {
       return;
     }
-    let drawHeight =
-      cell.heightMeters *
-      obstacle.scale *
-      point.pixelsPerMeter;
-    let drawWidth =
-      drawHeight *
-      cell.width /
-      cell.height;
-    if (dedicatedArt) {
-      const footprint =
-        projectedObstacleFootprint(
-          obstacle,
-        );
-      const footprintWidth =
-        footprint.radiusX * 1.72;
-      if (drawWidth < footprintWidth) {
-        const ratio =
-          footprintWidth /
-          drawWidth;
-        drawWidth *= ratio;
-        drawHeight *= ratio;
-      }
-    }
+    const metrics =
+      courseObstacleVisualMetrics(
+        obstacle,
+        point,
+        cell,
+        dedicatedArt,
+      );
+    const drawWidth =
+      metrics.drawWidth;
+    const drawHeight =
+      metrics.drawHeight;
     const sway = state.reducedMotion
       ? 0
       : Math.sin(state.time * 0.7 + obstacle.x * 0.11) * Math.min(2.5, point.scale * 2);
@@ -21455,6 +25827,20 @@
       drawHeight,
     );
     ctx.restore();
+    drawCourseMechanicFixture(
+      SHED_FILING_TERMINAL,
+      2,
+      {
+        scale: 0.82,
+        active:
+          worldDistance(
+            state.player,
+            SHED_EXIT,
+          ) < 34,
+        accent: "224,184,83",
+        maxHeight: 118,
+      },
+    );
   }
 
   function drawDeadGreenScenery(scenery) {
@@ -21600,6 +25986,21 @@
       ctx.stroke();
       ctx.restore();
     }
+    drawCourseMechanicFixture(
+      DRAIN_RELEASE_CONTROL,
+      3,
+      {
+        scale: 0.92,
+        active:
+          unlocked ||
+          worldDistance(
+            state.player,
+            DRAIN_EXIT,
+          ) < 34,
+        accent: "108,201,175",
+        maxHeight: 96,
+      },
+    );
   }
 
   function drawSprintReviewGate(
@@ -21704,14 +26105,28 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const signHeight = clamp(
-      point.pixelsPerMeter *
-        1.55,
-      18,
-      96,
-    );
-    const signWidth =
-      signHeight * 1.08;
+    const hasMechanicArt =
+      courseMechanicsArt.complete &&
+      courseMechanicsArt.naturalWidth > 0;
+    const reviewFixtureCell =
+      COURSE_MECHANIC_CELLS[1];
+    const signHeight = hasMechanicArt
+      ? clamp(
+          point.pixelsPerMeter *
+            reviewFixtureCell.heightMeters,
+          24,
+          126,
+        )
+      : clamp(
+          point.pixelsPerMeter * 1.55,
+          18,
+          96,
+        );
+    const signWidth = hasMechanicArt
+      ? signHeight *
+        reviewFixtureCell.width /
+        reviewFixtureCell.height
+      : signHeight * 1.08;
     ctx.fillStyle =
       "rgba(1,4,2,0.48)";
     ctx.beginPath();
@@ -21728,20 +26143,34 @@
       Math.PI * 2,
     );
     ctx.fill();
-    if (
+    if (hasMechanicArt) {
+      if (!cleared) {
+        ctx.shadowColor =
+          `rgba(227,180,78,${pulse})`;
+        ctx.shadowBlur = Math.max(
+          8,
+          signHeight * 0.08,
+        );
+      }
+      drawCachedAtlasCell(
+        courseMechanicsArt,
+        reviewFixtureCell,
+        point.x - signWidth * 0.5,
+        point.y - signHeight,
+        signWidth,
+        signHeight,
+      );
+      ctx.shadowBlur = 0;
+    } else if (
       signageAtlasArt.complete &&
-      signageAtlasArt.naturalWidth >
-        0
+      signageAtlasArt.naturalWidth > 0
     ) {
-      ctx.drawImage(
+      drawCachedAtlasCell(
         signageAtlasArt,
-        (
-          reviewIndex % 3
-        ) *
-          SIGNAGE_ATLAS_CELL,
-        SIGNAGE_ATLAS_CELL,
-        SIGNAGE_ATLAS_CELL,
-        SIGNAGE_ATLAS_CELL,
+        SIGNAGE_ATLAS_CELLS[
+          1 +
+            (reviewIndex % 3)
+        ],
         point.x -
           signWidth * 0.5,
         point.y -
@@ -22491,6 +26920,624 @@
     };
   }
 
+  function drawZoneSetPieceWorld() {
+    const setPiece =
+      state.hole.zoneSetPiece;
+    if (
+      !setPiece.active ||
+      setPiece.duration <= 0
+    ) {
+      return;
+    }
+    const progress = clamp(
+      1 -
+        setPiece.timer /
+          setPiece.duration,
+      0,
+      1,
+    );
+    const envelope =
+      Math.sin(progress * Math.PI);
+    const seed = setPiece.seed;
+    const center = worldToScreen(
+      (
+        hash(seed + 3) - 0.5
+      ) *
+        54,
+      clamp(
+        state.player.y + 34,
+        12,
+        COURSE_LENGTH - 12,
+      ),
+    );
+    ctx.save();
+    if (
+      setPiece.active ===
+      "boundary_knock"
+    ) {
+      const knock =
+        Math.max(
+          0,
+          Math.sin(progress * 18),
+        ) * envelope;
+      for (
+        let index = 0;
+        index < 3;
+        index += 1
+      ) {
+        ctx.strokeStyle =
+          `rgba(223,158,73,${knock * (0.28 - index * 0.07)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(
+          WIDTH * 0.5,
+          274,
+          42 + index * 34,
+          11 + index * 8,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+    } else if (
+      setPiece.active ===
+      "hedge_breath"
+    ) {
+      const breath =
+        state.reducedMotion
+          ? 0.55
+          : 0.5 +
+            Math.sin(progress * 15) *
+              0.5;
+      for (
+        let side = -1;
+        side <= 1;
+        side += 2
+      ) {
+        ctx.fillStyle =
+          `rgba(56,105,66,${envelope * 0.14})`;
+        ctx.beginPath();
+        ctx.ellipse(
+          WIDTH * 0.5 +
+            side *
+              (
+                290 -
+                breath * 42
+              ),
+          350,
+          112,
+          28 + breath * 14,
+          side * 0.04,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    } else if (
+      setPiece.active ===
+      "submerged_lights"
+    ) {
+      for (
+        let index = 0;
+        index < 4;
+        index += 1
+      ) {
+        const lightX =
+          center.x -
+          170 +
+          index * 105 +
+          progress * 58;
+        const lightY =
+          center.y +
+          16 +
+          Math.sin(
+            progress * 8 + index,
+          ) *
+            7;
+        const glow =
+          ctx.createRadialGradient(
+            lightX,
+            lightY,
+            0,
+            lightX,
+            lightY,
+            38,
+          );
+        glow.addColorStop(
+          0,
+          `rgba(82,207,201,${0.3 * envelope})`,
+        );
+        glow.addColorStop(
+          1,
+          "rgba(82,207,201,0)",
+        );
+        ctx.fillStyle = glow;
+        ctx.fillRect(
+          lightX - 42,
+          lightY - 22,
+          84,
+          44,
+        );
+      }
+    } else if (
+      setPiece.active ===
+      "door_cycle"
+    ) {
+      const cycle =
+        state.reducedMotion
+          ? 0.72
+          : Math.max(
+              0.16,
+              Math.sin(progress * 22),
+            );
+      for (
+        let index = 0;
+        index < 5;
+        index += 1
+      ) {
+        ctx.fillStyle =
+          `rgba(229,151,66,${envelope * cycle * (0.11 + index * 0.012)})`;
+        ctx.fillRect(
+          410 + index * 112,
+          232 +
+            (index % 2) * 9,
+          34,
+          42,
+        );
+      }
+    } else if (
+      setPiece.active ===
+      "hedge_breach"
+    ) {
+      for (
+        let index = 0;
+        index < 32;
+        index += 1
+      ) {
+        const phase =
+          (
+            progress * 1.8 +
+            hash(seed + index * 11)
+          ) % 1;
+        const side =
+          hash(seed + index * 17) <
+          0.5
+            ? -1
+            : 1;
+        ctx.strokeStyle =
+          `rgba(125,154,68,${envelope * (1 - phase) * 0.58})`;
+        ctx.lineWidth =
+          1 +
+          hash(seed + index * 23) *
+            2;
+        ctx.beginPath();
+        ctx.moveTo(
+          center.x + side * 60,
+          center.y - 26,
+        );
+        ctx.lineTo(
+          center.x +
+            side *
+              (
+                75 + phase * 180
+              ),
+          center.y -
+            20 -
+            phase * 74 +
+            index % 5 * 7,
+        );
+        ctx.stroke();
+      }
+    } else if (
+      setPiece.active ===
+      "black_sprinklers"
+    ) {
+      ctx.strokeStyle =
+        `rgba(39,61,58,${0.62 * envelope})`;
+      ctx.lineWidth = 5;
+      for (
+        let index = 0;
+        index < 4;
+        index += 1
+      ) {
+        const sourceX =
+          center.x -
+          180 +
+          index * 120;
+        ctx.beginPath();
+        ctx.moveTo(
+          sourceX,
+          center.y + 26,
+        );
+        ctx.quadraticCurveTo(
+          sourceX + 46,
+          center.y - 92,
+          sourceX + 92,
+          center.y + 22,
+        );
+        ctx.stroke();
+      }
+    } else if (
+      setPiece.active ===
+      "range_volley"
+    ) {
+      for (
+        let index = 0;
+        index < 14;
+        index += 1
+      ) {
+        const phase =
+          (
+            progress * 2.2 +
+            hash(seed + index * 19)
+          ) % 1;
+        const x =
+          hash(seed + index * 29) *
+          WIDTH;
+        const y =
+          -30 + phase * 510;
+        ctx.strokeStyle =
+          `rgba(230,224,184,${envelope * (1 - phase) * 0.74})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x - 18,
+          y - 54,
+        );
+        ctx.stroke();
+        ctx.fillStyle =
+          `rgba(240,232,197,${envelope * 0.88})`;
+        ctx.fillRect(
+          x - 2,
+          y - 2,
+          4,
+          4,
+        );
+      }
+    } else if (
+      setPiece.active ===
+      "release_sweep"
+    ) {
+      const sweepX =
+        lerp(
+          -180,
+          WIDTH + 180,
+          smoothstep(progress),
+        );
+      const sweep =
+        ctx.createLinearGradient(
+          sweepX - 150,
+          0,
+          sweepX + 150,
+          0,
+        );
+      sweep.addColorStop(
+        0,
+        "rgba(194,42,24,0)",
+      );
+      sweep.addColorStop(
+        0.5,
+        `rgba(194,42,24,${0.2 * envelope})`,
+      );
+      sweep.addColorStop(
+        1,
+        "rgba(194,42,24,0)",
+      );
+      ctx.fillStyle = sweep;
+      ctx.fillRect(
+        sweepX - 150,
+        128,
+        300,
+        HEIGHT - 190,
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawComposureFeedback() {
+    const composure =
+      state.hole.composure;
+    const stress = clamp(
+      1 - composure.value,
+      0,
+      1,
+    );
+    if (stress < 0.08) {
+      return;
+    }
+    const pulse =
+      state.reducedMotion
+        ? 0.78
+        : 0.76 +
+          Math.sin(
+            state.hole.elapsed *
+              lerp(
+                2.8,
+                7.4,
+                stress,
+              ),
+          ) *
+            0.16;
+    ctx.save();
+    const vignette =
+      ctx.createRadialGradient(
+        WIDTH * 0.5,
+        HEIGHT * 0.48,
+        HEIGHT * 0.22,
+        WIDTH * 0.5,
+        HEIGHT * 0.48,
+        WIDTH * 0.72,
+      );
+    vignette.addColorStop(
+      0,
+      "rgba(0,0,0,0)",
+    );
+    vignette.addColorStop(
+      0.72,
+      `rgba(13,24,22,${stress * 0.08})`,
+    );
+    vignette.addColorStop(
+      1,
+      `rgba(49,7,4,${stress * pulse * 0.28})`,
+    );
+    ctx.fillStyle = vignette;
+    ctx.fillRect(
+      0,
+      0,
+      WIDTH,
+      HEIGHT,
+    );
+    if (!state.reducedMotion) {
+      ctx.globalAlpha =
+        stress * 0.16;
+      ctx.fillStyle = "#8dc6bb";
+      for (
+        let index = 0;
+        index < 5;
+        index += 1
+      ) {
+        const y =
+          96 +
+          index * 119 +
+          Math.sin(
+            state.hole.elapsed * 8 +
+              index,
+          ) *
+            4 * stress;
+        const width =
+          24 +
+          stress *
+            (
+              42 + index * 9
+            );
+        ctx.fillRect(
+          index % 2 === 0
+            ? 8
+            : WIDTH - width - 8,
+          y,
+          width,
+          1,
+        );
+      }
+    }
+    if (composure.pulse > 0) {
+      ctx.globalAlpha =
+        composure.pulse * 0.34;
+      ctx.strokeStyle =
+        composure.state === "panic"
+          ? "#e54f31"
+          : "#d7904f";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(
+        14,
+        14,
+        WIDTH - 28,
+        HEIGHT - 28,
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawJoeThreatBeam() {
+    const hole = state.hole;
+    const joe = hole.joe;
+    const point = worldToScreen(
+      joe.x,
+      joe.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -180 ||
+      point.x > WIDTH + 180
+    ) {
+      return;
+    }
+    const distance = worldDistance(
+      joe,
+      state.player,
+    );
+    const tactics =
+      hole.predatorTactics;
+    const tacticStrength =
+      tactics.active
+        ? tactics.phase === "telegraph"
+          ? 0.62
+          : 0.82
+        : 0;
+    const modeStrength =
+      joe.mode === "chase"
+        ? 1
+        : joe.mode === "search"
+          ? 0.58
+          : joe.mode ===
+                "investigate"
+            ? 0.44
+            : 0.16;
+    const distanceStrength = clamp(
+      1 -
+        (
+          distance - 18
+        ) /
+          150,
+      0,
+      1,
+    );
+    const strength =
+      Math.max(
+        modeStrength,
+        tacticStrength,
+      ) *
+      distanceStrength;
+    if (strength < 0.07) {
+      return;
+    }
+    const spriteHeight =
+      JOE_SOURCE.heightMeters *
+      point.pixelsPerMeter;
+    const originX = point.x;
+    const originY =
+      point.y -
+      spriteHeight * 0.23;
+    const playerSide = clamp(
+      (
+        state.player.x - joe.x
+      ) *
+        2.2,
+      -210,
+      210,
+    );
+    const targetX =
+      WIDTH * 0.5 + playerSide;
+    const targetY =
+      HEIGHT *
+      (
+        lookBackView().rear
+          ? 0.76
+          : 0.86
+      );
+    const spread =
+      92 +
+      strength * 126;
+    const pulse =
+      state.reducedMotion
+        ? 0.88
+        : 0.82 +
+          Math.sin(
+            state.hole.elapsed *
+              (
+                joe.mode === "chase"
+                  ? 8.4
+                  : 3.8
+              ),
+          ) *
+            0.12;
+    ctx.save();
+    ctx.globalCompositeOperation =
+      "screen";
+    ctx.beginPath();
+    ctx.moveTo(
+      originX,
+      originY,
+    );
+    ctx.lineTo(
+      targetX - spread,
+      targetY,
+    );
+    ctx.lineTo(
+      targetX + spread,
+      targetY,
+    );
+    ctx.closePath();
+    ctx.clip();
+    const beam =
+      ctx.createLinearGradient(
+        originX,
+        originY,
+        targetX,
+        targetY,
+      );
+    const beamColor =
+      tactics.active ===
+      "cover_shred"
+        ? "223,115,45"
+        : joe.mode === "chase"
+          ? "229,72,34"
+          : "219,169,82";
+    beam.addColorStop(
+      0,
+      `rgba(${beamColor},${0.18 * strength * pulse})`,
+    );
+    beam.addColorStop(
+      0.48,
+      `rgba(${beamColor},${0.085 * strength * pulse})`,
+    );
+    beam.addColorStop(
+      1,
+      `rgba(${beamColor},0)`,
+    );
+    ctx.fillStyle = beam;
+    ctx.fillRect(
+      Math.min(
+        originX,
+        targetX - spread,
+      ),
+      originY,
+      Math.abs(
+        targetX - originX,
+      ) +
+        spread * 2,
+      targetY - originY,
+    );
+    for (
+      let index = 0;
+      index < 4;
+      index += 1
+    ) {
+      const t =
+        0.24 +
+        index * 0.18;
+      const fogX = lerp(
+        originX,
+        targetX,
+        t,
+      );
+      const fogY = lerp(
+        originY,
+        targetY,
+        t,
+      );
+      const radius =
+        24 + index * 20;
+      const haze =
+        ctx.createRadialGradient(
+          fogX,
+          fogY,
+          0,
+          fogX,
+          fogY,
+          radius,
+        );
+      haze.addColorStop(
+        0,
+        `rgba(${beamColor},${0.07 * strength})`,
+      );
+      haze.addColorStop(
+        1,
+        `rgba(${beamColor},0)`,
+      );
+      ctx.fillStyle = haze;
+      ctx.fillRect(
+        fogX - radius,
+        fogY - radius,
+        radius * 2,
+        radius * 2,
+      );
+    }
+    ctx.restore();
+  }
+
   function drawJoeMowerClippings(point, spriteHeight, animation) {
     const joeMode = state.hole.joe.mode;
     const count =
@@ -22950,12 +27997,11 @@
       ctx.shadowBlur = 9;
     }
     if (animatedArtReady) {
-      ctx.drawImage(
+      drawCachedAtlasCell(
         animation.art,
-        animation.frame * JOE_ANIMATION_FRAME_SIZE,
-        0,
-        JOE_ANIMATION_FRAME_SIZE,
-        JOE_ANIMATION_FRAME_SIZE,
+        JOE_ANIMATION_FRAME_CELLS[
+          animation.frame
+        ],
         -animatedSpriteWidth * 0.5,
         -spriteHeight,
         animatedSpriteWidth,
@@ -23686,7 +28732,9 @@
       ctx.stroke();
       ctx.restore();
     }
-    ctx.fillStyle = "rgba(161,145,61,0.55)";
+    let latestCut = null;
+    ctx.save();
+    ctx.lineCap = "round";
     for (
       let index = 0;
       index < state.hole.turfMarks.length;
@@ -23696,14 +28744,86 @@
       if (mark.kind !== "mowed") {
         continue;
       }
-      const cutPoint = mapPoint(mark.x, mark.y);
-      ctx.fillRect(
-        cutPoint.x - 1.5,
-        cutPoint.y - 1,
-        3,
-        2,
+      const cutLength =
+        mark.length ||
+        MOWED_MARK_SPACING;
+      const directionX =
+        Math.cos(mark.heading) *
+        cutLength * 0.5;
+      const directionY =
+        Math.sin(mark.heading) *
+        cutLength * 0.5;
+      const cutStart = mapPoint(
+        mark.x - directionX,
+        mark.y - directionY,
       );
+      const cutEnd = mapPoint(
+        mark.x + directionX,
+        mark.y + directionY,
+      );
+      const freshness =
+        joeCutFreshness(mark);
+      ctx.strokeStyle =
+        freshness === "fresh"
+          ? "rgba(205,224,128,0.86)"
+          : freshness === "warm"
+            ? "rgba(174,164,82,0.66)"
+            : "rgba(106,112,67,0.44)";
+      ctx.lineWidth =
+        freshness === "fresh"
+          ? 2.1
+          : 1.35;
+      ctx.beginPath();
+      ctx.moveTo(
+        cutStart.x,
+        cutStart.y,
+      );
+      ctx.lineTo(
+        cutEnd.x,
+        cutEnd.y,
+      );
+      ctx.stroke();
+      if (
+        !latestCut ||
+        mark.id > latestCut.id
+      ) {
+        latestCut = mark;
+      }
     }
+    if (
+      latestCut &&
+      latestCut.age <=
+        JOE_CUT_CLUE_MAX_AGE
+    ) {
+      const tip = mapPoint(
+        latestCut.x +
+          Math.cos(
+            latestCut.heading,
+          ) * 4,
+        latestCut.y +
+          Math.sin(
+            latestCut.heading,
+          ) * 4,
+      );
+      const tail = mapPoint(
+        latestCut.x,
+        latestCut.y,
+      );
+      const angle = Math.atan2(
+        tip.y - tail.y,
+        tip.x - tail.x,
+      );
+      ctx.translate(tip.x, tip.y);
+      ctx.rotate(angle);
+      ctx.fillStyle =
+        "rgba(225,235,145,0.9)";
+      polygon([
+        [4, 0],
+        [-3, -3],
+        [-3, 3],
+      ]);
+    }
+    ctx.restore();
     const focusCut =
       (
         state.hole.focus
@@ -24063,7 +29183,15 @@
         golfBallDangerState(ball);
       ctx.fillStyle = ball.wet
         ? "#b7e0d5"
-        : "#eee6c7";
+        : ball.surface === "bunker" ||
+            ball.surface ===
+              "soaked_bunker"
+          ? "#dfc989"
+          : ball.surface === "rough"
+            ? "#a8be7b"
+            : ball.surface === "mowed"
+              ? "#cbd99b"
+              : "#eee6c7";
       ctx.beginPath();
       ctx.arc(
         ballPoint.x,
@@ -24148,7 +29276,18 @@
         3,
       );
     }
+    const shotPreview =
+      state.hole.ballAim.preview ||
+      state.hole.ballFlight?.shotPlan ||
+      state.hole.ballRoll ||
+      null;
+    const shotImpact =
+      shotPreview?.impact ||
+      state.hole.ballAim.target ||
+      state.hole.ballFlight?.target ||
+      null;
     const shotTarget =
+      shotPreview?.target ||
       state.hole.ballAim.target ||
       state.hole.ballFlight?.target ||
       (state.hole.distractionTimer > 0
@@ -24163,6 +29302,10 @@
         state.hole.ballAim.active;
       const inFlight =
         Boolean(state.hole.ballFlight);
+      const rolling =
+        Boolean(state.hole.ballRoll);
+      const inMotion =
+        inFlight || rolling;
       const statusSignal =
         shotTarget.kind === "status_ack" ||
         shotTarget.kind ===
@@ -24174,7 +29317,7 @@
           : "#76c1a4"
         : aiming
           ? "#f0cf65"
-          : inFlight
+          : inMotion
             ? "#eee7c9"
             : "#c9863f";
       ctx.lineWidth = aiming ? 2 : 1.5;
@@ -24187,10 +29330,55 @@
         playerPoint.y,
       );
       ctx.lineTo(
-        shotPoint.x,
-        shotPoint.y,
+        shotImpact
+          ? mapPoint(
+              shotImpact.x,
+              shotImpact.y,
+            ).x
+          : shotPoint.x,
+        shotImpact
+          ? mapPoint(
+              shotImpact.x,
+              shotImpact.y,
+            ).y
+          : shotPoint.y,
       );
       ctx.stroke();
+      if (
+        shotImpact &&
+        worldDistance(
+          shotImpact,
+          shotTarget,
+        ) > 0.25
+      ) {
+        const impactPoint = mapPoint(
+          shotImpact.x,
+          shotImpact.y,
+        );
+        ctx.strokeStyle =
+          shotPreview?.finalSurface?.color ||
+          "#b9c98a";
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(
+          impactPoint.x,
+          impactPoint.y,
+        );
+        ctx.lineTo(
+          shotPoint.x,
+          shotPoint.y,
+        );
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(
+          impactPoint.x,
+          impactPoint.y,
+          2.4,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
       ctx.setLineDash([]);
       const shotPulse =
         5 +
@@ -24206,25 +29394,49 @@
         Math.PI * 2,
       );
       ctx.stroke();
-      if (inFlight) {
-        const flightProgress = clamp(
-          state.hole.ballFlight.elapsed /
-            state.hole.ballFlight.duration,
+      if (inMotion) {
+        const motion =
+          state.hole.ballFlight ||
+          state.hole.ballRoll;
+        const motionProgress = clamp(
+          motion.elapsed /
+            motion.duration,
           0,
           1,
         );
+        const motionStart = rolling
+          ? mapPoint(
+              motion.start.x,
+              motion.start.y,
+            )
+          : playerPoint;
+        const motionTarget = rolling
+          ? shotPoint
+          : shotImpact
+            ? mapPoint(
+                shotImpact.x,
+                shotImpact.y,
+              )
+            : shotPoint;
+        const presentedProgress = rolling
+          ? 1 -
+            Math.pow(
+              1 - motionProgress,
+              2.15,
+            )
+          : motionProgress;
         ctx.fillStyle = "#f2efd7";
         ctx.beginPath();
         ctx.arc(
           lerp(
-            playerPoint.x,
-            shotPoint.x,
-            flightProgress,
+            motionStart.x,
+            motionTarget.x,
+            presentedProgress,
           ),
           lerp(
-            playerPoint.y,
-            shotPoint.y,
-            flightProgress,
+            motionStart.y,
+            motionTarget.y,
+            presentedProgress,
           ),
           3,
           0,
@@ -24259,8 +29471,22 @@
       [playerPoint.x + 6, playerPoint.y + 6],
     ]);
     drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
+    const golfBallMapStatus =
+      state.hole.ballAim.active &&
+      state.hole.ballAim.preview
+        ? state.hole.ballAim
+            .craftPreview?.eligible
+          ? `${state.hole.ballAim.craftPreview.newDiscovery ? "NEW" : "CRAFT"} ${state.hole.ballAim.craftPreview.label}  //  ${state.hole.ballAim.preview.outcomeLabel} ${Math.round(state.hole.ballAim.preview.distance)}m`
+          : `SHOT ${state.hole.ballAim.preview.initialSurface.terrainLabel}  //  ${state.hole.ballAim.preview.outcomeLabel} ${Math.round(state.hole.ballAim.preview.distance)}m`
+        : state.hole.ballRoll
+          ? `${state.hole.ballRoll.outcomeLabel}  //  REST ${state.hole.ballRoll.finalSurface.terrainLabel}`
+          : state.hole.ballFlight
+            ? "BALL IN FLIGHT  //  IMPACT + REST MARKED"
+            : null;
     drawText(
-      cadenceForecast
+      golfBallMapStatus
+        ? golfBallMapStatus
+        : cadenceForecast
         ? `CADENCE ${Math.ceil(cadenceForecast.timer)}s  â€¢  MINT = JOE'S COMMITTED ROUTE`
         : state.hole.crosswind.phase ===
         "active"
@@ -24273,14 +29499,20 @@
             : state.hole.blindsidePreview
                 ?.options?.length > 0
               ? `BLINDSIDE READY  •  ${state.hole.blindsidePreview.options.length} MINT COVER LANES`
+              : state.hole.livingRoadmap
+                  .playerOnCut
+                ? "CUT LANE +8% PACE  //  QUIET  //  EXPOSED"
           : "SOLID SHAPES  •  AMBER REVIEW  •  GLOW USE",
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 4,
       8,
-      cadenceForecast ||
+      golfBallMapStatus ||
+        cadenceForecast ||
         state.hole.crosswind.phase !==
           "calm" ||
-        blindsideLaneState()
+        blindsideLaneState() ||
+        state.hole.livingRoadmap
+          .playerOnCut
         ? "#9ed8b8"
         : "#9eaa88",
       "center",
@@ -24770,14 +30002,20 @@
           492,
           WIDTH - 326,
         );
-        ctx.fillStyle = `rgba(238,231,196,${impact})`;
+        ctx.fillStyle =
+          effect.color ||
+          `rgba(238,231,196,${impact})`;
+        ctx.globalAlpha = impact;
         ctx.fillRect(
           Math.round(impactX - 3 * scale),
           Math.round(point.y - 7 * scale),
           Math.max(3, Math.round(6 * scale)),
           Math.max(3, Math.round(6 * scale)),
         );
-        ctx.strokeStyle = `rgba(231,185,77,${impact * 0.86})`;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = effect.blocked
+          ? `rgba(235,174,83,${impact * 0.92})`
+          : `rgba(231,185,77,${impact * 0.86})`;
         ctx.lineWidth = Math.max(1, 2 * scale);
         for (let ray = 0; ray < 8; ray += 1) {
           const angle =
@@ -24800,6 +30038,71 @@
           );
           ctx.stroke();
         }
+      } else if (
+        effect.kind === "ball_settle"
+      ) {
+        ctx.strokeStyle =
+          `rgba(226,220,180,${
+            alpha * 0.62
+          })`;
+        ctx.lineWidth = Math.max(
+          1,
+          1.5 * scale,
+        );
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y - 2 * scale,
+          (7 + progress * 11) * scale,
+          (2.5 + progress * 4) * scale,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      } else if (
+        effect.kind === "shot_craft"
+      ) {
+        const pulse =
+          state.reducedMotion
+            ? 1
+            : 0.82 +
+              Math.sin(
+                progress * Math.PI * 3,
+              ) *
+                0.18;
+        const craftColor =
+          effect.color || "#8fd3a5";
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = craftColor;
+        ctx.lineWidth = Math.max(
+          1,
+          2 * scale,
+        );
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y - 3 * scale,
+          13 * scale * pulse,
+          5 * scale * pulse,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+        drawText(
+          effect.label,
+          clamp(
+            point.x,
+            555,
+            WIDTH - 390,
+          ),
+          point.y - 22 * scale,
+          Math.max(8, 10 * scale),
+          craftColor,
+          "center",
+          true,
+        );
       } else if (effect.kind === "trail_found") {
         ctx.strokeStyle = `rgba(219,91,48,${0.82 * alpha})`;
         ctx.lineWidth = Math.max(1, 3 * scale);
@@ -25113,6 +30416,92 @@
               5 * scale,
           ],
         ]);
+      } else if (
+        effect.kind ===
+          "cover_audit"
+      ) {
+        const arriving =
+          effect.phase ===
+          "investigate";
+        const pulse = state.reducedMotion
+          ? 0.45
+          : 0.36 +
+            Math.sin(
+              effect.age *
+                (arriving ? 12 : 7),
+            ) *
+              0.16;
+        ctx.strokeStyle = arriving
+          ? `rgba(238,116,72,${(0.72 + pulse * 0.18) * alpha})`
+          : `rgba(220,176,92,${(0.58 + pulse * 0.2) * alpha})`;
+        ctx.lineWidth = Math.max(
+          1,
+          (arriving ? 2.8 : 2) *
+            scale,
+        );
+        ctx.setLineDash([
+          8 * scale,
+          5 * scale,
+        ]);
+        for (
+          let ring = 0;
+          ring < 2;
+          ring += 1
+        ) {
+          const radius =
+            (
+              18 +
+              ring * 13 +
+              progress *
+                (arriving ? 48 : 28)
+            ) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y,
+            radius,
+            radius * 0.22,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.fillStyle = arriving
+          ? `rgba(248,154,91,${0.7 * alpha})`
+          : `rgba(238,207,129,${0.62 * alpha})`;
+        for (
+          let tooth = 0;
+          tooth < 7;
+          tooth += 1
+        ) {
+          const offset =
+            (tooth - 3) * 9 * scale;
+          polygon([
+            [
+              point.x + offset -
+                4 * scale,
+              point.y -
+                (13 + progress * 12) *
+                  scale,
+            ],
+            [
+              point.x + offset,
+              point.y -
+                (22 + progress * 18) *
+                  scale,
+            ],
+            [
+              point.x + offset +
+                4 * scale,
+              point.y -
+                (13 + progress * 12) *
+                  scale,
+            ],
+          ]);
+        }
       } else if (
         effect.kind ===
           "blindside_open"
@@ -25880,15 +31269,19 @@
   function drawGolfBallTactics() {
     const hole = state.hole;
     const flight = hole.ballFlight;
+    const roll = hole.ballRoll;
     if (flight) {
       const progress = clamp(
         flight.elapsed / flight.duration,
         0,
         1,
       );
+      const flightImpact =
+        flight.shotPlan?.impact ||
+        flight.target;
       const targetPoint = worldToScreen(
-        flight.target.x,
-        flight.target.y,
+        flightImpact.x,
+        flightImpact.y,
       );
       const transformedTargetPoint =
         transformCourseScreenPoint(
@@ -25959,13 +31352,158 @@
       ctx.restore();
     }
 
+    if (roll) {
+      const progress = clamp(
+        roll.elapsed / roll.duration,
+        0,
+        1,
+      );
+      const travelProgress =
+        1 - Math.pow(1 - progress, 2.15);
+      const ballWorld = {
+        x: lerp(
+          roll.start.x,
+          roll.target.x,
+          travelProgress,
+        ),
+        y: lerp(
+          roll.start.y,
+          roll.target.y,
+          travelProgress,
+        ),
+      };
+      const ballPoint =
+        transformCourseScreenPoint(
+          worldToScreen(
+            ballWorld.x,
+            ballWorld.y,
+          ),
+        );
+      const restPoint =
+        transformCourseScreenPoint(
+          worldToScreen(
+            roll.target.x,
+            roll.target.y,
+          ),
+        );
+      const ballX = clamp(
+        ballPoint.x,
+        492,
+        WIDTH - 326,
+      );
+      const restX = clamp(
+        restPoint.x,
+        492,
+        WIDTH - 326,
+      );
+      const restY = clamp(
+        restPoint.y,
+        122,
+        HEIGHT * 0.72,
+      );
+      const bounce = state.reducedMotion
+        ? 0
+        : Math.abs(
+            Math.sin(
+              progress *
+                Math.PI *
+                (
+                  2.2 +
+                  roll.distance / 8
+                ),
+            ),
+          ) *
+          (1 - progress) *
+          (
+            7 +
+            roll.initialSurface.bounce *
+              24
+          );
+      const ballY = clamp(
+        ballPoint.y - bounce,
+        116,
+        HEIGHT * 0.72,
+      );
+      ctx.save();
+      ctx.strokeStyle =
+        `${roll.finalSurface.color}a8`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.moveTo(ballX, ballY + bounce);
+      ctx.lineTo(restX, restY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(0,0,0,0.34)";
+      ctx.beginPath();
+      ctx.ellipse(
+        ballX,
+        ballY + bounce + 3,
+        9,
+        3,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle =
+        `${roll.finalSurface.color}d9`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(
+        restX,
+        restY,
+        20,
+        7,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.shadowColor =
+        "rgba(247,231,172,0.9)";
+      ctx.shadowBlur = 9;
+      ctx.fillStyle = "#f0e8c9";
+      ctx.beginPath();
+      ctx.arc(
+        ballX,
+        ballY,
+        4.5,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      drawText(
+        `${roll.outcomeLabel} // ${Math.round(roll.distance * travelProgress)}/${Math.round(roll.distance)}m`,
+        WIDTH * 0.5,
+        516,
+        11,
+        roll.finalSurface.color,
+        "center",
+        true,
+      );
+      ctx.restore();
+    }
+
     if (!hole.ballAim.active) {
       return;
     }
 
-    const target =
+    const requestedTarget =
       hole.ballAim.target ||
       golfBallAimTarget();
+    const preview =
+      hole.ballAim.preview ||
+      golfBallShotPlan(
+        state.player,
+        requestedTarget,
+        hole.ballAim.power,
+      );
+    const craftPreview =
+      hole.ballAim.craftPreview ||
+      shotCraftAimPreview(preview);
+    const target = preview.impact;
     const targetPoint = worldToScreen(
       target.x,
       target.y,
@@ -25983,6 +31521,23 @@
       transformedTargetPoint.y,
       112,
       HEIGHT * 0.68,
+    );
+    const restPoint =
+      transformCourseScreenPoint(
+        worldToScreen(
+          preview.target.x,
+          preview.target.y,
+        ),
+      );
+    const restX = clamp(
+      restPoint.x,
+      492,
+      WIDTH - 326,
+    );
+    const restY = clamp(
+      restPoint.y,
+      112,
+      HEIGHT * 0.7,
     );
     const startX = WIDTH * 0.5;
     const startY = HEIGHT * 0.73;
@@ -26046,6 +31601,37 @@
     ctx.lineTo(targetX, targetY + 10);
     ctx.stroke();
 
+    ctx.strokeStyle =
+      craftPreview?.eligible
+        ? craftPreview.color
+        : preview.impactObstacle ||
+      (
+        preview.blockedBy &&
+        preview.blockedBy !==
+          preview.impactObstacle
+      ) ||
+      preview.boundary
+          ? "rgba(224,151,76,0.88)"
+          : `${preview.finalSurface.color}d6`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    ctx.moveTo(targetX, targetY);
+    ctx.lineTo(restX, restY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.ellipse(
+      restX,
+      restY,
+      21,
+      7,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+
     for (let index = 1; index < 13; index += 1) {
       const amount = index / 13;
       const inverse = 1 - amount;
@@ -26075,11 +31661,13 @@
     }
     ctx.globalAlpha = 1;
 
+    const craftOffset =
+      craftPreview ? 22 : 0;
     const panel = {
       x: WIDTH * 0.5 - 210,
       y: 538,
       width: 420,
-      height: 104,
+      height: 104 + craftOffset,
     };
     ctx.fillStyle = "rgba(2,10,6,0.94)";
     ctx.fillRect(
@@ -26098,12 +31686,49 @@
         : "#d09b48",
       2,
     );
+    if (craftPreview) {
+      const craftColor =
+        craftPreview.eligible
+          ? craftPreview.color
+          : "#7f8b79";
+      ctx.fillStyle =
+        "rgba(6,22,14,0.96)";
+      ctx.fillRect(
+        panel.x + 1,
+        panel.y + 1,
+        panel.width - 2,
+        craftOffset - 1,
+      );
+      ctx.fillStyle = craftColor;
+      ctx.fillRect(
+        panel.x + 1,
+        panel.y + craftOffset - 1,
+        panel.width - 2,
+        1,
+      );
+      drawText(
+        craftPreview.eligible
+          ? `${craftPreview.newDiscovery ? "NEW SHOT BOOK ENTRY" : "SHOT CRAFT READY"}  //  ${craftPreview.label}  //  BASE +${craftPreview.bonus}`
+          : craftPreview.blockedReason ===
+              "run_cap"
+            ? `SHOT CRAFT FILED ${craftPreview.familyCount}/${craftPreview.runCap}  //  ${craftPreview.label}`
+            : `FIELD TEST  //  ${craftPreview.label} DOES NOT SCORE`,
+        WIDTH * 0.5,
+        panel.y + 15,
+        10,
+        craftColor,
+        "center",
+        true,
+      );
+    }
     drawText(
       practiceLocked
         ? `FIELD TEST LOCKED  //  RELEASE AT ${actualDistance}m`
-        : `CHIP SHOT  //  LANDING ${actualDistance}m`,
+        : `CHIP ${actualDistance}m  //  ${preview.outcomeLabel} ${Math.round(preview.distance)}m`,
       WIDTH * 0.5,
-      panel.y + 24,
+      panel.y +
+        craftOffset +
+        24,
       13,
       practiceLocked
         ? "#9ce9c3"
@@ -26114,7 +31739,9 @@
     ctx.fillStyle = "#172219";
     ctx.fillRect(
       panel.x + 34,
-      panel.y + 36,
+      panel.y +
+        craftOffset +
+        36,
       panel.width - 68,
       13,
     );
@@ -26124,14 +31751,18 @@
         : "#9bb65f";
     ctx.fillRect(
       panel.x + 34,
-      panel.y + 36,
+      panel.y +
+        craftOffset +
+        36,
       (panel.width - 68) *
         hole.ballAim.power,
       13,
     );
     strokeRect(
       panel.x + 34,
-      panel.y + 36,
+      panel.y +
+        craftOffset +
+        36,
       panel.width - 68,
       13,
       "#778764",
@@ -26144,7 +31775,9 @@
         "SLIDE CHIP BUTTON TO AIM  •  RELEASE TO CHIP",
       ),
       WIDTH * 0.5,
-      panel.y + 71,
+      panel.y +
+        craftOffset +
+        71,
       11,
       "#ead79e",
       "center",
@@ -26155,9 +31788,11 @@
         ? "STARTER BELL LOCKED — RELEASE TO WATCH JOE DIVERT."
         : practiceDrillActive()
           ? "LAND INSIDE THE AMBER RING — JOE KEEPS MOVING."
-          : "JOE KEEPS MOVING WHILE YOU LINE UP THE SHOT.",
+          : `${preview.initialSurface.terrainLabel} IMPACT  //  ${preview.lureLabel} LURE  //  REST ${preview.finalSurface.terrainLabel}${preview.blockedBy ? "  //  SOLID CONTACT" : preview.boundary ? "  //  BOUNDARY" : ""}`,
       WIDTH * 0.5,
-      panel.y + 91,
+      panel.y +
+        craftOffset +
+        91,
       10,
       practiceLocked
         ? "#74d9ad"
@@ -26235,6 +31870,198 @@
         ? [[edgeX + 13, HEIGHT * 0.5 - 10], [edgeX, HEIGHT * 0.5], [edgeX + 13, HEIGHT * 0.5 + 10]]
         : [[edgeX - 13, HEIGHT * 0.5 - 10], [edgeX, HEIGHT * 0.5], [edgeX - 13, HEIGHT * 0.5 + 10]]);
     }
+  }
+
+  function drawTensionOmen() {
+    const omen =
+      state.hole.tensionDirector
+        .omen;
+    if (!omen) {
+      return;
+    }
+    const point = worldToScreen(
+      omen.x,
+      omen.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -180 ||
+      point.x > WIDTH + 180
+    ) {
+      return;
+    }
+    const progress = clamp(
+      1 -
+        omen.seconds /
+          omen.duration,
+      0,
+      1,
+    );
+    const fadeIn = smoothstep(
+      clamp(progress / 0.16, 0, 1),
+    );
+    const fadeOut = smoothstep(
+      clamp(omen.seconds / 0.62, 0, 1),
+    );
+    const alpha =
+      fadeIn * fadeOut;
+    if (alpha <= 0.01) {
+      return;
+    }
+    const motion = state.reducedMotion
+      ? 0.54
+      : 0.5 +
+        Math.sin(
+          state.hole.elapsed * 5.8 +
+            omen.seed,
+        ) *
+          0.5;
+    ctx.save();
+    if (omen.type === "grass_line") {
+      const bladeCount =
+        effectQualityScale() < 0.55
+          ? 9
+          : 16;
+      const spread = clamp(
+        point.pixelsPerMeter * 2.8,
+        64,
+        176,
+      );
+      ctx.strokeStyle =
+        `rgba(174,193,92,${alpha * 0.72})`;
+      ctx.lineWidth = Math.max(
+        1,
+        point.scale * 1.15,
+      );
+      for (
+        let index = 0;
+        index < bladeCount;
+        index += 1
+      ) {
+        const seed = hash(
+          omen.seed + index * 29,
+        );
+        const x =
+          point.x +
+          (seed - 0.5) * spread;
+        const height =
+          9 +
+          seed * 16 * point.scale;
+        const bend =
+          omen.side *
+          (8 + motion * 14) *
+          point.scale;
+        ctx.beginPath();
+        ctx.moveTo(x, point.y + 2);
+        ctx.quadraticCurveTo(
+          x + bend * 0.28,
+          point.y - height * 0.58,
+          x + bend,
+          point.y - height,
+        );
+        ctx.stroke();
+      }
+      ctx.strokeStyle =
+        `rgba(86,126,78,${alpha * 0.38})`;
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y + 2,
+        spread * 0.54,
+        Math.max(4, point.scale * 7),
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    } else if (
+      omen.type === "birds_scatter"
+    ) {
+      const birdCount =
+        effectQualityScale() < 0.55
+          ? 4
+          : 7;
+      for (
+        let index = 0;
+        index < birdCount;
+        index += 1
+      ) {
+        const seed = hash(
+          omen.seed + index * 41,
+        );
+        const travel =
+          state.reducedMotion
+            ? seed
+            : progress;
+        const x =
+          point.x +
+          omen.side *
+            travel *
+            (90 + seed * 110) +
+          (seed - 0.5) * 82;
+        const y = clamp(
+          point.y -
+            76 -
+            travel *
+              (42 + seed * 58) -
+            index * 5,
+          92,
+          HEIGHT * 0.5,
+        );
+        const wing =
+          4 + seed * 4;
+        ctx.strokeStyle =
+          `rgba(12,17,14,${alpha * 0.86})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - wing, y + 2);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + wing, y + 2);
+        ctx.stroke();
+      }
+    } else {
+      const wakeWidth = clamp(
+        point.pixelsPerMeter * 3.4,
+        82,
+        210,
+      );
+      const bankCount =
+        effectQualityScale() < 0.55
+          ? 3
+          : 5;
+      for (
+        let index = 0;
+        index < bankCount;
+        index += 1
+      ) {
+        const seed = hash(
+          omen.seed + index * 53,
+        );
+        const drift =
+          state.reducedMotion
+            ? 0
+            : omen.side *
+              progress *
+              (16 + seed * 24);
+        ctx.fillStyle =
+          `rgba(106,145,132,${alpha * (0.055 + seed * 0.045)})`;
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x +
+            drift +
+            (seed - 0.5) * wakeWidth,
+          point.y - 4 - index * 3,
+          wakeWidth *
+            (0.34 + seed * 0.2),
+          9 + seed * 8,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   function drawSuspenseEffects() {
@@ -27068,6 +32895,20 @@
     );
     drawText("USE KEY, VALVE, EXITS, LOST BALLS", 979, 579, 10, "#df8c47", "center");
 
+    drawText(
+      inputCopy(
+        `${keyboardBindingLabel("look_back")} HOLD TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD`,
+        "R3 HOLD TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD",
+        "HOLD REAR TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD",
+      ),
+      WIDTH * 0.5,
+      604,
+      11,
+      "#83c9be",
+      "center",
+      true,
+    );
+
     const pulse = 0.62 + (Math.sin(state.time * 4.2) + 1) * 0.18;
     ctx.globalAlpha = pulse;
     drawText(
@@ -27077,7 +32918,7 @@
           ? "MOVE LEFT STICK OR PRESS A TO START"
           : `PRESS ${keyboardBindingLabel("move_up")} OR ${keyboardBindingLabel("interact")} TO START`,
       WIDTH * 0.5,
-      621,
+      631,
       16,
       "#ffe2a0",
       "center",
@@ -27088,7 +32929,7 @@
       drawText(
         `COURSE ECHO READY  //  ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD  //  CHASE THE SPECTRAL TRAIL`,
         WIDTH * 0.5,
-        650,
+        658,
         10,
         "#83d9c1",
         "center",
@@ -29127,6 +34968,13 @@
     ctx.restore();
 
     drawTouchButton(
+      TOUCH_CONTROLS.lookBack,
+      "REAR",
+      touch.lookBackPointerId !== null,
+      "#7fc7bc",
+      "HOLD",
+    );
+    drawTouchButton(
       TOUCH_CONTROLS.interact,
       "USE",
       Boolean(state.hole.prompt),
@@ -29206,6 +35054,364 @@
     ctx.restore();
   }
 
+  function drawRearSighting(
+    view,
+    sighting,
+    point,
+  ) {
+    if (
+      !sighting ||
+      !view.rear ||
+      !point.visible
+    ) {
+      return;
+    }
+    const progress = clamp(
+      1 -
+        sighting.seconds /
+          sighting.duration,
+      0,
+      1,
+    );
+    const fadeIn = smoothstep(
+      clamp(progress / 0.18, 0, 1),
+    );
+    const fadeOut = smoothstep(
+      clamp(
+        sighting.seconds / 0.5,
+        0,
+        1,
+      ),
+    );
+    const flicker =
+      state.reducedMotion
+        ? 0.74
+        : 0.52 +
+          hash(
+            Math.floor(
+              state.hole.elapsed * 17,
+            ) +
+              sighting.seed,
+          ) *
+            0.48;
+    const alpha =
+      view.amount *
+      fadeIn *
+      fadeOut *
+      flicker;
+    const crossingOffset =
+      sighting.type ===
+        "rear_crossing"
+        ? sighting.side *
+          (progress - 0.5) *
+          (
+            state.reducedMotion
+              ? 18
+              : 108
+          )
+        : 0;
+    const projectedX =
+      point.x + crossingOffset;
+    const x =
+      sighting.side < 0
+        ? clamp(
+            projectedX,
+            150,
+            WIDTH * 0.38,
+          )
+        : clamp(
+            projectedX,
+            WIDTH * 0.62,
+            WIDTH - 330,
+          );
+    const height = clamp(
+      point.pixelsPerMeter * 3.4,
+      76,
+      174,
+    );
+    ctx.save();
+    const silhouetteRim =
+      ctx.createRadialGradient(
+        x,
+        point.y - height * 0.48,
+        height * 0.06,
+        x,
+        point.y - height * 0.46,
+        height * 0.72,
+      );
+    silhouetteRim.addColorStop(
+      0,
+      `rgba(104,155,137,${alpha * 0.17})`,
+    );
+    silhouetteRim.addColorStop(
+      0.5,
+      `rgba(52,91,77,${alpha * 0.08})`,
+    );
+    silhouetteRim.addColorStop(
+      1,
+      "rgba(35,70,59,0)",
+    );
+    ctx.fillStyle = silhouetteRim;
+    ctx.fillRect(
+      x - height * 0.8,
+      point.y - height * 1.25,
+      height * 1.6,
+      height * 1.35,
+    );
+    if (
+      sighting.type ===
+        "rear_headlight"
+    ) {
+      const beamLength = clamp(
+        height * 2.6,
+        220,
+        410,
+      );
+      const beam =
+        ctx.createLinearGradient(
+          x,
+          point.y - height * 0.38,
+          WIDTH * 0.5,
+          HEIGHT * 0.84,
+        );
+      beam.addColorStop(
+        0,
+        `rgba(224,151,69,${alpha * 0.24})`,
+      );
+      beam.addColorStop(
+        1,
+        "rgba(224,151,69,0)",
+      );
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.moveTo(
+        x - height * 0.08,
+        point.y - height * 0.42,
+      );
+      ctx.lineTo(
+        x + height * 0.08,
+        point.y - height * 0.42,
+      );
+      ctx.lineTo(
+        WIDTH * 0.5 +
+          sighting.side *
+            beamLength * 0.32,
+        HEIGHT * 0.84,
+      );
+      ctx.lineTo(
+        WIDTH * 0.5 -
+          sighting.side *
+            beamLength * 0.08,
+        HEIGHT * 0.84,
+      );
+      ctx.closePath();
+      ctx.fill();
+    }
+    drawShadowJoeSprite(
+      x,
+      point.y,
+      height,
+      alpha *
+        (
+          sighting.type ===
+            "rear_headlight"
+            ? 0.38
+            : 0.9
+        ),
+      sighting.side > 0,
+      true,
+    );
+    ctx.strokeStyle =
+      `rgba(123,166,143,${alpha * 0.34})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(
+      x,
+      point.y + 2,
+      height * 0.34,
+      height * 0.055,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLookBackFeedback() {
+    const view = lookBackView();
+    if (view.amount <= 0.015) {
+      return;
+    }
+    const glance = lookBackState();
+    const turnEnvelope =
+      Math.sin(view.amount * Math.PI);
+    const joePoint = worldToScreen(
+      state.hole.joe.x,
+      state.hole.joe.y,
+    );
+    const joeVisible =
+      view.rear &&
+      joePoint.visible &&
+      joePoint.x > 24 &&
+      joePoint.x < WIDTH - 24;
+    const rearSighting =
+      state.hole.tensionDirector
+        .rearSighting;
+    const rearSightingPoint =
+      rearSighting
+        ? worldToScreen(
+            rearSighting.x,
+            rearSighting.y,
+          )
+        : null;
+    const rearSightingVisible =
+      Boolean(
+        view.rear &&
+          rearSighting &&
+          rearSightingPoint
+            ?.visible &&
+          rearSightingPoint.x > 18 &&
+          rearSightingPoint.x <
+            WIDTH - 18,
+      );
+    const accent = joeVisible
+      ? "#e66f45"
+      : rearSightingVisible
+        ? "#d6b56d"
+        : "#79c7bd";
+    ctx.save();
+    const edgeGrade =
+      ctx.createLinearGradient(
+        0,
+        0,
+        WIDTH,
+        0,
+      );
+    edgeGrade.addColorStop(
+      0,
+      `rgba(37,92,85,${0.12 * view.amount})`,
+    );
+    edgeGrade.addColorStop(
+      0.18,
+      "rgba(8,20,18,0)",
+    );
+    edgeGrade.addColorStop(
+      0.82,
+      "rgba(8,20,18,0)",
+    );
+    edgeGrade.addColorStop(
+      1,
+      `rgba(37,92,85,${0.12 * view.amount})`,
+    );
+    ctx.fillStyle = edgeGrade;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    if (
+      rearSightingVisible &&
+      rearSightingPoint
+    ) {
+      drawRearSighting(
+        view,
+        rearSighting,
+        rearSightingPoint,
+      );
+    }
+    ctx.strokeStyle = joeVisible
+      ? `rgba(230,91,54,${0.32 * view.amount})`
+      : rearSightingVisible
+        ? `rgba(214,181,109,${0.29 * view.amount})`
+        : `rgba(121,199,189,${0.25 * view.amount})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      10,
+      10,
+      WIDTH - 20,
+      HEIGHT - 20,
+    );
+    if (
+      !state.reducedMotion &&
+      turnEnvelope > 0.04
+    ) {
+      ctx.globalAlpha =
+        turnEnvelope * 0.24;
+      ctx.fillStyle = "#8bd2c5";
+      const direction =
+        glance.direction;
+      for (
+        let index = 0;
+        index < 5;
+        index += 1
+      ) {
+        const y =
+          92 + index * 108;
+        const width =
+          74 + index * 19;
+        const x =
+          direction > 0
+            ? WIDTH - width - 12
+            : 12;
+        ctx.fillRect(
+          x,
+          y,
+          width,
+          2,
+        );
+      }
+    }
+    if (view.amount > 0.68) {
+      const labelAlpha = smoothstep(
+        clamp(
+          (view.amount - 0.68) /
+            0.22,
+          0,
+          1,
+        ),
+      );
+      const width = 310;
+      const panelY = 170;
+      ctx.globalAlpha = labelAlpha;
+      ctx.fillStyle =
+        "rgba(2,10,8,0.88)";
+      ctx.fillRect(
+        WIDTH * 0.5 - width * 0.5,
+        panelY,
+        width,
+        38,
+      );
+      strokeRect(
+        WIDTH * 0.5 - width * 0.5,
+        panelY,
+        width,
+        38,
+        accent,
+        2,
+      );
+      drawText(
+        joeVisible
+          ? `REAR VIEW  //  JOE ${Math.ceil(
+              worldDistance(
+                state.hole.joe,
+                state.player,
+              ),
+            )}m`
+          : rearSightingVisible
+            ? `REAR VIEW  //  MOVEMENT ${
+                rearSighting.side < 0
+                  ? "LEFT"
+                  : "RIGHT"
+              }`
+            : "REAR VIEW  //  MOVEMENT UNCHANGED",
+        WIDTH * 0.5,
+        panelY + 25,
+        11,
+        accent,
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
+  }
+
   function drawFirstHoleOverlay() {
     const hole = state.hole;
     const variant = activeRunVariant();
@@ -29223,7 +35429,7 @@
             ? "REACH DRAIN AND FILE RELEASE"
             : hole.keyCollected
               ? "RETURN TO SHED AND FILE RELEASE"
-              : "FIND KEY OR RELEASE DRAIN";
+              : "FIND SHED KEY OR OPEN DRAIN VALVE";
     const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
     const activeStampCount =
       performanceStampsFor(
@@ -29593,6 +35799,25 @@
       "left",
       true,
     );
+    const composure =
+      hole.composure;
+    drawText(
+      `COMPOSURE ${composure.state.toUpperCase()} ${Math.round(composure.value * 100)}`,
+      meterX + 246,
+      132,
+      9,
+      composure.state === "panic"
+        ? "#f06a43"
+        : composure.state ===
+              "frayed"
+          ? "#e6a15a"
+          : composure.state ===
+                "tense"
+            ? "#aab982"
+            : "#6f826c",
+      "right",
+      composure.value < 0.53,
+    );
     drawText(
       hole.joe.mode === "chase"
         ? `PREMIUM +${hole.riskPremiumBanked} // LIVE +${hole.riskBreakBonuses.length < 3 ? hole.currentRiskPremium : 0}`
@@ -29710,7 +35935,7 @@
           : environment.hardCover
             ? "SOLID OBJECT BETWEEN YOU AND JOE"
             : environment.mowed
-              ? "CUT STRIP: QUIET FOOTING, NO CONCEALMENT"
+              ? "JOE'S ROADMAP: +8% PACE, QUIET, EXPOSED"
             : inRough
               ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
               : "OPEN SIGHTLINE — MOVE COVER TO COVER";
@@ -29753,7 +35978,22 @@
       ctx.fillStyle = "rgba(2,8,4,0.9)";
       ctx.fillRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46);
       strokeRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46, "#d87532", 2);
-      drawText(hole.message, WIDTH * 0.5, HEIGHT - 82, 15, "#f1e7c9", "center", true);
+      const messageSize = fittedTextSize(
+        hole.message,
+        15,
+        messageWidth - 30,
+        10,
+        true,
+      );
+      drawText(
+        hole.message,
+        WIDTH * 0.5,
+        HEIGHT - 82,
+        messageSize,
+        "#f1e7c9",
+        "center",
+        true,
+      );
       ctx.globalAlpha = 1;
     } else if (
       !hole.escapeFiling.active &&
@@ -29768,12 +36008,12 @@
       drawText(
         expandedHud
           ? inputCopy(
-              `MOVE ${keyboardMovementCopy()}  •  ${keyboardBindingLabel("sprint")} SPRINT  •  ${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN  •  ${keyboardBindingLabel("interact")} INTERACT  •  HOLD ${keyboardBindingLabel("chip")} AIM  •  ESC PAUSE`,
-              "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  A INTERACT  •  HOLD X AIM  •  START PAUSE",
+              `MOVE ${keyboardMovementCopy()}  •  ${keyboardBindingLabel("sprint")} SPRINT  •  ${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN  •  ${keyboardBindingLabel("look_back")} REAR  •  ${keyboardBindingLabel("interact")} USE  •  HOLD ${keyboardBindingLabel("chip")} AIM  •  ESC`,
+              "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  R3 REAR  •  A USE  •  HOLD X AIM  •  START",
             )
           : inputCopy(
-              `${keyboardBindingLabel("controls")} CONTROLS  •  ESC PAUSE`,
-              "Y CONTROLS  •  START PAUSE",
+              `${keyboardBindingLabel("controls")} CONTROLS  •  ${keyboardBindingLabel("look_back")} REAR  •  ESC PAUSE`,
+              "Y CONTROLS  •  R3 REAR  •  START PAUSE",
             ),
         28,
         HEIGHT - 25,
@@ -30578,6 +36818,63 @@
     { x: -98, y: 682, lean: -1 },
   ];
 
+  function drawShadowJoeSprite(
+    x,
+    y,
+    height,
+    alpha,
+    mirror = false,
+    spectral = false,
+  ) {
+    if (
+      !shadowJoeArt.complete ||
+      shadowJoeArt.naturalWidth <= 0
+    ) {
+      return false;
+    }
+    const width =
+      height *
+      (
+        SHADOW_JOE_SOURCE.width /
+        SHADOW_JOE_SOURCE.height
+      );
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(mirror ? -1 : 1, 1);
+    if (spectral) {
+      ctx.globalCompositeOperation =
+        "screen";
+      ctx.globalAlpha = alpha * 0.34;
+      ctx.drawImage(
+        shadowJoeArt,
+        SHADOW_JOE_SOURCE.x,
+        SHADOW_JOE_SOURCE.y,
+        SHADOW_JOE_SOURCE.width,
+        SHADOW_JOE_SOURCE.height,
+        -width * 0.54,
+        -height,
+        width * 1.08,
+        height,
+      );
+    }
+    ctx.globalCompositeOperation =
+      "source-over";
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(
+      shadowJoeArt,
+      SHADOW_JOE_SOURCE.x,
+      SHADOW_JOE_SOURCE.y,
+      SHADOW_JOE_SOURCE.width,
+      SHADOW_JOE_SOURCE.height,
+      -width * 0.5,
+      -height,
+      width,
+      height,
+    );
+    ctx.restore();
+    return true;
+  }
+
   function drawSpectralCourseFigures() {
     const figures =
       SPECTRAL_COURSE_FIGURES;
@@ -30721,79 +37018,41 @@
         Math.PI * 2,
       );
       ctx.fill();
-      const body =
-        ctx.createLinearGradient(
-          0,
-          point.y - height,
-          0,
+      const drewShadowJoe =
+        drawShadowJoeSprite(
+          point.x +
+            headTurn * width * 0.1,
           point.y,
+          height,
+          alpha * 1.18,
+          figure.lean < 0,
+          true,
         );
-      body.addColorStop(
-        0,
-        `rgba(191,211,192,${
-          alpha * 0.72
-        })`,
-      );
-      body.addColorStop(
-        0.48,
-        `rgba(92,132,117,${
-          alpha
-        })`,
-      );
-      body.addColorStop(
-        1,
-        "rgba(61,92,78,0)",
-      );
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.moveTo(
-        point.x -
-          width * 0.62,
-        point.y - height * 0.72,
-      );
-      ctx.lineTo(
-        point.x +
-          width * 0.54,
-        point.y - height * 0.72,
-      );
-      ctx.lineTo(
-        point.x +
-          width *
-            (
-              0.88 +
-              figure.lean * 0.08
-            ),
-        point.y - height * 0.08,
-      );
-      ctx.lineTo(
-        point.x -
-          width *
-            (
-              0.74 -
-              figure.lean * 0.08
-            ),
-        point.y - height * 0.08,
-      );
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle =
-        `rgba(188,207,191,${
-          alpha * 0.9
-        })`;
-      ctx.beginPath();
-      ctx.ellipse(
-        point.x +
-          headTurn *
-            width *
-            0.24,
-        point.y - height * 0.84,
-        width * 0.42,
-        height * 0.1,
-        headTurn * 0.18,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
+      if (!drewShadowJoe) {
+        ctx.fillStyle =
+          `rgba(92,132,117,${alpha})`;
+        ctx.fillRect(
+          point.x - width * 0.5,
+          point.y - height * 0.78,
+          width,
+          height * 0.7,
+        );
+        ctx.fillStyle =
+          `rgba(188,207,191,${
+            alpha * 0.9
+          })`;
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y - height * 0.86,
+          width * 0.42,
+          height * 0.1,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
       const dissolveCount =
         effectQualityScale() < 0.55
           ? 3
@@ -30903,7 +37162,7 @@
     const side = manifestation.side;
     const baseX =
       side < 0
-        ? 72
+        ? 88
         : WIDTH - 344;
     const baseY =
       HEIGHT * manifestation.height;
@@ -30921,11 +37180,15 @@
           5;
     ctx.save();
     ctx.globalAlpha = alpha;
+    const edgeWidth =
+      side < 0 ? 220 : 400;
     const edgeMist =
       ctx.createLinearGradient(
         side < 0 ? 0 : WIDTH,
         0,
-        side < 0 ? 190 : WIDTH - 190,
+        side < 0
+          ? edgeWidth
+          : WIDTH - edgeWidth,
         0,
       );
     edgeMist.addColorStop(
@@ -30938,51 +37201,54 @@
     );
     ctx.fillStyle = edgeMist;
     ctx.fillRect(
-      side < 0 ? 0 : WIDTH - 190,
-      baseY - 176,
-      190,
-      226,
+      side < 0 ? 0 : WIDTH - edgeWidth,
+      baseY - 258,
+      edgeWidth,
+      310,
     );
     ctx.translate(
       baseX + jitter,
       baseY,
     );
     ctx.scale(side, 1);
+    const shadowHeight = 242;
     if (!state.reducedMotion) {
-      ctx.globalAlpha = alpha * 0.2;
-      ctx.fillStyle = "#7b1c17";
-      ctx.fillRect(-32, -123, 44, 84);
-      ctx.fillStyle = "#4e9b86";
-      ctx.fillRect(-26, -121, 44, 82);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(
+        -52,
+        -198,
+        108,
+        42,
+      );
+      ctx.rect(
+        -58,
+        -112,
+        116,
+        23,
+      );
+      ctx.clip();
+      drawShadowJoeSprite(
+        -7,
+        2,
+        shadowHeight,
+        alpha * 0.24,
+      );
+      ctx.restore();
     }
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = "#030705";
-    ctx.fillRect(-27, -126, 42, 74);
-    ctx.fillRect(-23, -60, 13, 56);
-    ctx.fillRect(3, -60, 13, 56);
-    ctx.fillRect(-19, -157, 28, 31);
-    ctx.fillRect(-14, -164, 19, 9);
-    ctx.fillStyle = "#101a13";
-    ctx.fillRect(-22, -122, 32, 5);
-    ctx.fillRect(-15, -145, 19, 4);
-    ctx.fillStyle = `rgba(184,205,174,${alpha * 0.74})`;
-    ctx.fillRect(-11, -149, 4, 3);
-    ctx.fillRect(-1, -149, 4, 3);
-    ctx.strokeStyle = `rgba(3,6,4,${alpha})`;
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(10, -105);
-    ctx.lineTo(48, -64);
-    ctx.lineTo(58, -25);
-    ctx.stroke();
-    ctx.fillStyle = "#020504";
-    ctx.fillRect(28, -27, 58, 21);
-    ctx.fillRect(39, -35, 36, 10);
-    ctx.fillRect(32, -8, 10, 10);
-    ctx.fillRect(73, -8, 10, 10);
-    ctx.strokeStyle = `rgba(96,128,101,${alpha * 0.48})`;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(28, -27, 58, 21);
+    const drewShadowJoe =
+      drawShadowJoeSprite(
+        0,
+        4,
+        shadowHeight,
+        alpha,
+      );
+    if (!drewShadowJoe) {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#030705";
+      ctx.fillRect(-28, -164, 56, 154);
+      ctx.fillRect(-18, -194, 36, 36);
+    }
     const clippingCount =
       effectQualityScale() < 0.55
         ? 5
@@ -30997,8 +37263,8 @@
         manifestation.seed + index * 31,
       );
       ctx.fillRect(
-        62 + seed * 74,
-        -20 -
+        32 + seed * 78,
+        -18 -
           hash(
             manifestation.seed +
               index * 47,
@@ -31828,6 +38094,167 @@
     ctx.restore();
   }
 
+  function drawHorrorVisualFlash() {
+    const flash =
+      state.hole?.horrorDirector
+        ?.visualFlash;
+    if (!flash) {
+      return;
+    }
+    const art =
+      flash.type === "joe_flash"
+        ? horrorFlashJoeArt
+        : screenTearCourseArt;
+    if (
+      !art.complete ||
+      art.naturalWidth <= 0
+    ) {
+      return;
+    }
+    const progress = clamp(
+      1 -
+        flash.seconds /
+          flash.duration,
+      0,
+      1,
+    );
+    const fadeIn = smoothstep(
+      clamp(progress / 0.16, 0, 1),
+    );
+    const fadeOut = smoothstep(
+      clamp(
+        flash.seconds /
+          (flash.duration * 0.58),
+        0,
+        1,
+      ),
+    );
+    const envelope =
+      fadeIn * fadeOut;
+    if (envelope <= 0.008) {
+      return;
+    }
+    const quality =
+      effectQualityScale();
+    const overlay =
+      cachedHorrorOverlay(art);
+    if (!overlay) {
+      return;
+    }
+    ctx.save();
+    ctx.globalCompositeOperation =
+      "screen";
+    ctx.globalAlpha =
+      envelope *
+      flash.strength *
+      (
+        state.reducedMotion
+          ? flash.type ===
+            "joe_flash"
+            ? 0.2
+            : 0.16
+          : flash.type ===
+              "joe_flash"
+            ? 0.48
+            : 0.44
+      );
+    if (flash.side < 0) {
+      ctx.translate(WIDTH, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(
+      overlay,
+      state.reducedMotion
+        ? 0
+        : flash.side *
+            Math.round(
+              3 + progress * 7,
+            ),
+      0,
+    );
+    ctx.restore();
+    if (!state.reducedMotion) {
+      const seamCount =
+        quality < 0.55
+          ? 3
+          : quality < 0.85
+            ? 5
+            : 7;
+      const step = Math.floor(
+        progress * 3,
+      );
+      ctx.save();
+      for (
+        let index = 0;
+        index < seamCount;
+        index += 1
+      ) {
+        const seed = hash(
+          flash.seed +
+            index * 71 +
+            step * 113,
+        );
+        const y = Math.round(
+          30 +
+            hash(
+              flash.seed +
+                index * 41,
+            ) *
+              (HEIGHT - 92),
+        );
+        const width = Math.round(
+          130 + seed * 470,
+        );
+        const offset = Math.round(
+          flash.side *
+            (
+              5 +
+              seed * 24
+            ) *
+            envelope,
+        );
+        const x =
+          hash(
+            flash.seed +
+              index * 97,
+          ) *
+            (WIDTH - width) +
+          offset;
+        ctx.globalAlpha =
+          envelope *
+          flash.strength * 0.14;
+        ctx.fillStyle =
+          index % 2 === 0
+            ? "#020604"
+            : "#170302";
+        ctx.fillRect(
+          Math.round(x),
+          y,
+          width,
+          2 + Math.round(seed * 5),
+        );
+        ctx.globalAlpha =
+          envelope * 0.28;
+        ctx.fillStyle =
+          index % 2 === 0
+            ? "#4eb3aa"
+            : "#a72e22";
+        ctx.fillRect(
+          Math.round(
+            x - flash.side * 3,
+          ),
+          y - 1,
+          Math.max(
+            22,
+            Math.round(width * 0.42),
+          ),
+          1,
+        );
+      }
+      ctx.restore();
+    }
+  }
+
   function drawFloodlightMoths() {
     const floodlight =
       PRIMARY_FLOODLIGHT;
@@ -32078,6 +38505,8 @@
       progress,
       walkBob,
     );
+    drawZoneSetPieceWorld();
+    drawJoeThreatBeam();
     drawCrosswindWeather(
       progress,
       walkBob,
@@ -32119,7 +38548,7 @@
       drawWorldInteractable(
         sprinkler,
         2,
-        "SPRINKLER",
+        "DRAIN VALVE",
         "#6aa8a0",
       );
     }
@@ -32224,6 +38653,8 @@
     }
 
     ctx.restore();
+    drawTensionOmen();
+    drawLookBackFeedback();
     drawPeripheralHorrorManifestation();
     drawLateralCameraFeedback();
     drawForwardMotionFeedback();
@@ -32232,7 +38663,9 @@
 
     drawSuspenseEffects();
     drawPursuitEffects();
+    drawComposureFeedback();
     drawThreatRefraction();
+    drawHorrorVisualFlash();
     drawNearMowerDebris();
     drawPlayerBreath();
     drawBlindsideTransferPath();
@@ -32939,6 +39372,26 @@
             : "#84c9a8",
       });
     }
+    if (
+      result.newShotCraftDiscoveries
+        .length > 0
+    ) {
+      const discoveryCodes =
+        result.newShotCraftDiscoveries.map(
+          (id) =>
+            shotCraftDefinition(id)
+              ?.code || id,
+        );
+      scoreNotes.push({
+        text: result.shotCraftBookCompleted
+          ? "SHOT BOOK COMPLETE // P • B • L"
+          : `SHOT BOOK FILED // ${discoveryCodes.join(" • ")}`,
+        color:
+          result.shotCraftBookCompleted
+            ? "#f1ce69"
+            : "#8fd3a5",
+      });
+    }
     for (
       let index = 0;
       index < scoreNotes.length;
@@ -32977,7 +39430,7 @@
       ],
       [
         "RESOURCES",
-        `${result.ballsRemaining} BALL${result.ballsRemaining === 1 ? "" : "S"}  •  ${result.ballsRecovered} RECLAIMED`,
+        `${result.ballsRemaining} BALL${result.ballsRemaining === 1 ? "" : "S"}  •  ${result.ballsRecovered} RECLAIMED${result.shotCraftCount > 0 ? `  •  ${result.shotCraftCount} CRAFT` : ""}`,
       ],
     ];
     for (
@@ -33054,6 +39507,8 @@
         ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
         : result.dossierPerfected
           ? `ORDER ${String(result.variantNumber).padStart(2, "0")} DOSSIER PERFECTED — ALL FOUR PERFORMANCE STAMPS FILED.`
+        : result.shotCraftBookCompleted
+          ? "SHOT BOOK COMPLETE — PRESSURE, BANK, AND LIE WORK ARE NOW ON FILE."
         : result.newPerformanceStamps.length >
             0
           ? `PERFORMANCE STAMP FILED — DOSSIER ${result.performanceStampProgress}/${PERFORMANCE_STAMPS.length}.`
@@ -33073,6 +39528,7 @@
         result.portfolioUnlocked ||
         result.masterProductOwnerUnlocked ||
         result.dossierPerfected ||
+        result.shotCraftBookCompleted ||
         result.newPerformanceStamps.length >
           0 ||
         result.newChangeRequestFiled ||
@@ -33360,6 +39816,31 @@
     ctx.fillStyle = color;
     ctx.fillText(text, x, y);
     ctx.restore();
+  }
+
+  function fittedTextSize(
+    text,
+    desiredSize,
+    maxWidth,
+    minimumSize = 10,
+    heavy = false,
+  ) {
+    ctx.save();
+    ctx.font = `${heavy ? "bold " : ""}${desiredSize}px "Courier New", monospace`;
+    const measuredWidth =
+      ctx.measureText(text).width;
+    ctx.restore();
+    if (measuredWidth <= maxWidth) {
+      return desiredSize;
+    }
+    return Math.max(
+      minimumSize,
+      Math.floor(
+        desiredSize *
+          maxWidth /
+          measuredWidth,
+      ),
+    );
   }
 
   function strokeRect(x, y, width, height, color, lineWidth) {
@@ -33697,6 +40178,10 @@
                 panicResponse,
             ),
         );
+      updateLookBack(
+        dt,
+        moving ? movement.x : 0,
+      );
       updateCourseCameraMotion(
         dt,
         moving ? movement.x : 0,
@@ -33708,8 +40193,15 @@
       if (sprinting) {
         hole.sprintSeconds += dt;
       }
+      const preMoveEnvironment =
+        hole.environment ||
+        getPlayerEnvironmentState();
       const preMoveSand =
-        sandStateAt(state.player).active;
+        preMoveEnvironment.sand;
+      const roadmapSpeedMultiplier =
+        livingRoadmapSpeedMultiplier(
+          preMoveEnvironment,
+        );
       const speed =
         (
           hole.focus
@@ -33725,6 +40217,7 @@
             ? SAND_PLAYER_SPEED_MULTIPLIER
             : 1
         ) *
+        roadmapSpeedMultiplier *
         (
           hole.secondWindTimer > 0 &&
           !hole.crouched &&
@@ -33864,8 +40357,12 @@
               0.2,
             );
           }
+          triggerZoneSetPiece(
+            zoneIndex,
+          );
         }
       }
+      updateZoneSetPiece(dt);
       updateSprintReviews();
       hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
       const environment = getPlayerEnvironmentState();
@@ -33873,6 +40370,9 @@
       const effectiveRough =
         environment.effectiveRough;
       hole.environment = environment;
+      updateLivingRoadmapPlayerState(
+        environment,
+      );
       updateCutTrace(
         dt,
         environment,
@@ -34037,6 +40537,9 @@
         );
       } else if (hole.ballFlight) {
         hole.prompt = "BALL IN FLIGHT";
+      } else if (hole.ballRoll) {
+        hole.prompt =
+          `${hole.ballRoll.outcomeLabel} // ${Math.max(0, Math.ceil(hole.ballRoll.duration - hole.ballRoll.elapsed))}s TO REST`;
       } else if (
         hole.escapeFiling.sealing
       ) {
@@ -34081,9 +40584,9 @@
         );
       } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
         hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — ACTIVATE SPRINKLERS`,
-          "A — ACTIVATE SPRINKLERS",
-          "TAP USE — ACTIVATE SPRINKLERS",
+          `${keyboardBindingLabel("interact")} — OPEN DRAIN VALVE`,
+          "A — OPEN DRAIN VALVE",
+          "TAP USE — OPEN DRAIN VALVE",
         );
       } else if (
         hole.keyCollected &&
@@ -34138,7 +40641,13 @@
             ? `TAP USE — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
             : "TAP USE — RECLAIM GOLF BALL",
         );
-      } else if (practiceDrillActive()) {
+      } else if (
+        practiceDrillActive() &&
+        worldDistance(
+          state.player,
+          state.hole.practiceDrill.target,
+        ) < 58
+      ) {
         hole.prompt = inputCopy(
           `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
           "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
@@ -34160,6 +40669,11 @@
         hole.prompt = "";
       }
 
+      updateShelterMemory(
+        dt,
+        moving,
+        environment,
+      );
       if (
         hole.escapeFiling.sealing
       ) {
@@ -34169,6 +40683,9 @@
           dt,
           moving,
         );
+        updatePredatorTactics(
+          dt,
+        );
         updateJoe(dt);
         if (state.mode === "first_hole") {
           updateEmergencyAppealWindow();
@@ -34176,9 +40693,15 @@
         }
       }
       if (state.mode === "first_hole") {
+        updateMowerAcoustics(dt);
         updateHorrorDirector(
           dt,
           moving,
+        );
+        updateComposure(
+          dt,
+          moving,
+          getPlayerEnvironmentState(),
         );
         updateNerveHold(
           dt,
@@ -34270,6 +40793,11 @@
           Math.max(
             threatHeartbeat,
             exertionHeartbeat,
+            (
+              1 -
+              hole.composure.value
+            ) *
+              0.68,
           ),
           0,
           1,
@@ -34324,6 +40852,9 @@
     state.gamepad.crouch = false;
     state.gamepad.sprint = false;
     state.gamepad.focus = false;
+    state.gamepad.lookBack = false;
+    state.hole.lookBack =
+      freshLookBackState();
     state.transitionAlpha = 0;
     setMotorLevel(0.006, 42);
     playUiTone(176, 0.07, 0.02);
@@ -34637,13 +41168,42 @@
 
     motorGain = audioContext.createGain();
     motorGain.gain.value = 0;
+    motorOcclusionFilter =
+      audioContext.createBiquadFilter();
+    motorOcclusionFilter.type = "lowpass";
+    motorOcclusionFilter.frequency.value =
+      6200;
+    motorOcclusionFilter.Q.value = 0.62;
+    motorGain.connect(
+      motorOcclusionFilter,
+    );
     if (typeof audioContext.createStereoPanner === "function") {
       motorPanNode = audioContext.createStereoPanner();
-      motorGain.connect(motorPanNode);
+      motorOcclusionFilter.connect(
+        motorPanNode,
+      );
       motorPanNode.connect(mowerBusGain);
     } else {
-      motorGain.connect(mowerBusGain);
+      motorOcclusionFilter.connect(
+        mowerBusGain,
+      );
     }
+    motorReflectionDelay =
+      audioContext.createDelay(0.2);
+    motorReflectionDelay.delayTime.value =
+      0.052;
+    motorReflectionGain =
+      audioContext.createGain();
+    motorReflectionGain.gain.value = 0;
+    motorOcclusionFilter.connect(
+      motorReflectionDelay,
+    );
+    motorReflectionDelay.connect(
+      motorReflectionGain,
+    );
+    motorReflectionGain.connect(
+      mowerBusGain,
+    );
 
     motorOscillator = audioContext.createOscillator();
     motorOscillator.type = "sawtooth";
@@ -34773,6 +41333,22 @@
     const isQuietScreen =
       pausedPresentation ||
       ["menu", "settings", "claim", "victory", "clocked_out"].includes(state.mode);
+    if (!isCourse) {
+      if (motorOcclusionFilter) {
+        motorOcclusionFilter.frequency.setTargetAtTime(
+          6200,
+          now,
+          0.08,
+        );
+      }
+      if (motorReflectionGain) {
+        motorReflectionGain.gain.setTargetAtTime(
+          0,
+          now,
+          0.08,
+        );
+      }
+    }
     const ambienceLevel =
       isCourse && state.hole.focus
         ? 0.018
@@ -34943,7 +41519,24 @@
           ? 0.014
           : director.pressure *
             0.0045;
-      setMotorLevel(
+      const silentStalk =
+        director.silentStalk;
+      const motorVisibility =
+        !silentStalk
+          ? 1
+          : silentStalk.phase ===
+              "silent"
+            ? 0.012
+            : hash(
+                  Math.floor(
+                    state.hole.elapsed *
+                      13,
+                  ) +
+                    silentStalk.seed,
+                ) > 0.48
+              ? 0.72
+              : 0.08;
+      const authoredMotorLevel =
         Math.max(
           0,
           0.008 +
@@ -34953,36 +41546,79 @@
             cadence +
             routeStress * 0.006 +
             routeOverrideGain,
-        ),
-        36 +
-          proximity * 46 +
-          modePitch +
-          cadence * 220 +
-          routeStress * 7 +
-          (
-            director.pendingIntercept
-              ? 7
-              : director.pressure * 3
-          ),
+        );
+      const acoustics =
+        state.hole.mowerAcoustics ||
+        freshMowerAcoustics();
+      setMotorLevel(
+        authoredMotorLevel *
+          motorVisibility *
+          acoustics.transmission,
+        (
+          36 +
+            proximity * 46 +
+            modePitch +
+            cadence * 220 +
+            routeStress * 7 +
+            (
+              director.pendingIntercept
+                ? 7
+                : director.pressure * 3
+            )
+        ) * acoustics.dopplerMultiplier,
       );
+      if (motorOcclusionFilter) {
+        motorOcclusionFilter.frequency.setTargetAtTime(
+          acoustics.filterHz,
+          now,
+          acoustics.occluded
+            ? 0.075
+            : 0.14,
+        );
+        motorOcclusionFilter.Q.setTargetAtTime(
+          acoustics.occluded
+            ? 0.82
+            : 0.62,
+          now,
+          0.12,
+        );
+      }
+      if (motorReflectionGain) {
+        motorReflectionGain.gain.setTargetAtTime(
+          authoredMotorLevel *
+            motorVisibility *
+            acoustics.reflection,
+          now,
+          0.11,
+        );
+      }
+      if (motorReflectionDelay) {
+        motorReflectionDelay.delayTime.setTargetAtTime(
+          acoustics.material === "metal"
+            ? 0.064
+            : acoustics.material ===
+                "structure"
+              ? 0.056
+              : 0.045,
+          now,
+          0.18,
+        );
+      }
       if (cutterOscillator) {
         cutterOscillator.frequency.setTargetAtTime(
-          238 +
-            proximity * 76 +
-            modePitch * 2.2 +
-            routeStress * 16,
+          (
+            238 +
+              proximity * 76 +
+              modePitch * 2.2 +
+              routeStress * 16
+          ) * acoustics.dopplerMultiplier,
           now,
           0.055,
         );
       }
       if (motorPanNode) {
-        const motorSourceX =
-          director.pendingIntercept
-            ? director
-                .pendingIntercept.x
-            : state.hole.joe.x;
         motorPanNode.pan.setTargetAtTime(
-          clamp((motorSourceX - state.player.x) / 72, -0.88, 0.88),
+          acoustics.pan,
           now,
           0.08,
         );
@@ -35535,10 +42171,123 @@
     );
   }
 
-  function playBallCue(direction) {
-    playNoiseBurst(0.09, 0.042, 2200, "highpass", direction * 0.48);
-    playTransientTone(520, 270, 0.1, 0.026, "sine");
-    playTransientTone(360, 190, 0.09, 0.032, "triangle", 0.24);
+  function playBallCue(
+    direction,
+    surface = "fairway",
+    blocked = false,
+  ) {
+    if (blocked) {
+      playNoiseBurst(
+        0.13,
+        0.05,
+        1800,
+        "bandpass",
+        direction * 0.48,
+      );
+      playTransientTone(
+        840,
+        310,
+        0.13,
+        0.032,
+        "square",
+      );
+      return;
+    }
+    if (
+      surface === "bunker" ||
+      surface === "soaked_bunker"
+    ) {
+      playNoiseBurst(
+        0.16,
+        0.045,
+        surface ===
+          "soaked_bunker"
+          ? 420
+          : 760,
+        "lowpass",
+        direction * 0.36,
+      );
+      playTransientTone(
+        240,
+        150,
+        0.08,
+        0.018,
+        "triangle",
+      );
+      return;
+    }
+    if (surface === "wet") {
+      playNoiseBurst(
+        0.12,
+        0.05,
+        540,
+        "lowpass",
+        direction * 0.42,
+      );
+      playTransientTone(
+        380,
+        210,
+        0.1,
+        0.022,
+        "sine",
+      );
+      return;
+    }
+    playNoiseBurst(
+      surface === "rough"
+        ? 0.12
+        : 0.09,
+      0.042,
+      surface === "rough"
+        ? 1250
+        : 2200,
+      surface === "rough"
+        ? "bandpass"
+        : "highpass",
+      direction * 0.48,
+    );
+    playTransientTone(
+      surface === "mowed"
+        ? 580
+        : 520,
+      270,
+      0.1,
+      0.026,
+      "sine",
+    );
+    playTransientTone(
+      360,
+      190,
+      0.09,
+      0.032,
+      "triangle",
+      0.24,
+    );
+  }
+
+  function playBallSettleCue(
+    surface,
+    direction,
+  ) {
+    const soft =
+      surface === "rough" ||
+      surface === "wet" ||
+      surface === "bunker" ||
+      surface === "soaked_bunker";
+    playNoiseBurst(
+      soft ? 0.055 : 0.035,
+      soft ? 0.018 : 0.012,
+      soft ? 620 : 1800,
+      soft ? "lowpass" : "highpass",
+      direction * 0.32,
+    );
+    playTransientTone(
+      soft ? 190 : 420,
+      soft ? 140 : 300,
+      0.055,
+      0.012,
+      "triangle",
+    );
   }
 
   function playPracticeBellCue() {
@@ -35591,6 +42340,54 @@
         "bandpass",
       );
     }
+  }
+
+  function playShotCraftCue(kind) {
+    const opening =
+      kind === "pressure"
+        ? 392
+        : kind === "bank"
+          ? 330
+          : 294;
+    playTransientTone(
+      opening,
+      opening * 1.5,
+      0.16,
+      0.022,
+      "triangle",
+    );
+    playTransientTone(
+      opening * 1.5,
+      opening * 2,
+      0.22,
+      0.016,
+      "sine",
+      0.08,
+    );
+  }
+
+  function playShotCraftReadyCue(kind) {
+    const opening =
+      kind === "pressure"
+        ? 466
+        : kind === "bank"
+          ? 415
+          : 370;
+    playTransientTone(
+      opening,
+      opening * 1.25,
+      0.1,
+      0.012,
+      "triangle",
+    );
+    playTransientTone(
+      opening * 1.5,
+      opening * 1.75,
+      0.12,
+      0.009,
+      "sine",
+      0.055,
+    );
   }
 
   function playDoorRattle() {
@@ -35739,6 +42536,7 @@
       "focus",
       "crouch",
       "sprint",
+      "lookBack",
     ];
     for (const id of order) {
       if (
@@ -35855,6 +42653,12 @@
     ) {
       state.touch.focusPointerId =
         event.pointerId;
+    } else if (
+      control === "lookBack" &&
+      state.touch.lookBackPointerId === null
+    ) {
+      state.touch.lookBackPointerId =
+        event.pointerId;
     }
   }
 
@@ -35938,6 +42742,12 @@
       state.touch.focusPointerId
     ) {
       state.touch.focusPointerId = null;
+    }
+    if (
+      event.pointerId ===
+      state.touch.lookBackPointerId
+    ) {
+      state.touch.lookBackPointerId = null;
     }
     try {
       canvas.releasePointerCapture?.(
@@ -36273,19 +43083,9 @@
     setHoleMessage(
       state.hole.overtime
         ? "OVERTIME ACTIVE — two balls, faster Joe, stronger evidence, 1.30× score."
-        : "SOUTH GATE LOCKED — cross to the shed key or release the drain.",
-      3.6,
+        : "SOUTH GATE LOCKED — find the shed key or open the drain valve.",
+      4.4,
     );
-    if (practiceDrillActive()) {
-      setHoleMessage(
-        "OPTIONAL FIELD TEST — chip into the amber bell ring to watch Joe react, or move on.",
-        4.8,
-      );
-      state.hole.stateBanner =
-        "OPTIONAL FIELD TEST // RING THE STARTER BELL";
-      state.hole.stateBannerTimer = 3.6;
-      state.hole.stateBannerLockTimer = 1.4;
-    }
     if (state.hole.courseEchoRecord) {
       state.hole.stateBanner =
         `COURSE ECHO // ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD`;
@@ -36545,6 +43345,7 @@
       state.gamepad.crouch = false;
       state.gamepad.sprint = false;
       state.gamepad.focus = false;
+      state.gamepad.lookBack = false;
       state.gamepad.previousButtons = [];
       state.gamepad.previousDirections = {
         up: false,
@@ -36609,6 +43410,7 @@
     state.gamepad.crouch = buttonDown(4);
     state.gamepad.focus = buttonDown(6);
     state.gamepad.sprint = buttonDown(7) || buttonDown(5);
+    state.gamepad.lookBack = buttonDown(11);
     if (meaningfulInput) {
       if (
         state.inputMethod === "touch"
@@ -36645,9 +43447,9 @@
         } else if (directionPressed("up")) {
           selectBinding(-1);
         } else if (directionPressed("left")) {
-          selectBinding(-5);
+          selectBinding(-6);
         } else if (directionPressed("right")) {
-          selectBinding(5);
+          selectBinding(6);
         }
       } else if (directionPressed("down")) {
         selectSettings(1);
@@ -36820,9 +43622,9 @@
         } else if (event.code === "ArrowUp") {
           selectBinding(-1);
         } else if (event.code === "ArrowLeft") {
-          selectBinding(-5);
+          selectBinding(-6);
         } else if (event.code === "ArrowRight") {
-          selectBinding(5);
+          selectBinding(6);
         } else if (
           (event.code === "Enter" ||
             event.code === "Space") &&
@@ -36909,6 +43711,7 @@
         [
           "crouch",
           "focus",
+          "look_back",
           "interact",
           "chip",
         ].includes(gameplayAction);
@@ -37390,6 +44193,31 @@
             ],
           ),
         ),
+      shotCraftBook: {
+        discovered:
+          state.career.shotCraftBook.slice(),
+        progress:
+          state.career.shotCraftBook.length,
+        available:
+          SHOT_CRAFT_BOOK.length,
+        complete:
+          shotCraftBookComplete(),
+        entries:
+          SHOT_CRAFT_BOOK.map(
+            (entry) => ({
+              id: entry.id,
+              code: entry.code,
+              label: entry.label,
+              hint: entry.hint,
+              discovered:
+                shotCraftDiscovered(
+                  entry.id,
+                ),
+            }),
+          ),
+        persistence:
+          "awarded Shot Craft discoveries save immediately, including before capture",
+      },
       perfectedVariants:
         RUN_VARIANTS.filter(
           (variant) =>
@@ -37420,6 +44248,7 @@
       crouchHeld: crouchHeld(),
       sprintHeld: sprintHeld(),
       focusHeld: focusHeld(),
+      lookBackHeld: lookBackHeld(),
       touch: {
         seen: state.touch.seen,
         controlsVisible:
@@ -37454,6 +44283,9 @@
           focus:
             state.touch.focusPointerId !==
             null,
+          lookBack:
+            state.touch.lookBackPointerId !==
+            null,
         },
       },
     },
@@ -37461,6 +44293,66 @@
       initialized: Boolean(audioContext),
       ambience: Boolean(ambienceGain),
       spatialMower: Boolean(motorPanNode),
+      mowerState:
+        state.hole
+          ?.tensionDirector
+          ?.silentStalk
+          ?.phase ??
+        "running",
+      mowerAcoustics: (() => {
+        const acoustics =
+          state.hole?.mowerAcoustics ||
+          freshMowerAcoustics();
+        return {
+          occluded:
+            acoustics.occluded,
+          blockerId:
+            acoustics.blockerId,
+          blockerCount:
+            acoustics.blockerCount,
+          material:
+            acoustics.material,
+          filterHz: Math.round(
+            acoustics.filterHz,
+          ),
+          transmission: Number(
+            acoustics.transmission.toFixed(
+              2,
+            ),
+          ),
+          reflection: Number(
+            acoustics.reflection.toFixed(
+              3,
+            ),
+          ),
+          direction:
+            acoustics.direction,
+          pan: Number(
+            acoustics.pan.toFixed(2),
+          ),
+          distance:
+            acoustics.distance === null
+              ? null
+              : Number(
+                  acoustics.distance.toFixed(
+                    1,
+                  ),
+                ),
+          radialVelocity: Number(
+            acoustics.radialVelocity.toFixed(
+              2,
+            ),
+          ),
+          dopplerMultiplier: Number(
+            acoustics.dopplerMultiplier.toFixed(
+              3,
+            ),
+          ),
+          source: acoustics.source,
+          gameplayEffect:
+            "presentation_only; sight, detection, collision, and Joe navigation remain authoritative",
+        };
+      })(),
       reactiveScore: (() => {
         const score =
           reactiveScoreState();
@@ -37571,6 +44463,10 @@
               !state.hole.focus
                 ? SECOND_WIND_SPEED_MULTIPLIER
                 : 1
+            ) *
+            livingRoadmapSpeedMultiplier(
+              state.hole.environment ||
+                getPlayerEnvironmentState(),
             ),
           crouched: state.hole.crouched,
           focus: state.hole.focus,
@@ -37585,6 +44481,72 @@
             screenY: Math.round(getOpeningForegroundTransform().y),
           },
           cameraMotion: {
+            lookBack: (() => {
+              const view =
+                lookBackView();
+              const joePoint =
+                worldToScreen(
+                  state.hole.joe.x,
+                  state.hole.joe.y,
+                );
+              return {
+                held:
+                  lookBackState().held,
+                amount: Number(
+                  view.amount.toFixed(2),
+                ),
+                angleDegrees: Number(
+                  (
+                    view.angle *
+                    180 /
+                    Math.PI
+                  ).toFixed(1),
+                ),
+                rearView: view.rear,
+                transitioning:
+                  view.transitioning,
+                movementDirection:
+                  "body_relative_unchanged",
+                joeVisible:
+                  view.rear &&
+                  joePoint.visible &&
+                  joePoint.x > 24 &&
+                  joePoint.x <
+                    WIDTH - 24,
+                glances:
+                  lookBackState()
+                    .glances,
+                anomalousMovement:
+                  state.hole
+                    .tensionDirector
+                    .rearSighting
+                    ? {
+                        type:
+                          state.hole
+                            .tensionDirector
+                            .rearSighting
+                            .type,
+                        side:
+                          state.hole
+                            .tensionDirector
+                            .rearSighting
+                            .side < 0
+                            ? "left"
+                            : "right",
+                        seconds: Number(
+                          state.hole
+                            .tensionDirector
+                            .rearSighting
+                            .seconds.toFixed(
+                              2,
+                            ),
+                        ),
+                        gameplayEffect:
+                          "none_atmospheric_only",
+                      }
+                    : null,
+              };
+            })(),
             lateralInput: Number(
               courseCameraMotion().lateralInput.toFixed(2),
             ),
@@ -38371,8 +45333,68 @@
                   activeLure:
                     danger.activeLure,
                   wet: ball.wet,
+                  surface:
+                    ball.surface ||
+                    (ball.wet
+                      ? "wet"
+                      : "fairway"),
+                  surfaceLabel:
+                    ball.surfaceLabel ||
+                    (ball.wet
+                      ? "SOAKED TURF"
+                      : "FAIRWAY"),
+                  rollDistance: Number(
+                    (
+                      ball.rollDistance || 0
+                    ).toFixed(2),
+                  ),
+                  outcome:
+                    ball.outcomeLabel ||
+                    null,
+                  lure:
+                    ball.lureLabel ||
+                    null,
+                  lureMultiplier: Number(
+                    (
+                      ball.lureMultiplier || 1
+                    ).toFixed(2),
+                  ),
+                  impactSurface:
+                    ball.impactSurface ||
+                    ball.surface ||
+                    null,
+                  surfaces:
+                    ball.surfaceSequence ||
+                    [
+                      ball.surface ||
+                        "fairway",
+                    ],
+                  impact: ball.impact
+                    ? {
+                        x: Math.round(
+                          ball.impact.x,
+                        ),
+                        y: Math.round(
+                          ball.impact.y,
+                        ),
+                      }
+                    : null,
+                  blockedBy:
+                    ball.blockedBy || null,
                   practiceHit:
                     ball.practiceHit === true,
+                  shotCraft:
+                    ball.shotCraft
+                      ? {
+                          ...ball.shotCraft,
+                        }
+                      : null,
+                  shotCraftPreview:
+                    ball.shotCraftPreview
+                      ? {
+                          ...ball.shotCraftPreview,
+                        }
+                      : null,
                   ageSeconds: Number(
                     (
                       state.hole.elapsed -
@@ -38385,6 +45407,66 @@
               },
             ),
           ballThrowsUsed: state.hole.ballThrowsUsed,
+          shotCraft: {
+            count:
+              state.hole.shotCraftEvents
+                .length,
+            runCap:
+              DELIVERY_FAMILY_CAPS
+                .shotcraft,
+            priority: [
+              "pressure",
+              "bank",
+              "lieSwitch",
+            ],
+            thresholds: {
+              pressureJoeDistance: {
+                min:
+                  SHOT_CRAFT_PRESSURE_MIN_DISTANCE,
+                max:
+                  SHOT_CRAFT_PRESSURE_MAX_DISTANCE,
+                requiresJoeMode:
+                  "chase",
+              },
+              bankMinRoll:
+                SHOT_CRAFT_BANK_MIN_ROLL,
+              lieSwitchMinRoll:
+                SHOT_CRAFT_LIE_SWITCH_MIN_ROLL,
+            },
+            counts: {
+              ...state.hole
+                .shotCraftCounts,
+            },
+            events:
+              state.hole.shotCraftEvents.map(
+                (event) => ({
+                  ...event,
+                }),
+              ),
+            newDiscoveriesThisRun:
+              state.hole.shotCraftEvents
+                .filter(
+                  (event) =>
+                    event.newDiscovery,
+                )
+                .map(
+                  (event) =>
+                    event.id,
+                ),
+            persistentBook: {
+              discovered:
+                state.career.shotCraftBook.slice(),
+              progress:
+                state.career.shotCraftBook.length,
+              available:
+                SHOT_CRAFT_BOOK.length,
+              complete:
+                shotCraftBookComplete(),
+            },
+            practiceAwards: false,
+            scoringEffect:
+              "Delivery chain only; Joe diversion timing and lure strength are unchanged.",
+          },
           practiceDrill: {
             active:
               practiceDrillActive(),
@@ -38455,6 +45537,72 @@
                   ),
                 }
               : null,
+            preview:
+              state.hole.ballAim.preview
+                ? {
+                    impact: {
+                      x: Math.round(
+                        state.hole.ballAim
+                          .preview.impact.x,
+                      ),
+                      y: Math.round(
+                        state.hole.ballAim
+                          .preview.impact.y,
+                      ),
+                    },
+                    rest: {
+                      x: Math.round(
+                        state.hole.ballAim
+                          .preview.target.x,
+                      ),
+                      y: Math.round(
+                        state.hole.ballAim
+                          .preview.target.y,
+                      ),
+                    },
+                    impactSurface:
+                      state.hole.ballAim
+                        .preview.initialSurface
+                        .id,
+                    restSurface:
+                      state.hole.ballAim
+                        .preview.finalSurface
+                        .id,
+                    outcome:
+                      state.hole.ballAim
+                        .preview.outcomeLabel,
+                    lure:
+                      state.hole.ballAim
+                        .preview.lureLabel,
+                    lureMultiplier: Number(
+                      state.hole.ballAim
+                        .preview.lureMultiplier.toFixed(
+                          2,
+                        ),
+                    ),
+                    rollDistance: Number(
+                      state.hole.ballAim
+                        .preview.distance.toFixed(
+                          2,
+                        ),
+                    ),
+                    blockedBy:
+                      state.hole.ballAim
+                        .preview.blockedBy?.id ||
+                      state.hole.ballAim
+                        .preview.boundary ||
+                      null,
+                    shotCraft:
+                      state.hole.ballAim
+                        .craftPreview
+                        ? {
+                            ...state.hole
+                              .ballAim
+                              .craftPreview,
+                          }
+                        : null,
+                  }
+                : null,
             flight: state.hole.ballFlight
               ? {
                   target: {
@@ -38471,6 +45619,102 @@
                       state.hole.ballFlight.duration
                     ).toFixed(2),
                   ),
+                  plannedImpact: {
+                    x: Math.round(
+                      state.hole.ballFlight
+                        .shotPlan.impact.x,
+                    ),
+                    y: Math.round(
+                      state.hole.ballFlight
+                        .shotPlan.impact.y,
+                    ),
+                  },
+                  plannedRest: {
+                    x: Math.round(
+                      state.hole.ballFlight
+                        .shotPlan.target.x,
+                    ),
+                    y: Math.round(
+                      state.hole.ballFlight
+                        .shotPlan.target.y,
+                    ),
+                  },
+                  shotCraftPreview:
+                    state.hole.ballFlight
+                      .shotCraftPreview
+                      ? {
+                          ...state.hole
+                            .ballFlight
+                            .shotCraftPreview,
+                        }
+                      : null,
+                }
+              : null,
+            roll: state.hole.ballRoll
+              ? {
+                  impact: {
+                    x: Math.round(
+                      state.hole.ballRoll.start.x,
+                    ),
+                    y: Math.round(
+                      state.hole.ballRoll.start.y,
+                    ),
+                  },
+                  rest: {
+                    x: Math.round(
+                      state.hole.ballRoll.target.x,
+                    ),
+                    y: Math.round(
+                      state.hole.ballRoll.target.y,
+                    ),
+                  },
+                  progress: Number(
+                    (
+                      state.hole.ballRoll.elapsed /
+                      state.hole.ballRoll.duration
+                    ).toFixed(2),
+                  ),
+                  distance: Number(
+                    state.hole.ballRoll.distance.toFixed(
+                      2,
+                    ),
+                  ),
+                  outcome:
+                    state.hole.ballRoll.outcomeLabel,
+                  lure:
+                    state.hole.ballRoll.lureLabel,
+                  lureMultiplier: Number(
+                    state.hole.ballRoll.lureMultiplier.toFixed(
+                      2,
+                    ),
+                  ),
+                  impactSurface:
+                    state.hole.ballRoll
+                      .initialSurface.id,
+                  restSurface:
+                    state.hole.ballRoll
+                      .finalSurface.id,
+                  surfaces:
+                    state.hole.ballRoll
+                      .surfaceSequence,
+                  blockedBy:
+                    state.hole.ballRoll
+                      .blockedBy?.id ||
+                    state.hole.ballRoll.boundary ||
+                    null,
+                  reducedMotionBounce:
+                    state.reducedMotion
+                      ? "suppressed"
+                      : "damped",
+                  shotCraftPreview:
+                    state.hole.ballRoll
+                      .shotCraftPreviewAtCommit
+                      ? {
+                          ...state.hole
+                            .ballRoll
+                            .shotCraftPreviewAtCommit,
+                        }
+                      : null,
                 }
               : null,
             distractionTarget:
@@ -38613,6 +45857,42 @@
               state.hole.turfMarks.filter(
                 (mark) => mark.kind === "mowed",
               ).length,
+            livingRoadmap: {
+              totalCutMeters: Number(
+                state.hole.livingRoadmap
+                  .totalCutMeters.toFixed(1),
+              ),
+              activeLaneMeters: Number(
+                state.hole.livingRoadmap
+                  .activeLaneMeters.toFixed(1),
+              ),
+              longestLaneMeters: Number(
+                state.hole.livingRoadmap
+                  .longestLaneMeters.toFixed(1),
+              ),
+              laneCount:
+                state.hole.livingRoadmap
+                  .laneId,
+              sectionsPublished:
+                state.hole.livingRoadmap
+                  .sectionsPublished,
+              sectionMeters:
+                LIVING_ROADMAP_SECTION_METERS,
+              playerOnCut:
+                state.hole.livingRoadmap
+                  .playerOnCut,
+              playerEntries:
+                state.hole.livingRoadmap
+                  .playerEntries,
+              playerSpeedMultiplier:
+                LIVING_ROADMAP_SPEED_MULTIPLIER,
+              traversalTradeoff:
+                "cut lanes are 8% faster and quieter but remove rough concealment",
+              persistence:
+                "Joe's bounded cut network remains for the run and visibly rewrites rough traversal",
+              mapPresentation:
+                "continuous freshness-colored cut segments with latest-direction arrow",
+            },
             freshTracks:
               state.hole.turfMarks.filter(
                 (mark) => mark.kind === "track",
@@ -39320,6 +46600,21 @@
               floodlightPower().toFixed(2),
             ),
             director: {
+              phase:
+                state.hole
+                  .tensionDirector
+                  .phase,
+              phaseSeconds: Number(
+                state.hole
+                  .tensionDirector
+                  .phaseSeconds.toFixed(
+                    2,
+                  ),
+              ),
+              phaseChanges:
+                state.hole
+                  .tensionDirector
+                  .phaseChanges,
               pressure: Number(
                 state.hole
                   .tensionDirector
@@ -39360,6 +46655,182 @@
                 state.hole
                   .tensionDirector
                   .cancelledIntercepts,
+              omen:
+                state.hole
+                  .tensionDirector
+                  .omen
+                  ? {
+                      type:
+                        state.hole
+                          .tensionDirector
+                          .omen.type,
+                      x: Number(
+                        state.hole
+                          .tensionDirector
+                          .omen.x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        state.hole
+                          .tensionDirector
+                          .omen.y.toFixed(
+                            2,
+                          ),
+                      ),
+                      seconds: Number(
+                        state.hole
+                          .tensionDirector
+                          .omen.seconds.toFixed(
+                            2,
+                          ),
+                      ),
+                    }
+                  : null,
+              silentStalk:
+                state.hole
+                  .tensionDirector
+                  .silentStalk
+                  ? {
+                      phase:
+                        state.hole
+                          .tensionDirector
+                          .silentStalk
+                          .phase,
+                      seconds: Number(
+                        state.hole
+                          .tensionDirector
+                          .silentStalk
+                          .seconds.toFixed(
+                            2,
+                          ),
+                      ),
+                      telegraph:
+                        "engine_cough_then_grass_and_fog_tracking",
+                      gameplayEffect:
+                        "mower_audio_removed_only_joe_motion_and_detection_unchanged",
+                    }
+                  : null,
+              silentStalks:
+                state.hole
+                  .tensionDirector
+                  .silentStalkCount,
+              rearSightings:
+                state.hole
+                  .tensionDirector
+                  .rearSightingCount,
+              coverAudit:
+                state.hole
+                  .tensionDirector
+                  .coverAudit
+                  ? {
+                      phase:
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .phase,
+                      seconds: Number(
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .seconds.toFixed(
+                            2,
+                          ),
+                      ),
+                      shelterId:
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .shelterId,
+                      shelterLabel:
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .shelterLabel,
+                      reason:
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .reason,
+                      playerLeftBeforeArrival:
+                        state.hole
+                          .tensionDirector
+                          .coverAudit
+                          .playerLeftBeforeArrival,
+                      target: {
+                        x: Number(
+                          state.hole
+                            .tensionDirector
+                            .coverAudit.x.toFixed(
+                              2,
+                            ),
+                        ),
+                        y: Number(
+                          state.hole
+                            .tensionDirector
+                            .coverAudit.y.toFixed(
+                              2,
+                            ),
+                        ),
+                      },
+                    }
+                  : null,
+              coverAudits:
+                state.hole
+                  .tensionDirector
+                  .coverAuditCount,
+              shelterMemory: {
+                currentId:
+                  state.hole
+                    .shelterMemory
+                    .currentId,
+                currentLabel:
+                  state.hole
+                    .shelterMemory
+                    .currentLabel,
+                heldSeconds: Number(
+                  state.hole
+                    .shelterMemory
+                    .currentSeconds.toFixed(
+                      2,
+                    ),
+                ),
+                currentVisits:
+                  state.hole
+                    .shelterMemory
+                    .currentId
+                    ? state.hole
+                        .shelterMemory
+                        .visits[
+                          state.hole
+                            .shelterMemory
+                            .currentId
+                        ] || 0
+                    : 0,
+                auditedShelters:
+                  state.hole
+                    .shelterMemory
+                    .auditedShelters
+                    .slice(),
+                warnings:
+                  state.hole
+                    .shelterMemory
+                    .warnings,
+                investigations:
+                  state.hole
+                    .shelterMemory
+                    .investigations,
+                escapesBeforeArrival:
+                  state.hole
+                    .shelterMemory
+                    .escapesBeforeArrival,
+                lastOutcome:
+                  state.hole
+                    .shelterMemory
+                    .lastOutcome,
+                fairness:
+                  "third shelter use or 9.5 stationary seconds warns for 2.6 seconds before Joe physically searches the memorized location; leaving always remains possible",
+              },
               pendingIntercept:
                 state.hole
                   .tensionDirector
@@ -39389,7 +46860,139 @@
                     }
                   : null,
               rule:
-                "Long quiet stretches build course pressure; warned off-screen service-gate intercepts can move Joe ahead, while active pursuit and contact breaks suspend the director.",
+                "Quiet, warning, confrontation, and recovery phases share one horror budget. Warnings use truthful environmental omens; mower silence is telegraphed and changes audio only; repeated or prolonged shelter use receives a visible Cover Audit warning before Joe physically checks the memorized location; rear sightings are atmospheric; active pursuit suppresses unrelated flashes; contact breaks create protected recovery.",
+            },
+            predatorTactics: {
+              active:
+                state.hole
+                  .predatorTactics.active,
+              phase:
+                state.hole
+                  .predatorTactics.phase,
+              secondsRemaining:
+                Number(
+                  state.hole
+                    .predatorTactics
+                    .timer.toFixed(2),
+                ),
+              cooldownSeconds:
+                Number(
+                  state.hole
+                    .predatorTactics
+                    .cooldown.toFixed(
+                      2,
+                    ),
+                ),
+              target:
+                state.hole
+                  .predatorTactics.target
+                  ? {
+                      x: Number(
+                        state.hole
+                          .predatorTactics
+                          .target.x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        state.hole
+                          .predatorTactics
+                          .target.y.toFixed(
+                            2,
+                          ),
+                      ),
+                    }
+                  : null,
+              counts: {
+                courseIntercepts:
+                  state.hole
+                    .predatorTactics
+                    .interceptsObserved,
+                falseRetreats:
+                  state.hole
+                    .predatorTactics
+                    .falseRetreats,
+                coverShreds:
+                  state.hole
+                    .predatorTactics
+                    .coverShreds,
+                completions:
+                  state.hole
+                    .predatorTactics
+                    .completions,
+                cancellations:
+                  state.hole
+                    .predatorTactics
+                    .cancellations,
+              },
+              recent:
+                state.hole
+                  .predatorTactics
+                  .history.slice(),
+              fairness:
+                "Intercepts receive a service-gate warning; false retreats telegraph with a falling mower throttle; cover shredding announces the threatened rough and physically publishes Joe's normal persistent cut lane. Direct sight, sound, or point-blank contact cancels the special motion and restores ordinary pursuit.",
+            },
+            composure: {
+              value: Number(
+                state.hole
+                  .composure.value.toFixed(
+                    3,
+                  ),
+              ),
+              target: Number(
+                state.hole
+                  .composure.target.toFixed(
+                    3,
+                  ),
+              ),
+              state:
+                state.hole
+                  .composure.state,
+              lowest: Number(
+                state.hole
+                  .composure.lowest.toFixed(
+                    3,
+                  ),
+              ),
+              lowSeconds: Number(
+                state.hole
+                  .composure.lowSeconds.toFixed(
+                    2,
+                  ),
+              ),
+              shocks:
+                state.hole
+                  .composure.shocks,
+              recoveries:
+                state.hole
+                  .composure.recoveries,
+              gameplayEffect:
+                "presentation_and_heartbeat_only_no_input_or_speed_penalty",
+            },
+            zoneSetPiece: {
+              active:
+                state.hole
+                  .zoneSetPiece.active,
+              secondsRemaining:
+                Number(
+                  state.hole
+                    .zoneSetPiece.timer.toFixed(
+                      2,
+                    ),
+                ),
+              triggered:
+                state.hole
+                  .zoneSetPiece
+                  .triggered.slice(),
+              counts:
+                state.hole
+                  .zoneSetPiece
+                  .counts.slice(),
+              total:
+                state.hole
+                  .zoneSetPiece.total,
+              gameplayEffect:
+                "authored_atmospheric_identity_only_no_collision_or_detection_change",
             },
             horrorDirector: {
               intensity: Number(
@@ -39430,8 +47033,45 @@
                       ),
                       collision:
                         "none_peripheral_hallucination",
+                      art:
+                        "dedicated_imagegen_shadow_joe_sprite",
                     }
                   : null,
+              activeVisualFlash:
+                state.hole
+                  .horrorDirector
+                  .visualFlash
+                  ? {
+                      type:
+                        state.hole
+                          .horrorDirector
+                          .visualFlash.type,
+                      seconds: Number(
+                        state.hole
+                          .horrorDirector
+                          .visualFlash.seconds.toFixed(
+                            2,
+                          ),
+                      ),
+                      art:
+                        state.hole
+                          .horrorDirector
+                          .visualFlash.type ===
+                        "joe_flash"
+                          ? "dedicated_imagegen_joe_flash_alpha_v2"
+                          : "dedicated_imagegen_course_tear_alpha_v2",
+                      gameplayEffect:
+                        "none_visual_intrusion_only",
+                    }
+                  : null,
+              nextVisualFlashSeconds:
+                Number(
+                  state.hole
+                    .horrorDirector
+                    .visualFlashTimer.toFixed(
+                      2,
+                    ),
+                ),
               fogSurgeSeconds: Number(
                 state.hole
                   .horrorDirector
@@ -39459,9 +47099,21 @@
                   state.hole
                     .horrorDirector
                     .lightFailureCount,
+                visualFlashes:
+                  state.hole
+                    .horrorDirector
+                    .visualFlashCount,
+                joeFlashes:
+                  state.hole
+                    .horrorDirector
+                    .joeFlashCount,
+                courseTears:
+                  state.hole
+                    .horrorDirector
+                    .courseTearCount,
               },
               fairness:
-                "Apparitions never collide; fog remains behind entities; light failures lower exposure while objective markers and HUD stay fully rendered.",
+                "Apparitions and visual flashes never collide or change detection; fog remains behind entities; light failures lower exposure while objective markers and HUD stay fully rendered. Visual flashes use a long cooldown, never strobe rapidly, and Reduced Camera Motion removes slice displacement.",
             },
             zoneVisits:
               state.hole.zoneVisits.slice(),
@@ -39627,6 +47279,18 @@
               transparentSourceMarginsRemoved:
                 true,
             },
+            twoWayCover: {
+              minimumVisualHeightMeters:
+                SIGHT_COVER_MIN_HEIGHT_METERS,
+              footprintWidthMultiplier:
+                SIGHT_COVER_FOOTPRINT_WIDTH,
+              nearOcclusionDistanceMeters:
+                SIGHT_COVER_OCCLUSION_DISTANCE,
+              rule:
+                "every_drawn_sight_blocker_reaches_camera_cover_height_and_its_authored_collision_footprint_so_it_can_obscure_joe_and_the_player",
+              navigationProtection:
+                "collision_footprints_route_ribbon_interaction_markers_and_map_remain_authoritative_when_cover_fills_the_view",
+            },
             firstPersonGuidance: {
               worldRibbon: true,
               fairwayEdgeStakes:
@@ -39657,6 +47321,35 @@
                 state.hole
                   .navigationGuide
                   .path.length,
+              nextWaypoint:
+                state.hole
+                  .navigationGuide
+                  .path.length > 0
+                  ? {
+                      x: Number(
+                        state.hole
+                          .navigationGuide
+                          .path[0].x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        state.hole
+                          .navigationGuide
+                          .path[0].y.toFixed(
+                            2,
+                          ),
+                      ),
+                      distance: Number(
+                        worldDistance(
+                          state.player,
+                          state.hole
+                            .navigationGuide
+                            .path[0],
+                        ).toFixed(2),
+                      ),
+                    }
+                  : null,
               approach:
                 state.hole
                   .navigationGuide
@@ -39821,6 +47514,30 @@
               },
               {
                 id:
+                  "rear_service_boundary",
+                depth:
+                  "rear_architectural_horizon",
+                source:
+                  "dedicated_imagegen_alpha_panorama",
+                activeBlend: Number(
+                  lookBackView()
+                    .amount.toFixed(3),
+                ),
+                landmarks: [
+                  "locked_service_gate",
+                  "guard_kiosk",
+                  "irrigation_pipes",
+                  "utility_sheds",
+                  "insurance_annex",
+                  "security_lamps",
+                ],
+                motion:
+                  state.reducedMotion
+                    ? "static_crossfade"
+                    : "reverse_parallax_crossfade",
+              },
+              {
+                id:
                   "distant_villas",
                 depth:
                   "horizon_architecture",
@@ -39893,6 +47610,8 @@
                   BUNKER_SAND_ZONES.length,
                 projection:
                   "authoritative_terrain_zone_with_irregular_alpha_silhouette",
+                atlasIsolation:
+                  "measured_alpha_bounds_with_non_overlapping_gutters",
                 detailLayers: [
                   "ground_contact_shadow",
                   "authored_sod_lip",
@@ -39947,7 +47666,32 @@
                 "floating_key_icon",
                 "floating_sprinkler_icon",
                 "procedural_recoverable_golf_ball",
+                "practice_field_test_bell",
+                "sprint_review_checkpoint_chime",
+                "shed_final_filing_terminal",
+                "drain_release_control",
+                "joe_mower_cut_strips",
+                "rough_shoe_tracks",
+                "wet_shoe_tracks",
+                "bunker_shoe_tracks",
+                "golf_divots",
               ],
+              functionalMechanicsArt: {
+                source:
+                  "rough-cut-course-mechanics-atlas-v1.png",
+                variants:
+                  COURSE_MECHANIC_CELLS.length,
+                grounding:
+                  "world_projected_base_contact_with_interaction_overlay",
+              },
+              terrainEvidenceArt: {
+                source:
+                  "rough-cut-turf-evidence-atlas-v1.png",
+                variants:
+                  TURF_EVIDENCE_CELLS.length,
+                rendering:
+                  "depth_scaled_authored_decals_with_age_variants",
+              },
             },
           },
           horrorEffects: {
@@ -39998,6 +47742,23 @@
               purpose:
                 "ground shockwaves reveal mower direction and escalation before Joe is fully visible",
             },
+            mowerHeadlight: {
+              active:
+                worldDistance(
+                  state.hole.joe,
+                  state.player,
+                ) < 168 &&
+                joeVisibleInCourseView(),
+              mode:
+                state.hole.joe.mode,
+              tactic:
+                state.hole
+                  .predatorTactics.active,
+              compositing:
+                "screen_blended_fog_volume_behind_world_entities",
+              purpose:
+                "reveals Joe's approach and committed lane before his full sprite is readable",
+            },
             playerBreath: {
               active:
                 [
@@ -40020,6 +47781,8 @@
             },
             spectralFigures: {
               placements: 5,
+              art:
+                "dedicated_imagegen_shadow_joe_sprite",
               collision:
                 "none_atmospheric_only",
               vanishRangeMeters: 34,
@@ -40082,6 +47845,35 @@
                 state.reducedMotion
                   ? "static_directional_edge_wash"
                   : "directional_mower_wash_with_restrained_chromatic_interference",
+            },
+            horrorVisualFlashes: {
+              assets: [
+                "dedicated_imagegen_joe_flash_alpha_v2",
+                "dedicated_imagegen_course_tear_alpha_v2",
+              ],
+              compositing:
+                "soft_black_chroma_key_alpha_over_live_world",
+              environmentVisibility:
+                "transparent_negative_space_preserves_course_navigation",
+              cadence:
+                "intensity_weighted_random_10.5_to_24.5_second_cooldown",
+              maximumDurationSeconds:
+                state.reducedMotion
+                  ? 0.48
+                  : 0.64,
+              protectedLayers: [
+                "hud",
+                "course_map",
+                "objective_text",
+                "interaction_prompts",
+                "crosshair",
+              ],
+              reducedMotion:
+                state.reducedMotion
+                  ? "static_low_alpha_art_without_slice_displacement"
+                  : "three_step_world_slice_displacement_with_single_fade_envelope",
+              gameplayEffect:
+                "none_atmospheric_only",
             },
           },
           deadGreenLayers: {
@@ -40474,7 +48266,7 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       keyboard: {
@@ -40482,13 +48274,13 @@
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
         result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; hold R3 to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
         result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
       },
@@ -40496,7 +48288,7 @@
         gate: "Tap to begin",
         intro: "Tap to skip",
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
-        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
         result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
@@ -40557,14 +48349,19 @@
   farRidgeArt.addEventListener("load", render);
   distantVillasArt.addEventListener("load", render);
   estatePerimeterArt.addEventListener("load", render);
+  rearServiceBoundaryArt.addEventListener("load", render);
   signageAtlasArt.addEventListener("load", render);
   bunkerAtlasArt.addEventListener("load", render);
   joeMowerArt.addEventListener("load", render);
   joeMowerAnimatedArt.addEventListener("load", render);
   joeMowerErraticHeadArt.addEventListener("load", render);
+  shadowJoeArt.addEventListener("load", render);
+  horrorFlashJoeArt.addEventListener("load", render);
+  screenTearCourseArt.addEventListener("load", render);
   fieldKitArt.addEventListener("load", render);
   courseObstacleArt.addEventListener("load", render);
   expandedCourseArt.addEventListener("load", render);
+  hedgeTunnelArt.addEventListener("load", render);
   maintenanceShedArt.addEventListener("load", render);
   hedgeHideArt.addEventListener("load", render);
   stoneCoverArt.addEventListener("load", render);
@@ -40587,6 +48384,22 @@
     "load",
     render,
   );
+  function primeHorrorOverlay(image) {
+    if (
+      image.complete &&
+      image.naturalWidth > 0
+    ) {
+      cachedHorrorOverlay(image);
+      return;
+    }
+    image.addEventListener(
+      "load",
+      () => cachedHorrorOverlay(image),
+      { once: true },
+    );
+  }
+  primeHorrorOverlay(horrorFlashJoeArt);
+  primeHorrorOverlay(screenTearCourseArt);
   const atlasPrimeQueue = [];
   let atlasPrimeScheduled = false;
 
@@ -40689,6 +48502,30 @@
   scheduleAtlasCachePriming(
     bunkerAtlasArt,
     BUNKER_ATLAS_SOURCES,
+  );
+  scheduleAtlasCachePriming(
+    pathLanternArt,
+    PATH_LANTERN_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    signageAtlasArt,
+    SIGNAGE_ATLAS_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    courseMechanicsArt,
+    COURSE_MECHANIC_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    turfEvidenceArt,
+    TURF_EVIDENCE_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    joeMowerAnimatedArt,
+    JOE_ANIMATION_FRAME_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    joeMowerErraticHeadArt,
+    JOE_ANIMATION_FRAME_CELLS,
   );
   requestAnimationFrame(frame);
 })();
