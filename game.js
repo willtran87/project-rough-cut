@@ -62,6 +62,8 @@
     cameraFrame: null,
     threat: null,
     locomotion: null,
+    blockerCallouts: null,
+    worldContextCue: null,
   };
   const layeredCourseEntities = [];
   let layeredCourseEntityCount = 0;
@@ -919,6 +921,8 @@
     4.4;
   const CROSSWIND_WARNING_SECONDS = 1.35;
   const CROSSWIND_ACTIVE_SECONDS = 4.4;
+  const CROSSWIND_ACTIVE_BRIEF_SECONDS = 1.7;
+  const CROSSWIND_REWARD_HANDOFF_SECONDS = 1.25;
   const CROSSWIND_NOISE_MULTIPLIER = 0.42;
   const CROSSWIND_RUN_DISTANCE = 30;
   const CROSSWIND_RUN_BONUS = 90;
@@ -1008,10 +1012,12 @@
     120;
   const CUT_TRACE_SCAN_SECONDS = 0.55;
   const CUT_TRACE_MEMORY_SECONDS = 6;
+  const CUT_TRACE_HANDOFF_SECONDS = 1.45;
   const MAX_LOGGED_CUT_TRACES = 12;
   const COUNTER_ROUTE_DISTANCE = 12;
   const COUNTER_ROUTE_ALIGNMENT = 0.62;
   const COUNTER_ROUTE_QUIET_SECONDS = 3.2;
+  const COUNTER_ROUTE_HANDOFF_SECONDS = 1.25;
   const COUNTER_ROUTE_BONUS = 95;
   const BLINDSIDE_TRANSFER_DISTANCE = 14;
   const BLINDSIDE_TRANSFER_WINDOW = 5.5;
@@ -1026,11 +1032,13 @@
   const NERVE_HOLD_COOLDOWN = 11;
   const NERVE_HOLD_BONUS = 105;
   const NERVE_EXIT_WINDOW_SECONDS = 4.4;
+  const NERVE_EXIT_HANDOFF_SECONDS = 1.25;
   const LISTENING_SEARCH_READ_MAX_DISTANCE = 126;
   const CADENCE_READ_SECONDS = 1.25;
   const CADENCE_READ_MIN_JOE_DISTANCE = 34;
   const CADENCE_READ_MAX_JOE_DISTANCE = 118;
   const CADENCE_FORECAST_SECONDS = 7;
+  const CADENCE_FORECAST_HANDOFF_SECONDS = 2.45;
   const CADENCE_READ_COOLDOWN = 9;
   const CADENCE_READ_BONUS = 90;
   const TENSION_DIRECTOR_GRACE_SECONDS = 8;
@@ -1060,6 +1068,10 @@
   const MAX_PLAYER_GROUND_RESPONSES = 18;
   const COURSE_ECHO_SAMPLE_SECONDS = 0.4;
   const MAX_COURSE_ECHO_SAMPLES = 360;
+  const COURSE_ECHO_NEAR_TIE_SECONDS = 0.35;
+  const COURSE_ECHO_FINAL_SPRINT_SECONDS = 8;
+  const COURSE_ECHO_FINAL_SPRINT_PACE_SECONDS = 2.5;
+  const COURSE_ECHO_FINISH_CARD_SECONDS = 3.2;
   const SPRINKLER_SOAK_SECONDS = 24;
   const WET_MOWER_SPEED_MULTIPLIER = 0.68;
   const SAND_PLAYER_SPEED_MULTIPLIER = 0.72;
@@ -1222,6 +1234,56 @@
       cue: "RELEASE CORRIDOR — both exits are close. Narrow lanes. Keep moving.",
     },
   ];
+
+  function holeMessageForPresentation() {
+    const hole = state.hole;
+    if (!hole || hole.messageTimer <= 0) {
+      return "";
+    }
+    const zone = courseZoneAt(
+      state.player.y,
+    );
+    if (
+      hole.zoneBannerTimer > 0 &&
+      activeHudPresentationFocus() ===
+        "zone_arrival" &&
+      hole.message === zone.cue
+    ) {
+      const dividerIndex =
+        hole.message.indexOf("—");
+      if (dividerIndex >= 0) {
+        const contextualCue =
+          hole.message
+          .slice(dividerIndex + 1)
+          .trim();
+        return contextualCue.length > 0
+          ? contextualCue[0].toUpperCase() +
+              contextualCue.slice(1)
+          : contextualCue;
+      }
+    }
+    return hole.message;
+  }
+
+  function fieldInteractionPromptOwnsBottomRail() {
+    const hole = state.hole;
+    return Boolean(
+      hole?.prompt &&
+      !hole.tutorialVisible &&
+      !hole.ballAim.active &&
+      !hole.ballFlight &&
+      !hole.ballRoll &&
+      !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing &&
+      !hole.statusRequest.active &&
+      !hole.blindsideTransfer &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
+      !emergencyAppealOwnsSignalLane() &&
+      !openingBriefingOwnsSignalLane(),
+    );
+  }
   const ZONE_SET_PIECES = [
     {
       id: "boundary_knock",
@@ -1504,6 +1566,73 @@
     { id: "release-clippings-east", type: 5, x: 104, y: 676, scale: 1.06 },
     { id: "release-bag-west", type: 1, x: -103, y: 704, scale: 0.96 },
   ];
+  const NOISE_HAZARD_TYPES = {
+    stones: {
+      type: 0,
+      label: "LOOSE TEE STONES",
+      impactLabel: "STONES KICKED LOOSE",
+      radius: 4.8,
+      baseSeconds: 3.8,
+      tone: "stone",
+    },
+    bag: {
+      type: 1,
+      label: "TOPPLED GOLF BAG",
+      impactLabel: "CLUBS CLATTER",
+      radius: 5.4,
+      baseSeconds: 4.7,
+      tone: "clubs",
+    },
+    hose: {
+      type: 2,
+      label: "LOOSE HOSE COUPLING",
+      impactLabel: "COUPLING STRIKES TURF",
+      radius: 5.2,
+      baseSeconds: 4.1,
+      tone: "coupling",
+    },
+    balls: {
+      type: 3,
+      label: "SPILLED RANGE BALLS",
+      impactLabel: "GOLF BALLS SCATTER",
+      radius: 5.8,
+      baseSeconds: 5.1,
+      tone: "balls",
+    },
+    tools: {
+      type: 4,
+      label: "MAINTENANCE TOOLS",
+      impactLabel: "TOOLS HIT THE GROUND",
+      radius: 5,
+      baseSeconds: 4.9,
+      tone: "tools",
+    },
+    flag: {
+      type: 5,
+      label: "BROKEN FLAG CUP",
+      impactLabel: "FLAG CUP SNAPS BACK",
+      radius: 4.6,
+      baseSeconds: 4.3,
+      tone: "flag",
+    },
+  };
+  const COURSE_NOISE_HAZARDS = [
+    { id: "tee-spill", kind: "balls", x: -12, y: 62, scale: 0.9 },
+    { id: "audit-tools", kind: "tools", x: 4, y: 139, scale: 0.92 },
+    { id: "audit-bag", kind: "bag", x: 32, y: 172, scale: 0.86 },
+    { id: "water-hose", kind: "hose", x: -16, y: 214, scale: 0.9 },
+    { id: "water-balls", kind: "balls", x: -38, y: 254, scale: 0.84 },
+    { id: "club-tools", kind: "tools", x: 10, y: 332, scale: 0.9 },
+    { id: "service-stones", kind: "stones", x: 8, y: 392, scale: 0.82 },
+    { id: "service-bag", kind: "bag", x: -30, y: 444, scale: 0.84 },
+    { id: "dead-coupling", kind: "hose", x: -12, y: 522, scale: 0.86 },
+    { id: "range-balls", kind: "balls", x: 26, y: 574, scale: 0.9 },
+    { id: "range-tools", kind: "tools", x: -30, y: 608, scale: 0.86 },
+    { id: "release-bag", kind: "bag", x: 7, y: 662, scale: 0.88 },
+  ].map((hazard) => ({
+    ...hazard,
+    ...NOISE_HAZARD_TYPES[hazard.kind],
+  }));
   const COURSE_VERGE_CELLS = [
     {
       x: 0,
@@ -1841,6 +1970,29 @@
       accent: "#77b9aa",
     },
   ];
+
+  function freshNoiseHazardState() {
+    const hazards = {};
+    for (
+      let index = 0;
+      index <
+        COURSE_NOISE_HAZARDS.length;
+      index += 1
+    ) {
+      hazards[
+        COURSE_NOISE_HAZARDS[
+          index
+        ].id
+      ] = {
+        triggered: false,
+        warned: false,
+        triggeredAt: null,
+        source: null,
+        intensity: 0,
+      };
+    }
+    return hazards;
+  }
 
   function freshStatusRequest(
     variant,
@@ -2184,6 +2336,7 @@
       totalMaskedDistance: 0,
       windRuns: 0,
       awardGiven: false,
+      presentationTimer: 0,
       lastTravelDistance: 0,
       lastOutcome: null,
     };
@@ -2741,6 +2894,13 @@
       },
       distraction: null,
       distractionTimer: 0,
+      noiseHazards:
+        freshNoiseHazardState(),
+      activeNoiseHazard: null,
+      noiseHazardsTriggered: 0,
+      noiseHazardsStepped: 0,
+      noiseHazardsTriggeredByBall: 0,
+      noiseHazardTutorialSeen: false,
       sprinklerUsed: false,
       sprinklerSoakTimer: 0,
       wetTrapCount: 0,
@@ -2870,6 +3030,7 @@
       cutTraceLocks: 0,
       cutTraceLoggedIds: [],
       cutTraceCueCooldown: 0,
+      cutTracePresentationTimer: 0,
       counterRoutes: 0,
       counterRouteQuietTimer: 0,
       blindsideTransfers: 0,
@@ -3425,6 +3586,637 @@
       return "ECHO  EVEN";
     }
     return `ECHO  ${Math.abs(echo.paceDelta).toFixed(1)}s ${echo.ahead ? "AHEAD" : "BEHIND"}`;
+  }
+
+  function courseEchoComparisonState() {
+    const echo = currentCourseEcho();
+    if (!echo?.position) {
+      return null;
+    }
+    const distance = worldDistance(
+      state.player,
+      echo.position,
+    );
+    const direction =
+      guidanceDirection(
+        echo.position,
+      );
+    const point = worldToScreen(
+      echo.position.x,
+      echo.position.y,
+    );
+    const onScreen =
+      point.visible &&
+      point.x > 24 &&
+      point.x < WIDTH - 24;
+    const contextCue =
+      worldContextCueState();
+    const rearCue =
+      rearNavigationCueState();
+    const focus =
+      activeHudPresentationFocus();
+    const projection =
+      state.hole.liveProjection ||
+      calculateRunResult(
+        echo.record.route,
+      );
+    const projectedScore =
+      projection.score;
+    const scoreDelta =
+      projectedScore -
+      echo.record.score;
+    const resultState =
+      scoreDelta > 0
+        ? "score_ahead"
+        : scoreDelta < 0
+          ? "score_behind"
+          : Math.abs(
+                echo.paceDelta,
+              ) < 0.01
+            ? "score_tied"
+            : echo.ahead
+              ? "tiebreak_ahead"
+              : "tiebreak_behind";
+    const projectedRecordBeating =
+      scoreDelta > 0 ||
+      (
+        scoreDelta === 0 &&
+        echo.ahead
+      );
+    const recordSecondsRemaining =
+      Math.max(
+        0,
+        echo.record.timeSeconds -
+          state.hole.elapsed,
+      );
+    const recordFinishAge =
+      Math.max(
+        0,
+        state.hole.elapsed -
+          echo.record.timeSeconds,
+      );
+    const nearTie =
+      !echo.finished &&
+      state.hole.elapsed > 2 &&
+      Math.abs(echo.paceDelta) <=
+        COURSE_ECHO_NEAR_TIE_SECONDS;
+    const finalSprint =
+      !echo.finished &&
+      recordSecondsRemaining <=
+        COURSE_ECHO_FINAL_SPRINT_SECONDS &&
+      Math.abs(echo.paceDelta) <=
+        COURSE_ECHO_FINAL_SPRINT_PACE_SECONDS;
+    const finishSettled =
+      echo.finished &&
+      recordFinishAge >
+        COURSE_ECHO_FINISH_CARD_SECONDS;
+    const racePhase =
+      echo.finished
+        ? "echo_finished"
+        : finalSprint && nearTie
+          ? "photo_finish"
+          : finalSprint
+            ? "final_sprint"
+            : nearTie
+              ? "near_tie"
+              : "race";
+    let deferredBy = null;
+    if (focus !== "field") {
+      deferredBy = focus;
+    } else if (
+      rearNavigationCueVisible(
+        rearCue,
+      )
+    ) {
+      deferredBy =
+        "rear_navigation";
+    } else if (
+      contextCue.kind === "noise" &&
+      contextCue.distance <= 8
+    ) {
+      deferredBy =
+        "imminent_hazard";
+    } else if (finishSettled) {
+      deferredBy =
+        "record_finished";
+    }
+    return {
+      active: true,
+      route: echo.record.route,
+      position: {
+        x: echo.position.x,
+        y: echo.position.y,
+      },
+      distance,
+      direction,
+      paceDelta: echo.paceDelta,
+      pace:
+        Math.abs(echo.paceDelta) < 0.15
+          ? "even"
+          : echo.ahead
+            ? "ahead"
+            : "behind",
+      finished: echo.finished,
+      racePhase,
+      nearTie,
+      finalSprint,
+      recordScore: echo.record.score,
+      projectedScore,
+      projectedGrade:
+        projection.grade,
+      projectionRoute:
+        projection.route,
+      scoreDelta,
+      resultState,
+      projectedRecordBeating,
+      recordSecondsRemaining,
+      recordFinishAge,
+      finishCardSecondsRemaining:
+        echo.finished
+          ? Math.max(
+              0,
+              COURSE_ECHO_FINISH_CARD_SECONDS -
+                recordFinishAge,
+            )
+          : 0,
+      onScreen,
+      worldMarkerLabelVisible:
+        onScreen &&
+        !finishSettled &&
+        (
+          state.hole.focus ||
+          distance < 55
+        ),
+      fieldCardVisible:
+        deferredBy === null,
+      deferredBy,
+    };
+  }
+
+  function courseEchoComparisonSummary() {
+    const comparison =
+      courseEchoComparisonState();
+    if (!comparison) {
+      return null;
+    }
+    return {
+      active: comparison.active,
+      route: comparison.route,
+      position: {
+        x: Number(
+          comparison.position.x.toFixed(
+            2,
+          ),
+        ),
+        y: Number(
+          comparison.position.y.toFixed(
+            2,
+          ),
+        ),
+      },
+      distance: Number(
+        comparison.distance.toFixed(2),
+      ),
+      direction: comparison.direction,
+      paceDeltaSeconds: Number(
+        comparison.paceDelta.toFixed(2),
+      ),
+      pace: comparison.pace,
+      finished: comparison.finished,
+      racePhase: comparison.racePhase,
+      nearTie: comparison.nearTie,
+      finalSprint:
+        comparison.finalSprint,
+      recordScore:
+        comparison.recordScore,
+      projectedScore:
+        comparison.projectedScore,
+      projectedGrade:
+        comparison.projectedGrade,
+      projectionRoute:
+        comparison.projectionRoute,
+      scoreDelta:
+        comparison.scoreDelta,
+      resultState:
+        comparison.resultState,
+      projectedRecordBeating:
+        comparison.projectedRecordBeating,
+      recordSecondsRemaining: Number(
+        comparison.recordSecondsRemaining.toFixed(
+          2,
+        ),
+      ),
+      recordFinishAgeSeconds: Number(
+        comparison.recordFinishAge.toFixed(
+          2,
+        ),
+      ),
+      finishCardSecondsRemaining:
+        Number(
+          comparison.finishCardSecondsRemaining.toFixed(
+            2,
+          ),
+        ),
+      onScreen: comparison.onScreen,
+      worldMarkerLabelVisible:
+        comparison.worldMarkerLabelVisible,
+      fieldCardVisible:
+        comparison.fieldCardVisible,
+      deferredBy:
+        comparison.deferredBy,
+    };
+  }
+
+  function courseEchoResultAdjudication(
+    result,
+  ) {
+    if (
+      !result ||
+      result.echoScore === null ||
+      result.echoTimeDelta === null
+    ) {
+      return null;
+    }
+    const scoreDelta =
+      result.score - result.echoScore;
+    const timeDelta =
+      result.echoTimeDelta;
+    const timeRelation =
+      timeDelta < 0
+        ? "faster"
+        : timeDelta > 0
+          ? "slower"
+          : "tied";
+    if (scoreDelta > 0) {
+      return {
+        outcome: "overtaken",
+        basis: "score",
+        recordScore: result.echoScore,
+        scoreDelta,
+        timeDeltaSeconds: timeDelta,
+        timeRelation,
+        headline:
+          `ECHO OVERTAKEN // SCORE +${scoreDelta}`,
+        detail:
+          `SCORE DECIDES // PACE ${Math.abs(timeDelta).toFixed(1)}s ${timeDelta <= 0 ? "AHEAD" : "BEHIND"}`,
+        color: "#83d3b7",
+      };
+    }
+    if (scoreDelta < 0) {
+      return {
+        outcome: "held",
+        basis: "score",
+        recordScore: result.echoScore,
+        scoreDelta,
+        timeDeltaSeconds: timeDelta,
+        timeRelation,
+        headline:
+          `ECHO HOLDS // SCORE -${Math.abs(scoreDelta)}`,
+        detail:
+          `SCORE DECIDES // PACE ${Math.abs(timeDelta).toFixed(1)}s ${timeDelta <= 0 ? "AHEAD" : "BEHIND"}`,
+        color: "#df9864",
+      };
+    }
+    if (timeDelta < 0) {
+      return {
+        outcome: "overtaken",
+        basis: "time_tiebreak",
+        recordScore: result.echoScore,
+        scoreDelta: 0,
+        timeDeltaSeconds: timeDelta,
+        timeRelation,
+        headline:
+          "ECHO OVERTAKEN // SCORE TIED",
+        detail:
+          `${Math.abs(timeDelta).toFixed(2)}s FASTER // TIME TIEBREAK`,
+        color: "#83d3b7",
+      };
+    }
+    if (timeDelta > 0) {
+      return {
+        outcome: "held",
+        basis: "time_tiebreak",
+        recordScore: result.echoScore,
+        scoreDelta: 0,
+        timeDeltaSeconds: timeDelta,
+        timeRelation,
+        headline:
+          "ECHO HOLDS // SCORE TIED",
+        detail:
+          `${Math.abs(timeDelta).toFixed(2)}s SLOWER // TIME TIEBREAK`,
+        color: "#df9864",
+      };
+    }
+    return {
+      outcome: "matched",
+      basis: "exact_tie",
+      recordScore: result.echoScore,
+      scoreDelta: 0,
+      timeDeltaSeconds: 0,
+      timeRelation,
+      headline:
+        "ECHO MATCHED // EXACT TIE",
+      detail:
+        "SCORE + TIME IDENTICAL // RECORD HOLDS",
+      color: "#d6ca91",
+    };
+  }
+
+  function courseEchoResultTimeCopy(
+    result,
+    adjudication,
+  ) {
+    if (!adjudication) {
+      return formatRunTime(
+        result.timeSeconds,
+      );
+    }
+    if (
+      adjudication.basis ===
+        "time_tiebreak"
+    ) {
+      return `${formatRunTime(result.timeSeconds)} // ${Math.abs(adjudication.timeDeltaSeconds).toFixed(2)}s ${adjudication.timeRelation.toUpperCase()}`;
+    }
+    if (
+      adjudication.basis ===
+        "exact_tie"
+    ) {
+      return `${formatRunTime(result.timeSeconds)} // EXACT TIE`;
+    }
+    return `${formatRunTime(result.timeSeconds)} // PACE ${Math.abs(adjudication.timeDeltaSeconds).toFixed(1)}s ${adjudication.timeDeltaSeconds <= 0 ? "AHEAD" : "BEHIND"}`;
+  }
+
+  function drawCourseEchoComparison() {
+    const comparison =
+      courseEchoComparisonState();
+    if (
+      !comparison ||
+      !comparison.fieldCardVisible
+    ) {
+      return;
+    }
+    const panel = {
+      x: 36,
+      y: 151,
+      width: 318,
+      height: 59,
+    };
+    const accent =
+      comparison.scoreDelta < 0
+        ? "#df8e5f"
+        : comparison.racePhase ===
+        "photo_finish"
+        ? "#f0df9a"
+        : comparison.racePhase ===
+            "final_sprint"
+          ? "#e5a459"
+          : comparison.racePhase ===
+              "near_tie"
+            ? "#cddca2"
+            : comparison.racePhase ===
+                "echo_finished"
+              ? "#ddb36b"
+              : comparison.pace ===
+                  "ahead"
+                ? "#80dcc4"
+                : comparison.pace ===
+                    "behind"
+                  ? "#ddb36b"
+                  : "#cbd9c5";
+    const directionCopy =
+      comparison.direction ===
+        "BEAR LEFT"
+        ? "< LEFT"
+        : comparison.direction ===
+            "BEAR RIGHT"
+          ? "RIGHT >"
+          : comparison.direction ===
+              "TURN BACK"
+            ? "V BACK"
+            : "^ AHEAD";
+    const paceCopy =
+      comparison.scoreDelta === 0 &&
+      (
+        comparison.resultState ===
+          "tiebreak_ahead" ||
+        comparison.resultState ===
+          "tiebreak_behind"
+      )
+        ? `${Math.abs(
+            comparison.paceDelta,
+          ).toFixed(2)}s ${comparison.resultState === "tiebreak_ahead" ? "AHEAD" : "BEHIND"}`
+        : comparison.pace === "even"
+        ? "EVEN"
+        : `${Math.abs(
+            comparison.paceDelta,
+          ).toFixed(1)}s ${comparison.pace.toUpperCase()}`;
+    const scoreCopy =
+      comparison.scoreDelta > 0
+        ? `FILE +${comparison.scoreDelta}`
+        : comparison.scoreDelta < 0
+          ? `FILE -${Math.abs(
+              comparison.scoreDelta,
+            )}`
+          : comparison.resultState ===
+                "score_tied"
+            ? "FILE TIED"
+            : comparison.resultState ===
+                "tiebreak_ahead"
+              ? "TIEBREAK +"
+              : "TIEBREAK -";
+    const railLeft = panel.x + 16;
+    const railRight =
+      panel.x + panel.width - 16;
+    const railCenter =
+      (railLeft + railRight) * 0.5;
+    const railY = panel.y + 32;
+    const markerX =
+      railCenter +
+      clamp(
+        comparison.paceDelta / 6,
+        -1,
+        1,
+      ) *
+        (railRight - railLeft) *
+        0.48;
+    const emphasis =
+      comparison.racePhase ===
+          "photo_finish" ||
+        comparison.racePhase ===
+          "final_sprint"
+        ? state.reducedMotion
+          ? 1
+          : 0.76 +
+            (
+              Math.sin(
+                state.hole.elapsed * 9,
+              ) +
+              1
+            ) *
+              0.12
+        : 1;
+    const title =
+      comparison.racePhase ===
+        "echo_finished"
+        ? "COURSE ECHO // RECORD FILED"
+        : comparison.racePhase ===
+            "photo_finish"
+          ? "COURSE ECHO // TIME PHOTO FINISH"
+          : comparison.racePhase ===
+              "final_sprint"
+              ? "COURSE ECHO // TIME FINAL SPRINT"
+            : comparison.racePhase ===
+                "near_tie"
+              ? "COURSE ECHO // TIME DEAD EVEN"
+              : `COURSE ECHO // ${comparison.route.toUpperCase()} FILE`;
+    const status =
+      comparison.racePhase ===
+        "echo_finished"
+        ? `TARGET +${comparison.recordScore}`
+        : comparison.finalSprint
+          ? `FILES ${comparison.recordSecondsRemaining.toFixed(1)}s`
+          : paceCopy;
+    ctx.save();
+    ctx.fillStyle =
+      "rgba(2,10,7,0.91)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      accent,
+      2,
+    );
+    if (emphasis < 1) {
+      ctx.save();
+      ctx.globalAlpha = emphasis;
+      strokeRect(
+        panel.x + 4,
+        panel.y + 4,
+        panel.width - 8,
+        panel.height - 8,
+        accent,
+        1,
+      );
+      ctx.restore();
+    }
+    drawText(
+      title,
+      panel.x + 14,
+      panel.y + 18,
+      10,
+      accent,
+      "left",
+      true,
+    );
+    drawText(
+      status,
+      panel.x +
+        panel.width -
+        14,
+      panel.y + 18,
+      10,
+      accent,
+      "right",
+      true,
+    );
+    ctx.strokeStyle =
+      "rgba(158,184,151,0.38)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(railLeft, railY);
+    ctx.lineTo(railRight, railY);
+    ctx.stroke();
+    ctx.strokeStyle =
+      "rgba(218,227,208,0.72)";
+    ctx.beginPath();
+    ctx.moveTo(railCenter, railY - 4);
+    ctx.lineTo(railCenter, railY + 4);
+    ctx.stroke();
+    if (comparison.finished) {
+      ctx.fillStyle = accent;
+      ctx.globalAlpha = 0.58;
+      ctx.fillRect(
+        railLeft,
+        railY - 2,
+        (
+          railRight - railLeft
+        ) *
+          clamp(
+            comparison.finishCardSecondsRemaining /
+              COURSE_ECHO_FINISH_CARD_SECONDS,
+            0,
+            1,
+          ),
+        4,
+      );
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = accent;
+      ctx.fillRect(
+        Math.round(markerX) - 3,
+        railY - 3,
+        7,
+        7,
+      );
+    }
+    drawText(
+      comparison.finished
+        ? `RECORD +${comparison.recordScore} // REACH AN EXIT`
+        : `${directionCopy} // ${Math.ceil(
+            comparison.distance,
+          )}m FROM YOU`,
+      panel.x + 14,
+      panel.y + 51,
+      9,
+      "#d9e2d1",
+      "left",
+      true,
+    );
+    if (!comparison.finished) {
+      drawText(
+        scoreCopy,
+        panel.x +
+          panel.width -
+          14,
+        panel.y + 51,
+        9,
+        comparison.scoreDelta < 0
+          ? "#efad79"
+          : comparison.scoreDelta > 0
+            ? "#a5e1c3"
+            : "#e4dcae",
+        "right",
+        true,
+      );
+    }
+    drawText(
+      comparison.finished
+        ? "RECORD SET"
+        : "AHEAD",
+      railLeft,
+      panel.y + 42,
+      7,
+      "#638d7e",
+      "left",
+    );
+    drawText(
+      comparison.finished
+        ? "RUN LIVE"
+        : "BEHIND",
+      railRight,
+      panel.y + 42,
+      7,
+      "#8c744d",
+      "right",
+    );
+    ctx.restore();
   }
 
   function addCourseEchoSample(force = false) {
@@ -6753,13 +7545,18 @@
     drawMotes(state.time, 18, "212,156,66", HEIGHT * 0.1);
     ctx.fillStyle = "rgba(2,8,4,0.88)";
     ctx.fillRect(WIDTH * 0.28, HEIGHT * 0.34, WIDTH * 0.44, HEIGHT * 0.3);
-    const pulse = 0.72 + (Math.sin(state.time * 2.4) + 1) * 0.14;
+    const pulse = state.reducedMotion
+      ? 0.86
+      : 0.72 +
+        (Math.sin(state.time * 2.4) +
+          1) *
+          0.14;
     strokeRect(WIDTH * 0.28, HEIGHT * 0.34, WIDTH * 0.44, HEIGHT * 0.3, `rgba(222,113,39,${pulse})`, 3);
     drawText("ROUGH CUT", WIDTH * 0.5, HEIGHT * 0.44, 64, "#eef0d7", "center", true);
     drawText(
       inputCopy(
-        "CLICK / ENTER TO BEGIN INCIDENT",
-        "PRESS A TO BEGIN INCIDENT",
+        "CLICK / ENTER / SPACE TO BEGIN",
+        "A / START TO BEGIN INCIDENT",
         "TAP TO BEGIN INCIDENT",
       ),
       WIDTH * 0.5,
@@ -6822,7 +7619,16 @@
     );
     drawMotes(state.time, 20, "225,125,41", HEIGHT * 0.18);
 
-    const flash = windowEnvelope(state.time, 6.9, 7.45, 0.08) * 0.42;
+    const flash =
+      windowEnvelope(
+        state.time,
+        6.9,
+        7.45,
+        0.08,
+      ) *
+      (state.reducedMotion
+        ? 0.18
+        : 0.42);
     if (flash > 0) {
       ctx.fillStyle = `rgba(205,240,155,${flash})`;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -6845,8 +7651,8 @@
 
     drawText(
       inputCopy(
-        "SPACE / CLICK TO SKIP",
-        "A / B TO SKIP",
+        "ENTER / SPACE / ESC / CLICK TO SKIP",
+        "A / B / START TO SKIP",
         "TAP TO SKIP",
       ),
       WIDTH - 32,
@@ -7493,7 +8299,14 @@
 
     if (state.status.startsWith("CHANGE REJECTED:")) {
       drawText("CHANGE REJECTED:", 91, 622, 13, "#db8041", "left");
-      drawText("unauthorized presence in the rough.", 91, 643, 12, "#a7b29e", "left");
+      drawText(
+        state.status.slice("CHANGE REJECTED:".length).trim(),
+        91,
+        643,
+        12,
+        "#a7b29e",
+        "left",
+      );
     } else {
       drawText(MENU_DESCRIPTIONS[state.menuIndex], 91, 621, 13, "#d0d8bf", "left");
       drawText(
@@ -7606,7 +8419,7 @@
     } else {
       drawMenu();
     }
-    ctx.fillStyle = "rgba(0,0,0,0.76)";
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = {
       x: 150,
@@ -7628,6 +8441,14 @@
       panel.height,
       "#dc6c25",
       3,
+    );
+    strokeRect(
+      panel.x + 10,
+      panel.y + 10,
+      panel.width - 20,
+      panel.height - 20,
+      "#35492f",
+      1,
     );
     drawText(
       "KEY BINDINGS",
@@ -7836,12 +8657,20 @@
     } else {
       drawMenu();
     }
-    ctx.fillStyle = "rgba(0,0,0,0.74)";
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 150, y: 82, width: 980, height: 556 };
     ctx.fillStyle = "rgba(5,16,9,0.98)";
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#dc6c25", 3);
+    strokeRect(
+      panel.x + 10,
+      panel.y + 10,
+      panel.width - 20,
+      panel.height - 20,
+      "#35492f",
+      1,
+    );
     drawText("HOW TO SURVIVE", WIDTH * 0.5, 133, 34, "#eee8c9", "center", true);
     drawText("ACCEPTANCE CRITERIA // NIGHT SHIFT", WIDTH * 0.5, 163, 13, "#d77b3b", "center");
 
@@ -7853,8 +8682,8 @@
         y: 260,
         icon: 0,
         title: "1. CHOOSE + FILE AN EXIT",
-        detail: "Key→shed; sprinkler→drain; movement aborts filing.",
-        subdetail: "Amber Reviews restore balls + shorten filing; CR adds +650.",
+        detail: "KEY → SHED  •  DRAIN VALVE → CULVERT",
+        subdetail: "MOVE ABORTS. REVIEWS: BALL + FASTER FILE. CR +650.",
       },
       {
         y: 348,
@@ -7881,7 +8710,7 @@
             ? "Hold LB near hard cover or in rough."
             : `Hold ${keyboardBindingLabel("crouch")} near hard cover or in rough.`,
         subdetail:
-          "Hold LOOK BACK while running; it never changes your movement direction.",
+          "LOOK BACK PRESERVES YOUR MOVEMENT DIRECTION.",
       },
     ];
     for (const step of steps) {
@@ -8108,6 +8937,31 @@
     );
   }
 
+  function currentHoleObjective() {
+    const hole = state.hole;
+    if (hole.escapeFiling.sealing) {
+      return "RELEASE AUTHORIZED";
+    }
+    if (hole.escapeFiling.active) {
+      return `FILE ${escapeRouteLabel(
+        hole.escapeFiling.route,
+      )}`;
+    }
+    if (
+      hole.keyCollected &&
+      hole.drainUnlocked
+    ) {
+      return "CHOOSE SHED OR DRAIN EXIT";
+    }
+    if (hole.drainUnlocked) {
+      return "REACH DRAIN AND FILE RELEASE";
+    }
+    if (hole.keyCollected) {
+      return "RETURN TO SHED AND FILE RELEASE";
+    }
+    return "FIND SHED KEY OR OPEN DRAIN VALVE";
+  }
+
   function drawPause() {
     drawFirstHole();
     ctx.fillStyle = "rgba(0,3,2,0.72)";
@@ -8130,16 +8984,47 @@
       true,
     );
     drawText(
-      "Joe is paused. Your position is being held.",
+      `ACTIVE FILE // ${currentHoleObjective()}`,
       WIDTH * 0.5,
-      204,
-      14,
-      "#99a891",
+      195,
+      12,
+      "#d9c47e",
       "center",
+      true,
+    );
+    const joeDistance =
+      Math.round(
+        worldDistance(
+          state.hole.joe,
+          state.player,
+        ),
+      );
+    const threatColor =
+      state.hole.joe.mode ===
+        "chase"
+        ? "#e98558"
+        : state.hole.joe.mode ===
+              "investigate" ||
+            state.hole.joe.mode ===
+              "search"
+          ? "#d6ae65"
+          : "#8fb490";
+    drawText(
+      `JOE ${state.hole.joe.mode.toUpperCase()} // ${joeDistance}m // ${
+        state.hole.hasLineOfSight
+          ? "OPEN SIGHTLINE"
+          : "SIGHTLINE BLOCKED"
+      }`,
+      WIDTH * 0.5,
+      216,
+      11,
+      threatColor,
+      "center",
+      true,
     );
 
     for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
-      const y = 238 + index * 68;
+      const y = 250 + index * 68;
       const selected = index === state.pauseIndex;
       ctx.fillStyle = selected
         ? "rgba(118,62,28,0.45)"
@@ -8301,6 +9186,13 @@
       },
       distraction: null,
       distractionTimer: 0,
+      noiseHazards:
+        freshNoiseHazardState(),
+      activeNoiseHazard: null,
+      noiseHazardsTriggered: 0,
+      noiseHazardsStepped: 0,
+      noiseHazardsTriggeredByBall: 0,
+      noiseHazardTutorialSeen: false,
       sprinklerUsed: false,
       sprinklerSoakTimer: 0,
       wetTrapCount: 0,
@@ -8434,6 +9326,7 @@
       cutTraceLocks: 0,
       cutTraceLoggedIds: [],
       cutTraceCueCooldown: 0,
+      cutTracePresentationTimer: 0,
       counterRoutes: 0,
       counterRouteQuietTimer: 0,
       blindsideTransfers: 0,
@@ -8448,7 +9341,7 @@
       cadenceRead:
         freshCadenceRead(),
       zoneIndex: 0,
-      zoneBannerTimer: 2.8,
+      zoneBannerTimer: 0,
       zoneVisits: COURSE_ZONES.map(
         (zone, index) =>
           index === 0 ? 1 : 0,
@@ -9076,6 +9969,14 @@
         hole.cutTraceCueCooldown -
           dt,
       );
+    if (!hole.focus) {
+      hole.cutTracePresentationTimer =
+        Math.max(
+          0,
+          hole.cutTracePresentationTimer -
+            dt,
+        );
+    }
     if (
       hole.cutTraceMemory &&
       !hole.focus
@@ -9272,6 +10173,8 @@
       resolved: false,
     };
     hole.cutTraceLocks += 1;
+    hole.cutTracePresentationTimer =
+      CUT_TRACE_HANDOFF_SECONDS;
     if (
       hole.cutTraceCueCooldown <= 0
     ) {
@@ -13624,6 +14527,17 @@
     }
   }
 
+  function openingBriefingOwnsSignalLane() {
+    const hole = state.hole;
+    return (
+      hole.zoneIndex === 0 &&
+      hole.messageTimer > 0 &&
+      hole.message.startsWith(
+        "SOUTH GATE LOCKED",
+      )
+    );
+  }
+
   function activeHudPresentationFocus() {
     const hole = state.hole;
     if (
@@ -13632,17 +14546,45 @@
     ) {
       return "final_filing";
     }
-    if (hole.appealReviewTimer > 0) {
+    if (emergencyAppealOwnsSignalLane()) {
       return "emergency_appeal";
     }
     if (hole.statusRequest.active) {
       return "status_request";
     }
+    if (golfAimOwnsSignalLane()) {
+      return "golf_aim";
+    }
+    if (
+      hole.joe.mode === "chase"
+    ) {
+      return "pursuit";
+    }
+    if (nerveHoldOwnsSignalLane()) {
+      return "nerve_hold";
+    }
+    if (activeDistractionOwnsSignalLane()) {
+      return "active_distraction";
+    }
+    if (cutTraceOwnsSignalLane()) {
+      return "cut_trace";
+    }
+    if (
+      listeningSearchReadOwnsSignalLane()
+    ) {
+      return "listening_search";
+    }
+    if (cadenceForecastHandoffOwnsSignalLane()) {
+      return "cadence_read";
+    }
+    if (counterRouteHandoffOwnsSignalLane()) {
+      return "counter_route";
+    }
+    if (crosswindOwnsSignalLane()) {
+      return "crosswind";
+    }
     if (hole.riskAward) {
       return "risk_premium";
-    }
-    if (hole.deliveryAward) {
-      return "delivery_award";
     }
     if (
       hole.trailWarningTimer > 0 &&
@@ -13650,10 +14592,13 @@
     ) {
       return "trail_evidence";
     }
+    if (hole.deliveryAward) {
+      return "delivery_award";
+    }
     if (
-      hole.joe.mode === "chase"
+      openingBriefingOwnsSignalLane()
     ) {
-      return "pursuit";
+      return "opening_briefing";
     }
     if (hole.blindsideTransfer) {
       return "blindside_transfer";
@@ -13664,7 +14609,35 @@
     if (hole.zoneBannerTimer > 0) {
       return "zone_arrival";
     }
+    if (joeDialogueOwnsSignalLane()) {
+      return "joe_dialogue";
+    }
     return "field";
+  }
+
+  function hudFocusSuppressesThreatCaptions(
+    focus,
+  ) {
+    return [
+      "final_filing",
+      "emergency_appeal",
+      "status_request",
+      "golf_aim",
+      "active_distraction",
+      "risk_premium",
+      "delivery_award",
+      "pursuit",
+      "opening_briefing",
+      "blindside_transfer",
+      "cadence_read",
+      "counter_route",
+      "crosswind",
+      "nerve_hold",
+      "cut_trace",
+      "listening_search",
+      "zone_arrival",
+      "joe_dialogue",
+    ].includes(focus);
   }
 
   function drawThreatCaptions() {
@@ -13678,11 +14651,9 @@
     const focus =
       activeHudPresentationFocus();
     if (
-      focus === "pursuit" ||
-      focus ===
-        "blindside_transfer" ||
-      focus === "emergency_appeal" ||
-      focus === "status_request"
+      hudFocusSuppressesThreatCaptions(
+        focus,
+      )
     ) {
       return;
     }
@@ -13741,6 +14712,14 @@
         "emergency_appeal" ||
       activeHudPresentationFocus() ===
         "status_request" ||
+      activeHudPresentationFocus() ===
+        "golf_aim" ||
+      activeHudPresentationFocus() ===
+        "nerve_hold" ||
+      activeHudPresentationFocus() ===
+        "cut_trace" ||
+      activeHudPresentationFocus() ===
+        "listening_search" ||
       activeHudPresentationFocus() ===
         "cadence_read"
     ) {
@@ -15071,6 +16050,144 @@
     };
   }
 
+  function emergencyAppealOwnsSignalLane() {
+    const hole = state.hole;
+    return (
+      hole.appealReviewTimer > 0 ||
+      emergencyAppealState().eligible
+    );
+  }
+
+  function golfAimOwnsSignalLane() {
+    return Boolean(
+      state.hole?.ballAim?.active,
+    );
+  }
+
+  function activeDistractionOwnsSignalLane() {
+    return Boolean(
+      state.hole?.distraction &&
+      state.hole.distractionTimer > 0 &&
+      state.hole.messageTimer > 0.75,
+    );
+  }
+
+  function cadenceForecastHandoffOwnsSignalLane() {
+    const forecast =
+      state.hole?.cadenceRead?.forecast;
+    return Boolean(
+      forecast &&
+      forecast.timer >
+        forecast.duration -
+          CADENCE_FORECAST_HANDOFF_SECONDS
+    );
+  }
+
+  function counterRouteHandoffOwnsSignalLane() {
+    const quietSeconds =
+      state.hole?.counterRouteQuietTimer ||
+      0;
+    return (
+      quietSeconds >
+      COUNTER_ROUTE_QUIET_SECONDS -
+        COUNTER_ROUTE_HANDOFF_SECONDS
+    );
+  }
+
+  function crosswindOwnsSignalLane() {
+    return Boolean(
+      state.hole?.crosswind
+        ?.presentationTimer > 0,
+    );
+  }
+
+  function nerveHoldOwnsSignalLane() {
+    const nerve =
+      state.hole?.nerveHold;
+    return Boolean(
+      nerve &&
+      (
+        nerve.active ||
+        nerve.exitWindow >
+          NERVE_EXIT_WINDOW_SECONDS -
+            NERVE_EXIT_HANDOFF_SECONDS
+      )
+    );
+  }
+
+  function cutTraceScanOwnsSignalLane() {
+    const hole = state.hole;
+    const candidateId =
+      hole?.cutTraceCandidateId;
+    return Boolean(
+      hole?.focus &&
+      candidateId !== null &&
+      candidateId !== undefined &&
+      hole.cutTraceProgress > 0 &&
+      hole.cutTraceProgress <
+        CUT_TRACE_SCAN_SECONDS &&
+      !hole.cutTraceLoggedIds.includes(
+        candidateId,
+      )
+    );
+  }
+
+  function cutTraceMemoryHandoffOwnsSignalLane() {
+    return Boolean(
+      state.hole?.cutTraceMemory &&
+      !state.hole
+        .cutTraceMemory.resolved &&
+      state.hole
+        .cutTracePresentationTimer > 0,
+    );
+  }
+
+  function cutTraceOwnsSignalLane() {
+    return (
+      cutTraceScanOwnsSignalLane() ||
+      cutTraceMemoryHandoffOwnsSignalLane()
+    );
+  }
+
+  function listeningSearchReadOwnsSignalLane() {
+    return Boolean(
+      state.hole &&
+      listeningSearchRead().active,
+    );
+  }
+
+  function deliveryAwardDeferredByCriticalFocus() {
+    const hole = state.hole;
+    return Boolean(
+      hole?.escapeFiling?.active ||
+      hole?.escapeFiling?.sealing ||
+      emergencyAppealOwnsSignalLane() ||
+      hole?.statusRequest?.active ||
+      golfAimOwnsSignalLane() ||
+      activeDistractionOwnsSignalLane() ||
+      cadenceForecastHandoffOwnsSignalLane() ||
+      counterRouteHandoffOwnsSignalLane() ||
+      crosswindOwnsSignalLane() ||
+      nerveHoldOwnsSignalLane() ||
+      cutTraceOwnsSignalLane() ||
+      (
+        hole?.trailWarningTimer > 0 &&
+        hole?.trailChain > 0
+      ) ||
+      hole?.joe?.mode === "chase"
+    );
+  }
+
+  function joeDialogueOwnsSignalLane() {
+    return Boolean(
+      state.subtitles &&
+      state.hole?.joeBark &&
+      state.hole.joeBarkTimer > 0 &&
+      !state.hole.tutorialVisible &&
+      state.hole.messageTimer <= 0.75,
+    );
+  }
+
   function activateEmergencyAppeal() {
     const appeal = emergencyAppealState();
     if (!appeal.eligible) {
@@ -15562,7 +16679,7 @@
       180,
     );
     setHoleMessage(
-      `${request.code} SECURED — escape to bank +${CHANGE_REQUEST_BONUS}, or sacrifice it during a close pursuit to force Joe into review.`,
+      `${request.code} SECURED — BANK +${CHANGE_REQUEST_BONUS} AT AN EXIT, OR USE NEAR JOE TO FORCE REVIEW.`,
       4.4,
     );
     addWorldEffect(
@@ -15842,7 +16959,7 @@
       drain.radius
     ) {
       setHoleMessage(
-        "DRAIN SEALED — Release pressure at the sprinkler valve.",
+        "DRAIN SEALED — open the drain valve to release pressure.",
         3.2,
       );
       playDoorRattle();
@@ -16599,6 +17716,398 @@
     );
   }
 
+  function noiseHazardState(
+    hazard,
+  ) {
+    return state.hole
+      .noiseHazards[
+        hazard.id
+      ];
+  }
+
+  function noiseHazardAtPoint(
+    point,
+    padding = 0,
+  ) {
+    for (
+      let index = 0;
+      index <
+        COURSE_NOISE_HAZARDS.length;
+      index += 1
+    ) {
+      const hazard =
+        COURSE_NOISE_HAZARDS[
+          index
+        ];
+      const hazardState =
+        noiseHazardState(
+          hazard,
+        );
+      if (
+        hazardState &&
+        !hazardState.triggered &&
+        worldDistance(
+          point,
+          hazard,
+        ) <=
+          hazard.radius +
+            padding
+      ) {
+        return hazard;
+      }
+    }
+    return null;
+  }
+
+  function nearestNoiseHazard() {
+    let nearest = null;
+    let distance = Infinity;
+    for (
+      let index = 0;
+      index <
+        COURSE_NOISE_HAZARDS.length;
+      index += 1
+    ) {
+      const hazard =
+        COURSE_NOISE_HAZARDS[
+          index
+        ];
+      const hazardState =
+        noiseHazardState(
+          hazard,
+        );
+      if (
+        !hazardState ||
+        hazardState.triggered
+      ) {
+        continue;
+      }
+      const candidateDistance =
+        worldDistance(
+          state.player,
+          hazard,
+        );
+      if (
+        candidateDistance <
+        distance
+      ) {
+        nearest = hazard;
+        distance =
+          candidateDistance;
+      }
+    }
+    return {
+      hazard: nearest,
+      distance,
+    };
+  }
+
+  function nearbyNoiseHazardsForText() {
+    const nearby = [];
+    for (
+      let index = 0;
+      index <
+        COURSE_NOISE_HAZARDS.length;
+      index += 1
+    ) {
+      const hazard =
+        COURSE_NOISE_HAZARDS[
+          index
+        ];
+      const hazardState =
+        noiseHazardState(
+          hazard,
+        );
+      const distance =
+        worldDistance(
+          state.player,
+          hazard,
+        );
+      if (
+        !hazardState ||
+        hazardState.triggered ||
+        distance > 72
+      ) {
+        continue;
+      }
+      nearby.push({
+        id: hazard.id,
+        label: hazard.label,
+        x: hazard.x,
+        y: hazard.y,
+        radius: hazard.radius,
+        warned:
+          hazardState.warned,
+        distance: Number(
+          distance.toFixed(1),
+        ),
+      });
+    }
+    nearby.sort(
+      (a, b) =>
+        a.distance - b.distance,
+    );
+    return nearby.slice(0, 4);
+  }
+
+  function triggerNoiseHazard(
+    hazard,
+    source,
+    sprinting = false,
+  ) {
+    const hole = state.hole;
+    const hazardState =
+      noiseHazardState(
+        hazard,
+      );
+    if (
+      !hazardState ||
+      hazardState.triggered
+    ) {
+      return false;
+    }
+    const triggeredByBall =
+      source === "golf_ball";
+    const quietStep =
+      !triggeredByBall &&
+      (
+        hole.crouched ||
+        hole.focus
+      );
+    const intensity =
+      triggeredByBall
+        ? 1
+        : sprinting
+          ? 1
+          : quietStep
+            ? 0.52
+            : 0.78;
+    const duration =
+      hazard.baseSeconds *
+      lerp(
+        0.68,
+        1.08,
+        intensity,
+      );
+    hazardState.triggered = true;
+    hazardState.triggeredAt =
+      hole.elapsed;
+    hazardState.source = source;
+    hazardState.intensity =
+      intensity;
+    hole.noiseHazardsTriggered +=
+      1;
+    if (triggeredByBall) {
+      hole.noiseHazardsTriggeredByBall +=
+        1;
+    } else {
+      hole.noiseHazardsStepped +=
+        1;
+    }
+    hole.activeNoiseHazard = {
+      id: hazard.id,
+      label: hazard.label,
+      x: hazard.x,
+      y: hazard.y,
+      source,
+      intensity,
+      timer: duration,
+      duration,
+    };
+    hole.noise = Math.max(
+      hole.noise,
+      0.42 +
+        intensity * 0.5,
+    );
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.3 +
+        intensity * 0.42,
+    );
+    addWorldEffect(
+      "sound",
+      hazard.x,
+      hazard.y,
+      1.45 +
+        intensity * 0.8,
+    );
+    playNoiseHazardCue(
+      hazard,
+      intensity,
+    );
+    const protectedDistraction =
+      hole.distraction &&
+      hole.distractionTimer > 0 &&
+      hole.distraction.kind ===
+        "appeal";
+    if (
+      hole.joe.mode ===
+        "chase" ||
+      protectedDistraction
+    ) {
+      hole.lastSeenPlayer = {
+        x: hazard.x,
+        y: hazard.y,
+      };
+      hole.searchTimer = Math.max(
+        hole.searchTimer,
+        duration,
+      );
+      hole.detection = Math.max(
+        hole.detection,
+        0.42 +
+          intensity * 0.28,
+      );
+      triggerJoeBark(
+        hole.joe.mode,
+        "noise_hazard",
+      );
+    } else {
+      hole.distraction = {
+        x: hazard.x,
+        y: hazard.y,
+        kind: "noise_hazard",
+        hazardId: hazard.id,
+        searchSeconds:
+          2.8 +
+          intensity * 2.6,
+      };
+      hole.distractionTimer =
+        duration;
+      hole.lastSeenPlayer = {
+        x: hazard.x,
+        y: hazard.y,
+      };
+      hole.trailTarget = null;
+      hole.trailApproachTimer = 0;
+      hole.joe.mode =
+        "investigate";
+      hole.detectionPulse =
+        Math.max(
+          hole.detectionPulse,
+          0.58,
+        );
+      hole.lastKnownJoe = {
+        x: hole.joe.x,
+        y: hole.joe.y,
+      };
+      hole.lastKnownJoeTimer = 5;
+      triggerJoeBark(
+        "investigate",
+        "noise_hazard",
+      );
+      playThreatCue(
+        "investigate",
+      );
+    }
+    hole.stateBanner =
+      triggeredByBall
+        ? "REMOTE NOISE // JOE RE-ROUTED"
+        : quietStep
+          ? "EQUIPMENT DISTURBED // MUFFLED"
+          : "EQUIPMENT DISTURBED // ROUTE EXPOSED";
+    hole.stateBannerTimer = 2.7;
+    hole.stateBannerLockTimer =
+      Math.max(
+        hole.stateBannerLockTimer,
+        2.7,
+      );
+    if (
+      !hole.noiseHazardTutorialSeen
+    ) {
+      hole.noiseHazardTutorialSeen =
+        true;
+      setHoleMessage(
+        triggeredByBall
+          ? "REMOTE TRIGGER — Joe is routing to the sound. Use the opening."
+          : "NOISE HAZARD — Joe is routing to this position. Break away; crouching softens future mistakes.",
+        4.1,
+      );
+    } else {
+      setHoleMessage(
+        triggeredByBall
+          ? `${hazard.impactLabel} — Joe committed to the remote noise.`
+          : quietStep
+            ? `${hazard.impactLabel} — muffled, but Joe still heard it.`
+            : `${hazard.impactLabel} — leave the sound location before Joe arrives.`,
+        2.8,
+      );
+    }
+    pushThreatCaption(
+      triggeredByBall
+        ? `${hazard.impactLabel} // REMOTE LURE`
+        : `${hazard.impactLabel} // JOE HEARD IT`,
+      hazard,
+      triggeredByBall
+        ? "world"
+        : "danger",
+      2.7,
+      `noise_hazard_${hazard.id}`,
+    );
+    return true;
+  }
+
+  function updateNoiseHazards(
+    dt,
+    moving,
+    sprinting,
+  ) {
+    const hole = state.hole;
+    if (
+      hole.activeNoiseHazard
+    ) {
+      hole.activeNoiseHazard.timer =
+        Math.max(
+          0,
+          hole.activeNoiseHazard
+            .timer - dt,
+        );
+      if (
+        hole.activeNoiseHazard
+          .timer <= 0
+      ) {
+        hole.activeNoiseHazard =
+          null;
+      }
+    }
+    if (!moving) {
+      return;
+    }
+    const nearest =
+      nearestNoiseHazard();
+    if (
+      nearest.hazard &&
+      nearest.distance <= 17 &&
+      nearest.distance >
+        nearest.hazard.radius + 1.5
+    ) {
+      const warningState =
+        noiseHazardState(
+          nearest.hazard,
+        );
+      if (
+        warningState &&
+        !warningState.warned
+      ) {
+        warningState.warned = true;
+        playNoiseHazardProximityCue(
+          nearest.hazard,
+        );
+      }
+    }
+    const hazard =
+      noiseHazardAtPoint(
+        state.player,
+      );
+    if (hazard) {
+      triggerNoiseHazard(
+        hazard,
+        "player_step",
+        sprinting,
+      );
+    }
+  }
+
   function landGolfBall(target, roll = null) {
     if (!roll) {
       const start = {
@@ -16671,23 +18180,30 @@
       roll,
       landedBall,
     );
-    hole.distraction = {
-      ...target,
-      kind: "golf_ball",
-      ballId: landedBall.id,
-    };
-    hole.distractionTimer = Math.max(
-      hole.overtime ? 1.65 : 2.25,
-      (
-        4.2 -
-        (hole.ballThrowsUsed - 1) * 0.85
-      ) *
-        (hole.overtime ? 0.72 : 1) *
-        roll.lureMultiplier,
-    );
-    hole.joe.mode = "investigate";
-    announceJoeState("investigate");
-    hole.noise = Math.max(hole.noise, 0.38);
+    const landedNoiseHazard =
+      noiseHazardAtPoint(
+        target,
+        2.4,
+      );
+    if (!landedNoiseHazard) {
+      hole.distraction = {
+        ...target,
+        kind: "golf_ball",
+        ballId: landedBall.id,
+      };
+      hole.distractionTimer = Math.max(
+        hole.overtime ? 1.65 : 2.25,
+        (
+          4.2 -
+          (hole.ballThrowsUsed - 1) * 0.85
+        ) *
+          (hole.overtime ? 0.72 : 1) *
+          roll.lureMultiplier,
+      );
+      hole.joe.mode = "investigate";
+      announceJoeState("investigate");
+      hole.noise = Math.max(hole.noise, 0.38);
+    }
     if (drillAttempt) {
       hole.practiceDrill.attempts += 1;
       if (practiceHit) {
@@ -16738,6 +18254,12 @@
       2.1,
       "ball_impact",
     );
+    if (landedNoiseHazard) {
+      triggerNoiseHazard(
+        landedNoiseHazard,
+        "golf_ball",
+      );
+    }
   }
 
   function recoverGolfBall(ball) {
@@ -18810,6 +20332,53 @@
       state.hole.navigationGuide
         .direction ||
       "STRAIGHT AHEAD"
+    );
+  }
+
+  function rearNavigationCueState() {
+    const guide =
+      state.hole?.navigationGuide;
+    if (
+      !guide?.target ||
+      effectiveGuidanceDirection() !==
+        "TURN BACK"
+    ) {
+      return null;
+    }
+    const waypoint =
+      guide.path[0] ||
+      guide.target;
+    const deltaX =
+      waypoint.x -
+      state.player.x;
+    return {
+      side:
+        deltaX < -4
+          ? "left"
+          : deltaX > 4
+            ? "right"
+            : "center",
+      targetLabel:
+        guide.targetLabel,
+      distance:
+        guide.distance,
+      color:
+        guide.targetColor,
+    };
+  }
+
+  function rearNavigationCueVisible(
+    cue = rearNavigationCueState(),
+  ) {
+    return Boolean(
+      cue &&
+      !state.hole.tutorialVisible &&
+      !state.hole.ballAim.active &&
+      !state.hole.escapeFiling.active &&
+      !(
+        state.hole.lookBack?.amount >
+        0.35
+      ),
     );
   }
 
@@ -21084,6 +22653,8 @@
       hole.zoneIndex;
     wind.lastOutcome =
       "warning";
+    wind.presentationTimer =
+      CROSSWIND_WARNING_SECONDS;
     wind.currentDistance = 0;
     wind.awardGiven = false;
     wind.lastTravelDistance =
@@ -21118,6 +22689,8 @@
       hole.travelDistance;
     wind.lastOutcome =
       "cover_open";
+    wind.presentationTimer =
+      CROSSWIND_ACTIVE_BRIEF_SECONDS;
     hole.stateBanner =
       "CROSSWIND COVER // FOOTSTEPS MASKED";
     hole.stateBannerTimer = 2.1;
@@ -21145,10 +22718,46 @@
     wind.windRuns += 1;
     wind.lastOutcome =
       "wind_run";
+    const previousAward =
+      hole.deliveryAward;
     const award = awardDeliveryBeat(
       "CROSSWIND TRAVERSE",
       CROSSWIND_RUN_BONUS,
     );
+    if (
+      award &&
+      previousAward &&
+      previousAward.age <= 0.001
+    ) {
+      const queuedIndex =
+        hole.deliveryAwardQueue.findIndex(
+          (queuedAward) =>
+            queuedAward.label ===
+              award.label &&
+            queuedAward.chain ===
+              award.chain,
+        );
+      if (queuedIndex >= 0) {
+        const promotedAward =
+          hole.deliveryAwardQueue.splice(
+            queuedIndex,
+            1,
+          )[0];
+        hole.deliveryAwardQueue.unshift({
+          ...previousAward,
+          age: 0,
+          duration:
+            DELIVERY_AWARD_QUEUED_DURATION,
+        });
+        promotedAward.age = 0;
+        promotedAward.duration =
+          award.duration;
+        hole.deliveryAward =
+          promotedAward;
+      }
+    }
+    wind.presentationTimer =
+      CROSSWIND_REWARD_HANDOFF_SECONDS;
     hole.stateBanner = award
       ? "WIND RUN // DELIVERY LINKED"
       : "WIND RUN // WEATHER CAP REACHED";
@@ -21200,6 +22809,11 @@
   ) {
     const hole = state.hole;
     const wind = hole.crosswind;
+    wind.presentationTimer =
+      Math.max(
+        0,
+        wind.presentationTimer - dt,
+      );
     if (wind.phase === "calm") {
       wind.timer = Math.max(
         0,
@@ -21755,13 +23369,6 @@
           maxHeight: 132,
         },
       );
-      drawWorldMarker(
-        target.x,
-        target.y,
-        "PRACTICE BELL // OPTIONAL",
-        "#e9b84f",
-        "â—Ž",
-      );
       return;
     }
     const height = clamp(
@@ -21859,13 +23466,6 @@
     );
     ctx.restore();
     ctx.restore();
-    drawWorldMarker(
-      target.x,
-      target.y,
-      "PRACTICE BELL // OPTIONAL",
-      "#e9b84f",
-      "◎",
-    );
   }
 
   /** Draws one authored course-mechanic fixture anchored to the world ground plane. */
@@ -22239,7 +23839,10 @@
     }
   }
 
-  function drawNearbyBlockerCallouts() {
+  function nearbyBlockerCalloutCandidates() {
+    if (renderFrameCache.blockerCallouts) {
+      return renderFrameCache.blockerCallouts;
+    }
     const candidates = [];
     for (
       let index = 0;
@@ -22287,82 +23890,324 @@
       (a, b) =>
         a.clearance - b.clearance,
     );
-    for (
-      let index = 0;
-      index <
-        Math.min(
-          2,
-          candidates.length,
-        );
-      index += 1
-    ) {
-      const candidate =
-        candidates[index];
-      const footprint =
-        projectedObstacleFootprint(
-          candidate.obstacle,
-          PLAYER_COLLISION_RADIUS,
-        );
-      const labelX = clamp(
-        candidate.point.x,
-        154,
-        WIDTH - 154,
-      );
-      const labelY = clamp(
-        candidate.point.y -
-          footprint.radiusY -
-          12,
-        370,
-        HEIGHT - 176,
-      );
-      ctx.save();
-      ctx.globalAlpha = clamp(
-        1 -
-          candidate.clearance /
-            14,
-        0.4,
-        0.9,
-      );
-      ctx.fillStyle =
-        "rgba(5,10,5,0.82)";
-      ctx.fillRect(
-        labelX - 104,
-        labelY - 14,
-        208,
-        27,
-      );
-      strokeRect(
-        labelX - 104,
-        labelY - 14,
-        208,
-        27,
-        "#c8bb78",
-        1.5,
-      );
-      drawText(
-        `SOLID  //  ${(candidate.obstacle.landmark || "OBSTACLE").toUpperCase()}  ${Math.ceil(candidate.clearance)}m`,
-        labelX,
-        labelY + 4,
-        10,
-        "#e5d9ac",
-        "center",
-        true,
-      );
-      ctx.strokeStyle =
-        "rgba(213,197,122,0.7)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(
-        labelX,
-        labelY + 14,
-      );
-      ctx.lineTo(
-        candidate.point.x,
-        candidate.point.y - 4,
-      );
-      ctx.stroke();
-      ctx.restore();
+    renderFrameCache.blockerCallouts =
+      candidates;
+    return candidates;
+  }
+
+  function worldContextCueState() {
+    if (renderFrameCache.worldContextCue) {
+      return renderFrameCache.worldContextCue;
     }
+    const distractionHandoffActive =
+      activeDistractionOwnsSignalLane();
+    if (
+      (
+        state.hole.activeNoiseHazard &&
+        state.hole.messageTimer > 0.75
+      ) ||
+      distractionHandoffActive
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy:
+          distractionHandoffActive
+            ? "active_distraction_handoff"
+            : "noise_hazard_consequence",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    const noise = nearestNoiseHazard();
+    const imminentNoise =
+      noise.hazard &&
+      noise.distance <= 8;
+    if (
+      golfAimOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "golf_aim",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      cadenceForecastHandoffOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "cadence_forecast",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      counterRouteHandoffOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "counter_route",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      state.hole.blindsideTransfer &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "blindside_transfer",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      crosswindOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "crosswind",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      nerveHoldOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "nerve_hold",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      cutTraceOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: "cut_trace",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    if (
+      listeningSearchReadOwnsSignalLane() &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy:
+          "listening_search",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    const focus =
+      activeHudPresentationFocus();
+    const joeDialogueActive =
+      state.subtitles &&
+      state.hole.joeBark &&
+      state.hole.joeBarkTimer > 0 &&
+      !state.hole.tutorialVisible &&
+      !state.hole.riskAward &&
+      !state.hole.deliveryAward &&
+      ![
+        "trail_evidence",
+        "emergency_appeal",
+        "status_request",
+        "cadence_read",
+      ].includes(focus);
+    const threatCaptionActive =
+      state.threatCaptions &&
+      state.hole.captions?.length > 0 &&
+      !state.hole.tutorialVisible &&
+      !hudFocusSuppressesThreatCaptions(
+        focus,
+      );
+    if (
+      !imminentNoise &&
+      (
+        joeDialogueActive ||
+        threatCaptionActive
+      )
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy:
+          joeDialogueActive
+            ? "joe_dialogue_lane"
+            : "threat_caption_lane",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    const blocker =
+      nearbyBlockerCalloutCandidates()[0] ||
+      null;
+    const practice =
+      practiceDrillActive()
+        ? state.hole.practiceDrill.target
+        : null;
+    const practiceDistance = practice
+      ? worldDistance(
+          state.player,
+          practice,
+        )
+      : Infinity;
+    let cue = null;
+    if (
+      noise.hazard &&
+      noise.distance <= 13
+    ) {
+      cue = {
+        kind: "noise",
+        id: noise.hazard.id,
+        distance: noise.distance,
+      };
+    } else if (
+      practice &&
+      practiceDistance <= 22
+    ) {
+      cue = {
+        kind: "practice",
+        id: "practice_bell",
+        distance: practiceDistance,
+      };
+    } else if (
+      blocker &&
+      blocker.clearance < 10
+    ) {
+      cue = {
+        kind: "blocker",
+        id: blocker.obstacle.id,
+        distance: blocker.clearance,
+      };
+    } else if (
+      noise.hazard &&
+      noise.distance <= 29
+    ) {
+      cue = {
+        kind: "noise",
+        id: noise.hazard.id,
+        distance: noise.distance,
+      };
+    } else if (
+      practice &&
+      practiceDistance <= 58
+    ) {
+      cue = {
+        kind: "practice",
+        id: "practice_bell",
+        distance: practiceDistance,
+      };
+    }
+    renderFrameCache.worldContextCue =
+      cue || {
+        kind: "none",
+        id: null,
+        distance: null,
+      };
+    return renderFrameCache.worldContextCue;
+  }
+
+  function drawNearbyBlockerCallouts() {
+    const cue = worldContextCueState();
+    if (cue.kind !== "blocker") {
+      return;
+    }
+    const candidate =
+      nearbyBlockerCalloutCandidates()
+        .find(
+          (entry) =>
+            entry.obstacle.id ===
+            cue.id,
+        );
+    if (!candidate) {
+      return;
+    }
+    const footprint =
+      projectedObstacleFootprint(
+        candidate.obstacle,
+        PLAYER_COLLISION_RADIUS,
+      );
+    const labelX = clamp(
+      candidate.point.x,
+      154,
+      COURSE_MAP_X - 116,
+    );
+    const labelY = clamp(
+      candidate.point.y -
+        footprint.radiusY -
+        12,
+      370,
+      HEIGHT - 176,
+    );
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      1 -
+        candidate.clearance /
+          14,
+      0.4,
+      0.9,
+    );
+    ctx.fillStyle =
+      "rgba(5,10,5,0.82)";
+    ctx.fillRect(
+      labelX - 104,
+      labelY - 14,
+      208,
+      27,
+    );
+    strokeRect(
+      labelX - 104,
+      labelY - 14,
+      208,
+      27,
+      "#c8bb78",
+      1.5,
+    );
+    drawText(
+      `SOLID  //  ${(candidate.obstacle.landmark || "OBSTACLE").toUpperCase()}  ${Math.ceil(candidate.clearance)}m`,
+      labelX,
+      labelY + 4,
+      10,
+      "#e5d9ac",
+      "center",
+      true,
+    );
+    ctx.strokeStyle =
+      "rgba(213,197,122,0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(
+      labelX,
+      labelY + 14,
+    );
+    ctx.lineTo(
+      candidate.point.x,
+      candidate.point.y - 4,
+    );
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawCollisionContactOverlay() {
@@ -22697,6 +24542,88 @@
         true,
       );
     }
+    ctx.restore();
+  }
+
+  function drawRearNavigationCue(
+    expandedHud,
+  ) {
+    if (
+      golfAimOwnsSignalLane() ||
+      listeningSearchReadOwnsSignalLane()
+    ) {
+      return;
+    }
+    const cue =
+      rearNavigationCueState();
+    if (
+      !rearNavigationCueVisible(
+        cue,
+      )
+    ) {
+      return;
+    }
+    const panel = {
+      x: 36,
+      y: expandedHud
+        ? 363
+        : 151,
+      width: 254,
+      height: 43,
+    };
+    const pulse =
+      state.reducedMotion
+        ? 1
+        : 0.92 +
+          Math.sin(
+            state.hole.elapsed *
+              3.1,
+          ) *
+            0.08;
+    const bearingLabel =
+      cue.side === "left"
+        ? "◀ TURN BACK"
+        : cue.side === "right"
+          ? "TURN BACK ▶"
+          : "TURN BACK";
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle =
+      "rgba(2,9,6,0.9)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      cue.color,
+      2,
+    );
+    drawText(
+      bearingLabel,
+      panel.x + 14,
+      panel.y + 17,
+      10,
+      cue.color,
+      "left",
+      true,
+    );
+    drawText(
+      `${cue.targetLabel} // ${Math.ceil(
+        cue.distance,
+      )}m`,
+      panel.x + 14,
+      panel.y + 34,
+      9,
+      "#d9dfc7",
+      "left",
+      true,
+    );
     ctx.restore();
   }
 
@@ -24427,6 +26354,42 @@
       );
     ctx.save();
     ctx.globalCompositeOperation = "screen";
+    if (visibleTrail.length > 1) {
+      ctx.globalAlpha =
+        state.hole.focus
+          ? 0.24
+          : 0.13;
+      ctx.strokeStyle =
+        masterProductOwner
+          ? "#e4c25f"
+          : echo.ahead
+            ? "#79d6bf"
+            : "#d4a65f";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([2, 6]);
+      ctx.beginPath();
+      for (
+        let index = 0;
+        index < visibleTrail.length;
+        index += 1
+      ) {
+        const point =
+          visibleTrail[index].point;
+        if (index === 0) {
+          ctx.moveTo(
+            point.x,
+            point.y,
+          );
+        } else {
+          ctx.lineTo(
+            point.x,
+            point.y,
+          );
+        }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     for (
       let index = 0;
       index < visibleTrail.length;
@@ -24556,12 +26519,20 @@
           point.y - radius * 0.25,
         ],
       ]);
+      const recordFinishSettled =
+        echo.finished &&
+        state.hole.elapsed -
+          echo.record.timeSeconds >
+          COURSE_ECHO_FINISH_CARD_SECONDS;
       if (
-        state.hole.focus ||
-        worldDistance(
-          state.player,
-          echo.position,
-        ) < 55
+        !recordFinishSettled &&
+        (
+          state.hole.focus ||
+          worldDistance(
+            state.player,
+            echo.position,
+          ) < 55
+        )
       ) {
         drawText(
           `${masterProductOwner ? "MASTER ECHO" : "COURSE ECHO"} // ${echo.record.route.toUpperCase()}`,
@@ -24571,6 +26542,22 @@
           echo.ahead
             ? "#a5ead7"
             : "#e2bd76",
+          "center",
+          true,
+        );
+        drawText(
+          `${courseEchoPaceLabel(echo).replace("ECHO  ", "")} // ${Math.ceil(
+            worldDistance(
+              state.player,
+              echo.position,
+            ),
+          )}m`,
+          point.x,
+          point.y - radius + 2,
+          8,
+          echo.ahead
+            ? "#91d9c5"
+            : "#c9a668",
           "center",
           true,
         );
@@ -26372,6 +28359,353 @@
     ctx.restore();
   }
 
+  function drawNoiseHazard(
+    hazard,
+    hazardIndex,
+  ) {
+    if (
+      !courseClutterArt.complete ||
+      courseClutterArt
+        .naturalWidth === 0
+    ) {
+      return;
+    }
+    const point =
+      worldToScreen(
+        hazard.x,
+        hazard.y,
+      );
+    if (
+      !point.visible ||
+      point.x < -220 ||
+      point.x > WIDTH + 220
+    ) {
+      return;
+    }
+    const cell =
+      COURSE_CLUTTER_CELLS[
+        hazard.type
+      ];
+    const hazardState =
+      noiseHazardState(
+        hazard,
+      );
+    if (
+      !cell ||
+      !hazardState
+    ) {
+      return;
+    }
+    const distance =
+      worldDistance(
+        state.player,
+        hazard,
+      );
+    const drawHeight = clamp(
+      cell.heightMeters *
+        hazard.scale *
+        point.pixelsPerMeter *
+        1.16,
+      12,
+      98,
+    );
+    const drawWidth =
+      drawHeight *
+      cell.width /
+      cell.height;
+    const triggeredAge =
+      hazardState.triggeredAt ===
+        null
+        ? 0
+        : Math.max(
+            0,
+            state.hole.elapsed -
+              hazardState.triggeredAt,
+          );
+    const scatterAmount =
+      hazardState.triggered
+        ? state.reducedMotion
+          ? 1
+          : smoothstep(
+              clamp(
+                triggeredAge / 0.48,
+                0,
+                1,
+              ),
+            )
+        : 0;
+    const scatterDirection =
+      hash(
+        hazardIndex * 47 + 9,
+      ) < 0.5
+        ? -1
+        : 1;
+    const offsetX =
+      scatterDirection *
+      drawWidth *
+      0.08 *
+      scatterAmount;
+    const rotation =
+      scatterDirection *
+      0.075 *
+      scatterAmount;
+    ctx.save();
+    ctx.globalAlpha =
+      hazardState.triggered
+        ? 0.66
+        : clamp(
+            0.64 +
+              point.scale * 0.3,
+            0.68,
+            0.98,
+          );
+    ctx.fillStyle =
+      hazardState.triggered
+        ? "rgba(1,3,2,0.35)"
+        : "rgba(1,3,2,0.62)";
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x + offsetX,
+      point.y + 1,
+      drawWidth * 0.46,
+      Math.max(
+        1,
+        drawHeight * 0.07,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.translate(
+      point.x + offsetX,
+      point.y,
+    );
+    ctx.rotate(rotation);
+    drawCachedAtlasCell(
+      courseClutterArt,
+      cell,
+      -drawWidth * 0.5,
+      -drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.restore();
+    if (
+      hazardState.triggered ||
+      distance > 38
+    ) {
+      return;
+    }
+    const warningAlpha = clamp(
+      1 - distance / 48,
+      0.18,
+      0.76,
+    );
+    const pulse =
+      state.reducedMotion
+        ? 0.5
+        : 0.5 +
+          Math.sin(
+            state.hole.elapsed *
+              3.2 +
+              hazardIndex,
+          ) *
+            0.12;
+    ctx.save();
+    ctx.strokeStyle =
+      `rgba(231,174,70,${warningAlpha * pulse})`;
+    ctx.lineWidth = Math.max(
+      1,
+      1.5 * point.scale,
+    );
+    ctx.setLineDash([
+      5 * point.scale,
+      5 * point.scale,
+    ]);
+    ctx.beginPath();
+    ctx.ellipse(
+      point.x,
+      point.y + 1,
+      drawWidth * 0.55,
+      Math.max(
+        3,
+        drawHeight * 0.1,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalCompositeOperation =
+      "screen";
+    ctx.fillStyle =
+      `rgba(232,222,165,${warningAlpha * 0.74})`;
+    ctx.fillRect(
+      Math.round(
+        point.x -
+          drawWidth * 0.18,
+      ),
+      Math.round(
+        point.y -
+          drawHeight * 0.7,
+      ),
+      Math.max(
+        2,
+        Math.round(
+          point.scale * 1.6,
+        ),
+      ),
+      Math.max(
+        2,
+        Math.round(
+          point.scale * 1.6,
+        ),
+      ),
+    );
+    ctx.restore();
+    const nearest =
+      nearestNoiseHazard();
+    const contextCue =
+      worldContextCueState();
+    if (
+      distance > 29 ||
+      nearest.hazard !== hazard ||
+      contextCue.kind !== "noise" ||
+      contextCue.id !== hazard.id
+    ) {
+      return;
+    }
+    let labelX = clamp(
+      point.x,
+      520,
+      WIDTH - 360,
+    );
+    const subtitleLaneBusy =
+      (
+        state.subtitles &&
+        state.hole.joeBark &&
+        state.hole.joeBarkTimer > 0
+      ) ||
+      (
+        state.threatCaptions &&
+        state.hole.captions?.length > 0
+      );
+    const displacedForOccupiedLane =
+      distance <= 8 &&
+      (
+        subtitleLaneBusy ||
+        state.hole.blindsideTransfer
+    );
+    if (displacedForOccupiedLane) {
+      const blindsidePrimary =
+        state.hole.blindsideTransfer
+          ?.destinations?.[0];
+      const blindsidePoint =
+        blindsidePrimary
+          ? worldToScreen(
+              blindsidePrimary.x,
+              blindsidePrimary.y,
+            )
+          : null;
+      const displacementSide =
+        blindsidePoint
+          ? blindsidePoint.x >=
+            WIDTH * 0.5
+            ? -1
+            : 1
+          : point.x < WIDTH * 0.5
+            ? -1
+            : 1;
+      labelX = clamp(
+        point.x +
+          displacementSide * 184,
+        104,
+        COURSE_MAP_X - 98,
+      );
+    }
+    const labelY =
+      point.y <
+        HEIGHT * 0.62
+        ? point.y + 34
+        : point.y -
+          drawHeight -
+          30;
+    ctx.save();
+    ctx.globalAlpha = clamp(
+      0.76 +
+        warningAlpha * 0.24,
+      0,
+      1,
+    );
+    if (displacedForOccupiedLane) {
+      ctx.strokeStyle =
+        "rgba(217,168,70,0.68)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(
+        labelX +
+          (point.x > labelX
+            ? 86
+            : -86),
+        labelY + 2,
+      );
+      ctx.lineTo(
+        point.x,
+        point.y -
+          drawHeight * 0.32,
+      );
+      ctx.stroke();
+    }
+    ctx.fillStyle =
+      "rgba(4,8,5,0.9)";
+    ctx.fillRect(
+      labelX - 86,
+      labelY - 16,
+      172,
+      36,
+    );
+    strokeRect(
+      labelX - 86,
+      labelY - 16,
+      172,
+      36,
+      "#d9a846",
+      1.5,
+    );
+    drawText(
+      hazard.label,
+      labelX,
+      labelY - 2,
+      9,
+      "#f0d58a",
+      "center",
+      true,
+    );
+    const locomotion =
+      courseLocomotionState();
+    const hazardGuidance =
+      locomotion.sprinting
+        ? "FULL ALERT"
+        : state.hole.crouched ||
+            state.hole.focus
+          ? "MUFFLED CROSSING"
+          : "WALK WIDE";
+    drawText(
+      `${hazardGuidance} // ${Math.ceil(
+        distance,
+      )}m`,
+      labelX,
+      labelY + 12,
+      9,
+      "#b8c9a4",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawCourseVerge(
     verge,
     vergeIndex,
@@ -26744,6 +29078,30 @@
         );
       }
     }
+    for (
+      let index = 0;
+      index <
+        COURSE_NOISE_HAZARDS.length;
+      index += 1
+    ) {
+      const hazard =
+        COURSE_NOISE_HAZARDS[
+          index
+        ];
+      const point =
+        worldToScreen(
+          hazard.x,
+          hazard.y,
+        );
+      if (point.visible) {
+        queueLayeredCourseEntity(
+          8,
+          hazard,
+          index,
+          point.y,
+        );
+      }
+    }
     for (let index = 0; index < DEAD_GREEN_SCENERY.length; index += 1) {
       if (
         effectQualityScale() < 0.55 &&
@@ -26830,8 +29188,15 @@
         entity.kind === 6
       ) {
         drawMaintenanceShed();
-      } else {
+      } else if (
+        entity.kind === 7
+      ) {
         drawCourseVerge(
+          entity.item,
+          entity.itemIndex,
+        );
+      } else {
+        drawNoiseHazard(
           entity.item,
           entity.itemIndex,
         );
@@ -28025,7 +30390,13 @@
     }
     ctx.restore();
 
-    if (distance < 52 || joe.mode !== "patrol") {
+    if (
+      !listeningSearchReadOwnsSignalLane() &&
+      (
+        distance < 52 ||
+        joe.mode !== "patrol"
+      )
+    ) {
       const label =
         joe.wet
           ? "JOE: MOWER BOGGED"
@@ -31769,6 +34140,19 @@
       1,
     );
     drawText(
+      `SHOT POWER ${Math.round(
+        hole.ballAim.power * 100,
+      )}%`,
+      WIDTH * 0.5,
+      panel.y +
+        craftOffset +
+        47,
+      9,
+      "#f4ead0",
+      "center",
+      true,
+    );
+    drawText(
       inputCopy(
         `${keyboardBindingLabel("move_left")} / ${keyboardBindingLabel("move_right")} AIM  •  RELEASE ${keyboardBindingLabel("chip")} TO CHIP  •  ESC CANCEL`,
         "STICK L/R AIM  •  RELEASE X TO CHIP  •  B CANCEL",
@@ -32493,7 +34877,10 @@
     if (
       concealment > 0.62 &&
       !hole.riskAward &&
-      !hole.deliveryAward
+      !hole.deliveryAward &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane()
     ) {
       const alpha = clamp((concealment - 0.62) / 0.3, 0, 1);
       const hardCover =
@@ -32628,6 +35015,16 @@
     if (
       hole.stateBannerTimer <= 0 ||
       !hole.stateBanner ||
+      hole.statusRequest.active ||
+      emergencyAppealOwnsSignalLane() ||
+      golfAimOwnsSignalLane() ||
+      activeDistractionOwnsSignalLane() ||
+      crosswindOwnsSignalLane() ||
+      nerveHoldOwnsSignalLane() ||
+      cutTraceOwnsSignalLane() ||
+      listeningSearchReadOwnsSignalLane() ||
+      joeDialogueOwnsSignalLane() ||
+      openingBriefingOwnsSignalLane() ||
       hole.riskAward ||
       hole.deliveryAward
     ) {
@@ -32662,12 +35059,20 @@
       performanceStampsFor(
         variant.id,
       ).length;
-    ctx.fillStyle = "rgba(0,3,1,0.78)";
+    ctx.fillStyle = "rgba(0,3,1,0.92)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const panel = { x: 164, y: 76, width: 952, height: 568 };
-    ctx.fillStyle = "rgba(3,14,8,0.97)";
+    ctx.fillStyle = "rgba(3,14,8,0.985)";
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#d47431", 3);
+    strokeRect(
+      panel.x + 10,
+      panel.y + 10,
+      panel.width - 20,
+      panel.height - 20,
+      "#35492f",
+      1,
+    );
 
     drawText(
       `${overtime ? "OVERTIME AUDIT" : "SURVIVAL BRIEFING"} // NIGHT ORDER ${String(variant.number).padStart(2, "0")}`,
@@ -32702,7 +35107,7 @@
       WIDTH * 0.5,
       184,
       10,
-      "#82927f",
+      "#9caa96",
       "center",
     );
 
@@ -32756,7 +35161,7 @@
         icon: 0,
         number: "1",
         title: "CHOOSE + FILE EXIT",
-        detail: "KEY → SHED  •  VALVE → DRAIN",
+        detail: "KEY → SHED  •  DRAIN VALVE → CULVERT",
         subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS} / CHASE APPEAL`,
       },
       {
@@ -32909,14 +35314,19 @@
       true,
     );
 
-    const pulse = 0.62 + (Math.sin(state.time * 4.2) + 1) * 0.18;
+    const pulse = state.reducedMotion
+      ? 1
+      : 0.62 +
+        (Math.sin(state.time * 4.2) +
+          1) *
+          0.18;
     ctx.globalAlpha = pulse;
     drawText(
       touchActive
-        ? "TOUCH LEFT PAD OR TAP USE TO START"
+        ? "MOVE LEFT PAD OR TAP USE TO START"
         : controllerActive
-          ? "MOVE LEFT STICK OR PRESS A TO START"
-          : `PRESS ${keyboardBindingLabel("move_up")} OR ${keyboardBindingLabel("interact")} TO START`,
+          ? "MOVE OR PRESS A TO START"
+          : `MOVE OR PRESS ${keyboardBindingLabel("interact")} TO START`,
       WIDTH * 0.5,
       631,
       16,
@@ -33916,7 +36326,10 @@
       !forecast ||
       state.hole.focus ||
       state.hole.riskAward ||
-      state.hole.deliveryAward ||
+      (
+        state.hole.deliveryAward &&
+        !deliveryAwardDeferredByCriticalFocus()
+      ) ||
       state.hole.joe.mode !==
         "patrol"
     ) {
@@ -34277,6 +36690,102 @@
     ctx.restore();
   }
 
+  function drawCutTraceFeedback() {
+    if (!cutTraceScanOwnsSignalLane()) {
+      return;
+    }
+    const hole = state.hole;
+    const environment =
+      hole.environment ||
+      getPlayerEnvironmentState();
+    const cut =
+      environment.recentJoeCut;
+    const progress = clamp(
+      hole.cutTraceProgress /
+        CUT_TRACE_SCAN_SECONDS,
+      0,
+      1,
+    );
+    const accent =
+      cut &&
+      joeCutFreshness(cut) ===
+        "fresh"
+        ? "#cde080"
+        : "#c9ae5f";
+    const panelWidth = 356;
+    const panelHeight = 58;
+    const panelX =
+      WIDTH * 0.5 -
+      panelWidth * 0.5;
+    const panelY =
+      HEIGHT * 0.52 + 112;
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(
+          state.time * 6.2,
+        ) * 0.035;
+    ctx.save();
+    ctx.globalAlpha = 0.95 + pulse;
+    ctx.fillStyle =
+      "rgba(3,13,7,0.93)";
+    ctx.fillRect(
+      panelX,
+      panelY,
+      panelWidth,
+      panelHeight,
+    );
+    strokeRect(
+      panelX,
+      panelY,
+      panelWidth,
+      panelHeight,
+      accent,
+      2,
+    );
+    drawText(
+      `READING CUT TRACE // ${Math.round(progress * 100)}%`,
+      WIDTH * 0.5,
+      panelY + 20,
+      11,
+      accent,
+      "center",
+      true,
+    );
+    ctx.fillStyle = "#1a2517";
+    ctx.fillRect(
+      panelX + 20,
+      panelY + 29,
+      panelWidth - 40,
+      7,
+    );
+    ctx.fillStyle = accent;
+    ctx.fillRect(
+      panelX + 20,
+      panelY + 29,
+      (
+        panelWidth - 40
+      ) * progress,
+      7,
+    );
+    const cutDistance =
+      environment
+        .recentJoeCutDistance;
+    drawText(
+      inputCopy(
+        `HOLD ${keyboardBindingLabel("focus")} // ${cut ? joeCutFreshness(cut).toUpperCase() : "JOE"} CUT ${cutDistance === null || cutDistance === undefined ? "--" : Math.round(cutDistance)}m // READ HEADING`,
+        `HOLD LT // ${cut ? joeCutFreshness(cut).toUpperCase() : "JOE"} CUT ${cutDistance === null || cutDistance === undefined ? "--" : Math.round(cutDistance)}m // READ HEADING`,
+        `HOLD LISTEN // ${cut ? joeCutFreshness(cut).toUpperCase() : "JOE"} CUT ${cutDistance === null || cutDistance === undefined ? "--" : Math.round(cutDistance)}m // READ HEADING`,
+      ),
+      WIDTH * 0.5,
+      panelY + 49,
+      9,
+      "#bac5a9",
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawContactBreakFeedback() {
     const hole = state.hole;
     if (hole.joe.mode !== "chase") {
@@ -34505,6 +37014,9 @@
       1,
     );
     const urgent = request.timer < 2;
+    const cancelled =
+      !request.responding &&
+      request.responseCancels > 0;
     const color = request.responding
       ? "#83c8aa"
       : urgent
@@ -34553,7 +37065,9 @@
     );
     ctx.stroke();
     drawText(
-      `JOE // ${request.code} — ${request.label}  ${request.timer.toFixed(1)}s`,
+      cancelled
+        ? `DRAFT CANCELLED // ${request.code} // ${request.timer.toFixed(1)}s`
+        : `JOE // ${request.code} — ${request.label}  ${request.timer.toFixed(1)}s`,
       WIDTH * 0.5,
       panel.y + 22,
       12,
@@ -34591,6 +37105,12 @@
     drawText(
       request.responding
         ? `SUBMITTING ${Math.round(responseProgress * 100)}% // MOVEMENT CANCELS`
+        : cancelled
+          ? inputCopy(
+              `${keyboardBindingLabel("interact")} — RESTART UPDATE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `A — RESTART UPDATE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `TAP USE — RESTART UPDATE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+            )
         : inputCopy(
             `${keyboardBindingLabel("interact")} — ACKNOWLEDGE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
             `A — ACKNOWLEDGE // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
@@ -34712,7 +37232,8 @@
       state.hole.deliveryAward;
     if (
       !award ||
-      state.hole.riskAward
+      state.hole.riskAward ||
+      deliveryAwardDeferredByCriticalFocus()
     ) {
       return;
     }
@@ -34738,7 +37259,7 @@
     const centerX =
       WIDTH * 0.5;
     const centerY =
-      334 - entrance;
+      206 - entrance;
     const color =
       award.chain >=
       DELIVERY_CHAIN_MAX
@@ -35419,18 +37940,17 @@
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.effectiveRough;
     const objective =
-      hole.escapeFiling.sealing
-        ? "RELEASE AUTHORIZED"
-        : hole.escapeFiling.active
-        ? `FILE ${escapeRouteLabel(hole.escapeFiling.route)}`
-        : hole.keyCollected && hole.drainUnlocked
-          ? "CHOOSE SHED OR DRAIN EXIT"
-          : hole.drainUnlocked
-            ? "REACH DRAIN AND FILE RELEASE"
-            : hole.keyCollected
-              ? "RETURN TO SHED AND FILE RELEASE"
-              : "FIND SHED KEY OR OPEN DRAIN VALVE";
-    const expandedHud = hole.controlHintTimer > 0.01 || hole.focus;
+      currentHoleObjective();
+    const expandedHud =
+      !golfAimOwnsSignalLane() &&
+      !activeDistractionOwnsSignalLane() &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
+      (
+        hole.controlHintTimer > 0.01 ||
+        hole.focus
+      );
     const activeStampCount =
       performanceStampsFor(
         variant.id,
@@ -35622,6 +38142,28 @@
       liveProjection.changeTimer > 0 &&
       liveProjection.direction !==
         "steady";
+    const echoProjection =
+      courseEchoComparisonState();
+    const echoProjectionVisible =
+      echoProjection
+        ?.fieldCardVisible &&
+      !echoProjection.finished;
+    const echoProjectionCopy =
+      !echoProjectionVisible
+        ? null
+        : echoProjection.scoreDelta > 0
+          ? `ECHO SCORE +${echoProjection.scoreDelta} // PROJECTED`
+          : echoProjection.scoreDelta < 0
+            ? `ECHO SCORE -${Math.abs(
+                echoProjection.scoreDelta,
+              )} // CLOSE GAP`
+            : echoProjection.resultState ===
+                  "score_tied"
+              ? "ECHO SCORE TIED // EXACT TIE"
+              : echoProjection.resultState ===
+                    "tiebreak_ahead"
+                ? "ECHO SCORE TIED // TIEBREAK +"
+                : "ECHO SCORE TIED // TIEBREAK -";
     ctx.fillStyle = "rgba(2,8,5,0.82)";
     ctx.fillRect(meterX, 36, 264, 170);
     strokeRect(
@@ -35896,17 +38438,29 @@
     drawText(
       projectionChanging
         ? `GRADE ${liveProjection.direction === "up" ? "UP" : "DOWN"} // ${liveProjection.reason}`
-        : "PROJECTED IF FILED NOW",
+        : echoProjectionCopy ||
+          "PROJECTED IF FILED NOW",
       meterX + 132,
       199,
       9,
       projectionChanging
         ? projectionColor
-        : "#647461",
+        : echoProjectionVisible
+          ? echoProjection.scoreDelta < 0
+            ? "#d99a65"
+            : echoProjection.scoreDelta > 0
+              ? "#80c7a5"
+              : "#d8cf9a"
+          : "#647461",
       "center",
-      projectionChanging,
+      projectionChanging ||
+        echoProjectionVisible,
     );
     drawCourseMiniMap();
+    drawRearNavigationCue(
+      expandedHud,
+    );
+    drawCourseEchoComparison();
 
     if (expandedHud) {
       ctx.fillStyle = "rgba(2,8,5,0.82)";
@@ -35927,18 +38481,37 @@
           ? `${environment.nearestLandmark.landmark.toUpperCase()}  ${Math.round(environment.nearestLandmarkDistance)}m`
           : "NO LANDMARK WITHIN 72m";
       drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
+      const nearbyNoiseHazard =
+        nearestNoiseHazard();
+      const noiseRiskVisible =
+        nearbyNoiseHazard.hazard &&
+        nearbyNoiseHazard.distance <
+          34;
+      const locomotion =
+        courseLocomotionState();
+      const noiseRiskGuidance =
+        locomotion.sprinting
+          ? "SLOW DOWN"
+          : hole.crouched ||
+              hole.focus
+            ? "MUFFLED, NOT SILENT"
+            : "WALK WIDE OR CHIP IT";
       const awarenessText =
         hole.blackoutTimer > 0
           ? "FLOODLIGHT POWER LOW — MOVE NOW"
-          : environment.lightExposure > 0.15
-          ? "AMBER LIGHT: VISIBILITY RISING"
-          : environment.hardCover
-            ? "SOLID OBJECT BETWEEN YOU AND JOE"
-            : environment.mowed
-              ? "JOE'S ROADMAP: +8% PACE, QUIET, EXPOSED"
-            : inRough
-              ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
-              : "OPEN SIGHTLINE — MOVE COVER TO COVER";
+          : noiseRiskVisible
+            ? `NOISE RISK ${Math.ceil(
+                nearbyNoiseHazard.distance,
+              )}m — ${noiseRiskGuidance}`
+            : environment.lightExposure > 0.15
+              ? "AMBER LIGHT: VISIBILITY RISING"
+              : environment.hardCover
+                ? "SOLID OBJECT BETWEEN YOU AND JOE"
+                : environment.mowed
+                  ? "JOE'S ROADMAP: +8% PACE, QUIET, EXPOSED"
+                  : inRough
+                    ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
+                    : "OPEN SIGHTLINE — MOVE COVER TO COVER";
       drawText(
         awarenessText,
         54,
@@ -35946,14 +38519,20 @@
         11,
         hole.blackoutTimer > 0
           ? "#75c4b8"
-          : environment.lightExposure > 0.15
-            ? "#f2a250"
-            : "#8fbc8a",
+          : noiseRiskVisible
+            ? "#e5b558"
+            : environment.lightExposure > 0.15
+              ? "#f2a250"
+              : "#8fbc8a",
         "left",
       );
     }
 
-    if (hole.zoneBannerTimer > 0) {
+    if (
+      hole.zoneBannerTimer > 0 &&
+      activeHudPresentationFocus() ===
+        "zone_arrival"
+    ) {
       const zoneAlpha = clamp(hole.zoneBannerTimer / 0.55, 0, 1);
       const bannerCenterX = WIDTH * 0.5 + 108;
       const bannerWidth = 400;
@@ -35968,10 +38547,58 @@
     }
 
     if (
+      fieldInteractionPromptOwnsBottomRail()
+    ) {
+      const actionWidth = 720;
+      const actionX =
+        WIDTH * 0.5 -
+        actionWidth * 0.5;
+      ctx.fillStyle =
+        "rgba(2,12,8,0.94)";
+      ctx.fillRect(
+        actionX,
+        HEIGHT - 112,
+        actionWidth,
+        46,
+      );
+      strokeRect(
+        actionX,
+        HEIGHT - 112,
+        actionWidth,
+        46,
+        "#76c49a",
+        2,
+      );
+      const actionCopy =
+        `ACTION // ${hole.prompt}`;
+      drawText(
+        actionCopy,
+        WIDTH * 0.5,
+        HEIGHT - 82,
+        fittedTextSize(
+          actionCopy,
+          15,
+          actionWidth - 30,
+          10,
+          true,
+        ),
+        "#dff1d5",
+        "center",
+        true,
+      );
+    } else if (
       !hole.escapeFiling.active &&
       !hole.escapeFiling.sealing &&
+      !hole.statusRequest.active &&
+      !emergencyAppealOwnsSignalLane() &&
+      !golfAimOwnsSignalLane() &&
+      !hole.nerveHold.active &&
+      !cutTraceScanOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
       hole.messageTimer > 0
     ) {
+      const presentedMessage =
+        holeMessageForPresentation();
       const alpha = clamp(hole.messageTimer, 0, 1);
       const messageWidth = 720;
       ctx.globalAlpha = alpha;
@@ -35979,14 +38606,14 @@
       ctx.fillRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46);
       strokeRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46, "#d87532", 2);
       const messageSize = fittedTextSize(
-        hole.message,
+        presentedMessage,
         15,
         messageWidth - 30,
         10,
         true,
       );
       drawText(
-        hole.message,
+        presentedMessage,
         WIDTH * 0.5,
         HEIGHT - 82,
         messageSize,
@@ -35998,13 +38625,21 @@
     } else if (
       !hole.escapeFiling.active &&
       !hole.escapeFiling.sealing &&
+      !hole.statusRequest.active &&
+      !emergencyAppealOwnsSignalLane() &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
       hole.prompt &&
       !hole.ballAim.active
     ) {
       drawText(hole.prompt, WIDTH * 0.5, HEIGHT - 82, 17, "#ffd184", "center", true);
     }
 
-    if (state.inputMethod !== "touch") {
+    if (
+      state.inputMethod !== "touch" &&
+      !golfAimOwnsSignalLane()
+    ) {
       drawText(
         expandedHud
           ? inputCopy(
@@ -38561,31 +41196,44 @@
       const statusEscalation =
         distraction.kind ===
         "status_escalation";
-      drawWorldMarker(
-        distraction.x,
-        distraction.y,
-        distraction.kind === "appeal"
-          ? `APPEAL REVIEW // ${state.hole.appealReviewTimer.toFixed(1)}s`
-          : statusAck
-            ? `STATUS PING // ${state.hole.distractionTimer.toFixed(1)}s`
-            : statusEscalation
-              ? `ESCALATED SECTOR // ${state.hole.distractionTimer.toFixed(1)}s`
-          : "DISTRACTION",
-        distraction.kind === "appeal"
-          ? "#ef9653"
-          : statusAck
-            ? "#76c1a4"
-            : statusEscalation
-              ? "#df6242"
-          : "#d6a74c",
-        distraction.kind === "appeal"
-          ? "CR"
-          : statusAck
-            ? "SR"
-            : statusEscalation
-              ? "!!"
-          : "!",
-      );
+      const noiseHazardSignal =
+        distraction.kind ===
+        "noise_hazard";
+      const hazardMessageActive =
+        noiseHazardSignal &&
+        state.hole.messageTimer >
+          0.75;
+      if (!hazardMessageActive) {
+        drawWorldMarker(
+          distraction.x,
+          distraction.y,
+          distraction.kind === "appeal"
+            ? `APPEAL REVIEW // ${state.hole.appealReviewTimer.toFixed(1)}s`
+            : statusAck
+              ? `STATUS PING // ${state.hole.distractionTimer.toFixed(1)}s`
+              : statusEscalation
+                ? `ESCALATED SECTOR // ${state.hole.distractionTimer.toFixed(1)}s`
+                : noiseHazardSignal
+                  ? `NOISE SOURCE // ${state.hole.distractionTimer.toFixed(1)}s`
+                  : "DISTRACTION",
+          distraction.kind === "appeal"
+            ? "#ef9653"
+            : statusAck
+              ? "#76c1a4"
+              : statusEscalation
+                ? "#df6242"
+                : noiseHazardSignal
+                  ? "#e0ad52"
+                  : "#d6a74c",
+          distraction.kind === "appeal"
+            ? "CR"
+            : statusAck
+              ? "SR"
+              : statusEscalation
+                ? "!!"
+                : "!",
+        );
+      }
     }
     const changeRequest =
       activeChangeRequest();
@@ -38606,15 +41254,39 @@
         "◇",
       );
     }
-    drawWorldMarker(
-      DRAIN_EXIT.x,
-      DRAIN_EXIT.y,
-      state.hole.drainUnlocked ? "DRAIN EXIT — OPEN" : "DRAIN — SEALED",
-      state.hole.drainUnlocked ? "#73c9aa" : "#778178",
-      state.hole.drainUnlocked ? "⇩" : "×",
-      DRAIN_EXIT.radius,
-    );
-    if (!state.hole.drainUnlocked || state.hole.keyCollected) {
+    const drainExitDistance =
+      worldDistance(
+        state.player,
+        DRAIN_EXIT,
+      );
+    if (
+      state.hole.drainUnlocked ||
+      state.hole.focus ||
+      drainExitDistance < 150
+    ) {
+      drawWorldMarker(
+        DRAIN_EXIT.x,
+        DRAIN_EXIT.y,
+        state.hole.drainUnlocked ? "DRAIN EXIT — OPEN" : "DRAIN — SEALED",
+        state.hole.drainUnlocked ? "#73c9aa" : "#778178",
+        state.hole.drainUnlocked ? "⇩" : "×",
+        DRAIN_EXIT.radius,
+      );
+    }
+    const shedExitDistance =
+      worldDistance(
+        state.player,
+        SHED_EXIT,
+      );
+    if (
+      (!state.hole.drainUnlocked ||
+        state.hole.keyCollected) &&
+      (
+        state.hole.keyCollected ||
+        state.hole.focus ||
+        shedExitDistance < 150
+      )
+    ) {
       drawWorldMarker(
         SHED_EXIT.x,
         SHED_EXIT.y,
@@ -38672,6 +41344,7 @@
     drawConcealmentEffects();
     drawListeningFocus();
     drawCutTraceMemory();
+    drawCutTraceFeedback();
     drawCadenceForecastCompass();
     drawContactBreakFeedback();
     drawAppealReviewFeedback();
@@ -38690,6 +41363,8 @@
       if (
         !state.hole.escapeFiling.active &&
         !state.hole.escapeFiling.sealing &&
+        !state.hole.statusRequest.active &&
+        !emergencyAppealOwnsSignalLane() &&
         !state.hole.riskAward &&
         !state.hole.deliveryAward
       ) {
@@ -38703,22 +41378,119 @@
   }
 
   function drawClockedOut() {
-    ctx.fillStyle = "#010302";
+    const horizonY = 388;
+    const drift = state.reducedMotion
+      ? 0
+      : Math.sin(state.time * 0.22) * 6;
+
+    ctx.fillStyle = "#020706";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    drawText("SHIFT ENDED", WIDTH * 0.5, HEIGHT * 0.46, 58, "#e9ead1", "center", true);
-    drawText("The release window reopens at dawn.", WIDTH * 0.5, HEIGHT * 0.54, 21, "#d57b39", "center");
+    const dawn = ctx.createLinearGradient(0, 40, 0, horizonY + 80);
+    dawn.addColorStop(0, "#030909");
+    dawn.addColorStop(0.54, "#0a1915");
+    dawn.addColorStop(0.78, "#34251b");
+    dawn.addColorStop(1, "#9a5632");
+    ctx.fillStyle = dawn;
+    ctx.fillRect(0, 0, WIDTH, horizonY + 80);
+
+    ctx.fillStyle = "rgba(232,137,70,0.12)";
+    ctx.fillRect(0, horizonY - 12, WIDTH, 4);
+    ctx.fillStyle = "rgba(241,174,92,0.08)";
+    ctx.fillRect(0, horizonY - 24, WIDTH, 3);
+    ctx.fillStyle = "rgba(234,183,115,0.54)";
+    ctx.fillRect(1034, horizonY - 39, 62, 8);
+    ctx.fillStyle = "rgba(242,195,123,0.24)";
+    ctx.fillRect(1022, horizonY - 43, 86, 4);
+
+    ctx.fillStyle = "#0a1510";
+    polygon([
+      [0, horizonY + 20],
+      [0, horizonY - 18],
+      [150, horizonY - 54],
+      [305, horizonY - 24],
+      [470, horizonY - 76],
+      [650, horizonY - 31],
+      [820, horizonY - 62],
+      [1000, horizonY - 27],
+      [1165, horizonY - 65],
+      [WIDTH, horizonY - 38],
+      [WIDTH, horizonY + 20],
+    ]);
+    ctx.fillStyle = "#071009";
+    polygon([
+      [0, horizonY + 90],
+      [0, horizonY + 29],
+      [205, horizonY - 2],
+      [406, horizonY + 32],
+      [622, horizonY - 9],
+      [845, horizonY + 28],
+      [1058, horizonY - 4],
+      [WIDTH, horizonY + 22],
+      [WIDTH, horizonY + 90],
+    ]);
+
+    ctx.fillStyle = "#030805";
+    ctx.fillRect(0, horizonY + 52, WIDTH, HEIGHT - horizonY - 52);
+    for (let index = 0; index < 92; index += 1) {
+      const rootX = index / 91 * WIDTH;
+      const bladeHeight = 18 + hash(index * 61) * 58;
+      const sway = state.reducedMotion
+        ? 0
+        : Math.sin(state.time * 0.7 + index * 1.4) * 5;
+      ctx.strokeStyle = index % 5 === 0
+        ? "rgba(60,76,37,0.72)"
+        : "rgba(30,51,28,0.82)";
+      ctx.lineWidth = index % 7 === 0 ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(rootX, HEIGHT);
+      ctx.lineTo(rootX + sway, HEIGHT - bladeHeight);
+      ctx.stroke();
+    }
+    drawMotes(state.time + drift * 0.02, 14, "218,139,73", horizonY - 70);
+
+    const panel = {
+      x: WIDTH * 0.5 - 326,
+      y: 130,
+      width: 652,
+      height: 396,
+    };
+    ctx.fillStyle = "rgba(2,10,7,0.91)";
+    ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
+    strokeRect(panel.x, panel.y, panel.width, panel.height, "#586847", 2);
+    ctx.fillStyle = "rgba(180,101,48,0.72)";
+    ctx.fillRect(panel.x, panel.y, panel.width, 5);
+    drawText("PERSONNEL ACTION // RELEASE NIGHT", panel.x + 30, panel.y + 38, 13, "#87967a", "left", true);
+    drawText("STATUS  //  OUT OF OFFICE", panel.x + panel.width - 30, panel.y + 38, 12, "#b36c3f", "right", true);
+    drawText("SHIFT ENDED", WIDTH * 0.5, panel.y + 112, 58, "#e9ead1", "center", true);
+    drawText("The release window reopens at dawn.", WIDTH * 0.5, panel.y + 158, 20, "#dd8748", "center");
+
+    ctx.fillStyle = "rgba(9,24,15,0.9)";
+    ctx.fillRect(panel.x + 30, panel.y + 190, panel.width - 60, 78);
+    strokeRect(panel.x + 30, panel.y + 190, panel.width - 60, 78, "#31432f", 1);
+    drawText("NIGHT ORDER", panel.x + 50, panel.y + 218, 12, "#76866f", "left", true);
+    drawText("LEFT UNSIGNED", panel.x + panel.width - 50, panel.y + 218, 13, "#d7b36b", "right", true);
+    drawText("Joe's calendar remains fully committed.", WIDTH * 0.5, panel.y + 251, 14, "#a7b29e", "center");
+
+    const promptPulse = state.reducedMotion
+      ? 0.78
+      : 0.68 + (Math.sin(state.time * 2.2) + 1) * 0.1;
+    ctx.fillStyle = `rgba(24,38,22,${promptPulse})`;
+    ctx.fillRect(panel.x + 118, panel.y + 302, panel.width - 236, 54);
+    strokeRect(panel.x + 118, panel.y + 302, panel.width - 236, 54, "#8b7844", 1);
     drawText(
       inputCopy(
-        "ENTER — RETURN TO MENU",
-        "A — RETURN TO MENU",
-        "TAP — RETURN TO MENU",
+        "CLICK / ENTER / SPACE / ESC  //  RETURN",
+        "A / B  //  RETURN",
+        "TAP  //  RETURN",
       ),
       WIDTH * 0.5,
-      HEIGHT * 0.64,
-      16,
-      "#9ba794",
+      panel.y + 336,
+      15,
+      "#d7d8bc",
       "center",
+      true,
     );
+    drawText("NO OVERTIME WAS AUTHORIZED.", WIDTH - 28, HEIGHT - 24, 11, "#586451", "right", true);
   }
 
   function nextNightOrderVariant() {
@@ -38880,11 +41652,18 @@
       state.hole.captureReview
         ? "RETRY FILE LOADS THIS COUNTERPLAN INTO THE NEXT ATTEMPT."
         : selected.description;
+    const actionDescriptionText =
+      `NEXT ACTION // ${actionDescription}`;
     drawText(
-      `NEXT ACTION // ${actionDescription}`,
+      actionDescriptionText,
       WIDTH * 0.5,
       588,
-      11,
+      fittedTextSize(
+        actionDescriptionText,
+        11,
+        1120,
+        9,
+      ),
       "#c8d1bd",
       "center",
     );
@@ -39142,6 +41921,10 @@
       state.hole.result ||
       calculateRunResult(state.hole.escapeRoute);
     const resultColor = gradeColor(result.grade);
+    const echoAdjudication =
+      courseEchoResultAdjudication(
+        result,
+      );
     const activeRecord = result.overtime
       ? state.career.overtimeBest
       : state.career.routes[result.route];
@@ -39392,27 +42175,44 @@
             : "#8fd3a5",
       });
     }
+    const scoreNoteLimit = 6;
+    const visibleScoreNotes =
+      scoreNotes.length > scoreNoteLimit
+        ? [
+            ...scoreNotes.slice(
+              0,
+              scoreNoteLimit - 1,
+            ),
+            {
+              text: `+${scoreNotes.length - (scoreNoteLimit - 1)} ADDITIONAL SCORE EVENTS FILED`,
+              color: "#9eb59a",
+            },
+          ]
+        : scoreNotes;
     for (
       let index = 0;
-      index < scoreNotes.length;
+      index < visibleScoreNotes.length;
       index += 1
     ) {
       drawText(
-        scoreNotes[index].text,
+        visibleScoreNotes[index].text,
         540,
         306 + index * 14,
         10,
-        scoreNotes[index].color,
+        visibleScoreNotes[index].color,
         "left",
         true,
       );
     }
     const statRows = [
       [
-        "TIME ON COURSE",
-        result.echoTimeDelta !== null
-          ? `${formatRunTime(result.timeSeconds)}  •  ${Math.abs(result.echoTimeDelta).toFixed(1)}s ${result.echoTimeDelta <= 0 ? "AHEAD" : "BEHIND"}`
-          : formatRunTime(result.timeSeconds),
+        echoAdjudication
+          ? "TIME / ECHO PACE"
+          : "TIME ON COURSE",
+        courseEchoResultTimeCopy(
+          result,
+          echoAdjudication,
+        ),
       ],
       [
         "ATTENTION AVOIDED",
@@ -39439,20 +42239,20 @@
       index += 1
     ) {
       const statStart =
-        scoreNotes.length > 0
+        visibleScoreNotes.length > 0
           ? 348 +
             Math.max(
               0,
-              scoreNotes.length - 3,
+              visibleScoreNotes.length - 3,
             ) *
               14
           : 324;
       const statSpacing =
-        scoreNotes.length > 3
+        visibleScoreNotes.length > 3
           ? 25
-          : scoreNotes.length > 0
+          : visibleScoreNotes.length > 0
             ? 28
-          : 33;
+            : 33;
       const y =
         statStart +
         index * statSpacing;
@@ -39481,17 +42281,46 @@
       );
     }
 
-    ctx.fillStyle = "rgba(14,31,18,0.8)";
-    ctx.fillRect(260, 495, 760, 46);
-    strokeRect(260, 495, 760, 46, "#3f563a", 1);
+    ctx.fillStyle = "rgba(14,31,18,0.84)";
+    ctx.fillRect(260, 490, 760, 52);
+    strokeRect(
+      260,
+      490,
+      760,
+      52,
+      echoAdjudication
+        ? echoAdjudication.color
+        : "#3f563a",
+      echoAdjudication ? 2 : 1,
+    );
+    ctx.fillStyle =
+      echoAdjudication
+        ? echoAdjudication.color
+        : routeAccent;
+    ctx.fillRect(274, 500, 4, 32);
     drawText(
-      usedDrain
-        ? `DRAIN ROUTE  //  ${result.variantName}  //  ${result.overtime ? "AFTER-HOURS EGRESS" : "UNAUTHORIZED EGRESS"}`
-        : `SHED ROUTE  //  ${result.variantName}  //  ${result.overtime ? "OVERTIME CLOSED" : "ACTION ITEM CLOSED"}`,
+      echoAdjudication
+        ? echoAdjudication.headline
+        : usedDrain
+          ? "DRAIN ESCAPE FILED"
+          : "SHED ESCAPE FILED",
       WIDTH * 0.5,
-      524,
-      13,
-      routeAccent,
+      512,
+      15,
+      echoAdjudication
+        ? echoAdjudication.color
+        : routeAccent,
+      "center",
+      true,
+    );
+    drawText(
+      echoAdjudication
+        ? `${echoAdjudication.detail} // ${usedDrain ? "DRAIN" : "SHED"} ESCAPE FILED`
+        : `${result.variantName}  //  ${result.overtime ? (usedDrain ? "AFTER-HOURS EGRESS" : "OVERTIME CLOSED") : usedDrain ? "UNAUTHORIZED EGRESS" : "ACTION ITEM CLOSED"}`,
+      WIDTH * 0.5,
+      533,
+      10,
+      "#aebba5",
       "center",
       true,
     );
@@ -39711,20 +42540,38 @@
       "left",
       true,
     );
+    const dialogueLineOne =
+      `"${captureDialogue.lines[0]}`;
+    const dialogueLineTwo =
+      `${captureDialogue.lines[1]}"`;
+    const dialogueTextWidth =
+      dialogueWidth - 126;
     drawText(
-      `"${captureDialogue.lines[0]}`,
+      dialogueLineOne,
       dialogueX + 98,
       dialogueY + 49,
-      15,
+      fittedTextSize(
+        dialogueLineOne,
+        15,
+        dialogueTextWidth,
+        11,
+        true,
+      ),
       "#f3e8cd",
       "left",
       true,
     );
     drawText(
-      `${captureDialogue.lines[1]}"`,
+      dialogueLineTwo,
       dialogueX + 98,
       dialogueY + 70,
-      15,
+      fittedTextSize(
+        dialogueLineTwo,
+        15,
+        dialogueTextWidth,
+        11,
+        true,
+      ),
       "#f3e8cd",
       "left",
       true,
@@ -39778,19 +42625,34 @@
       "left",
       true,
     );
+    const evidenceText =
+      `EVIDENCE // ${captureReview.evidence}`;
+    const counterplayText =
+      `NEXT RUN // ${captureReview.counterplay}`;
     drawText(
-      `EVIDENCE // ${captureReview.evidence}`,
+      evidenceText,
       reviewX + 14,
       reviewY + 38,
-      11,
+      fittedTextSize(
+        evidenceText,
+        11,
+        reviewWidth - 28,
+        9,
+      ),
       "#e5ddc8",
       "left",
     );
     drawText(
-      `NEXT RUN // ${captureReview.counterplay}`,
+      counterplayText,
       reviewX + 14,
       reviewY + 57,
-      10,
+      fittedTextSize(
+        counterplayText,
+        10,
+        reviewWidth - 28,
+        8,
+        true,
+      ),
       "#d5a15e",
       "left",
       true,
@@ -39869,6 +42731,10 @@
       null;
     renderFrameCache.threat = null;
     renderFrameCache.locomotion = null;
+    renderFrameCache.blockerCallouts =
+      null;
+    renderFrameCache.worldContextCue =
+      null;
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     switch (state.mode) {
@@ -39989,7 +42855,10 @@
         hole.deliveryChain = 0;
       }
       if (hole.deliveryAward) {
-        if (!hole.riskAward) {
+        if (
+          !hole.riskAward &&
+          !deliveryAwardDeferredByCriticalFocus()
+        ) {
           hole.deliveryAward.age +=
             dt;
         }
@@ -40003,6 +42872,7 @@
       if (
         !hole.deliveryAward &&
         !hole.riskAward &&
+        !deliveryAwardDeferredByCriticalFocus() &&
         hole.deliveryAwardQueue.length >
           0
       ) {
@@ -40486,6 +43356,11 @@
         filingNoise,
       );
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
+      updateNoiseHazards(
+        dt,
+        moving,
+        sprinting,
+      );
       const targetConcealment =
         hole.crouched && environment.hardCover
           ? moving
@@ -40643,6 +43518,7 @@
         );
       } else if (
         practiceDrillActive() &&
+        !hole.blindsideTransfer &&
         worldDistance(
           state.player,
           state.hole.practiceDrill.target,
@@ -41898,6 +44774,147 @@
     playNoiseBurst(0.12, 0.018, 2400, "highpass");
   }
 
+  function playNoiseHazardCue(
+    hazard,
+    intensity,
+  ) {
+    const pan = clamp(
+      (
+        hazard.x -
+        state.player.x
+      ) / 28,
+      -0.78,
+      0.78,
+    );
+    const volume =
+      lerp(
+        0.035,
+        0.07,
+        intensity,
+      );
+    if (hazard.tone === "balls") {
+      for (
+        let impact = 0;
+        impact < 4;
+        impact += 1
+      ) {
+        playTransientTone(
+          880 - impact * 105,
+          430 - impact * 38,
+          0.1 + impact * 0.025,
+          volume *
+            (0.72 - impact * 0.09),
+          "triangle",
+          impact * 0.075,
+        );
+      }
+      playNoiseBurst(
+        0.52,
+        volume * 0.74,
+        1650,
+        "bandpass",
+        pan,
+      );
+      return;
+    }
+    if (
+      hazard.tone === "clubs" ||
+      hazard.tone === "tools"
+    ) {
+      playTransientTone(
+        hazard.tone === "clubs"
+          ? 1240
+          : 970,
+        210,
+        0.36,
+        volume,
+        "square",
+      );
+      playTransientTone(
+        610,
+        168,
+        0.42,
+        volume * 0.72,
+        "triangle",
+        0.08,
+      );
+      playNoiseBurst(
+        0.46,
+        volume * 0.82,
+        2100,
+        "highpass",
+        pan,
+      );
+      return;
+    }
+    if (hazard.tone === "coupling") {
+      playTransientTone(
+        286,
+        82,
+        0.28,
+        volume,
+        "square",
+      );
+      playNoiseBurst(
+        0.34,
+        volume * 0.86,
+        920,
+        "bandpass",
+        pan,
+        0.04,
+      );
+      return;
+    }
+    playTransientTone(
+      hazard.tone === "flag"
+        ? 430
+        : 240,
+      hazard.tone === "flag"
+        ? 118
+        : 76,
+      0.3,
+      volume * 0.86,
+      "triangle",
+    );
+    playNoiseBurst(
+      0.4,
+      volume,
+      hazard.tone === "flag"
+        ? 1250
+        : 680,
+      "bandpass",
+      pan,
+    );
+  }
+
+  function playNoiseHazardProximityCue(
+    hazard,
+  ) {
+    const pan = clamp(
+      (
+        hazard.x -
+        state.player.x
+      ) / 22,
+      -0.68,
+      0.68,
+    );
+    playNoiseBurst(
+      0.09,
+      0.012,
+      1800,
+      "bandpass",
+      pan,
+    );
+    playTransientTone(
+      520,
+      390,
+      0.07,
+      0.009,
+      "triangle",
+      0.02,
+    );
+  }
+
   function playCollisionCue(obstacle) {
     const pan = clamp(
       (obstacle.x - state.player.x) /
@@ -42467,7 +45484,7 @@
       return -1;
     }
     for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
-      const y = 238 + index * 68;
+      const y = 250 + index * 68;
       if (point.y >= y && point.y <= y + 50) {
         return index;
       }
@@ -43580,7 +46597,13 @@
       enterMenu();
       event.preventDefault();
     } else if (state.mode === "menu" || state.mode === "claim") {
-      if (event.code === "KeyR" && !event.repeat) {
+      if (
+        state.mode === "claim" &&
+        event.code === "Escape"
+      ) {
+        enterMenu();
+        event.preventDefault();
+      } else if (event.code === "KeyR" && !event.repeat) {
         toggleOvertimeAudit();
         event.preventDefault();
       } else if (event.code === "ArrowDown") {
@@ -43783,7 +46806,14 @@
         activateResultAction();
         event.preventDefault();
       }
-    } else if (state.mode === "clocked_out" && (event.code === "Enter" || event.code === "Space")) {
+    } else if (
+      state.mode === "clocked_out" &&
+      (
+        event.code === "Enter" ||
+        event.code === "Space" ||
+        event.code === "Escape"
+      )
+    ) {
       enterMenu();
       event.preventDefault();
     }
@@ -43873,6 +46903,38 @@
     selectedPauseItem:
       state.mode === "paused"
         ? PAUSE_ITEMS[state.pauseIndex]
+        : null,
+    pauseSnapshot:
+      state.mode === "paused"
+        ? {
+            frozen: true,
+            objective:
+              currentHoleObjective(),
+            zone:
+              courseZoneAt(
+                state.player.y,
+              ).name,
+            progressPercent:
+              Math.round(
+                state.player.y /
+                  COURSE_LENGTH *
+                  100,
+              ),
+            joeMode:
+              state.hole.joe.mode,
+            joeDistance:
+              Math.round(
+                worldDistance(
+                  state.hole.joe,
+                  state.player,
+                ),
+              ),
+            sightline:
+              state.hole
+                .hasLineOfSight
+                ? "open"
+                : "blocked",
+          }
         : null,
     resultActions:
       state.mode === "victory" ||
@@ -44800,17 +47862,34 @@
               ),
             })) || [],
           hudExpanded:
-            state.hole.controlHintTimer > 0.01 ||
-            state.hole.focus,
+            !golfAimOwnsSignalLane() &&
+            !activeDistractionOwnsSignalLane() &&
+            !nerveHoldOwnsSignalLane() &&
+            !cutTraceOwnsSignalLane() &&
+            !listeningSearchReadOwnsSignalLane() &&
+            (
+              state.hole.controlHintTimer > 0.01 ||
+              state.hole.focus
+            ),
           hudExpansionReason:
-            state.hole.focus
-              ? "focus"
-              : state.hole.controlHintTimer >
-                    0.01
-                ? state.hole
-                    .controlHintSource ||
-                  "timed"
-                : "compact",
+            golfAimOwnsSignalLane()
+              ? "golf_aim_focus"
+              : activeDistractionOwnsSignalLane()
+                ? "distraction_handoff"
+                : nerveHoldOwnsSignalLane()
+                  ? "nerve_hold"
+                  : cutTraceOwnsSignalLane()
+                    ? "cut_trace"
+                    : listeningSearchReadOwnsSignalLane()
+                      ? "listening_search"
+                      : state.hole.focus
+                        ? "focus"
+                        : state.hole.controlHintTimer >
+                              0.01
+                          ? state.hole
+                              .controlHintSource ||
+                            "timed"
+                          : "compact",
           controlHintSeconds: Number(
             state.hole.controlHintTimer.toFixed(2),
           ),
@@ -44857,6 +47936,8 @@
                       : "behind",
                   finished:
                     currentCourseEcho().finished,
+                  comparison:
+                    courseEchoComparisonSummary(),
                 }
               : {
                   available: false,
@@ -45117,6 +48198,10 @@
                       : "restrained camera drift and refuge glow",
                   fallback:
                     "existing course tableau while generated image loads",
+                  courseEchoAdjudication:
+                    courseEchoResultAdjudication(
+                      state.hole.result,
+                    ),
                 }
               : null,
           captureReview:
@@ -45738,6 +48823,13 @@
             secondsRemaining: Number(
               state.hole.crosswind.timer.toFixed(2),
             ),
+            presentationSecondsRemaining:
+              Number(
+                state.hole.crosswind
+                  .presentationTimer.toFixed(
+                    2,
+                  ),
+              ),
             direction:
               crosswindDirectionLabel().toLowerCase(),
             strength: Number(
@@ -45852,6 +48944,59 @@
             ),
           },
           noise: Number(state.hole.noise.toFixed(2)),
+          noiseHazards: {
+            total:
+              COURSE_NOISE_HAZARDS.length,
+            triggered:
+              state.hole
+                .noiseHazardsTriggered,
+            steppedOn:
+              state.hole
+                .noiseHazardsStepped,
+            remoteTriggers:
+              state.hole
+                .noiseHazardsTriggeredByBall,
+            nearby:
+              nearbyNoiseHazardsForText(),
+            active:
+              state.hole
+                .activeNoiseHazard
+                ? {
+                    id: state.hole
+                      .activeNoiseHazard
+                      .id,
+                    label: state.hole
+                      .activeNoiseHazard
+                      .label,
+                    x: state.hole
+                      .activeNoiseHazard
+                      .x,
+                    y: state.hole
+                      .activeNoiseHazard
+                      .y,
+                    source: state.hole
+                      .activeNoiseHazard
+                      .source,
+                    intensity: Number(
+                      state.hole
+                        .activeNoiseHazard
+                        .intensity.toFixed(2),
+                    ),
+                    timer: Number(
+                      state.hole
+                        .activeNoiseHazard
+                        .timer.toFixed(2),
+                    ),
+                    duration: Number(
+                      state.hole
+                        .activeNoiseHazard
+                        .duration.toFixed(2),
+                    ),
+                  }
+                : null,
+          behavior:
+            "a one-time player-only proximity rustle precedes contact; entering a marked radius triggers a spatial noise, crouching softens it, and golf-ball impacts can activate it remotely",
+          },
           turf: {
             mowedMarks:
               state.hole.turfMarks.filter(
@@ -46065,6 +49210,13 @@
                   1,
                 ).toFixed(2),
               ),
+              presentationSecondsRemaining:
+                Number(
+                  state.hole
+                    .cutTracePresentationTimer.toFixed(
+                      2,
+                    ),
+                ),
               candidateMarkId:
                 state.hole
                   .cutTraceCandidateId,
@@ -47119,10 +50271,99 @@
               state.hole.zoneVisits.slice(),
           },
           message:
-            state.hole.messageTimer > 0
+            state.hole.messageTimer > 0 &&
+            !state.hole.statusRequest.active &&
+            !emergencyAppealOwnsSignalLane() &&
+            !golfAimOwnsSignalLane() &&
+            !state.hole.nerveHold.active &&
+            !cutTraceScanOwnsSignalLane() &&
+            !listeningSearchReadOwnsSignalLane() &&
+            !fieldInteractionPromptOwnsBottomRail()
+              ? holeMessageForPresentation()
+              : null,
+          messageSource:
+            state.hole.messageTimer > 0 &&
+            (
+              state.hole.statusRequest.active ||
+              emergencyAppealOwnsSignalLane() ||
+              golfAimOwnsSignalLane() ||
+              state.hole.nerveHold.active ||
+              cutTraceScanOwnsSignalLane() ||
+              listeningSearchReadOwnsSignalLane() ||
+              fieldInteractionPromptOwnsBottomRail() ||
+              holeMessageForPresentation() !==
+                state.hole.message
+            )
               ? state.hole.message
               : null,
-          prompt: state.hole.prompt || null,
+          messageDeferredBy:
+            state.hole.messageTimer > 0 &&
+            (
+              state.hole.statusRequest.active ||
+              emergencyAppealOwnsSignalLane() ||
+              golfAimOwnsSignalLane() ||
+              state.hole.nerveHold.active ||
+              cutTraceScanOwnsSignalLane() ||
+              listeningSearchReadOwnsSignalLane() ||
+              fieldInteractionPromptOwnsBottomRail()
+            )
+              ? state.hole.statusRequest.active
+                ? "status_request"
+                : emergencyAppealOwnsSignalLane()
+                  ? "emergency_appeal"
+                  : golfAimOwnsSignalLane()
+                    ? "golf_aim"
+                    : state.hole.nerveHold.active
+                      ? "nerve_hold"
+                      : cutTraceScanOwnsSignalLane()
+                        ? "cut_trace"
+                        : listeningSearchReadOwnsSignalLane()
+                          ? "listening_search"
+                          : "interaction_prompt"
+              : null,
+          prompt:
+            state.hole.statusRequest.active ||
+            emergencyAppealOwnsSignalLane() ||
+            golfAimOwnsSignalLane() ||
+            nerveHoldOwnsSignalLane() ||
+            cutTraceOwnsSignalLane() ||
+            listeningSearchReadOwnsSignalLane()
+              ? null
+              : state.hole.prompt || null,
+          promptSource:
+            (
+              state.hole.statusRequest.active ||
+              emergencyAppealOwnsSignalLane() ||
+              golfAimOwnsSignalLane() ||
+              nerveHoldOwnsSignalLane() ||
+              cutTraceOwnsSignalLane() ||
+              listeningSearchReadOwnsSignalLane()
+            ) &&
+            state.hole.prompt
+              ? state.hole.prompt
+              : null,
+          promptDeferredBy:
+            (
+              state.hole.statusRequest.active ||
+              emergencyAppealOwnsSignalLane() ||
+              golfAimOwnsSignalLane() ||
+              nerveHoldOwnsSignalLane() ||
+              cutTraceOwnsSignalLane() ||
+              listeningSearchReadOwnsSignalLane()
+            ) &&
+            state.hole.prompt
+              ? state.hole.statusRequest.active
+                ? "status_request"
+                : emergencyAppealOwnsSignalLane()
+                  ? "emergency_appeal"
+                  : golfAimOwnsSignalLane()
+                    ? "golf_aim"
+                    : nerveHoldOwnsSignalLane()
+                      ? "nerve_hold"
+                      : cutTraceOwnsSignalLane()
+                        ? "cut_trace"
+                        : "listening_search"
+              : null,
           blockedBy: state.hole.blockedTimer > 0 ? state.hole.blockedObstacle : null,
           collisionContact:
             state.hole.blockedTimer > 0
@@ -47179,7 +50420,10 @@
             deliveryQueued:
               Boolean(
                 (
-                  state.hole.riskAward &&
+                  (
+                    state.hole.riskAward ||
+                    deliveryAwardDeferredByCriticalFocus()
+                  ) &&
                   state.hole.deliveryAward
                 ) ||
                 state.hole
@@ -47189,6 +50433,7 @@
             deliveryVisible:
               Boolean(
                 !state.hole.riskAward &&
+                !deliveryAwardDeferredByCriticalFocus() &&
                 state.hole.deliveryAward,
               ),
             joeStateVisible:
@@ -47196,28 +50441,37 @@
                 state.hole
                     .stateBannerTimer > 0 &&
                 state.hole.stateBanner &&
+                !state.hole
+                  .statusRequest.active &&
+                !emergencyAppealOwnsSignalLane() &&
+                !golfAimOwnsSignalLane() &&
+                !activeDistractionOwnsSignalLane() &&
+                !nerveHoldOwnsSignalLane() &&
+                !cutTraceOwnsSignalLane() &&
+                !listeningSearchReadOwnsSignalLane() &&
+                !joeDialogueOwnsSignalLane() &&
+                !openingBriefingOwnsSignalLane() &&
                 !state.hole.riskAward &&
                 !state.hole
                   .deliveryAward,
               ),
             maximumThreatCaptionCards:
-              (
-                activeHudPresentationFocus() ===
-                  "pursuit" ||
-                activeHudPresentationFocus() ===
-                  "blindside_transfer" ||
-                activeHudPresentationFocus() ===
-                  "emergency_appeal" ||
-                activeHudPresentationFocus() ===
-                  "status_request"
+              hudFocusSuppressesThreatCaptions(
+                activeHudPresentationFocus(),
               )
                 ? 0
                 : activeHudPresentationFocus() ===
                     "field"
                   ? 2
                   : 1,
+            zoneBannerVisible:
+              state.hole
+                  .zoneBannerTimer > 0 &&
+              activeHudPresentationFocus() ===
+                "zone_arrival",
             joeBarkVisible:
               Boolean(
+                state.subtitles &&
                 state.hole
                     .joeBarkTimer > 0 &&
                 state.hole.joeBark &&
@@ -47229,7 +50483,13 @@
                 activeHudPresentationFocus() !==
                   "emergency_appeal" &&
                 activeHudPresentationFocus() !==
-                  "status_request",
+                  "status_request" &&
+                activeHudPresentationFocus() !==
+                  "nerve_hold" &&
+                activeHudPresentationFocus() !==
+                  "cut_trace" &&
+                activeHudPresentationFocus() !==
+                  "listening_search",
               ),
           },
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
@@ -47299,6 +50559,34 @@
                 true,
               proximityBlockers:
                 true,
+              contextCue: (() => {
+                const cue =
+                  worldContextCueState();
+                return cue.kind === "none"
+                  ? cue.deferredBy
+                    ? {
+                        kind: "none",
+                        deferredBy:
+                          cue.deferredBy,
+                      }
+                    : null
+                  : {
+                      kind: cue.kind,
+                      id: cue.id,
+                      distance: Number(
+                        cue.distance.toFixed(
+                          2,
+                        ),
+                      ),
+                      presentation:
+                        cue.kind ===
+                        "practice"
+                          ? "binding_aware_bottom_prompt_plus_world_art_and_ground_ring"
+                          : "single_world_label",
+                      arbitration:
+                        "one_nearest_ambient_context_owner; imminent noise and close practice override blockers",
+                    };
+              })(),
               targetId:
                 state.hole
                   .navigationGuide
@@ -47317,6 +50605,36 @@
                 ),
               direction:
                 effectiveGuidanceDirection(),
+              rearBearingCue:
+                (() => {
+                  const cue =
+                    rearNavigationCueState();
+                  if (!cue) {
+                    return null;
+                  }
+                  return {
+                    visible:
+                      !listeningSearchReadOwnsSignalLane() &&
+                      rearNavigationCueVisible(
+                        cue,
+                      ),
+                    deferredBy:
+                      listeningSearchReadOwnsSignalLane()
+                        ? "listening_search"
+                        : null,
+                    side:
+                      cue.side,
+                    targetLabel:
+                      cue.targetLabel,
+                    distance: Number(
+                      cue.distance.toFixed(
+                        2,
+                      ),
+                    ),
+                    inputEffect:
+                      "guidance_only",
+                  };
+                })(),
               pathWaypoints:
                 state.hole
                   .navigationGuide
@@ -48035,6 +51353,16 @@
             sand:
               state.hole.joe.sand,
             distance: Math.round(worldDistance(state.hole.joe, state.player)),
+            worldLabelVisible:
+              !listeningSearchReadOwnsSignalLane() &&
+              (
+                worldDistance(
+                  state.hole.joe,
+                  state.player,
+                ) < 52 ||
+                state.hole.joe.mode !==
+                  "patrol"
+              ),
             hasLineOfSight: state.hole.hasLineOfSight,
             lineBlockedBy: state.hole.lineBlockedBy,
             lostSightSeconds: Number(state.hole.lostSightTimer.toFixed(2)),
