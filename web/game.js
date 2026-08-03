@@ -977,6 +977,8 @@
     18;
   const ONBOARDING_CONTROL_COLLAPSE_DELAY =
     0.65;
+  const ONBOARDING_MOVEMENT_CUE_DISTANCE =
+    10;
   const MANUAL_CONTROL_HINT_SECONDS = 8;
   const LOOK_BACK_TURN_IN_RESPONSE = 13.5;
   const LOOK_BACK_TURN_OUT_RESPONSE = 10.5;
@@ -2142,6 +2144,8 @@
       attempts: 0,
       misses: 0,
       landedBallId: null,
+      lastCorrection: null,
+      lastMissDistance: 0,
     };
   }
 
@@ -14532,9 +14536,26 @@
     return (
       hole.zoneIndex === 0 &&
       hole.messageTimer > 0 &&
-      hole.message.startsWith(
-        "SOUTH GATE LOCKED",
+      (
+        hole.message.startsWith(
+          "SOUTH GATE LOCKED",
+        ) ||
+        hole.controlHintSource ===
+          "onboarding"
       )
+    );
+  }
+
+  function openingMovementCueActive() {
+    const hole = state.hole;
+    return Boolean(
+      hole &&
+      hole.zoneIndex === 0 &&
+      hole.controlHintSource ===
+        "onboarding" &&
+      hole.controlHintTimer > 0.01 &&
+      hole.travelDistance <
+        ONBOARDING_MOVEMENT_CUE_DISTANCE
     );
   }
 
@@ -14640,6 +14661,79 @@
     ].includes(focus);
   }
 
+  function joeStateBannerVisible() {
+    const hole = state.hole;
+    return Boolean(
+      hole.stateBannerTimer > 0 &&
+      hole.stateBanner &&
+      activeHudPresentationFocus() !==
+        "final_filing" &&
+      !hole.statusRequest.active &&
+      !emergencyAppealOwnsSignalLane() &&
+      !golfAimOwnsSignalLane() &&
+      !activeDistractionOwnsSignalLane() &&
+      !crosswindOwnsSignalLane() &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
+      !joeDialogueOwnsSignalLane() &&
+      !openingBriefingOwnsSignalLane() &&
+      !hole.riskAward &&
+      !hole.deliveryAward
+    );
+  }
+
+  function stateBannerThreatCaption() {
+    if (
+      !state.threatCaptions ||
+      !joeStateBannerVisible()
+    ) {
+      return null;
+    }
+    const captions =
+      state.hole.captions || [];
+    for (
+      let index =
+        captions.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      if (
+        captions[index].text ===
+        state.hole.stateBanner
+      ) {
+        return captions[index];
+      }
+    }
+    return null;
+  }
+
+  function visibleThreatCaptions(
+    focus = activeHudPresentationFocus(),
+  ) {
+    if (
+      !state.threatCaptions ||
+      !state.hole.captions?.length ||
+      state.hole.tutorialVisible ||
+      hudFocusSuppressesThreatCaptions(
+        focus,
+      )
+    ) {
+      return [];
+    }
+    const merged =
+      stateBannerThreatCaption();
+    const captions = merged
+      ? state.hole.captions.filter(
+          (caption) =>
+            caption !== merged,
+        )
+      : state.hole.captions;
+    return captions.slice(
+      focus === "field" ? -2 : -1,
+    );
+  }
+
   function drawThreatCaptions() {
     if (
       !state.threatCaptions ||
@@ -14650,19 +14744,13 @@
     }
     const focus =
       activeHudPresentationFocus();
-    if (
-      hudFocusSuppressesThreatCaptions(
-        focus,
-      )
-    ) {
+    const captions =
+      visibleThreatCaptions(focus);
+    if (!captions.length) {
       return;
     }
     const focused =
       focus !== "field";
-    const captions =
-      state.hole.captions.slice(
-        focused ? -1 : -2,
-      );
     for (let index = 0; index < captions.length; index += 1) {
       const caption = captions[index];
       const remaining = caption.duration - caption.age;
@@ -14706,6 +14794,7 @@
       hole.tutorialVisible ||
       hole.riskAward ||
       hole.deliveryAward ||
+      hole.escapeFiling.sealing ||
       activeHudPresentationFocus() ===
         "trail_evidence" ||
       activeHudPresentationFocus() ===
@@ -16991,6 +17080,62 @@
     );
   }
 
+  function practiceMissCorrection(
+    impact,
+    target,
+  ) {
+    const deltaX =
+      target.x - impact.x;
+    const deltaY =
+      target.y - impact.y;
+    const missDistance = Math.max(
+      1,
+      Math.ceil(
+        worldDistance(
+          impact,
+          target,
+        ) - target.radius,
+      ),
+    );
+    const lateralCorrection =
+      Math.abs(deltaX) >
+      target.radius * 0.55
+        ? deltaX < 0
+          ? "AIM LEFT"
+          : "AIM RIGHT"
+        : null;
+    const powerCorrection =
+      Math.abs(deltaY) >
+      target.radius * 0.55
+        ? deltaY >= 0
+          ? "ADD POWER"
+          : "REDUCE POWER"
+        : null;
+    const correction =
+      [
+        lateralCorrection,
+        powerCorrection,
+      ]
+      .filter(Boolean)
+      .join(" + ") ||
+      (
+        Math.abs(deltaX) >
+        Math.abs(deltaY)
+          ? deltaX < 0
+            ? "AIM LEFT"
+            : "AIM RIGHT"
+          : deltaY >= 0
+            ? "ADD POWER"
+            : "REDUCE POWER"
+      );
+    return {
+      correction,
+      missDistance,
+      summary:
+        `${correction} // ${missDistance}m OUT`,
+    };
+  }
+
   function completePracticeDrill(
     landedBall,
   ) {
@@ -17001,6 +17146,8 @@
     drill.stage = "joe_diverted";
     drill.landedBallId =
       landedBall.id;
+    drill.lastCorrection = null;
+    drill.lastMissDistance = 0;
     state.career.golfLessonCompleted =
       true;
     saveCareer();
@@ -18215,10 +18362,21 @@
           4.2,
         );
       } else {
+        const correction =
+          practiceMissCorrection(
+            roll.impact,
+            hole.practiceDrill.target,
+          );
         hole.practiceDrill.misses += 1;
+        hole.practiceDrill.stage =
+          "correct_aim";
+        hole.practiceDrill.lastCorrection =
+          correction.correction;
+        hole.practiceDrill.lastMissDistance =
+          correction.missDistance;
         setHoleMessage(
-          "JOE HEARD THE LANDING — the amber bell remains an optional aim test.",
-          3.4,
+          `BELL MISSED // ${correction.summary}. BALL MARKED; RETRY OR CONTINUE.`,
+          4.2,
         );
       }
     } else {
@@ -22309,12 +22467,12 @@
       definition.label;
     hole.stateBannerTimer = Math.max(
       hole.stateBannerTimer,
-      2.65,
+      2.8,
     );
     hole.stateBannerLockTimer =
       Math.max(
         hole.stateBannerLockTimer,
-        2.65,
+        2.8,
       );
     const captionPoint = {
       x:
@@ -24022,6 +24180,22 @@
     }
     const focus =
       activeHudPresentationFocus();
+    if (
+      !imminentNoise &&
+      (
+        focus === "final_filing" ||
+        focus === "risk_premium" ||
+        focus === "delivery_award"
+      )
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy: focus,
+      };
+      return renderFrameCache.worldContextCue;
+    }
     const joeDialogueActive =
       state.subtitles &&
       state.hole.joeBark &&
@@ -24036,12 +24210,9 @@
         "cadence_read",
       ].includes(focus);
     const threatCaptionActive =
-      state.threatCaptions &&
-      state.hole.captions?.length > 0 &&
-      !state.hole.tutorialVisible &&
-      !hudFocusSuppressesThreatCaptions(
+      visibleThreatCaptions(
         focus,
-      );
+      ).length > 0;
     if (
       !imminentNoise &&
       (
@@ -30390,41 +30561,146 @@
     }
     ctx.restore();
 
-    if (
+  }
+
+  function joeWorldLabelState() {
+    const hole = state.hole;
+    const joe = hole.joe;
+    const point = worldToScreen(
+      joe.x,
+      joe.y,
+    );
+    const distance = worldDistance(
+      joe,
+      state.player,
+    );
+    const occludedBy =
+      hole.lineBlockedBy || null;
+    const visible = Boolean(
+      point.visible &&
+      point.x > -80 &&
+      point.x < WIDTH + 80 &&
       !listeningSearchReadOwnsSignalLane() &&
+      !occludedBy &&
       (
         distance < 52 ||
         joe.mode !== "patrol"
       )
-    ) {
-      const label =
-        joe.wet
-          ? "JOE: MOWER BOGGED"
-          : joe.sand
-            ? "JOE: SAND CHURN"
+    );
+    const label =
+      joe.wet
+        ? "JOE: MOWER BOGGED"
+        : joe.sand
+          ? "JOE: SAND CHURN"
           : joe.mode === "chase"
-          ? "JOE: PURSUING"
-          : joe.mode === "investigate"
-            ? "JOE: DISTRACTED"
-            : joe.mode === "search"
-              ? "JOE: SEARCHING"
-              : "JOE: PATROLLING";
-      drawText(
-        label,
-        point.x,
-        point.y + 27 * labelScale,
-        12,
+            ? "JOE: PURSUING"
+            : joe.mode ===
+                "investigate"
+              ? "JOE: DISTRACTED"
+              : joe.mode ===
+                  "search"
+                ? "JOE: SEARCHING"
+                : "JOE: PATROLLING";
+    const panelWidth = 184;
+    const panelHeight = 28;
+    const centerX = clamp(
+      point.x,
+      panelWidth * 0.5 + 20,
+      COURSE_MAP_X -
+        panelWidth * 0.5 - 18,
+    );
+    const centerY = clamp(
+      point.y +
+        29 * clamp(
+          point.scale,
+          0.55,
+          1.35,
+        ),
+      COURSE_CAMERA.horizonY + 42,
+      HEIGHT - 176,
+    );
+    return {
+      visible,
+      label,
+      point,
+      distance,
+      occludedBy,
+      panelWidth,
+      panelHeight,
+      centerX,
+      centerY,
+      color:
         joe.wet
           ? "#8fd7ca"
           : joe.sand
             ? "#e2b66f"
-          : joe.mode === "chase"
-            ? "#ff7045"
-            : "#d3bc6d",
-        "center",
-        true,
-      );
+            : joe.mode === "chase"
+              ? "#ff7045"
+              : "#d3bc6d",
+    };
+  }
+
+  function drawJoeWorldLabel() {
+    const presentation =
+      joeWorldLabelState();
+    if (!presentation.visible) {
+      return;
     }
+    const panelWidth =
+      presentation.panelWidth;
+    const panelHeight =
+      presentation.panelHeight;
+    const centerX =
+      presentation.centerX;
+    const centerY =
+      presentation.centerY;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle =
+      "rgba(2,9,6,0.82)";
+    ctx.fillRect(
+      centerX - panelWidth * 0.5,
+      centerY - panelHeight * 0.5,
+      panelWidth,
+      panelHeight,
+    );
+    strokeRect(
+      centerX - panelWidth * 0.5,
+      centerY - panelHeight * 0.5,
+      panelWidth,
+      panelHeight,
+      presentation.color,
+      1.5,
+    );
+    ctx.strokeStyle =
+      presentation.color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(
+      presentation.point.x,
+      presentation.point.y + 3,
+    );
+    ctx.lineTo(
+      centerX,
+      centerY - panelHeight * 0.5,
+    );
+    ctx.stroke();
+    drawText(
+      presentation.label,
+      centerX,
+      centerY + 4,
+      fittedTextSize(
+        presentation.label,
+        11,
+        panelWidth - 20,
+        9,
+        true,
+      ),
+      presentation.color,
+      "center",
+      true,
+    );
+    ctx.restore();
   }
 
   function playerFieldPositionLabel() {
@@ -31939,69 +32215,169 @@
     );
   }
 
-  function drawMovementFeedback(walkBob) {
+  function movementFeedbackState() {
     const input = movementInput();
+    const moving =
+      Math.hypot(
+        input.x,
+        input.y,
+      ) > 0.12;
+    const afterglow = moving
+      ? 1
+      : clamp(
+          state.hole.moveHintTimer /
+            0.42,
+          0,
+          1,
+        );
     const left =
       input.x < -0.12 ||
-      (state.hole.moveHintTimer > 0 && state.hole.moveVector.x < 0);
+      (
+        state.hole.moveHintTimer > 0 &&
+        state.hole.moveVector.x < 0
+      );
     const right =
       input.x > 0.12 ||
-      (state.hole.moveHintTimer > 0 && state.hole.moveVector.x > 0);
+      (
+        state.hole.moveHintTimer > 0 &&
+        state.hole.moveVector.x > 0
+      );
     const forward =
       input.y > 0.12 ||
-      (state.hole.moveHintTimer > 0 && state.hole.moveVector.y > 0);
+      (
+        state.hole.moveHintTimer > 0 &&
+        state.hole.moveVector.y > 0
+      );
     const back =
       input.y < -0.12 ||
-      (state.hole.moveHintTimer > 0 && state.hole.moveVector.y < 0);
-    if (!left && !right && !forward && !back) {
+      (
+        state.hole.moveHintTimer > 0 &&
+        state.hole.moveVector.y < 0
+      );
+    const visible = Boolean(
+      afterglow > 0.01 &&
+      (
+        left ||
+        right ||
+        forward ||
+        back
+      )
+    );
+    const label = !moving
+      ? null
+      : state.hole.environment?.sand
+        ? state.hole.crouched
+          ? "CROUCHING IN SAND \u2014 TRACKED"
+          : sprintHeld()
+            ? "SPRINTING IN SAND \u2014 VERY LOUD"
+            : "WADING BUNKER SAND"
+        : state.hole.crouched
+          ? "CROUCH WALK \u2014 QUIET"
+          : sprintHeld()
+            ? "SPRINTING \u2014 LOUD"
+            : "RUNNING";
+    const contextCue =
+      worldContextCueState();
+    const displacedByContextCue =
+      Boolean(
+        label &&
+        contextCue.kind !== "none"
+      );
+    return {
+      visible,
+      moving,
+      afterglow,
+      label,
+      labelVisible:
+        Boolean(label),
+      labelOffsetY:
+        displacedByContextCue
+          ? 116
+          : 68,
+      displacedByContextCue,
+      contextCueKind:
+        contextCue.kind,
+      directions: {
+        left,
+        right,
+        forward,
+        back,
+      },
+      presentation: moving
+        ? "live_input_with_chevrons"
+        : visible
+          ? "directional_afterglow_only"
+          : "hidden",
+    };
+  }
+
+  function drawMovementFeedback(walkBob) {
+    const feedback =
+      movementFeedbackState();
+    if (!feedback.visible) {
       return;
     }
 
     const centerX = WIDTH * 0.5;
     const centerY = HEIGHT * 0.52 + walkBob;
-    const pulse = 0.55 + (Math.sin(state.time * 10) + 1) * 0.2;
+    const pulse =
+      (
+        state.reducedMotion
+          ? 0.76
+          : 0.55 +
+            (
+              Math.sin(
+                state.time * 10,
+              ) + 1
+            ) * 0.2
+      ) *
+      feedback.afterglow;
+    ctx.save();
     ctx.strokeStyle = `rgba(226,210,148,${pulse})`;
-    ctx.lineWidth = 3;
-    if (forward) {
+    ctx.lineWidth =
+      1.5 +
+      feedback.afterglow * 1.5;
+    if (feedback.directions.forward) {
       ctx.beginPath();
       ctx.moveTo(centerX - 14, centerY - 30);
       ctx.lineTo(centerX, centerY - 44);
       ctx.lineTo(centerX + 14, centerY - 30);
       ctx.stroke();
     }
-    if (back) {
+    if (feedback.directions.back) {
       ctx.beginPath();
       ctx.moveTo(centerX - 14, centerY + 30);
       ctx.lineTo(centerX, centerY + 44);
       ctx.lineTo(centerX + 14, centerY + 30);
       ctx.stroke();
     }
-    if (left) {
+    if (feedback.directions.left) {
       ctx.beginPath();
       ctx.moveTo(centerX - 30, centerY - 14);
       ctx.lineTo(centerX - 44, centerY);
       ctx.lineTo(centerX - 30, centerY + 14);
       ctx.stroke();
     }
-    if (right) {
+    if (feedback.directions.right) {
       ctx.beginPath();
       ctx.moveTo(centerX + 30, centerY - 14);
       ctx.lineTo(centerX + 44, centerY);
       ctx.lineTo(centerX + 30, centerY + 14);
       ctx.stroke();
     }
-    const motionLabel = state.hole.environment?.sand
-      ? state.hole.crouched
-        ? "CROUCHING IN SAND — TRACKED"
-        : sprintHeld()
-          ? "SPRINTING IN SAND — VERY LOUD"
-          : "WADING BUNKER SAND"
-      : state.hole.crouched
-      ? "CROUCH WALK — QUIET"
-      : sprintHeld()
-        ? "SPRINTING — LOUD"
-        : "RUNNING";
-    drawText(motionLabel, centerX, centerY + 68, 12, "#dfd29c", "center", true);
+    if (feedback.labelVisible) {
+      drawText(
+        feedback.label,
+        centerX,
+        centerY +
+          feedback.labelOffsetY,
+        12,
+        "#dfd29c",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
   }
 
   function drawMowerWorldParticles(
@@ -34171,7 +34547,9 @@
       practiceLocked
         ? "STARTER BELL LOCKED — RELEASE TO WATCH JOE DIVERT."
         : practiceDrillActive()
-          ? "LAND INSIDE THE AMBER RING — JOE KEEPS MOVING."
+          ? hole.practiceDrill.lastCorrection
+            ? `LAST TRY ${hole.practiceDrill.lastMissDistance}m OUT // ${hole.practiceDrill.lastCorrection}`
+            : "LAND INSIDE THE AMBER RING — JOE KEEPS MOVING."
           : `${preview.initialSurface.terrainLabel} IMPACT  //  ${preview.lureLabel} LURE  //  REST ${preview.finalSurface.terrainLabel}${preview.blockedBy ? "  //  SOLID CONTACT" : preview.boundary ? "  //  BOUNDARY" : ""}`,
       WIDTH * 0.5,
       panel.y +
@@ -35012,43 +35390,53 @@
 
   function drawJoeStateBanner() {
     const hole = state.hole;
-    if (
-      hole.stateBannerTimer <= 0 ||
-      !hole.stateBanner ||
-      hole.statusRequest.active ||
-      emergencyAppealOwnsSignalLane() ||
-      golfAimOwnsSignalLane() ||
-      activeDistractionOwnsSignalLane() ||
-      crosswindOwnsSignalLane() ||
-      nerveHoldOwnsSignalLane() ||
-      cutTraceOwnsSignalLane() ||
-      listeningSearchReadOwnsSignalLane() ||
-      joeDialogueOwnsSignalLane() ||
-      openingBriefingOwnsSignalLane() ||
-      hole.riskAward ||
-      hole.deliveryAward
-    ) {
+    if (!joeStateBannerVisible()) {
       return;
     }
+    const mergedCaption =
+      stateBannerThreatCaption();
+    const direction =
+      mergedCaption?.direction || null;
     const visible = clamp(hole.stateBannerTimer * 2.2, 0, 1);
     const width = hole.joe.mode === "chase" ? 340 : 330;
+    const height = direction ? 50 : 42;
     const bannerCenterX = WIDTH * 0.5 + 108;
     const x = bannerCenterX - width * 0.5;
     const y = hole.zoneBannerTimer > 0 ? 128 : 42;
     ctx.save();
     ctx.globalAlpha = visible;
     ctx.fillStyle = hole.joe.mode === "chase" ? "rgba(39,5,2,0.93)" : "rgba(3,13,7,0.91)";
-    ctx.fillRect(x, y, width, 42);
-    strokeRect(x, y, width, 42, hole.joe.mode === "chase" ? "#d04d28" : "#a4773f", 2);
+    ctx.fillRect(x, y, width, height);
+    strokeRect(x, y, width, height, hole.joe.mode === "chase" ? "#d04d28" : "#a4773f", 2);
     drawText(
       hole.stateBanner,
       bannerCenterX,
-      y + 27,
-      13,
+      y + (direction ? 21 : 27),
+      fittedTextSize(
+        hole.stateBanner,
+        13,
+        width - 24,
+        10,
+        true,
+      ),
       hole.joe.mode === "chase" ? "#ffbc83" : "#e2cf9c",
       "center",
       true,
     );
+    if (direction) {
+      drawText(
+        `SOUND ${direction}`,
+        bannerCenterX,
+        y + 39,
+        9,
+        mergedCaption.category ===
+          "danger"
+          ? "#f09a69"
+          : "#9fc2a6",
+        "center",
+        true,
+      );
+    }
     ctx.restore();
   }
 
@@ -36788,7 +37176,11 @@
 
   function drawContactBreakFeedback() {
     const hole = state.hole;
-    if (hole.joe.mode !== "chase") {
+    if (
+      hole.joe.mode !== "chase" ||
+      activeHudPresentationFocus() ===
+        "final_filing"
+    ) {
       return;
     }
     const visualContact = hole.hasLineOfSight;
@@ -38463,21 +38855,37 @@
     drawCourseEchoComparison();
 
     if (expandedHud) {
+      const openingMovementCue =
+        openingMovementCueActive();
       ctx.fillStyle = "rgba(2,8,5,0.82)";
       ctx.fillRect(36, 269, 430, 82);
       strokeRect(36, 269, 430, 82, hole.focus ? "#c8b267" : "#4d6444", 2);
       drawText(
-        hole.focus ? "LISTENING FOCUS" : "SURROUNDINGS",
+        hole.focus
+          ? "LISTENING FOCUS"
+          : openingMovementCue
+            ? "FIRST STEPS"
+            : "SURROUNDINGS",
         54,
         293,
         13,
-        hole.focus ? "#f2d781" : "#ccd7c0",
+        hole.focus
+          ? "#f2d781"
+          : openingMovementCue
+            ? "#9edbc0"
+            : "#ccd7c0",
         "left",
         true,
       );
       const landmarkText =
-        environment.nearestLandmark &&
-        environment.nearestLandmarkDistance < 72
+        openingMovementCue
+          ? inputCopy(
+              `MOVE ${keyboardMovementCopy()} // FOLLOW MINT ROUTE`,
+              "MOVE LEFT STICK / D-PAD // FOLLOW MINT ROUTE",
+              "DRAG LEFT PAD // FOLLOW MINT ROUTE",
+            )
+        : environment.nearestLandmark &&
+            environment.nearestLandmarkDistance < 72
           ? `${environment.nearestLandmark.landmark.toUpperCase()}  ${Math.round(environment.nearestLandmarkDistance)}m`
           : "NO LANDMARK WITHIN 72m";
       drawText(landmarkText, 54, 316, 11, "#aeb9a2", "left");
@@ -38497,33 +38905,37 @@
             ? "MUFFLED, NOT SILENT"
             : "WALK WIDE OR CHIP IT";
       const awarenessText =
-        hole.blackoutTimer > 0
-          ? "FLOODLIGHT POWER LOW — MOVE NOW"
-          : noiseRiskVisible
-            ? `NOISE RISK ${Math.ceil(
-                nearbyNoiseHazard.distance,
-              )}m — ${noiseRiskGuidance}`
-            : environment.lightExposure > 0.15
-              ? "AMBER LIGHT: VISIBILITY RISING"
-              : environment.hardCover
-                ? "SOLID OBJECT BETWEEN YOU AND JOE"
-                : environment.mowed
-                  ? "JOE'S ROADMAP: +8% PACE, QUIET, EXPOSED"
-                  : inRough
-                    ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
-                    : "OPEN SIGHTLINE — MOVE COVER TO COVER";
+        openingMovementCue
+          ? `${hole.navigationGuide.targetLabel || "FIRST CHOICE"}  ${Math.ceil(hole.navigationGuide.distance || 0)}m  //  ${effectiveGuidanceDirection()}`
+          : hole.blackoutTimer > 0
+            ? "FLOODLIGHT POWER LOW — MOVE NOW"
+            : noiseRiskVisible
+              ? `NOISE RISK ${Math.ceil(
+                  nearbyNoiseHazard.distance,
+                )}m — ${noiseRiskGuidance}`
+              : environment.lightExposure > 0.15
+                ? "AMBER LIGHT: VISIBILITY RISING"
+                : environment.hardCover
+                  ? "SOLID OBJECT BETWEEN YOU AND JOE"
+                  : environment.mowed
+                    ? "JOE'S ROADMAP: +8% PACE, QUIET, EXPOSED"
+                    : inRough
+                      ? "BENT ROUGH: CONCEALMENT LEAVES A TRAIL"
+                      : "OPEN SIGHTLINE — MOVE COVER TO COVER";
       drawText(
         awarenessText,
         54,
         338,
         11,
-        hole.blackoutTimer > 0
-          ? "#75c4b8"
-          : noiseRiskVisible
-            ? "#e5b558"
-            : environment.lightExposure > 0.15
-              ? "#f2a250"
-              : "#8fbc8a",
+        openingMovementCue
+          ? "#74c9ad"
+          : hole.blackoutTimer > 0
+            ? "#75c4b8"
+            : noiseRiskVisible
+              ? "#e5b558"
+              : environment.lightExposure > 0.15
+                ? "#f2a250"
+                : "#8fbc8a",
         "left",
       );
     }
@@ -41169,6 +41581,7 @@
       walkBob,
     );
     drawWorldEffects();
+    drawJoeWorldLabel();
     drawNearbyBlockerCallouts();
 
     if (!state.hole.keyCollected) {
@@ -41537,15 +41950,329 @@
     };
   }
 
+  function courseEchoEffectiveScoreGain(
+    result,
+    basePoints,
+  ) {
+    if (
+      !result.overtime ||
+      !result.breakdown
+    ) {
+      return basePoints;
+    }
+    const currentBase =
+      result.score -
+      result.breakdown.overtime;
+    const nextOvertime = Math.round(
+      (
+        currentBase +
+        basePoints
+      ) *
+        (
+          OVERTIME_SCORE_MULTIPLIER -
+          1
+        ),
+    );
+    return (
+      basePoints +
+      nextOvertime -
+      result.breakdown.overtime
+    );
+  }
+
+  function courseEchoScoreRecoveryPlan(
+    result,
+    scoreGap,
+  ) {
+    if (
+      !result?.breakdown ||
+      scoreGap <= 0
+    ) {
+      return null;
+    }
+    const candidates = [];
+    const addCandidate = (
+      id,
+      label,
+      compactName,
+      basePoints,
+      detail,
+    ) => {
+      if (basePoints <= 0) {
+        return;
+      }
+      const scorePoints =
+        courseEchoEffectiveScoreGain(
+          result,
+          basePoints,
+        );
+      candidates.push({
+        id,
+        label,
+        compactLabel:
+          `${compactName} +${scorePoints.toLocaleString()}`,
+        detail,
+        basePoints,
+        scorePoints,
+        coversGap:
+          scorePoints >= scoreGap,
+      });
+    };
+    if (
+      result.breakdown.changeRequest ===
+        0
+    ) {
+      addCandidate(
+        "change_request",
+        "BANK CHANGE REQUEST",
+        "CHANGE",
+        CHANGE_REQUEST_BONUS,
+        "Secure the exposed document and carry it to an exit",
+      );
+    }
+    const ballCapacity =
+      result.overtime ? 2 : 4;
+    const missingBalls = Math.max(
+      0,
+      ballCapacity -
+        result.ballsRemaining,
+    );
+    if (missingBalls > 0) {
+      addCandidate(
+        "ball_recovery",
+        `RECLAIM ${missingBalls} ${missingBalls === 1 ? "BALL" : "BALLS"}`,
+        missingBalls === 1
+          ? "BALL"
+          : "BALLS",
+        missingBalls * 180,
+        "Recover thrown golf balls before Final Filing",
+      );
+    }
+    const missingBunkerBaits =
+      Math.max(
+        0,
+        2 -
+          Math.min(
+            2,
+            result.sandTrapCount,
+          ),
+      );
+    if (missingBunkerBaits > 0) {
+      addCandidate(
+        "bunker_bait",
+        `BAIT ${missingBunkerBaits} ${missingBunkerBaits === 1 ? "BUNKER" : "BUNKERS"}`,
+        missingBunkerBaits === 1
+          ? "BUNKER"
+          : "BUNKERS",
+        missingBunkerBaits *
+          BUNKER_TRAP_BONUS,
+        "Pull Joe through unused bunker sand",
+      );
+    }
+    const stealthPoints = Math.max(
+      0,
+      1100 -
+        result.breakdown.stealth,
+    );
+    if (
+      stealthPoints > 0 &&
+      (
+        result.maxDetection > 0 ||
+        result.pursuitSeconds > 0
+      )
+    ) {
+      addCandidate(
+        "stealth_recovery",
+        "KEEP JOE UNCONFIRMED",
+        "STEALTH",
+        stealthPoints,
+        "Reduce peak attention and pursuit time",
+      );
+    }
+    let paceSeconds = 0;
+    let paceBasePoints = 0;
+    let paceScorePoints = 0;
+    while (
+      paceSeconds <
+        result.timeSeconds &&
+      paceScorePoints < scoreGap
+    ) {
+      paceSeconds = Number(
+        (
+          paceSeconds + 0.1
+        ).toFixed(1),
+      );
+      const nextTimeBonus = Math.max(
+        0,
+        Math.round(
+          (
+            270 -
+            Math.max(
+              0,
+              result.timeSeconds -
+                paceSeconds,
+            )
+          ) * 9,
+        ),
+      );
+      paceBasePoints = Math.max(
+        0,
+        nextTimeBonus -
+          result.breakdown.time,
+      );
+      paceScorePoints =
+        courseEchoEffectiveScoreGain(
+          result,
+          paceBasePoints,
+        );
+    }
+    if (paceScorePoints > 0) {
+      candidates.push({
+        id: "pace_score",
+        label:
+          `FINISH ${paceSeconds.toFixed(1)}s FASTER`,
+        compactLabel:
+          `PACE +${paceScorePoints.toLocaleString()}`,
+        detail:
+          "Shorten the route while preserving filed score",
+        basePoints: paceBasePoints,
+        scorePoints: paceScorePoints,
+        coversGap:
+          paceScorePoints >= scoreGap,
+      });
+    }
+    candidates.sort(
+      (a, b) =>
+        b.scorePoints -
+          a.scorePoints ||
+        Number(b.coversGap) -
+          Number(a.coversGap),
+    );
+    const best = candidates[0];
+    if (!best) {
+      return null;
+    }
+    return {
+      ...best,
+      summary:
+        `${best.label} +${best.scorePoints.toLocaleString()}`,
+    };
+  }
+
+  function courseEchoRematchTarget(
+    result,
+  ) {
+    const adjudication =
+      courseEchoResultAdjudication(
+        result,
+      );
+    if (
+      !adjudication ||
+      adjudication.outcome ===
+        "overtaken"
+    ) {
+      return null;
+    }
+    const common = {
+      source: "course_echo",
+      recordScore:
+        adjudication.recordScore,
+      route:
+        result.echoRoute ||
+        result.route,
+      basis: adjudication.basis,
+      outcome:
+        adjudication.outcome,
+    };
+    if (
+      adjudication.basis === "score"
+    ) {
+      const scoreGap = Math.abs(
+        adjudication.scoreDelta,
+      );
+      const recoveryPlan =
+        courseEchoScoreRecoveryPlan(
+          result,
+          scoreGap,
+        );
+      return {
+        ...common,
+        id: "echo_score_gap",
+        name: "ECHO SCORE GAP",
+        shortName:
+          `SCORE +${scoreGap.toLocaleString()}`,
+        detail:
+          recoveryPlan
+            ? `SCORE ${scoreGap.toLocaleString()} // ${recoveryPlan.compactLabel}`
+            : `SCORE GAP // ${scoreGap.toLocaleString()}`,
+        hint:
+          `Recover ${scoreGap.toLocaleString()} score to draw level; a tie still needs faster time`,
+        recoveryPlan,
+        rematchMessage:
+          recoveryPlan
+            ? `SCORE +${scoreGap.toLocaleString()} TO TIE // ${recoveryPlan.summary}`
+            : `SCORE +${scoreGap.toLocaleString()} TO TIE`,
+        scoreGap,
+        paceGapSeconds: Number(
+          Math.abs(
+            adjudication.timeDeltaSeconds,
+          ).toFixed(2),
+        ),
+      };
+    }
+    if (
+      adjudication.basis ===
+        "time_tiebreak"
+    ) {
+      const paceGapSeconds = Number(
+        Math.abs(
+          adjudication.timeDeltaSeconds,
+        ).toFixed(2),
+      );
+      return {
+        ...common,
+        id: "echo_pace_gap",
+        name: "ECHO PACE GAP",
+        shortName:
+          `PACE -${paceGapSeconds.toFixed(2)}s`,
+        detail:
+          `PACE GAP // ${paceGapSeconds.toFixed(2)}s`,
+        hint:
+          `Hold ${adjudication.recordScore.toLocaleString()} score and recover more than ${paceGapSeconds.toFixed(2)}s`,
+        scoreGap: 0,
+        paceGapSeconds,
+      };
+    }
+    return {
+      ...common,
+      id: "echo_exact_tie",
+      name: "ECHO TIEBREAK",
+      shortName: "BREAK TIE",
+      detail:
+        "EXACT TIE // +1 OR -0.01s",
+      hint:
+        "Add 1 score or finish at least 0.01s faster",
+      scoreGap: 0,
+      paceGapSeconds: 0,
+    };
+  }
+
   function resultActionPresentations(
     outcome,
   ) {
-    const target =
-      nextPerformanceTarget();
     const captureReview =
       outcome === "defeat"
         ? state.hole.captureReview
         : null;
+    const echoTarget =
+      outcome === "victory"
+        ? courseEchoRematchTarget(
+            state.hole.result,
+          )
+        : null;
+    const target =
+      echoTarget ||
+      nextPerformanceTarget();
     const nextVariant =
       nextNightOrderVariant();
     return [
@@ -41558,12 +42285,15 @@
         detail:
           captureReview
             ? `COUNTER // ${captureReview.shortLabel}`
-            : `TARGET // ${target.shortName}`,
+            : echoTarget
+              ? echoTarget.detail
+              : `TARGET // ${target.shortName}`,
         description:
           captureReview
             ? captureReview.counterplay
-            :
-          `${target.name} — ${target.hint}.`,
+            : echoTarget
+              ? `${echoTarget.hint}.`
+              : `${target.name} — ${target.hint}.`,
       },
       {
         id: "next_order",
@@ -42830,6 +43560,17 @@
         hole.controlHintSource = null;
       }
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
+      if (
+        hole.controlHintSource ===
+          "onboarding" &&
+        hole.travelDistance >=
+          ONBOARDING_MOVEMENT_CUE_DISTANCE
+      ) {
+        hole.messageTimer = Math.min(
+          hole.messageTimer,
+          ONBOARDING_CONTROL_COLLAPSE_DELAY,
+        );
+      }
       hole.joeBarkTimer = Math.max(
         0,
         hole.joeBarkTimer - dt,
@@ -43519,15 +44260,31 @@
       } else if (
         practiceDrillActive() &&
         !hole.blindsideTransfer &&
-        worldDistance(
-          state.player,
-          state.hole.practiceDrill.target,
-        ) < 58
+        (
+          (
+            hole.practiceDrill
+              .lastCorrection &&
+            hole.messageTimer <= 0.01
+          ) ||
+          worldDistance(
+            state.player,
+            state.hole.practiceDrill.target,
+          ) < 58
+        )
       ) {
+        const practiceRetry =
+          hole.practiceDrill
+            .lastCorrection;
         hole.prompt = inputCopy(
-          `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
-          "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
-          "HOLD CHIP — AIM AT AMBER BELL (OPTIONAL)",
+          practiceRetry
+            ? `HOLD ${keyboardBindingLabel("chip")} — RETRY BELL // ${practiceRetry}`
+            : `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
+          practiceRetry
+            ? `HOLD X — RETRY BELL // ${practiceRetry}`
+            : "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
+          practiceRetry
+            ? `HOLD CHIP — RETRY BELL // ${practiceRetry}`
+            : "HOLD CHIP — AIM AT AMBER BELL (OPTIONAL)",
         );
       } else if (worldDistance(state.player, shed) < shed.radius) {
         hole.prompt = inputCopy(
@@ -46100,7 +46857,11 @@
     setHoleMessage(
       state.hole.overtime
         ? "OVERTIME ACTIVE — two balls, faster Joe, stronger evidence, 1.30× score."
-        : "SOUTH GATE LOCKED — find the shed key or open the drain valve.",
+        : inputCopy(
+            `MOVE ${keyboardMovementCopy()} — follow the mint route to the valve or key.`,
+            "MOVE LEFT STICK / D-PAD — follow the mint route to the valve or key.",
+            "DRAG LEFT PAD — follow the mint route to the valve or key.",
+          ),
       4.4,
     );
     if (state.hole.courseEchoRecord) {
@@ -46121,6 +46882,14 @@
       quickStart
         ? state.hole.captureReview
         : null;
+    const echoTarget =
+      quickStart &&
+      !captureReview &&
+      state.mode === "victory"
+        ? courseEchoRematchTarget(
+            state.hole.result,
+          )
+        : null;
     const target =
       captureReview
         ? {
@@ -46136,7 +46905,11 @@
               "capture_review",
           }
         : quickStart
-        ? nextPerformanceTarget()
+        ? echoTarget || {
+            ...nextPerformanceTarget(),
+            source:
+              "performance_target",
+          }
         : null;
     state.mode = "first_hole";
     state.time = 0;
@@ -46151,11 +46924,7 @@
         "skipped_rematch";
       hole.quickRematch = true;
       hole.rematchTarget = {
-        id: target.id,
-        name: target.name,
-        shortName:
-          target.shortName,
-        hint: target.hint,
+        ...target,
       };
       hole.zoneBannerTimer = 0;
       hole.controlHintTimer = 4.2;
@@ -46163,8 +46932,10 @@
       hole.message =
         captureReview
           ? `COUNTERPLAN // ${target.hint}${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`
-          :
-        `${target.name} — ${target.hint}.${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`;
+          : target.source ===
+              "course_echo"
+            ? `${target.name} // ${target.rematchMessage || target.hint}. COURSE ECHO ACTIVE.`
+            : `${target.name} — ${target.hint}.${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`;
       hole.messageTimer = 4.2;
       hole.stateBanner =
         captureReview
@@ -47726,6 +48497,39 @@
                     )
                   : 0,
             },
+            movementFeedback: (() => {
+              const feedback =
+                movementFeedbackState();
+              return {
+                visible:
+                  feedback.visible,
+                moving:
+                  feedback.moving,
+                label:
+                  feedback.label,
+                labelVisible:
+                  feedback.labelVisible,
+                labelOffsetY:
+                  feedback.labelOffsetY,
+                displacedByContextCue:
+                  feedback.displacedByContextCue,
+                contextCueKind:
+                  feedback.contextCueKind,
+                afterglow:
+                  Number(
+                    feedback.afterglow.toFixed(
+                      2,
+                    ),
+                  ),
+                directions: {
+                  ...feedback.directions,
+                },
+                presentation:
+                  feedback.presentation,
+                rule:
+                  "labels_follow_live_input; chevrons_may_fade_after_release",
+              };
+            })(),
             secondWind: {
               active:
                 state.hole
@@ -47854,6 +48658,19 @@
               text: caption.text,
               direction: caption.direction,
               category: caption.category,
+              visible:
+                visibleThreatCaptions().includes(
+                  caption,
+                ),
+              presentation:
+                stateBannerThreatCaption() ===
+                caption
+                  ? "merged_into_state_banner"
+                  : visibleThreatCaptions().includes(
+                        caption,
+                      )
+                    ? "caption_card"
+                    : "deferred",
               remainingSeconds: Number(
                 Math.max(
                   0,
@@ -47895,6 +48712,31 @@
           ),
           onboardingCollapseDistance:
             ONBOARDING_CONTROL_COLLAPSE_DISTANCE,
+          openingMovementCue:
+            openingMovementCueActive()
+              ? {
+                  visible: true,
+                  collapsesAfterMeters:
+                    ONBOARDING_MOVEMENT_CUE_DISTANCE,
+                  target:
+                    state.hole
+                      .navigationGuide
+                      .targetLabel,
+                  distance: Number(
+                    state.hole
+                      .navigationGuide
+                      .distance.toFixed(2),
+                  ),
+                  direction:
+                    effectiveGuidanceDirection(),
+                  instruction:
+                    inputCopy(
+                      `MOVE ${keyboardMovementCopy()} // FOLLOW MINT ROUTE`,
+                      "MOVE LEFT STICK / D-PAD // FOLLOW MINT ROUTE",
+                      "DRAG LEFT PAD // FOLLOW MINT ROUTE",
+                    ),
+                }
+              : null,
           courseEcho:
             currentCourseEcho()
               ? {
@@ -48591,6 +49433,12 @@
             landedBallId:
               state.hole.practiceDrill
                 .landedBallId,
+            lastCorrection:
+              state.hole.practiceDrill
+                .lastCorrection,
+            lastMissDistance:
+              state.hole.practiceDrill
+                .lastMissDistance,
             optional: true,
             skipRule:
               `Move beyond ${TEE_PRACTICE_EXIT_Y}m or start a quick rematch.`,
@@ -50413,6 +51261,11 @@
           hudPresentation: {
             focus:
               activeHudPresentationFocus(),
+            contactBreakVisible:
+              state.hole.joe.mode ===
+                "chase" &&
+              activeHudPresentationFocus() !==
+                "final_filing",
             riskPremiumVisible:
               Boolean(
                 state.hole.riskAward,
@@ -50437,24 +51290,10 @@
                 state.hole.deliveryAward,
               ),
             joeStateVisible:
-              Boolean(
-                state.hole
-                    .stateBannerTimer > 0 &&
-                state.hole.stateBanner &&
-                !state.hole
-                  .statusRequest.active &&
-                !emergencyAppealOwnsSignalLane() &&
-                !golfAimOwnsSignalLane() &&
-                !activeDistractionOwnsSignalLane() &&
-                !nerveHoldOwnsSignalLane() &&
-                !cutTraceOwnsSignalLane() &&
-                !listeningSearchReadOwnsSignalLane() &&
-                !joeDialogueOwnsSignalLane() &&
-                !openingBriefingOwnsSignalLane() &&
-                !state.hole.riskAward &&
-                !state.hole
-                  .deliveryAward,
-              ),
+              joeStateBannerVisible(),
+            visibleThreatCaptionCards:
+              visibleThreatCaptions()
+                .length,
             maximumThreatCaptionCards:
               hudFocusSuppressesThreatCaptions(
                 activeHudPresentationFocus(),
@@ -50475,6 +51314,8 @@
                 state.hole
                     .joeBarkTimer > 0 &&
                 state.hole.joeBark &&
+                !state.hole
+                  .escapeFiling.sealing &&
                 !state.hole.riskAward &&
                 !state.hole
                   .deliveryAward &&
@@ -50493,6 +51334,34 @@
               ),
           },
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
+          stateBannerPresentation:
+            state.hole.stateBannerTimer > 0
+              ? {
+                  visible:
+                    joeStateBannerVisible(),
+                  text:
+                    state.hole.stateBanner,
+                  direction:
+                    stateBannerThreatCaption()
+                      ?.direction || null,
+                  mergedThreatCaption:
+                    Boolean(
+                      stateBannerThreatCaption(),
+                    ),
+                  duplicateCaptionCards:
+                    visibleThreatCaptions()
+                      .filter(
+                        (caption) =>
+                          caption.text ===
+                          state.hole
+                            .stateBanner,
+                      ).length,
+                  presentation:
+                    stateBannerThreatCaption()
+                      ? "single_banner_with_direction"
+                      : "state_banner",
+                }
+              : null,
           activeEffects: [
             ...state.hole
               .worldEffects
@@ -51354,15 +52223,39 @@
               state.hole.joe.sand,
             distance: Math.round(worldDistance(state.hole.joe, state.player)),
             worldLabelVisible:
-              !listeningSearchReadOwnsSignalLane() &&
-              (
-                worldDistance(
-                  state.hole.joe,
-                  state.player,
-                ) < 52 ||
-                state.hole.joe.mode !==
-                  "patrol"
-              ),
+              joeWorldLabelState().visible,
+            worldLabel: (() => {
+              const presentation =
+                joeWorldLabelState();
+              return {
+                visible:
+                  presentation.visible,
+                text:
+                  presentation.label,
+                occludedBy:
+                  presentation.occludedBy,
+                screenX:
+                  presentation.visible
+                    ? Math.round(
+                        presentation.centerX,
+                      )
+                    : null,
+                screenY:
+                  presentation.visible
+                    ? Math.round(
+                        presentation.centerY,
+                      )
+                    : null,
+                width:
+                  presentation.panelWidth,
+                height:
+                  presentation.panelHeight,
+                presentation:
+                  "post_entity_grounded_panel",
+                visibilityRule:
+                  "hidden_when_physical_cover_blocks_joe",
+              };
+            })(),
             hasLineOfSight: state.hole.hasLineOfSight,
             lineBlockedBy: state.hole.lineBlockedBy,
             lostSightSeconds: Number(state.hole.lostSightTimer.toFixed(2)),

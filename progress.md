@@ -617,3 +617,90 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Added `victoryPresentation.courseEchoAdjudication` with outcome, decision basis, score/time deltas, time relation, visible copy, and verdict color; no-Echo runs report null.
 - Exact replay passed eight score-first, time-tie-break, exact-tie, Reduced Motion, no-Echo baseline, and browser-error assertions. The required official route produced no error artifact and sampled 1.74ms average / 1.20ms last canvas render work across 227 frames.
 - Evidence is recorded in `qa/course-echo-result-adjudication-polish-2026-08-02.md`. Suggested next refinement: audit the Rematch File target copy after an Echo miss so the next action reflects whether the recoverable gap is score or pace, while keeping the three result actions unchanged.
+
+## Course Echo rematch-target polish
+
+- Made the existing Rematch File action reflect the authoritative reason an Echo held the record. Score losses show the exact score gap and retain the faster-time requirement for a tie; tied-score losses show the hundredth-second pace gap and record score; exact ties offer +1 score or at least 0.01 seconds faster.
+- Carried the same structured recovery target into the reopened run so the result action, state banner, bottom message, and `render_game_to_text` target cannot drift. Echo wins and no-Echo runs keep the ordinary Performance Stamp target, capture retries keep their Incident Counterplan, and the three result actions remain unchanged.
+- Exact replay passed score, pace, tie, successful-Echo, no-Echo, Reduced Motion, preserved-action, Enter-to-rematch, and browser-error assertions. Visual review covered 2560x1600, 1280x720, and 844x390; the required uninstrumented route reached Audit Row with no error artifact at 1.68ms average / 2.80ms last canvas render work.
+- Evidence is recorded in `qa/course-echo-rematch-target-polish-2026-08-02.md`. Suggested next refinement: only after human rematch play, consider naming the strongest missed score source alongside the exact gap if the current recovery target still feels too abstract.
+
+## Course Echo recovery-plan polish
+
+- Turned a score-gap Rematch File into one actionable next play by ranking only score sources the completed run actually left available: an unbanked Change Request, missing golf balls, unused bunker baits, lost stealth score, or a faster filing pace.
+- Calculated each option from the authoritative scoring rules, including the exact incremental 1.30x Overtime value, then surfaced the strongest option in the selected result card and reopened-run instruction without adding another panel.
+- Kept the primary Next Action sentence concise after high-resolution review showed the first combined version was too long. The result card now carries compact evidence such as `SCORE 340 // CHANGE +650`, while the reopened run expands it to `SCORE +340 TO TIE // BANK CHANGE REQUEST +650`.
+- Scoring, difficulty, Joe behavior, and result-action count are unchanged. The targeted replay passed sixteen score-source, Overtime, rematch, Reduced Motion, and error assertions; the existing eight-case score-first adjudication suite also remained green.
+- Visual review covered 2560x1600, 1280x720, 844x390, and Reduced Motion. The required uninstrumented route reached Audit Row with no error artifact, averaging 1.55ms canvas work with a 1.40ms final sample across 449 rendered frames.
+- Evidence is recorded in `qa/course-echo-recovery-plan-polish-2026-08-02.md`. Suggested next refinement: stop extending this result flow until a human rematch confirms the chosen advice is useful; move the next polish pass to a separate observed friction point.
+
+## Opening movement-hierarchy polish
+
+- Re-audited the first playable frame and found that the large HUD, bottom rail, and objective dossier repeated the locked-gate goal while the actual movement instruction remained in the smallest footer text.
+- Replaced the redundant surroundings read with a short-lived `FIRST STEPS` card that names the active movement binding, points to the mint route, and reports the nearest viable objective's live distance and bearing.
+- Replaced the duplicate gate-warning rail with an input-aware movement instruction. After ten meters it fades, the card returns to ordinary surroundings, and the established 18-meter compact-HUD handoff completes normally.
+- Preserved controller and touch wording, Reduced Camera Motion parity, the physical route ribbon, map, objective dossier, manual control recall, threat hierarchy, scoring, and gameplay behavior.
+- Focused replay passed ten opening, movement-collapse, manual-recall, controller, compact, Reduced Motion, and browser-error assertions. Visual review covered 2560x1600, 1280x720, and 844x390.
+- The required uninstrumented opening and movement routes produced no error artifacts. Initial canvas work averaged 5.54ms with a 1.80ms last sample; active travel averaged 4.98ms with a 1.90ms last sample.
+- Evidence is recorded in `qa/opening-movement-hierarchy-polish-2026-08-02.md`. Suggested next refinement: human-playtest the first thirty meters without referring to the map and adjust only the cue's ten-meter lifetime if players still hesitate or if it lingers after intent is clear.
+
+## Starter-bell correction polish
+
+- Audited the first optional golf interaction and found that a missed starter-bell shot consumed a ball and drew Joe but only said the bell remained optional, leaving the next attempt as guesswork.
+- Added an impact-derived correction that can report left/right aim, more/less power, or both when the miss has meaningful error on both axes. The feedback also reports how many meters the impact landed outside the amber ring.
+- Replaced the vague miss copy with one actionable consequence: the ball is marked for recovery, and the player may retry or continue. After that explanation finishes, the existing action rail preserves the correction from the actual tee position instead of losing it to the former 58-meter proximity gate.
+- Carried the same correction into the aim panel, then cleared it immediately on a successful retry. Ball physics, target radius, Joe diversion, recovery, scoring, and the drill's optional skip remain unchanged.
+- The exact miss-to-retry-to-success replay passed eleven correction, persistence, controller, compact, Reduced Motion, and browser-error assertions. The established golf-terrain suite also retained all fifteen assertions across fairway, mowed turf, wet turf, rough, bunker, solid bank, boundary, recovery, and Reduced Motion behavior.
+- Visual review covered 2560x1600, 1280x720, and 844x390. The required uninstrumented miss produced no error artifact and averaged 1.79ms canvas work with a 2.20ms final sample across 319 frames.
+- Evidence is recorded in `qa/starter-bell-correction-polish-2026-08-02.md`. Suggested next refinement: human-playtest whether the combined correction is understood on the first retry; adjust wording only, not golf physics, unless players consistently follow the instruction and still miss.
+
+## Joe world-label occlusion polish
+
+- High-resolution review exposed Joe's world-state label inside the depth-sorted sprite pass, where a nearer cart or hedge could slice it into stray fragments such as `JOE: C...` even when the obstacle correctly blocked the character.
+- Separated the label from Joe's sprite and moved it to a bounded post-entity overlay with a restrained ground tether. Open sightlines now produce one compact, screen-safe state panel; nearer world art can no longer cut through the text.
+- Made physical sight occlusion authoritative for the label. When `lineBlockedBy` identifies real cover, the entire panel and tether disappear instead of leaking Joe's mode through scenery; the attention panel and last-signal systems retain their established roles.
+- Synchronized `render_game_to_text` with the visible label text, panel position and dimensions, occluding object, presentation mode, and explicit cover rule.
+- Focused replay passed nine clear-sight, chase, cover, distant-patrol, compact, Reduced Motion, presentation, and browser-error assertions. Visual review covered 2560x1600, 1280x720, 844x390, and Reduced Motion.
+- The required uninstrumented route reproduced the grounds-cart cover case without a clipped label or error artifact, averaging 2.03ms canvas work with a 1.60ms final sample across 198 rendered frames.
+- Evidence is recorded in `qa/joe-world-label-occlusion-polish-2026-08-03.md`. Suggested next refinement: human-playtest the label's frequency during several natural pursuits and reduce its 52-meter patrol range only if it competes with route decisions; never restore through-cover information.
+
+## Zone-event signal-merge polish
+
+- Native opening-route review found that each course set piece could show the same event twice: once in the centered state banner and again as a full directional threat-caption card. The south-gate knock visibly repeated across the top and lower signal lanes while the player was trying to read route and cover guidance.
+- Merged an exact matching threat caption into the visible state banner as a compact `SOUND LEFT/RIGHT/AHEAD/BEHIND` line. The banner and caption timers now share the same 2.8-second window, preventing a stray caption flash after the card retires.
+- Preserved independent captions, the threat-caption preference, and caption-only fallback whenever the banner is unavailable. The freed threat-caption lane once again permits ambient obstacle and route guidance rather than deferring it behind an invisible duplicate.
+- Centralized the state-banner visibility rule and synchronized `render_game_to_text` with banner direction, merge mode, caption-card visibility, duplicate count, and presentation ownership.
+- Focused replay passed nine merge, independent-caption, fallback, preference, ambient-lane, compact, Reduced Motion, and browser-error assertions. Visual review covered 2560x1600, 1280x720, 844x390, and Reduced Motion.
+- The required uninstrumented opening route produced one directional south-gate banner, zero duplicate caption cards, and no error artifact, averaging 2.98ms canvas work with a 3.00ms final sample across 208 rendered frames.
+- Evidence is recorded in `qa/zone-event-signal-merge-polish-2026-08-03.md`. Suggested next refinement: observe the remaining zone set pieces during a full human route and shorten only individual banner copy that proves hard to parse while moving; retain the single-card hierarchy.
+
+## Locomotion release-feedback polish
+
+- The ordinary opening route ended after 22 idle frames, yet the center HUD still said `RUNNING`. The 0.42-second directional afterglow was correctly retaining the last chevrons but also retaining a full-strength locomotion label, contradicting the authoritative idle input and camera state.
+- Split live locomotion from directional inertia. Running, sprint, crouch-walk, and bunker-sand labels now exist only while movement input is held; releasing input immediately removes the text while the last chevrons fade smoothly with their remaining timer and line weight.
+- High-resolution review then caught active sprint text touching the nearby noise-hazard plaque. Live locomotion labels now use a protected lower slot whenever a blocker, hazard, practice, or other context card occupies the ordinary line.
+- Preserved every existing movement speed, noise, terrain, camera, input-method, and Reduced Camera Motion rule. Added a synchronized text-state contract for feedback visibility, live movement, label, afterglow, direction, context displacement, and presentation phase.
+- Focused replay passed ten live-run, release, full-retirement, sprint, crouch, sand, context-slot, compact, Reduced Motion, contract, and browser-error checks. Visual review covered 2560x1600, 1280x720, 844x390, and Reduced Motion.
+- The required uninstrumented opening route reproduced the original 22-frame pause with `moving: false`, a faint 0.13 directional afterglow, no locomotion label, and no error artifact. Canvas rendering averaged 2.22ms with a 1.40ms final sample across 197 rendered frames.
+- Evidence is recorded in `qa/locomotion-release-feedback-polish-2026-08-03.md`. Suggested next refinement: human-playtest repeated short taps and obstacle bumps; adjust only the 0.42-second chevron decay if the visual inertia feels too long or too abrupt, while keeping labels bound to live input.
+
+## Score-handoff context polish
+
+- Moved the audit beyond the opening into an ordinary Audit Row arrival. The mature frame stacked the +70 Delivery card, route-back bearing, zone message, and a non-imminent `MAINTENANCE TOOLS // WALK WIDE // 20m` plaque inside the hedge tunnel.
+- Delivery and Risk Premium now defer ambient blocker, practice, and noise-hazard context cards unless a noise hazard is within the established eight-meter safety threshold. Route-back navigation, zone guidance, map, and authoritative world art remain visible.
+- The deferred context is not consumed or aged away: once the score handoff ends, the same physical hazard becomes eligible again immediately. An imminent seven-meter tools hazard still renders during the score card.
+- Reused the existing `contextCue.deferredBy` contract, so visual ownership and `render_game_to_text` report `delivery_award` or `risk_premium` without adding a new HUD layer or changing gameplay.
+- Focused replay passed eight Delivery, Risk, return, imminent-safety, compact, Reduced Motion, state-contract, and browser-error checks. Visual review covered 2560x1600, 1280x720, 844x390, and Reduced Motion.
+- The required uninstrumented Audit Row route reproduced the original hedge-tunnel frame with a 19.2-meter maintenance-tools hazard. The Delivery card remained visible, the ambient plaque deferred, and no error artifact appeared; canvas work averaged 1.92ms with a 1.80ms final sample across 371 rendered frames.
+- Evidence is recorded in `qa/score-handoff-context-polish-2026-08-03.md`. Suggested next refinement: human-playtest consecutive queued Delivery beats through Audit Row and confirm the returning hazard plaque does not feel late; preserve the eight-meter override.
+
+## Final Filing focus polish
+
+- Audited the active drain filing and acceptance seal at 2560x1600, 1280x720, and 844x390. Close pursuit was rendering a second `CONTACT BREAK` / Risk panel above the dedicated filing bar, while the acceptance stamp could share its center lane with a stale Joe subtitle.
+- Made Final Filing the explicit late-run presentation owner. The generic Joe-state banner and non-imminent ambient context plaques now yield to the filing panel, and close-chase telemetry yields because the filing bar already reports Joe distance and the only actionable choice: stay still or move to abort.
+- Preserved Joe's taunts during the vulnerable filing hold, then silenced that subtitle only during the 0.48-second acceptance seal so the large `RELEASE AUTHORIZED` stamp lands cleanly. The eight-meter noise-hazard safety override remains intact.
+- Chase presentation returns immediately after an aborted filing. No collision, pursuit, filing duration, input, scoring, route, or Joe-behavior rule changed.
+- Added synchronized `hudPresentation.contactBreakVisible`, Joe-subtitle visibility during sealing, generic-banner ownership, and `contextCue.deferredBy: final_filing` diagnostics.
+- Focused replay passed nine filing, dialogue, chase-return, compact, Reduced Motion, and browser-error assertions. Visual review covered active filing, close danger, acceptance sealing, compact, and Reduced Motion states.
+- The required uninstrumented gameplay route produced no error artifact and remained visually coherent around the opening grounds-cart cover case, averaging 1.74ms canvas work with a 1.20ms final sample across 195 rendered frames.
+- Evidence is recorded in `qa/final-filing-focus-polish-2026-08-03.md`. Suggested next refinement: human-playtest both exits under natural pursuit and adjust only the filing-panel copy or vertical placement if the hold feels unclear; preserve the single-owner hierarchy.
