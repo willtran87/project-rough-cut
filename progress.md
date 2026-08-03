@@ -704,3 +704,12 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Focused replay passed nine filing, dialogue, chase-return, compact, Reduced Motion, and browser-error assertions. Visual review covered active filing, close danger, acceptance sealing, compact, and Reduced Motion states.
 - The required uninstrumented gameplay route produced no error artifact and remained visually coherent around the opening grounds-cart cover case, averaging 1.74ms canvas work with a 1.20ms final sample across 195 rendered frames.
 - Evidence is recorded in `qa/final-filing-focus-polish-2026-08-03.md`. Suggested next refinement: human-playtest both exits under natural pursuit and adjust only the filing-panel copy or vertical placement if the hold feels unclear; preserve the single-owner hierarchy.
+
+## Final Filing withdrawal-handoff polish
+
+- High-resolution review of movement-abort recovery found three simultaneous reads: a top `FILING WITHDRAWN` banner, the restored contact-break meter, and a second bottom withdrawal message. The two withdrawal cards repeated the same consequence while competing with the urgent survival read.
+- Removed only the duplicate generic banner. One bottom rail now combines the reason and next action—`MOVEMENT DETECTED` plus the exact Drain or Shed release to revisit—while the objective HUD, map, and contact-break meter retain their established roles.
+- Preserved immediate pursuit recovery, Joe dialogue, cancellation count and reason, route availability, the 2.5-second instruction lifetime, input, collision, scoring, and all Final Filing mechanics.
+- Exact replay passed nine drain, shed, pursuit, cancellation-state, compact, Reduced Motion, expiry, and browser-error assertions. Visual review covered 2560x1600, 1280x720, 844x390, and both exits.
+- The required uninstrumented gameplay route produced no error artifact and retained the ordinary opening hierarchy, averaging 2.52ms canvas work with a 1.50ms final sample across 205 rendered frames.
+- Evidence is recorded in `qa/final-filing-withdrawal-handoff-polish-2026-08-03.md`. Suggested next refinement: human-playtest a natural last-second filing abort and adjust only the 2.5-second rail lifetime if it obscures the resumed route longer than necessary.

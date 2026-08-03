@@ -15975,12 +15975,11 @@
     filing.stage = 0;
     filing.cancellations += 1;
     filing.lastInterruption = reason;
-    hole.stateBanner =
-      "FILING WITHDRAWN // MOVEMENT DETECTED";
-    hole.stateBannerTimer = 1.8;
-    hole.stateBannerLockTimer = 1.8;
+    hole.stateBanner = null;
+    hole.stateBannerTimer = 0;
+    hole.stateBannerLockTimer = 0;
     setHoleMessage(
-      `${escapeRouteLabel(interruptedRoute)} WITHDRAWN — return to the exit and file again.`,
+      `FILING WITHDRAWN // MOVEMENT DETECTED — RETURN TO ${escapeRouteLabel(interruptedRoute)}`,
       2.5,
     );
     playTransientTone(
