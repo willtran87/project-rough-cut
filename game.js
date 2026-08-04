@@ -181,11 +181,13 @@
     "RETURN TO CLUBHOUSE",
   ];
   const PAUSE_DESCRIPTIONS = [
-    "Continue from the exact point the audit stopped.",
+    "Continue from the exact point where the audit stopped.",
     "Review the assignment and adjust presentation.",
     "Reset Hole 1 and begin again from the tee.",
     "Abandon this attempt and return to the main menu.",
   ];
+  const PAUSE_WORLD_VEIL_ALPHA =
+    0.84;
   const RESULT_ACTION_IDS = [
     "rematch",
     "next_order",
@@ -5488,6 +5490,18 @@
     return keyboardCopy;
   }
 
+  /**
+   * Returns the Clock Out scene's visible return instruction for the
+   * player's most recent input method.
+   */
+  function clockedOutReturnPrompt() {
+    return inputCopy(
+      "CLICK / ENTER / SPACE / ESC  //  RETURN",
+      "A / B  //  RETURN",
+      "TAP  //  RETURN",
+    );
+  }
+
   function keyboardBindingCode(id) {
     const definition =
       KEYBOARD_BINDING_ROWS.find(
@@ -7736,7 +7750,7 @@
         ? "MASTER PRODUCT OWNER // 12 STAMPS"
         : unlocked
         ? "RED-PEN AUTHORIZATION"
-        : "AUTHORIZATION PENDING",
+        : "PREVIEW ONLY // AUTHORIZATION PENDING",
       panel.x + panel.width - 24,
       panel.y + 32,
       11,
@@ -7833,6 +7847,9 @@
       const selectedCard =
         unlocked &&
         selected.id === variant.id;
+      const nextInRotation =
+        !unlocked &&
+        selected.id === variant.id;
       const cleared =
         state.career.completedVariants.includes(
           variant.id,
@@ -7856,6 +7873,8 @@
         ? perfected
           ? "rgba(54,43,10,0.96)"
           : "rgba(43,39,16,0.94)"
+        : nextInRotation
+          ? "rgba(13,30,14,0.94)"
         : "rgba(8,25,13,0.9)";
       ctx.fillRect(
         x,
@@ -7876,6 +7895,8 @@
             ? "#b89a4f"
           : filed
             ? variant.accent
+            : nextInRotation
+              ? "#667b4f"
             : "#344733",
         selectedCard ? 3 : 1,
       );
@@ -7888,6 +7909,8 @@
             ? "#b89a4f"
           : filed
             ? variant.accent
+            : nextInRotation
+              ? "#7e905f"
             : "#53604f";
       ctx.fillRect(
         x,
@@ -7902,6 +7925,8 @@
         11,
         selectedCard
           ? "#f3b36c"
+          : nextInRotation
+            ? "#aebd9d"
           : "#82917c",
         "left",
         true,
@@ -7926,6 +7951,8 @@
         14,
         selectedCard
           ? "#f3efd2"
+          : nextInRotation
+            ? "#e1e6d1"
           : "#cbd4bd",
         "left",
         true,
@@ -7936,6 +7963,8 @@
       ctx.strokeStyle =
         filed
           ? variant.accent
+          : nextInRotation
+            ? "#667b4f"
           : "#3f4b3d";
       ctx.lineWidth = selectedCard
         ? 3
@@ -7983,14 +8012,20 @@
         ctx.stroke();
       }
       drawText(
-        cleared
-          ? "✓ ORDER CLEARED"
-          : "○ REVIEW OPEN",
+        nextInRotation
+          ? "● NEXT IN ROTATION"
+          : cleared
+            ? "✓ ORDER CLEARED"
+            : unlocked
+              ? "○ REVIEW OPEN"
+              : "○ ROTATION PREVIEW",
         x + 16,
         PORTFOLIO_CARD_Y + 132,
         11,
-        cleared
-          ? "#a9c986"
+        nextInRotation
+          ? "#d3bd76"
+          : cleared
+            ? "#a9c986"
           : "#778477",
         "left",
         cleared,
@@ -8138,7 +8173,7 @@
             "D-PAD ← → SELECT  //  C CLEAN  R RECLAIM  B BAIT  E ECHO",
             "TAP A DOSSIER  //  C CLEAN  R RECLAIM  B BAIT  E ECHO",
           )
-        : "FILE ALL CHANGES TO SELECT ORDERS  //  STAMPS TRACK ESCAPE STYLES.",
+        : `FILE ALL ${RUN_VARIANTS.length} CHANGES TO CHOOSE AN ORDER  //  UNTIL THEN, RUNS FOLLOW ROTATION.`,
       panel.x + panel.width * 0.5,
       panel.y + panel.height - 18,
       11,
@@ -8326,15 +8361,21 @@
       );
     }
     drawText(
-      inputCopy(
-        `${portfolioUnlocked() ? "←→ ORDER  •  " : ""}↑↓ SELECT  •  ENTER CONFIRM${overtimeAvailable ? "  •  R OVERTIME" : ""}  •  F FULLSCREEN`,
-        `D-PAD SELECT${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM${overtimeAvailable ? "  •  RB OVERTIME" : ""}`,
-        portfolioUnlocked()
-          ? "TAP MENU / DOSSIER / OVERTIME CARD"
-          : overtimeAvailable
-            ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
-            : "TAP A MENU ITEM",
-      ),
+      state.mode === "claim"
+        ? inputCopy(
+            `ESC DISMISS  •  ↑↓ MENU${portfolioUnlocked() ? "  •  ←→ ORDER" : ""}  •  ENTER CONFIRM`,
+            `B DISMISS  •  D-PAD MENU${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM`,
+            "TAP ANOTHER MENU ITEM",
+          )
+        : inputCopy(
+            `${portfolioUnlocked() ? "←→ ORDER  •  " : ""}↑↓ SELECT  •  ENTER CONFIRM${overtimeAvailable ? "  •  R OVERTIME" : ""}  •  F FULLSCREEN`,
+            `D-PAD SELECT${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM${overtimeAvailable ? "  •  RB OVERTIME" : ""}`,
+            portfolioUnlocked()
+              ? "TAP MENU / DOSSIER / OVERTIME CARD"
+              : overtimeAvailable
+                ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
+                : "TAP A MENU ITEM",
+          ),
       WIDTH - 32,
       HEIGHT - 25,
       14,
@@ -8430,7 +8471,7 @@
       x: 150,
       y: 82,
       width: 980,
-      height: 556,
+      height: 580,
     };
     ctx.fillStyle = "rgba(5,16,9,0.985)";
     ctx.fillRect(
@@ -8646,8 +8687,8 @@
           : "ARROWS SELECT  •  ENTER REBIND  •  CONFLICTS SWAP",
       WIDTH * 0.5,
       633,
-      10,
-      "#84927d",
+      11,
+      "#9eaa98",
       "center",
     );
   }
@@ -8969,7 +9010,27 @@
 
   function drawPause() {
     drawFirstHole();
-    ctx.fillStyle = "rgba(0,3,2,0.72)";
+    const worldVeil =
+      ctx.createRadialGradient(
+        WIDTH * 0.5,
+        HEIGHT * 0.48,
+        90,
+        WIDTH * 0.5,
+        HEIGHT * 0.48,
+        Math.hypot(
+          WIDTH,
+          HEIGHT,
+        ) * 0.64,
+      );
+    worldVeil.addColorStop(
+      0,
+      `rgba(0,3,2,${PAUSE_WORLD_VEIL_ALPHA - 0.04})`,
+    );
+    worldVeil.addColorStop(
+      1,
+      `rgba(0,3,2,${PAUSE_WORLD_VEIL_ALPHA + 0.06})`,
+    );
+    ctx.fillStyle = worldVeil;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     const panel = { x: 330, y: 78, width: 620, height: 564 };
@@ -14640,6 +14701,11 @@
     if (nerveHoldOwnsSignalLane()) {
       return "nerve_hold";
     }
+    if (
+      practiceCorrectionOwnsSignalLane()
+    ) {
+      return "practice_correction";
+    }
     if (activeDistractionOwnsSignalLane()) {
       return "active_distraction";
     }
@@ -14700,6 +14766,7 @@
       "emergency_appeal",
       "status_request",
       "golf_aim",
+      "practice_correction",
       "active_distraction",
       "risk_premium",
       "delivery_award",
@@ -14727,6 +14794,7 @@
       !hole.statusRequest.active &&
       !emergencyAppealOwnsSignalLane() &&
       !golfAimOwnsSignalLane() &&
+      !practiceCorrectionOwnsSignalLane() &&
       !activeDistractionOwnsSignalLane() &&
       !crosswindOwnsSignalLane() &&
       !nerveHoldOwnsSignalLane() &&
@@ -14843,31 +14911,7 @@
 
   function drawJoeBark() {
     const hole = state.hole;
-    if (
-      !state.subtitles ||
-      !hole.joeBark ||
-      hole.joeBarkTimer <= 0 ||
-      hole.tutorialVisible ||
-      hole.riskAward ||
-      hole.deliveryAward ||
-      hole.escapeFiling.sealing ||
-      activeHudPresentationFocus() ===
-        "trail_evidence" ||
-      activeHudPresentationFocus() ===
-        "emergency_appeal" ||
-      activeHudPresentationFocus() ===
-        "status_request" ||
-      activeHudPresentationFocus() ===
-        "golf_aim" ||
-      activeHudPresentationFocus() ===
-        "nerve_hold" ||
-      activeHudPresentationFocus() ===
-        "cut_trace" ||
-      activeHudPresentationFocus() ===
-        "listening_search" ||
-      activeHudPresentationFocus() ===
-        "cadence_read"
-    ) {
+    if (!joeBarkVisible()) {
       return;
     }
     const fade = clamp(
@@ -16208,6 +16252,20 @@
     );
   }
 
+  function practiceCorrectionOwnsSignalLane() {
+    const drill =
+      state.hole?.practiceDrill;
+    return Boolean(
+      practiceDrillActive() &&
+      drill.stage === "correct_aim" &&
+      drill.lastCorrection &&
+      state.hole.messageTimer > 0.75 &&
+      state.hole.message.startsWith(
+        "BELL MISSED",
+      )
+    );
+  }
+
   function activeDistractionOwnsSignalLane() {
     return Boolean(
       state.hole?.distraction &&
@@ -16329,6 +16387,34 @@
       state.hole.joeBarkTimer > 0 &&
       !state.hole.tutorialVisible &&
       state.hole.messageTimer <= 0.75,
+    );
+  }
+
+  function joeBarkVisible() {
+    const hole = state.hole;
+    if (
+      !state.subtitles ||
+      !hole?.joeBark ||
+      hole.joeBarkTimer <= 0 ||
+      hole.tutorialVisible ||
+      hole.riskAward ||
+      hole.deliveryAward ||
+      hole.escapeFiling.sealing
+    ) {
+      return false;
+    }
+    return ![
+      "trail_evidence",
+      "emergency_appeal",
+      "status_request",
+      "golf_aim",
+      "practice_correction",
+      "nerve_hold",
+      "cut_trace",
+      "listening_search",
+      "cadence_read",
+    ].includes(
+      activeHudPresentationFocus(),
     );
   }
 
@@ -24239,6 +24325,7 @@
       !imminentNoise &&
       (
         focus === "final_filing" ||
+        focus === "practice_correction" ||
         focus === "risk_premium" ||
         focus === "delivery_award"
       )
@@ -24252,18 +24339,7 @@
       return renderFrameCache.worldContextCue;
     }
     const joeDialogueActive =
-      state.subtitles &&
-      state.hole.joeBark &&
-      state.hole.joeBarkTimer > 0 &&
-      !state.hole.tutorialVisible &&
-      !state.hole.riskAward &&
-      !state.hole.deliveryAward &&
-      ![
-        "trail_evidence",
-        "emergency_appeal",
-        "status_request",
-        "cadence_read",
-      ].includes(focus);
+      joeBarkVisible();
     const threatCaptionActive =
       visibleThreatCaptions(
         focus,
@@ -32670,13 +32746,23 @@
         label &&
         contextCue.kind !== "none"
       );
+    const labelDeferredByJoeBark =
+      Boolean(
+        label &&
+        joeBarkVisible()
+      );
     return {
       visible,
       moving,
       afterglow,
       label,
       labelVisible:
-        Boolean(label),
+        Boolean(label) &&
+        !labelDeferredByJoeBark,
+      labelDeferredBy:
+        labelDeferredByJoeBark
+          ? "joe_bark"
+          : null,
       labelOffsetY:
         displacedByContextCue
           ? 116
@@ -32699,6 +32785,8 @@
       },
       presentation: escapeOverride
         ? "collision_escape_override"
+        : labelDeferredByJoeBark
+          ? "live_input_chevrons_with_label_deferred"
         : moving
           ? "live_input_with_chevrons"
           : visible
@@ -35657,6 +35745,7 @@
       concealment > 0.62 &&
       !hole.riskAward &&
       !hole.deliveryAward &&
+      !contactBreakFeedbackVisible() &&
       !nerveHoldOwnsSignalLane() &&
       !cutTraceOwnsSignalLane() &&
       !listeningSearchReadOwnsSignalLane()
@@ -35685,7 +35774,8 @@
         nerve.active
       ) &&
       !hole.riskAward &&
-      !hole.deliveryAward
+      !hole.deliveryAward &&
+      !contactBreakFeedbackVisible()
     ) {
       const progress = clamp(
         nerve.progress /
@@ -37575,13 +37665,18 @@
     ctx.restore();
   }
 
+  function contactBreakFeedbackVisible() {
+    return Boolean(
+      state.hole?.joe?.mode ===
+        "chase" &&
+      activeHudPresentationFocus() !==
+        "final_filing",
+    );
+  }
+
   function drawContactBreakFeedback() {
     const hole = state.hole;
-    if (
-      hole.joe.mode !== "chase" ||
-      activeHudPresentationFocus() ===
-        "final_filing"
-    ) {
+    if (!contactBreakFeedbackVisible()) {
       return;
     }
     const visualContact = hole.hasLineOfSight;
@@ -37602,6 +37697,10 @@
       ) || "NEARBY";
     const appeal =
       emergencyAppealState();
+    const nerveActive = Boolean(
+      hole.nerveHold?.active &&
+      !appeal.eligible,
+    );
     const panel = {
       x: WIDTH * 0.5 - 176,
       y: HEIGHT *
@@ -37610,7 +37709,11 @@
           : 0.67),
       width: 352,
       height:
-        appeal.eligible ? 94 : 54,
+        appeal.eligible
+          ? 94
+          : nerveActive
+            ? 76
+            : 54,
     };
     ctx.save();
     ctx.fillStyle = "rgba(8,3,2,0.86)";
@@ -37656,7 +37759,13 @@
       label,
       WIDTH * 0.5,
       panel.y + 22,
-      11,
+      fittedTextSize(
+        label,
+        11,
+        panel.width - 24,
+        9,
+        true,
+      ),
       breaking ? "#b8d6ad" : "#ffad78",
       "center",
       true,
@@ -37703,6 +37812,40 @@
         9,
         "#dba470",
         "center",
+      );
+    } else if (nerveActive) {
+      const nerveProgress =
+        clamp(
+          hole.nerveHold.progress /
+            NERVE_HOLD_SECONDS,
+          0,
+          1,
+        );
+      ctx.strokeStyle =
+        "rgba(132,183,140,0.62)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(
+        panel.x + 16,
+        panel.y + 50,
+      );
+      ctx.lineTo(
+        panel.x + panel.width - 16,
+        panel.y + 50,
+      );
+      ctx.stroke();
+      drawText(
+        inputCopy(
+          `NERVE ${Math.round(nerveProgress * 100)}% • KEEP ${keyboardBindingLabel("crouch")} + ${keyboardBindingLabel("focus")} • DO NOT MOVE`,
+          `NERVE ${Math.round(nerveProgress * 100)}% • KEEP LB + LT • DO NOT MOVE`,
+          `NERVE ${Math.round(nerveProgress * 100)}% • KEEP CROUCH + LISTEN • DO NOT MOVE`,
+        ),
+        WIDTH * 0.5,
+        panel.y + 67,
+        9,
+        "#a9d4b0",
+        "center",
+        true,
       );
     }
     ctx.restore();
@@ -42139,6 +42282,10 @@
     }
 
     ctx.restore();
+    if (state.hole.tutorialVisible) {
+      drawTutorialBriefing();
+      return;
+    }
     drawTensionOmen();
     drawLookBackFeedback();
     drawPeripheralHorrorManifestation();
@@ -42186,9 +42333,6 @@
       }
     }
     drawTouchControls();
-    if (state.hole.tutorialVisible) {
-      drawTutorialBriefing();
-    }
   }
 
   function drawClockedOut() {
@@ -42292,11 +42436,7 @@
     ctx.fillRect(panel.x + 118, panel.y + 302, panel.width - 236, 54);
     strokeRect(panel.x + 118, panel.y + 302, panel.width - 236, 54, "#8b7844", 1);
     drawText(
-      inputCopy(
-        "CLICK / ENTER / SPACE / ESC  //  RETURN",
-        "A / B  //  RETURN",
-        "TAP  //  RETURN",
-      ),
+      clockedOutReturnPrompt(),
       WIDTH * 0.5,
       panel.y + 336,
       15,
@@ -42778,11 +42918,7 @@
           Math.sin(state.time * 5.2) *
             0.14;
     const actionDescription =
-      outcome === "defeat" &&
-      state.resultIndex === 0 &&
-      state.hole.captureReview
-        ? "RETRY FILE LOADS THIS COUNTERPLAN INTO THE NEXT ATTEMPT."
-        : selected.description;
+      selected.description;
     const actionDescriptionText =
       `NEXT ACTION // ${actionDescription}`;
     drawText(
@@ -43555,12 +43691,33 @@
 
   function drawDefeat() {
     const impact = smoothstep(state.time / 0.48);
+    const textReveal = smoothstep((state.time - 0.18) / 0.38);
+    const panelY = lerp(504, 342, textReveal);
+    const aftermath = smoothstep((state.time - 0.52) / 1.1);
     const jitterStrength = state.reducedMotion ? 0 : (1 - Math.min(1, state.time / 1.2)) * 15;
     const jitterX = (hash(Math.floor(state.time * 44)) - 0.5) * jitterStrength;
     const jitterY = (hash(Math.floor(state.time * 37) + 8) - 0.5) * jitterStrength * 0.55;
+    const tableauDriftX =
+      state.reducedMotion
+        ? 0
+        : Math.sin(state.time * 0.31) * 2.4 * aftermath;
+    const tableauDriftY =
+      state.reducedMotion
+        ? 0
+        : Math.cos(state.time * 0.27) * 1.5 * aftermath;
+    const tableauBreath =
+      state.reducedMotion
+        ? 0
+        : (0.0035 + Math.sin(state.time * 0.54) * 0.0025) * aftermath;
     ctx.save();
-    ctx.translate(jitterX, jitterY);
-    drawImageCover(ctx, defeatArt, 0, 8 + impact * 8, 1.035 + impact * 0.075);
+    ctx.translate(jitterX + tableauDriftX, jitterY + tableauDriftY);
+    drawImageCover(
+      ctx,
+      defeatArt,
+      0,
+      8 + impact * 8,
+      1.035 + impact * 0.075 + tableauBreath,
+    );
     ctx.restore();
 
     const captureGrade = ctx.createLinearGradient(0, 0, 0, HEIGHT);
@@ -43570,13 +43727,13 @@
     ctx.fillStyle = captureGrade;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+    drawDefeatAftermath(panelY, aftermath);
+
     if (state.time < 0.16) {
       ctx.fillStyle = `rgba(255,225,176,${(0.16 - state.time) * 2.8})`;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
 
-    const textReveal = smoothstep((state.time - 0.18) / 0.38);
-    const panelY = lerp(504, 342, textReveal);
     const captureDialogue =
       state.hole.captureDialogue ||
       JOE_CAPTURE_LINES[0];
@@ -43792,6 +43949,129 @@
       "defeat",
       "#c64626",
     );
+    ctx.restore();
+  }
+
+  /**
+   * Keeps Joe's capture tableau alive after the impact without obscuring the result interface.
+   */
+  function drawDefeatAftermath(
+    panelY,
+    aftermath,
+  ) {
+    if (aftermath <= 0) {
+      return;
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, WIDTH, panelY);
+    ctx.clip();
+
+    const fogHeight = 92;
+    for (
+      let layer = 0;
+      layer < 4;
+      layer += 1
+    ) {
+      const seed = hash(layer * 83 + 17);
+      const drift =
+        state.reducedMotion
+          ? seed * WIDTH
+          : (seed * WIDTH +
+                state.time *
+                  (8 + layer * 2.6)) %
+              (WIDTH + 360) -
+            180;
+      const fogY =
+        panelY -
+        26 -
+        layer * 14;
+      const fog =
+        ctx.createRadialGradient(
+          drift,
+          fogY,
+          0,
+          drift,
+          fogY,
+          178 + layer * 24,
+        );
+      fog.addColorStop(
+        0,
+        `rgba(162,183,169,${(0.052 - layer * 0.006) * aftermath})`,
+      );
+      fog.addColorStop(
+        0.58,
+        `rgba(87,116,103,${(0.025 - layer * 0.002) * aftermath})`,
+      );
+      fog.addColorStop(
+        1,
+        "rgba(40,57,49,0)",
+      );
+      ctx.fillStyle = fog;
+      ctx.fillRect(
+        drift - 230,
+        fogY - fogHeight * 0.5,
+        460,
+        fogHeight,
+      );
+    }
+
+    const sweepCycle =
+      (state.time + 5.75) % 6.8;
+    if (
+      !state.reducedMotion &&
+      sweepCycle < 1.45
+    ) {
+      const sweepProgress =
+        smoothstep(
+          sweepCycle / 1.45,
+        );
+      const sweepAlpha =
+        Math.sin(
+          sweepProgress * Math.PI,
+        ) *
+        0.11 *
+        aftermath;
+      const sweepY = lerp(
+        72,
+        panelY - 18,
+        sweepProgress,
+      );
+      const sweep =
+        ctx.createLinearGradient(
+          0,
+          sweepY,
+          WIDTH,
+          sweepY,
+        );
+      sweep.addColorStop(
+        0,
+        "rgba(198,70,38,0)",
+      );
+      sweep.addColorStop(
+        0.26,
+        `rgba(222,104,66,${sweepAlpha * 0.55})`,
+      );
+      sweep.addColorStop(
+        0.5,
+        `rgba(255,166,107,${sweepAlpha})`,
+      );
+      sweep.addColorStop(
+        0.74,
+        `rgba(222,104,66,${sweepAlpha * 0.55})`,
+      );
+      sweep.addColorStop(
+        1,
+        "rgba(198,70,38,0)",
+      );
+      ctx.fillStyle = sweep;
+      ctx.fillRect(
+        0,
+        sweepY - 2,
+        WIDTH,
+        5,
+      );
+    }
     ctx.restore();
   }
 
@@ -44957,6 +45237,8 @@
         break;
       case 4:
         state.mode = "clocked_out";
+        state.status =
+          "SHIFT ENDED: Night Order left unsigned.";
         state.transitionAlpha = 0.7;
         setMotorLevel(0, 40);
         break;
@@ -48074,6 +48356,67 @@
     selectedMenuItem: state.mode === "menu" || state.mode === "claim"
       ? MENU_ITEMS[state.menuIndex]
       : null,
+    changeRequestRejection:
+      state.mode === "claim"
+        ? {
+            visible: true,
+            reason: state.status
+              .slice(
+                "CHANGE REJECTED:".length,
+              )
+              .trim(),
+            footerOwnsControls: true,
+            dismiss: {
+              keyboard: "Escape",
+              gamepad: "B",
+              touch:
+                "select_another_menu_item",
+            },
+            rule:
+              "rejection_footer_prioritizes_exit_and_menu_recovery",
+          }
+        : null,
+    clockedOutPresentation:
+      state.mode === "clocked_out"
+        ? {
+            visible: true,
+            outcome: "shift_ended",
+            personnelStatus:
+              "out_of_office",
+            nightOrder:
+              "left_unsigned",
+            headline: "SHIFT ENDED",
+            detail:
+              "The release window reopens at dawn.",
+            consequence:
+              "Joe's calendar remains fully committed.",
+            overtimeAuthorized: false,
+            inputMethod:
+              state.inputMethod,
+            activeReturnPrompt:
+              clockedOutReturnPrompt(),
+            returnInputs: {
+              keyboard: [
+                "pointer_click",
+                "Enter",
+                "Space",
+                "Escape",
+              ],
+              gamepad: ["A", "B"],
+              touch: ["tap"],
+            },
+            presentation: {
+              modalOwnsInstructions:
+                true,
+              worldContext:
+                "pre_dawn_course",
+              reducedMotion:
+                state.reducedMotion,
+            },
+            rule:
+              "visible_outcome_and_return_contract_match_reported_state",
+          }
+        : null,
     selectedPauseItem:
       state.mode === "paused"
         ? PAUSE_ITEMS[state.pauseIndex]
@@ -48108,6 +48451,28 @@
                 .hasLineOfSight
                 ? "open"
                 : "blocked",
+            presentation: {
+              modalOwnsInstructions:
+                true,
+              worldContextVisible:
+                true,
+              backgroundHudTreatment:
+                "subdued_beneath_center_weighted_world_veil",
+              centerVeilAlpha:
+                Number(
+                  (
+                    PAUSE_WORLD_VEIL_ALPHA -
+                    0.04
+                  ).toFixed(2),
+                ),
+              edgeVeilAlpha:
+                Number(
+                  (
+                    PAUSE_WORLD_VEIL_ALPHA +
+                    0.06
+                  ).toFixed(2),
+                ),
+            },
           }
         : null,
     resultActions:
@@ -48202,6 +48567,10 @@
       id: "night_order_portfolio",
       unlocked:
         portfolioUnlocked(),
+      presentationMode:
+        portfolioUnlocked()
+          ? "interactive"
+          : "rotation_preview",
       unlockProgress: {
         filed:
           state.career.filedChangeRequests.length,
@@ -48363,6 +48732,20 @@
         state.bindingCaptureId,
       bindingStatus:
         state.bindingStatus,
+      bindingsPresentation:
+        state.settingsPage ===
+          "bindings"
+          ? {
+              instructionFooterProtected:
+                true,
+              panelBottom: 662,
+              innerBorderBottom: 652,
+              instructionBaseline: 633,
+              instructionClearance: 19,
+              rule:
+                "binding_help_remains_inside_the_modal_border",
+            }
+          : null,
       keyboardBindings:
         Object.fromEntries(
           KEYBOARD_BINDING_ROWS.map(
@@ -48912,6 +49295,8 @@
                   feedback.label,
                 labelVisible:
                   feedback.labelVisible,
+                labelDeferredBy:
+                  feedback.labelDeferredBy,
                 labelOffsetY:
                   feedback.labelOffsetY,
                 displacedByContextCue:
@@ -49045,6 +49430,17 @@
           phase: state.hole.phase,
           overtime: state.hole.overtime,
           tutorialVisible: state.hole.tutorialVisible,
+          tutorialPresentation:
+            state.hole.tutorialVisible
+              ? {
+                  owner:
+                    "survival_briefing",
+                  liveHudVisible: false,
+                  worldContextVisible: true,
+                  rule:
+                    "briefing_owns_instruction_layer_over_course_world",
+                }
+              : null,
           rematch: {
             quickStart:
               state.hole.quickRematch,
@@ -49460,6 +49856,32 @@
             state.hole.captureReview
               ? {
                   ...state.hole.captureReview,
+                }
+              : null,
+          capturePresentation:
+            state.mode === "defeat"
+              ? {
+                  generatedTableau:
+                    "rough-cut-joe-capture-v1.png",
+                  loaded:
+                    defeatArt.complete,
+                  hierarchy: [
+                    "joe_capture",
+                    "joe_dialogue",
+                    "incident_review",
+                    "selected_counterplan",
+                    "result_actions",
+                  ],
+                  aftermath:
+                    state.reducedMotion
+                      ? "static_tableau_with_fixed_ground_haze"
+                      : "restrained_tableau_breath_ground_haze_and_periodic_review_sweep",
+                  interfaceProtection:
+                    "aftermath_clipped_above_result_panel",
+                  selectedAction:
+                    resultActionPresentations(
+                      "defeat",
+                    )[state.resultIndex],
                 }
               : null,
           keyCollected: state.hole.keyCollected,
@@ -51691,10 +52113,22 @@
             focus:
               activeHudPresentationFocus(),
             contactBreakVisible:
-              state.hole.joe.mode ===
-                "chase" &&
-              activeHudPresentationFocus() !==
-                "final_filing",
+              contactBreakFeedbackVisible(),
+            contactBreakOwnsConcealmentLane:
+              contactBreakFeedbackVisible(),
+            contactBreakNerveHandoff:
+              contactBreakFeedbackVisible()
+                ? state.hole
+                    .nerveHold.active
+                  ? emergencyAppealState()
+                      .eligible
+                    ? "emergency_appeal_priority"
+                    : "nerve_progress_integrated"
+                  : state.hole
+                      .nerveHold.armed
+                    ? "nerve_input_on_bottom_rail"
+                    : "concealment_panels_deferred"
+                : null,
             riskPremiumVisible:
               Boolean(
                 state.hole.riskAward,
@@ -51737,30 +52171,17 @@
                   .zoneBannerTimer > 0 &&
               activeHudPresentationFocus() ===
                 "zone_arrival",
+            practiceCorrectionVisible:
+              practiceCorrectionOwnsSignalLane(),
             joeBarkVisible:
-              Boolean(
-                state.subtitles &&
-                state.hole
-                    .joeBarkTimer > 0 &&
-                state.hole.joeBark &&
-                !state.hole
-                  .escapeFiling.sealing &&
-                !state.hole.riskAward &&
-                !state.hole
-                  .deliveryAward &&
-                activeHudPresentationFocus() !==
-                  "trail_evidence" &&
-                activeHudPresentationFocus() !==
-                  "emergency_appeal" &&
-                activeHudPresentationFocus() !==
-                  "status_request" &&
-                activeHudPresentationFocus() !==
-                  "nerve_hold" &&
-                activeHudPresentationFocus() !==
-                  "cut_trace" &&
-                activeHudPresentationFocus() !==
-                  "listening_search",
-              ),
+              joeBarkVisible(),
+            joeBarkDeferredBy:
+              state.hole.joeBark &&
+              state.hole.joeBarkTimer > 0 &&
+              !joeBarkVisible() &&
+              practiceCorrectionOwnsSignalLane()
+                ? "practice_correction"
+                : null,
           },
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
           stateBannerPresentation:
