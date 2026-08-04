@@ -873,3 +873,333 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Focused validation passed 35/35 high-resolution, standard, compact, Reduced Motion, keyboard, controller-copy, touch-copy, outcome-parity, return-handoff, and browser-error checks. Escape, Enter, Space, pointer click, and touch tap all returned cleanly to the Clubhouse.
 - The required official client produced no error artifact and reported 3.01ms average / 0.60ms last canvas work across 71 rendered frames.
 - Evidence is recorded in `qa/clock-out-state-parity-polish-2026-08-03.md`. Suggested next refinement: human-playtest whether this intentionally quiet branch feels like a satisfying joke ending; preserve its short runtime and single-action return lane.
+
+## Route pressure and Vertical Pass pursuit polish
+
+- Added seven persistent but avoidable footing hazards across alternating course lanes: Audit Thatch, Irrigation Mud, Exposed Root Mat, Service Thatch, Black Irrigation Mud, Range Root Mat, and Release Windrow.
+- Thatch limits movement to 66%, mud to 54%, and roots to 70%. Each carries a material-specific movement-noise floor, while crouch and Listening Focus still provide meaningful mitigation. The player may accept the drag, route wide at full pace, or wait for Joe to turn.
+- Used one rotated-ellipse contract for terrain art, physical edge stakes, approach distance, map marks, active highlighting, movement contact, and validation. All seven zone centers are traversable and all seven preserve a nearby full-speed bypass.
+- Added pre-contact percentage plaques, active `FOOTING DRAG` feedback, material audio, updated Survival Briefing / How to Survive / keyboard / controller / touch language, and complete text-state telemetry.
+- Added Vertical Pass awareness when an exposed player moves forward beyond Joe's mowing line. Sprinting builds the wake fastest; lateral separation, crouching, Listening Focus, rough, and hard cover reduce acquisition.
+- Joe now physically creeps toward the last exposed crossing rather than learning the player's live hidden position. Awareness extends the response window and ramps his movement, preventing a simple straight sprint from permanently clearing him.
+- Waiting and concealment drain the wake; sustained hard cover resolves it completely as `waited_out_under_cover`. Direct sight, sound, distractions, searches, and existing predator tactics retain priority.
+- Focused validation passed 11/11 route, slowdown, wake, creep, counterplay, geometry, bypass, label-handoff, and browser-error checks. High-resolution visual validation passed 24/24 at 2560x1600, 1280x720, 844x390, and Reduced Camera Motion.
+- The required official-client approach showed the Audit Thatch cue 3.05m before contact with 15.02m physical clearance, no Joe-label overlap, no browser error artifact, and 2.34ms average / 2.60ms last canvas rendering across 461 frames. Existing first-hole and vertical-chase routes remained intact.
+- Evidence is recorded in `qa/route-pressure-vertical-wake-polish-2026-08-04.md`. Suggested next refinement: human-playtest both escape routes and tune only individual multipliers or awareness thresholds if one lane dominates; preserve honest geometry, full-speed bypasses, approximate wake tracking, and hard-cover waiting.
+
+## Footing bypass guidance polish
+
+- Audited the new footing decisions from the first-person view and found that `CROSS OR ROUTE WIDE` did not identify a viable side, pushing an urgent choice back onto the map.
+- Added a local evaluator that expands candidate lanes on both sides, rejects player-padded obstacle intersections from approach through exit, and ranks remaining routes by clearance, course-edge room, Joe separation, and player distance.
+- The audit caught a real geometry error at Irrigation Mud: its 36-unit horizontal radius and pond banks left no player-clear lateral route. Reduced the shared art/map/contact radius to 30, producing an honest 6.69m-clear left bypass.
+- Added one amber world-space bypass thread and forward chevrons beneath physical cover, visually separate from the mint objective route. The field plaque names `FULL-SPEED BYPASS LEFT/RIGHT`; after entry it reports the recommended clear edge and distance.
+- Moved the plaque into a screen-stable protected lane so active guidance cannot disappear beneath the bottom consequence rail, while retaining Joe-label displacement and higher-priority HUD ownership.
+- Extended `render_game_to_text` with bypass visibility, side, validity, minimum clearance, distance, entry/exit, wait recommendation, alternative blockers, and the under-cover presentation rule.
+- Range-gated scoring outside 34m and shared one evaluation between the route and plaque. The final official capture improved from 4.92ms average / 3.90ms final canvas work to 4.02ms / 2.70ms across 456 frames.
+- Focused validation passed 12/12 checks, including a collision-clear recommendation for all seven active hazards. Responsive visual validation passed 28/28 at 2560x1600, 1280x720, 844x390, and Reduced Camera Motion, with no browser errors.
+- The required uninstrumented replay naturally reached Audit Thatch with a valid 12.67m-clear left recommendation 24.75m from the bypass entry; amber local guidance, mint objective guidance, Joe, the map, and the noise consequence remained readable.
+- Evidence is recorded in `qa/footing-bypass-guidance-polish-2026-08-04.md`. Suggested next refinement: human-playtest both exits without the map and adjust only the 34m window or widening margins if a route recommendation changes too late; preserve collision validation and one clear local choice.
+
+## Footing material-response polish
+
+- Gave the three established slow-footing families distinct projected contact responses instead of one generic debris burst. Thatch now bends into layered fibers and sheds straw, mud compresses into dark rims and sticky clods, and roots flex through bark-marked branch impacts.
+- Connected those surfaces to restrained locomotion cadence: mud has the heaviest bounded drag, thatch produces an irregular soft pull, and roots create brief uneven impacts. The authoritative 54-70% movement multipliers and noise floors remain unchanged.
+- Reduced Camera Motion preserves the static material contact read while removing the added footing lurch, camera bob, and root roll.
+- Made the footing-entry explanation the temporary instruction owner. The active bypass plaque returns after that message retires, follows the selected escape edge rather than the already-passed hazard center, remains horizontally centered, and moves clear of Joe's label and the aiming reticle.
+- Extended the text-state contract with active footing material, drag, response mode, all seven footfall surface variants, plaque visibility, and entry-feedback deferral.
+- Focused validation passed 16/16 material, cadence, slowdown, route, wake, creep, waiting, geometry, recommendation, and browser-error checks. Responsive validation passed 36/36 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- The required official uninstrumented replay preserved an honest 12.67m-clear Audit Thatch bypass, the mint objective route, Joe's grounded label, and the noise consequence with no error artifact. Canvas work averaged 2.74ms with a 2.50ms final sample across 464 rendered frames.
+- Evidence is recorded in `qa/footing-material-response-polish-2026-08-04.md`. Suggested next refinement: human-playtest consecutive mud and root crossings without the map and adjust only response amplitude if the material identity is too subtle; preserve the truthful movement penalty, collision-clear bypass, and Reduced Motion contract.
+
+## Footing recovery-handoff polish
+
+- Audited the final edge of a slow-footing crossing and found a state contradiction: movement returned to full speed immediately, but the locked percentage banner and `SLOW FOOTING` explanation could remain visible after the player was clear.
+- Added a 1.45-second recovery state that records the cleared zone and material while keeping the authoritative movement multiplier at 1.0.
+- The stale slowdown banner now becomes one compact `FOOTING CLEAR // FULL PACE` confirmation, and the obsolete bottom explanation retires immediately. The normal movement label remains unchanged while its existing chevrons briefly tint mint, avoiding a second textual owner.
+- Protected higher-priority events: recovery only replaces the exact banner and message produced by the cleared footing zone, so a newer danger, scoring, collision, or objective update is never overwritten.
+- Extended `render_game_to_text` with recovery activity, remaining time, cleared zone, material, full-speed multiplier, presentation contract, and movement-tint state.
+- Focused validation passed 17/17 material, recovery, slowdown, route, wake, creep, waiting, geometry, recommendation, and browser-error checks. Responsive validation passed 40/40 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- Visual inspection confirmed a single recovery owner with no map, objective, reticle, foreground-cover, or HUD overlap. The required uninstrumented straight crossing also preserved Joe's established pressure: lingering in his sightline produced the expected Sightline Held capture instead of allowing a free sprint-through, with no error artifact.
+- Evidence is recorded in `qa/footing-recovery-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest the recovery banner during an active chase and adjust only its 1.45-second duration if it is too easy to miss; preserve single-owner messaging and danger-event priority.
+
+## Footing recovery threat-theme polish
+
+- Audited the full-pace handoff under active pursuit at 2560x1600, 1280x720, and 844x390. The recovery text was correct, but it inherited the state banner's chase-red fill, border, and type, visually presenting a positive movement recovery as another danger.
+- Added an explicit recovery-banner predicate and mint fill, border, and text theme. Joe's objective frame, attention panel, pursuit lock, Contact Break, vignette, and every danger mechanic remain red and authoritative.
+- Added `stateBannerPresentation.theme` diagnostics with `recovery_mint`, `danger_red`, and `field_amber` states so accessibility and screenshot validation no longer infer meaning from color alone.
+- Focused validation passed 18/18, including the real 0.66-to-1.0 footing transition and a pursuit presentation preview. Responsive validation passed 40/40 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- The required official-client smoke route dismissed onboarding, moved ten meters, preserved the first-person objective/map handoff, produced no error artifact, and completed at 8.60ms average / 1.70ms final canvas work across 92 frames.
+- Evidence is recorded in `qa/footing-recovery-threat-theme-polish-2026-08-04.md`. Suggested next refinement: human-playtest recovery during a naturally acquired chase and adjust only mint luminance if it becomes hard to distinguish against a bright moonlit zone; preserve semantic color separation and pursuit priority.
+
+## Responsive First Steps ownership polish
+
+- Audited the first playable frame and found movement, route, and target guidance repeated across the First Steps panel, bottom instruction message, world target plaque, route label, and persistent control footer. The redundancy reduced course visibility without adding a new decision.
+- Assigned one responsive instruction owner while preserving the diegetic route and permanent control footer. Standard, high-resolution, and Reduced Camera Motion presentations keep the detailed First Steps panel and defer the duplicate bottom sentence.
+- At short landscape sizes up to 880 pixels wide or 460 pixels tall, the secondary left panel yields and the larger bottom rail owns the movement instruction. This preserves the more legible copy at 844x390 while revealing more of the course center.
+- The onboarding movement message now retires at ten meters instead of briefly resurfacing after its primary owner collapses. The pre-round Survival Briefing no longer reports a hidden First Steps cue before dismissal.
+- Added text-state diagnostics for `instructionOwner`, `compactViewport`, and `duplicateInstructionRails`, and aligned `hudExpanded`, message visibility, source, and deferral with the rendered owner.
+- Responsive validation passed 48/48 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion. The established route-pressure suite retained all 18/18 material, recovery, pursuit, route, geometry, and browser-error checks.
+- The required official client dismissed the briefing into a clean desktop First Steps panel at zero travel, reported no duplicate rails, kept the source message deferred by that panel, and produced no error artifact at 5.93ms average / 2.40ms final canvas work across 103 frames.
+- Evidence is recorded in `qa/opening-handoff-responsive-ownership-polish-2026-08-04.md`. Suggested next refinement: human-playtest the opening on an actual landscape phone and adjust only the compact breakpoint if browser chrome changes the available height; preserve one instruction owner and the ten-meter retirement.
+
+## Onboarding tactical-handoff polish
+
+- Audited the exact ten-meter First Steps boundary. Desktop correctly converted the detailed card into `SURROUNDINGS`, but compact retired its large bottom instruction and immediately popped in the smaller secondary panel for the remaining onboarding grace distance.
+- Kept compact onboarding on the unobstructed course view through that grace window unless the player deliberately holds Listening Focus. Desktop and high-resolution layouts retain the richer Surroundings panel.
+- Added `onboardingPresentation` diagnostics for phase, owner, compact decision, secondary-panel visibility, bottom-instruction visibility, and duplicate rails. The compact hidden-panel reason is now reported explicitly rather than appearing as a generic expansion request.
+- The new transition scenario exposed a separate timer leak: any tactical message triggered between ten and eighteen meters was being capped to 0.65 seconds by onboarding cleanup. Retirement now clears only the original `MOVE`/`DRAG` sentence, preserving full hazard, collision, Joe, and objective message lifetimes.
+- Responsive validation passed 56/56 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion. The established focused gameplay suite retained all 18/18 route-pressure, material, recovery, pursuit, geometry, and browser-error checks.
+- The required official client naturally crossed the boundary at eleven meters, reported `tactical_handoff` with the desktop `surroundings_panel`, no bottom instruction, no duplicates, and no error artifact. Canvas work measured 7.61ms average / 2.00ms final across 95 frames.
+- Evidence is recorded in `qa/onboarding-tactical-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest the first naturally encountered warning between ten and eighteen meters and tune only its authored copy if it feels too dense; preserve its full lifetime and the responsive course-view handoff.
+
+## Late-course route-thread contrast polish
+
+- Audited the first-person objective thread across Dead Green and Release Corridor, where the original 28-38% colored core and sparse `2 / 7` dash cadence could dissolve into dark turf, ground fog, and the late-course grade even though the map remained accurate.
+- Added a sampled-zone presentation contract. Routes that touch Service Maze, Dead Green, Night Range, or Release Corridor use a 5.5-pixel dark turf underlay, a 2-pixel bounded-color core, a tighter `3 / 5` cadence, and a higher minimum reflector alpha; earlier zones retain the restrained opening treatment.
+- Preserved physical truth: the route remains world projected and is still drawn before authored entities, so hedges, carts, stone, and other cover occlude it normally. No screen-space line, collision rule, pathfinding rule, map behavior, or objective selection changed.
+- Extended text-state diagnostics with the active route mode, sampled zones, late-course contrast flag, dash cadence, and stroke widths.
+- The established gameplay validation retained all 18/18 route-pressure, material, recovery, pursuit, geometry, and browser-error checks. Responsive visual validation passed 64/64 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion, including dedicated Dead Green and Release Corridor captures.
+- The required official-client smoke preserved the opening route, first-person/map handoff, and beneath-cover presentation with no error artifact. Canvas work averaged 6.77ms with a 2.20ms final sample across 104 rendered frames.
+- Evidence is recorded in `qa/late-course-route-thread-contrast-polish-2026-08-04.md`. Suggested next refinement: human-playtest both final approaches without consulting the map and adjust only late-zone alpha or dash spacing if a specific surface still swallows the thread; preserve world occlusion and the separate amber footing-bypass language.
+
+## Footing consequence signal-ownership polish
+
+- Audited active slow-footing captures and found three central reads competing at once: the actionable `SLOW FOOTING` escape sentence, an ambient blocker plaque such as `TOPPLED GOLF BAG`, and the objective ribbon's `FOLLOW LANTERNS` caption.
+- Made the short footing-entry explanation the temporary owner of that reading lane. Non-imminent ambient blocker/practice plaques and only the objective caption defer; projected route arrows, the target bearing, map, terrain art, physical obstacles, collision feedback, and eight-meter noise warnings remain authoritative.
+- Reused the existing `footingHazardEntryFeedbackActive()` lifetime so the change adds no new timer. Ordinary context plaques and the route caption return as soon as the entry explanation yields or the player clears the patch.
+- Added route-caption diagnostics for visibility, deferral owner, and continued world-geometry visibility. Existing context-cue diagnostics now explicitly report `footing_entry_feedback` during the handoff.
+- The established gameplay suite retained all 18/18 slowdown, response, recovery, pursuit, route, geometry, and browser-error checks. Responsive visual validation passed 72/72 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- Visual inspection confirmed the active crossing loses both competing captions while retaining the route arrows and exact 66% terrain state; the recovery capture restores ordinary route-caption ownership.
+- The required official uninstrumented route crossed into Audit Row and preserved the restored caption/context state before Joe's existing Sightline Held capture, with no error artifact. The final result frame averaged 0.36ms canvas work and ended at 0.40ms across 641 rendered frames.
+- Evidence is recorded in `qa/footing-consequence-signal-ownership-polish-2026-08-04.md`. Suggested next refinement: human-playtest the active crossing while an eight-meter noise hazard approaches and confirm that safety override feels appropriately urgent; preserve its priority over the footing explanation.
+
+## Sustained footing-guidance ownership polish
+
+- Audited the slow-footing state after its opening explanation expired. The amber `CLEAR LEFT/RIGHT` plaque returned correctly, but ordinary obstacle plaques and the objective caption also became eligible while the player was still physically slowed, recreating the same central competition later in the crossing.
+- Added one shared footing signal owner. `footing_entry_feedback` owns the initial explanation; `footing_hazard_guidance` then owns the remainder of the physical crossing until the authoritative terrain ellipse reports clearance.
+- Ambient blocker/practice plaques and the objective caption now remain deferred through both stages. Projected objective reflectors, the amber bypass path, target bearing, map, hazard art, collision response, and movement penalty remain live.
+- Audited the eight-meter noise-warning overlap at the real intersection of Audit Thatch and Maintenance Tools. An imminent untriggered noise object now temporarily defers the amber footing plaque, while its warning art and label render above both surviving route geometries.
+- Reused current terrain contact, entry lifetime, and nearest-noise distance; no new timers, geometry, AI knowledge, or gameplay values were added.
+- The focused gameplay suite retained all 18/18 slowdown, material, recovery, pursuit, route, geometry, and browser-error checks. Responsive visual validation passed 80/80 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- Visual inspection confirmed three clean states at every viewport: entry explanation, sustained amber escape plaque, and imminent `MAINTENANCE TOOLS` safety override. Recovery restores ordinary context and objective-caption ownership.
+- The required official-client smoke preserved the opening first-person handoff with no error artifact at 6.95ms average / 2.00ms final canvas work across 101 rendered frames.
+- Evidence is recorded in `qa/footing-sustained-guidance-ownership-polish-2026-08-04.md`. Suggested next refinement: human-playtest a long mud crossing while Joe is close and adjust only plaque vertical placement if the local instruction competes with Joe's grounded label; preserve the full-crossing owner and imminent-noise priority.
+
+## Footing locomotion-label truth polish
+
+- Audited movement feedback inside an active footing patch and found a semantic contradiction: the terrain banner and camera response reported 54-70% drag while the center locomotion label could still say plain `RUNNING` or `SPRINTING`.
+- Reused the established footing signal owner to defer only that generic word during both the entry explanation and sustained local guidance. Directional chevrons, held-input state, camera translation, stride cadence, surface debris, collision escape overrides, and actual movement remain unchanged.
+- Kept Joe dialogue priority intact. If a bark and footing state coincide, the existing Joe-bark owner still explains the label deferral; the footing owner resumes afterward without adding another rail.
+- Full-pace recovery restores the ordinary locomotion label immediately alongside the mint chevron tint and `FOOTING CLEAR // FULL PACE` banner.
+- Extended responsive assertions across entry, sustained movement, imminent-noise overlap, recovery, and Reduced Camera Motion. The gameplay suite retained all 18/18 checks and visual validation passed 88/88 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed forward chevrons remain visible with no contradictory word during drag, while the recovery frame restores `RUNNING` at a movement multiplier of 1.0.
+- The required official-client smoke preserved the opening first-person handoff with no error artifact at 6.82ms average / 2.20ms final canvas work across 102 rendered frames.
+- Evidence is recorded in `qa/footing-locomotion-label-truth-polish-2026-08-04.md`. Suggested next refinement: human-playtest alternating short taps along a hazard edge and adjust only chevron afterglow if direction feels sticky; preserve truthful text deferral and live-input arrows.
+
+## Close-Joe footing pressure polish
+
+- Audited a sustained irrigation-mud crossing with Joe visible at 28 meters. The existing plaque was geometrically clear of Joe's label and the reticle, but its quiet amber treatment did not communicate that the local route choice had become immediately dangerous.
+- Reused the same compact world-space plaque: while guidance is active and visible Joe is within 36 meters, its frame shifts danger-orange and its escape line includes Joe's live rounded distance. No additional HUD card, timer, AI knowledge, route rule, or movement penalty was added.
+- Centralized the visible-Joe proximity read so rendering and `render_game_to_text` share the same `route_amber`/`danger_orange` tone, close-pressure flag, and distance contract.
+- The focused gameplay suite passed 18/18 slowdown, material, recovery, pursuit, route, geometry, and browser-error checks. Responsive visual validation passed 92/92 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion.
+- Visual inspection confirmed the orange `CLEAR LEFT // 26m // JOE 28m` plaque remains grounded over the mud route while clearing Joe's label and the reticle at desktop and compact sizes.
+- The required official-client smoke reached the eleven-meter tactical handoff with the first-person objective/map presentation intact and no browser-error artifact. Canvas work averaged 6.94ms with a 1.60ms final sample across 114 rendered frames.
+- Evidence is recorded in `qa/footing-close-joe-pressure-polish-2026-08-04.md`. Suggested next refinement: human-playtest the 36-meter transition during natural patrol and tune only that threshold if urgency arrives too early or late; preserve the visible-Joe requirement, single-plaque ownership, and imminent-noise priority.
+
+## Footing proximity-ramp polish
+
+- Compared the same sustained mud crossing with visible Joe at 42, 29, and 23 meters. The local information was truthful, but the plaque jumped directly from quiet amber to one fixed danger-orange treatment at 36 meters and did not visually distinguish close pressure from critical pressure.
+- Added a bounded proximity ramp to the existing plaque. Its frame and two text tones begin warming at 48 meters, retain the established live-distance warning at 36 meters, and reach full critical treatment at 24 meters.
+- Added one restrained outer-border cadence only while close pressure is active. Its speed follows proximity without moving, resizing, or multiplying the plaque; Reduced Camera Motion preserves the same urgency as a static tone.
+- Kept the honesty contract intact: the ramp requires active footing guidance and Joe's already-visible world label, so it reveals nothing through cover. Imminent noise still replaces the plaque, and no collision, slowdown, route, detection, map, or AI values changed.
+- Extended `render_game_to_text` with normalized pressure amount, `quiet`/`approaching`/`close`/`critical` band, and motion treatment.
+- The focused gameplay suite passed 18/18. Responsive visual validation passed 100/100 at 2560x1600, 1280x720, 844x390, and 1280x720 with Reduced Camera Motion, including dedicated approach and critical captures.
+- The required official-client smoke reached the eleven-meter tactical handoff with no duplicate instruction rails or browser-error artifact. Canvas work averaged 6.77ms with a 2.30ms final sample across 105 rendered frames.
+- Evidence is recorded in `qa/footing-proximity-ramp-polish-2026-08-04.md`. Suggested next refinement: human-playtest the approach while Joe crosses the 48-to-24-meter band naturally and tune only the color-ramp endpoints or cadence amplitude if the escalation feels too subtle or too loud; preserve the 36-meter information boundary and cover honesty.
+
+## Slow-footing correction-feedback polish
+
+- Audited a short lateral tap inside irrigation mud at held, 120ms released, and 280ms released states. Live direction was truthful, but the ordinary 420ms chevron afterglow remained eligible long after a small correction stopped, making slow-terrain steering look stickier than the actual input.
+- Added one terrain-aware release duration: marked footing uses a 260ms directional echo while ordinary terrain retains 420ms. Held input remains full-strength and immediate, and the collision escape override keeps its separate authoritative timer.
+- No movement speed, acceleration, camera translation, collision, route guidance, hazard geometry, input mapping, or Reduced Camera Motion behavior changed.
+- Extended `render_game_to_text` with the active afterglow duration and `quick_footing_correction`/`standard_direction_echo` presentation mode.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 112/112 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed full-strength left feedback while held, one faint readable echo after 120ms, and no stale direction after 280ms at every tested size.
+- The required official-client smoke preserved the ordinary 420ms fairway echo, reached the eleven-meter tactical handoff without duplicate instruction rails, and produced no browser-error artifact. Canvas work averaged 8.91ms with a 3.40ms final sample across 98 rendered frames.
+- Evidence is recorded in `qa/slow-footing-correction-feedback-polish-2026-08-04.md`. Suggested next refinement: human-playtest alternating left/right taps across the actual mud boundary and tune only the 260ms footing echo if the handoff still feels soft; preserve live-input truth, ordinary-terrain readability, and collision-escape priority.
+
+## Footing-boundary feedback-continuity polish
+
+- Audited a continuous right correction that began just inside irrigation mud and reached fairway before release. The player correctly regained full pace, but feedback was reclassified from the 260ms footing echo to the 420ms ordinary echo on the last held frame, so a short correction expanded and changed opacity at the boundary.
+- Latched the directional-feedback duration when each continuous movement gesture begins. The gesture now keeps its originating 260ms or 420ms contract through hold and release even if the player crosses a terrain boundary before letting go.
+- Added explicit gesture-active and latched-duration state to both fresh-hole paths. A full release arms the next gesture to sample its new starting terrain; direction changes without release remain one coherent gesture.
+- Preserved movement speed, full-pace recovery, camera response, collision, route guidance, input mapping, ordinary feedback timing, and the separate collision-escape override.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 124/124 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed the right recovery chevron remains continuous at the mud edge, fades without a timing or opacity jump, and disappears by 280ms at every tested size.
+- The required official-client smoke preserved the standard 420ms fairway gesture, reached the eleven-meter tactical handoff without duplicate instruction rails, and produced no browser-error artifact. Canvas work averaged 7.88ms with a 4.20ms final sample across 110 rendered frames.
+- Evidence is recorded in `qa/footing-boundary-feedback-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest one uninterrupted strafe that crosses into rather than out of marked footing and tune only whether the gesture should preserve its origin or resample after a complete release; preserve the no-mid-gesture-switch contract.
+
+## Field-navigation edge-safety polish
+
+- High-resolution inspection of the mud-boundary recovery exposed an off-axis `SHED KEY` marker pressed against the left course frame. Its 196-pixel card was clamped with only eight pixels of remaining canvas space, making the leading arrow and label look clipped even though their pixels technically survived.
+- Added one shared world-marker placement contract based on the actual 196-pixel interactable card or 148-pixel ordinary marker width plus an 18-pixel safe gutter. Rendering and the interactable text-state ledger now consume the same x/y, width, edge direction, and inside-canvas result.
+- Added an independent safety contract for the ground-reflector caption. It remains grounded to the first visible route sample but its text center clamps between an 18-pixel left gutter and the persistent map's left edge.
+- Preserved world anchors, route geometry, target selection, interaction radii, map state, movement, collision, and input behavior.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 132/132 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed complete edge arrows, labels, distances, card borders, and route captions at every tested size with no map overlap or anchor drift.
+- The required official-client smoke showed the off-axis `DRAIN VALVE // 81m` card with the full 18-pixel gutter, reached the eleven-meter tactical handoff without duplicate instruction rails, and produced no browser-error artifact. Canvas work averaged 6.71ms with a 1.80ms final sample across 104 rendered frames.
+- Evidence is recorded in `qa/field-navigation-edge-safety-polish-2026-08-04.md`. Suggested next refinement: human-playtest the same marker on the right edge near the persistent map and adjust only the shared gutter if it feels cramped; preserve measured card width, map separation, and world anchoring.
+
+## Right-edge marker/map separation polish
+
+- Exercised the matching right-side case with the `SHED KEY` projected beneath the persistent course map. The prior canvas-only clamp left the 196-pixel prompt card inside the canvas but visually attached it to the map and did not report a right-facing edge arrow.
+- Extended the existing world-marker placement contract with a playable field boundary. During the hole, the right boundary is the map's left edge minus the established 18-pixel gutter; non-hole scenes continue to use the full canvas.
+- Rendering now consumes the placement contract's left/right edge decision instead of independently comparing against canvas width. The arrow, exported edge direction, and actual clamped card therefore remain synchronized.
+- Added text-state diagnostics for the safe region, right boundary, field containment, and map clearance while retaining the original inside-canvas result.
+- Preserved world anchors, object visibility, interaction radii, target selection, route geometry, map position, movement, collision, and AI behavior.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 136/136 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed the complete `SHED KEY // 57m ▶` card remains grounded to its projected object while clearing the map at every tested size.
+- The required official uninstrumented smoke reached the tactical first-person handoff with the left-side `DRAIN VALVE // 81m` card still honoring the same contract and no browser-error artifact. Canvas work averaged 7.12ms with a 2.10ms final sample across 104 rendered frames.
+- Evidence is recorded in `qa/right-edge-marker-map-separation-polish-2026-08-04.md`. Suggested next refinement: human-playtest alternating left/right targets during an active chase and tune only the shared 18-pixel gutter if either edge feels cramped; preserve measured marker width, map separation, and shared rendering/state geometry.
+
+## World-marker label-fit polish
+
+- Audited the shared edge-marker card after map separation and measured the actual bold Courier labels in Chromium. `MAINTENANCE SHED // 150m ▶` exceeded the protected 180-pixel text lane by 21.63px, while `DRAIN EXIT — OPEN // 150m ▶` exceeded it by 28.83px.
+- Added one shared marker-label presentation contract. It composes the directional arrow, object name, and optional distance, then fits only the label type from the established 12px size down to a readable 10px floor when needed.
+- Preserved the authored 196-pixel interaction card, 148-pixel ordinary marker, 18-pixel edge/map gutter, vertical placement, glyph size, world anchor, and in-reach row.
+- Rendering and `render_game_to_text` now share the final label string, font size, maximum width, measured width, and inside-card result.
+- The dedicated Release Corridor capture places `MAINTENANCE SHED // 81m ▶` against the map-safe right edge. It resolves to 10px and 164.64px measured width inside the 180-pixel lane; the nearby shorter `DRAIN — SEALED // 42m` remains visually subordinate and clear.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 140/140 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- The required official uninstrumented smoke retained the ordinary left-side `◀ DRAIN VALVE // 81m` label at full 12px, measured it at 161.56px inside the same lane, and produced no browser-error artifact. Canvas work averaged 7.20ms with a 2.30ms final sample across 95 rendered frames.
+- Evidence is recorded in `qa/world-marker-label-fit-polish-2026-08-04.md`. Suggested next refinement: human-playtest both exits while Listening Focus is held and confirm the 10px long-label floor remains comfortably readable; preserve fixed card geometry and full-size ordinary labels.
+
+## Navigation target commitment-margin polish
+
+- Audited the Release Corridor with both exits available and found the nearest-target selector had no hysteresis. A small lateral correction around the weighted midpoint could flip the map header, bearing color, route ribbon, and world caption between shed and drain even though the player had not made a meaningful route decision.
+- Added an 8-meter target commitment margin to the shared objective selector. Guidance begins on the nearest available objective, retains the incumbent while a challenger is less than 8 meters closer, and switches once that advantage reaches the threshold.
+- The selector uses the game's authored `worldDistance` metric, including its 72% lateral weighting, rather than raw Euclidean distance.
+- The margin stabilizes presentation only. Both exits remain visible, physically available, and immediately interactable; no objective locations, collision, route planning, movement, detection, or Joe behavior changed.
+- Exposed the selection reason, nearest candidate, incumbent, candidate distances, live advantage, and threshold through `render_game_to_text` so map, ribbon, bearing, and automated evidence share one target truth.
+- Deterministic Release Corridor validation began on the shed at x=-25, retained it after crossing to x=-33 with the drain only 2.22 meters better, then switched to the drain at x=-45 when its advantage reached 8.61 meters.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 152/152 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed the gold `SHED EXIT` map/ribbon/caption remain synchronized through the minor cross, then all change together to teal `DRAIN EXIT` after the decisive move. Clean test captures invalidate the minimap cache and clear prior dialogue so no stale rail obscures the handoff.
+- The required official uninstrumented smoke preserved ordinary opening guidance on `DRAIN VALVE`, reported `current_is_nearest`, and produced no browser-error artifact. Canvas work averaged 7.21ms with a 2.40ms final sample across 91 rendered frames.
+- Evidence is recorded in `qa/navigation-target-commitment-margin-polish-2026-08-04.md`. Suggested next refinement: human-playtest the final midpoint while sprinting and tune only the 8-meter margin if the handoff feels too sticky or too eager; preserve synchronized presentation and direct access to either exit.
+
+## World-marker route-hierarchy polish
+
+- Audited the stabilized dual-exit state and found both exit cards still used nearly equal frame weight and opacity. The alternative marker could compete visually with the selected map target and ground-reflector route even though selection itself no longer flickered.
+- Added one shared marker-guidance presentation contract for the key, valve, shed, and drain. The selected route keeps full opacity, gains a static two-pixel top rail, and receives a one-pixel frame boost.
+- Alternate route markers retain their complete glyph, name, distance, card, ground ring, and interaction at 72% emphasis. Entering an alternate target's interaction radius restores full opacity and the top rail so a direct player choice always takes priority over recommendation.
+- Context markers such as Change Requests and distractions retain their existing presentation and never inherit route dimming.
+- Passed stable target IDs through both off-axis interactable markers and the two exit markers; `render_game_to_text` now reports `selected_route`, `alternate_route`, or `context`, plus opacity, frame boost, rail, and interaction override.
+- Preserved the 8-meter commitment margin, target availability, world positions, card dimensions, label fitting, map clearance, route geometry, collision, movement, AI, and Reduced Camera Motion behavior. The hierarchy is static and adds no animation.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 156/156 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Visual inspection confirmed the gold shed card leads while shed guidance is committed, then the teal drain card takes the stronger rail/frame after the decisive switch; the unselected card remains readable at every tested size.
+- The required official uninstrumented smoke showed the opening `DRAIN VALVE` as `selected_route` with full opacity and top rail while the off-screen `SHED KEY` remained an available 72% alternate. No browser-error artifact was produced. Canvas work averaged 8.52ms with a 4.20ms final sample across 94 rendered frames.
+- Evidence is recorded in `qa/world-marker-route-hierarchy-polish-2026-08-04.md`. Suggested next refinement: human-playtest deliberately ignoring the reflector route and walking into the alternate exit; tune only the 72% emphasis if the option feels too quiet, preserving the full in-reach override.
+
+## Centered-interactable route-hierarchy polish
+
+- Audited the selected key and valve as they crossed from an off-axis edge card into the centered first-person view. Exported state already named the selected route correctly, but the centered information panel still used the older equal-weight frame and did not carry the selected top rail.
+- Extended the existing shared route-presentation contract into the centered interactable panel. Selected and in-reach targets now receive the same static two-pixel top rail and one-pixel frame boost used by edge cards; alternate centered panels inherit the established 72% emphasis until the player enters interaction range.
+- Scoped the treatment to the floating information panel. Dedicated image-generated key/valve art, ground anchors, interaction rings, world position, label content, and reach behavior remain full-strength and unchanged, so route hierarchy never makes a usable prop disappear into the course.
+- Preserved the 8-meter commitment margin, objective availability, route geometry, map state, collision, movement, Joe AI, input, and Reduced Camera Motion behavior.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 160/160 and confirmed the centered `SHED KEY` as visible, non-edge, and `selected_route` with full opacity, frame boost, and top rail at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion. Direct inspection confirmed readable framing and no new panel, map, reticle, or prop overlap at all four sizes.
+- The required official-client smoke preserved ordinary opening guidance on `DRAIN VALVE`, reported `current_is_nearest`, exported full selected-route emphasis, and produced no browser-error artifact. Canvas work averaged 9.35ms with a 4.00ms final sample across 94 rendered frames.
+- Evidence is recorded in `qa/centered-interactable-route-hierarchy-polish-2026-08-04.md`. Suggested next refinement: human-playtest walking laterally across the edge-to-center transition and tune only panel emphasis if the handoff feels abrupt; preserve full-strength prop art, static Reduced Motion behavior, and direct access to the alternate route.
+
+## Interactable marker morph polish
+
+- Exercised the selected shed key laterally across the left HUD-safe boundary. The prior presentation changed from a 196-pixel protected edge card to the centered prop and panel on one frame, producing a visible jump even though target selection, map bearing, and world position remained stable.
+- Added one 48-pixel projection-driven handoff for key and valve props. It begins only after the object clears the HUD/map safety boundary and completes before the ordinary centered presentation takes ownership.
+- Replaced the initial two-card crossfade after visual inspection exposed ghosted duplicate labels, then rejected a staggered dissolve because its midpoint became too quiet. The final implementation renders one continuously legible morph panel whose position, width, height, label size, frame weight, and selected-route top rail interpolate from edge-card geometry into centered-panel geometry.
+- The edge glyph fades into the dedicated image-generated prop art across the same spatial progress. The interaction ring remains fully visible and authoritative throughout; no objective availability, reach radius, route selection, map state, collision, movement, Joe AI, or input behavior changed.
+- `render_game_to_text` now reports `edge`, `handoff`, or `centered`, plus the active panel owner, prop alpha, normalized blend progress, current HUD-safety clearance, and 48-pixel transition width for key and valve props only.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 172/172 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including deterministic edge, midpoint, and centered captures in every configuration.
+- Direct inspection confirmed one readable `SHED KEY` label, continuous selected-route framing, a visible prop handoff, and no HUD, map, reticle, or neighboring-object collision at every tested size. Reduced Camera Motion uses the same position-derived state without time-driven motion.
+- The required official-client smoke preserved the opening selected `DRAIN VALVE` edge card, map bearing, movement handoff, and route hierarchy with no browser-error artifact. Canvas work averaged 7.33ms with a 2.00ms final sample across 103 rendered frames.
+- Evidence is recorded in `qa/interactable-marker-morph-polish-2026-08-04.md`. Suggested next refinement: human-playtest repeated short left/right corrections directly on the handoff boundary and tune only the 48-pixel span if the morph feels too fast or sticky; preserve the single-panel owner, stable ground ring, and world-projection truth.
+
+## HUD-footprint marker protection polish
+
+- Re-ran the key handoff with the expanded 430-pixel `SURROUNDINGS` panel forced visible. The morph itself was smooth, but its safety threshold still measured only the projected object anchor; a partially transitioned card could therefore extend back underneath the HUD.
+- Replaced anchor-only clearance with full-card clearance. The 196-pixel edge card now stays in the lower protected lane until its complete left edge clears the secondary HUD plus the existing 18-pixel gutter. The centered/in-reach maximum width is included in the matching right-side course-map boundary.
+- Kept the existing 48-pixel spatial morph after the footprint clears. Its geometry, single label owner, prop fade, selected-route hierarchy, interaction ring, and Reduced Camera Motion behavior are unchanged.
+- Expanded the measured-width lane rule to ordinary 148-pixel context markers. The nearby `CR-017` card now moves below `SURROUNDINGS` instead of rendering underneath it, while retaining its context styling and world anchor.
+- `render_game_to_text` now reports the active protected lane and the 484-to-988 safe panel region for key and valve presentations. The expanded-HUD validation derives the morph's live width from its normalized progress and confirms its full left edge stays inside that region.
+- No objective availability, interaction radius, target selection, route geometry, map state, collision, movement, camera response, Joe AI, input, or scoring behavior changed.
+- Focused gameplay validation passed 18/18. Expanded-HUD responsive validation passed 176/176 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including protected edge, morph midpoint, centered prop, and nearby context-card assertions in every configuration.
+- Direct inspection confirmed the edge card clears the bottom of `SURROUNDINGS`, the midpoint and centered panel clear its right edge, `CR-017` occupies the lower context lane, and no marker collides with the map, reticle, or neighboring label at any tested size.
+- The required official-client smoke preserved the selected opening `DRAIN VALVE`, its left protected lane, map bearing, route hierarchy, and movement handoff with no browser-error artifact. Canvas work averaged 7.09ms with a 2.00ms final sample across 105 rendered frames.
+- Evidence is recorded in `qa/hud-footprint-marker-protection-polish-2026-08-04.md`. Suggested next refinement: human-playtest manual HUD expansion while a key, valve, and Change Request share the left field edge; tune only the shared 18-pixel gutter if the grouping feels too loose or cramped, preserving measured widths and exclusive information ownership.
+
+## Right map-side handoff continuity polish
+
+- Audited the symmetric selected-key handoff beside the persistent course map. Its full marker footprint and map clearance were already correct, but the right-facing edge glyph disappeared immediately when the 48-pixel morph began, before the generated prop was visually strong enough to replace that bearing.
+- Added one presentation-only right `directionCue` to the shared handoff state. It remains strong during the early morph, then fades smoothly through the first 55% of spatial progress as the projected prop takes over.
+- Kept one label and one panel owner throughout. The arrow follows the live morph panel rather than becoming a second card, and `render_game_to_text` exports its direction and alpha from the same state used by rendering.
+- Preserved the 484-to-988 safe panel region, complete interpolated card footprint, 48-pixel transition, generated prop art, ground interaction ring, selected-route hierarchy, map bearing, target selection, interaction, collision, movement, Joe AI, input, and Reduced Camera Motion behavior.
+- Focused gameplay validation passed 18/18. Expanded-HUD responsive validation passed 192/192 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including right protected-edge, early-handoff, midpoint-handoff, and centered-prop states in every configuration.
+- Direct inspection confirmed the right arrow remains readable while the prop is faint, is nearly retired by the midpoint, and never competes with the single `SHED KEY` label. Every interpolated panel remains fully left of the course map with no HUD, reticle, or neighboring-marker collision.
+- The required official-client smoke preserved ordinary opening guidance, the selected `DRAIN VALVE` protected lane, map bearing, and movement handoff with no browser-error artifact. Canvas work averaged 7.04ms with a 2.00ms final sample across 104 rendered frames.
+- Evidence is recorded in `qa/right-map-side-handoff-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid lateral corrections beside the course map and tune only the 55% directional-cue fade window if necessary; preserve single-panel ownership, complete footprint protection, and world-projection truth.
+
+## Interactable approach-readiness polish
+
+- Audited rapid lateral corrections at the map-side handoff and confirmed its edge-to-morph and morph-to-centered boundaries were already continuous. Preserved that geometry and moved to the more visible remaining gap: usable props had only distant and in-reach ground-ring states.
+- Added one presentation-only readiness curve beginning at 2.25 times each prop's authoritative interaction radius. The existing projected ellipse gradually brightens and tightens while four restrained cardinal ticks emerge, communicating the final approach without another text card.
+- Crossing the real interaction radius remains authoritative. The ticks retire into the established solid gold ring and input-aware `IN REACH` prompt, so the player receives one clear actionable owner rather than overlapping approach and ready signals.
+- Reduced Camera Motion keeps the distance information as static geometry without ambient pulsing. `render_game_to_text` reports the shared zero-to-one readiness plus `far`, `approaching`, `near`, or `ready` from the same radius and distance truth.
+- Preserved all interaction radii, availability, generated prop art, route selection, map state, collision, movement, camera behavior, Joe AI, scoring, audio, and input behavior.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 208/208 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including deterministic far, approaching, near, and ready captures in every configuration.
+- Direct inspection confirmed the approach geometry remains attached to the real ground footprint, survives course fog and textured turf, stays subordinate to world/context cards, and retires cleanly when the solid ready ring and prompt take ownership.
+- The required official-client smoke preserved ordinary opening navigation and produced no browser-error artifact. Canvas work averaged 8.05ms with a 1.70ms final sample across 92 rendered frames.
+- Evidence is recorded in `qa/interactable-approach-readiness-polish-2026-08-04.md`. Suggested next refinement: human-playtest the valve and both exits at sprint speed and tune only the 2.25-radius outer threshold if necessary; preserve the authoritative inner radius, single ready prompt, and projected-footprint geometry.
+
+## Interactable context-ownership polish
+
+- Reviewed the new near and ready captures and found the nearest ambient noise plaque could sit directly beneath the key panel. Both cards were truthful, but their similar weight weakened the interaction hierarchy at the moment the player needed to act.
+- Added one shared context owner for the key, valve, Change Request, maintenance shed, and drain exit. At the established 0.78 `near` readiness threshold, non-urgent ambient plaques yield to `interactable_approach`; inside the real radius they yield to `interactable_action`.
+- Preserved the hazard itself. Noise objects, blocker art, practice art, projected footprints, ground warnings, map state, and HUD awareness remain visible even when their optional field plaque yields.
+- Kept urgent and tactical signals ahead of the new owner. Active footing guidance, aiming, distraction/horror handoffs, Joe dialogue, threat captions, and existing focused lanes remain authoritative; any noise hazard within eight meters explicitly interrupts interaction ownership and restores its tethered plaque.
+- `render_game_to_text` reports the deferral owner plus the owning interactable's ID, distance, and readiness. No hazard trigger, interaction radius, availability, movement, collision, detection, Joe AI, route selection, scoring, audio, or input behavior changed.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 212/212 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including early approach, near ownership, ready ownership, and imminent-hazard override states in every configuration.
+- Direct inspection confirmed the near and ready key views now have one clean actionable hierarchy, while the forced five-meter noise case restores a separated tethered hazard plaque without covering the key panel.
+- The required official-client smoke preserved ordinary opening navigation and produced no browser-error artifact. Canvas work averaged 6.70ms with a 1.90ms final sample across 108 rendered frames.
+- Evidence is recorded in `qa/interactable-context-ownership-polish-2026-08-04.md`. Suggested next refinement: human-playtest collecting the key during natural Joe pressure and tune only existing panel threat emphasis if necessary; preserve the eight-meter hazard override and single local context owner.
+
+## Interactable action-owner polish
+
+- Exercised the in-reach key state through a live update rather than a static placement and confirmed duplicate binding copy: the grounded panel said generic `ENTER USE` while the bottom rail simultaneously named the precise `ENTER — TAKE SHED KEY` action.
+- Added one reach-presentation contract shared by centered props, handoff panels, and edge/world markers. When the bottom rail is available, it exclusively owns the binding and exact action verb; the local panel remains spatially grounded as `IN REACH`.
+- Initial visual inspection caught the centered reticle covering the shortened status. Moved `IN REACH` into a measured 12-pixel left inset inside the existing panel, preserving the target-centered crosshair and avoiding a new card or connector.
+- Preserved input resilience: if another presentation removes the bottom action rail, the local panel automatically restores its keyboard, gamepad, or touch `USE` binding as a fallback.
+- `render_game_to_text` reports local text, role, alignment, inset, binding owner, and action text. No interaction radius, availability, action ordering, input mapping, route state, movement, collision, detection, Joe AI, scoring, audio, or hazard priority changed.
+- Focused gameplay validation passed 18/18. Responsive visual validation passed 216/216 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including live action-owner and no-rail fallback assertions in every configuration.
+- Direct inspection confirmed the world status and bottom action rail now have distinct jobs, the reticle no longer covers readiness copy, compact text remains legible, and Reduced Motion retains the same static hierarchy.
+- The required official-client smoke preserved ordinary opening navigation and produced no browser-error artifact. Canvas work averaged 7.14ms with a 1.90ms final sample across 106 rendered frames.
+- Evidence is recorded in `qa/interactable-action-owner-polish-2026-08-04.md`. Suggested next refinement: human-playtest taking the key and immediately moving away and tune only readiness-panel retirement if it feels abrupt; preserve the single exact-action owner and immediate gameplay result.
+
+## Interactable completion-handoff polish
+
+- Exercised the key through a live ready state, the exact post-interaction render before another simulation update, and the following settled tick. The key disappeared immediately, but its old action prompt and navigation selection previously depended on that later update to retire.
+- Added one shared completion handoff for the shed key, drain valve, optional Change Request, and golf-ball recovery. It clears the completed prompt atomically; route-changing key and valve actions also refresh navigation and invalidate the minimap cache immediately.
+- Taking the key now removes the usable marker, changes the objective ledger to `RETURN TO SHED AND FILE RELEASE`, presents `KEY ACQUIRED`, and points the grounded route plus map at `SHED EXIT` in one coherent state. The following tick preserves that result without a stale prompt or route pop.
+- Preserved all interaction radii, action ordering, generated prop and course art, input mapping, movement, collision, detection, Joe AI, scoring, audio, and hazard priority.
+- Focused gameplay validation passed 18/18. Responsive visual/state validation passed 228/228 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including ready, immediate-completion, and settled assertions in every configuration.
+- Direct inspection confirmed the key prompt and art retire together, the confirmation and next objective remain readable, compact presentation stays clear, and Reduced Motion retains the same static hierarchy.
+- The required official-client smoke preserved the uninstrumented opening and selected drain-valve route with no browser-error artifact. Canvas work averaged 5.86ms with a 1.80ms final sample across 107 rendered frames.
+- Evidence is recorded in `qa/interactable-completion-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest rejection feedback at the locked shed and sealed drain; preserve the atomic successful-action handoff and authoritative retry state.
+
+## Interaction rejection-handoff polish
+
+- Exercised the locked maintenance shed and sealed drain through live ready, rejected, and restored-retry phases. Their failure messages were authored correctly, but the still-valid interaction prompt immediately reclaimed the bottom rail and hid the explanation.
+- Added one shared 2.35-second rejection handoff. The bottom rail presents a high-contrast `BLOCKED` reason while the grounded target marker changes to `LOCKED` or `SEALED`, keeping the consequence attached to the attempted exit.
+- Preserved the exact input-aware action as deferred state. When the rejection retires, the correct shed or drain prompt returns automatically without requiring the player to leave and re-enter the interaction radius.
+- Successful field interactions clear any rejection state atomically. `render_game_to_text` reports the rejected target, local state, remaining time, presentation owners, deferred prompt source, and automatic retry contract.
+- Preserved all interaction radii, exit availability, action ordering, objective routes, map behavior, generated course and target art, movement, collision, detection, Joe AI, scoring, audio, and hazard priority.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 252/252 and covers both exits in ready, blocked, and retry phases at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the orange explanation is legible at high resolution and compact size, while the target, objective HUD, course context, and persistent map remain visible.
+- The required official-client smoke preserved the uninstrumented opening, selected drain-valve route, first-steps guidance, map, and generated course art with no browser-error artifact. Canvas work averaged 8.23ms with a 4.80ms final sample across 95 rendered frames.
+- Evidence is recorded in `qa/interaction-rejection-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid repeated attempts during close pursuit and tune only the rejection duration if necessary; preserve the local blocked state and automatic retry restoration.
