@@ -10,6 +10,24 @@
   const COURSE_MAP_Y = 210;
   const COURSE_MAP_WIDTH = 234;
   const COURSE_MAP_HEIGHT = 340;
+  const FIELD_MARKER_SAFE_GUTTER = 18;
+  const INTERACTABLE_EDGE_CARD_WIDTH =
+    196;
+  const INTERACTABLE_CENTER_PANEL_MAX_WIDTH =
+    184;
+  const INTERACTABLE_HANDOFF_WIDTH = 48;
+  const SECONDARY_HUD_RIGHT = 466;
+  const INTERACTABLE_LEFT_SAFE_CENTER =
+    SECONDARY_HUD_RIGHT +
+    FIELD_MARKER_SAFE_GUTTER +
+    INTERACTABLE_EDGE_CARD_WIDTH * 0.5;
+  const INTERACTABLE_RIGHT_SAFE_CENTER =
+    COURSE_MAP_X -
+    FIELD_MARKER_SAFE_GUTTER -
+    INTERACTABLE_CENTER_PANEL_MAX_WIDTH *
+      0.5;
+  const NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS =
+    8;
   const screenTextureBuffer =
     document.createElement("canvas");
   screenTextureBuffer.width = WIDTH;
@@ -1081,6 +1099,9 @@
   const WET_MOWER_SPEED_MULTIPLIER = 0.68;
   const SAND_PLAYER_SPEED_MULTIPLIER = 0.72;
   const SAND_MOWER_SPEED_MULTIPLIER = 0.76;
+  const VERTICAL_PASS_MIN_LEAD = 6;
+  const VERTICAL_PASS_MAX_LEAD = 118;
+  const VERTICAL_PASS_MAX_DISTANCE = 132;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: -18, y: 710, radius: 16 };
@@ -1157,6 +1178,102 @@
       rakeAngle: -0.12,
     },
   ];
+  const FOOTING_HAZARD_ZONES = [
+    {
+      id: "audit-thatch",
+      name: "AUDIT THATCH",
+      kind: "thatch",
+      x: 28,
+      y: 151,
+      radiusX: 32,
+      radiusY: 13,
+      angle: -0.12,
+      speedMultiplier: 0.66,
+      noiseFloor: 0.64,
+    },
+    {
+      id: "pond-mud",
+      name: "IRRIGATION MUD",
+      kind: "mud",
+      x: 20,
+      y: 224,
+      radiusX: 30,
+      radiusY: 15,
+      angle: 0.08,
+      speedMultiplier: 0.54,
+      noiseFloor: 0.78,
+    },
+    {
+      id: "clubhouse-roots",
+      name: "EXPOSED ROOT MAT",
+      kind: "roots",
+      x: -12,
+      y: 337,
+      radiusX: 40,
+      radiusY: 14,
+      angle: -0.05,
+      speedMultiplier: 0.7,
+      noiseFloor: 0.82,
+    },
+    {
+      id: "service-thatch",
+      name: "SERVICE THATCH",
+      kind: "thatch",
+      x: 22,
+      y: 393,
+      radiusX: 34,
+      radiusY: 13,
+      angle: 0.11,
+      speedMultiplier: 0.66,
+      noiseFloor: 0.64,
+    },
+    {
+      id: "dead-green-mud",
+      name: "BLACK IRRIGATION MUD",
+      kind: "mud",
+      x: 24,
+      y: 516,
+      radiusX: 34,
+      radiusY: 14,
+      angle: -0.08,
+      speedMultiplier: 0.54,
+      noiseFloor: 0.78,
+    },
+    {
+      id: "range-roots",
+      name: "RANGE ROOT MAT",
+      kind: "roots",
+      x: -20,
+      y: 580,
+      radiusX: 35,
+      radiusY: 13,
+      angle: 0.06,
+      speedMultiplier: 0.7,
+      noiseFloor: 0.82,
+    },
+    {
+      id: "release-thatch",
+      name: "RELEASE WINDROW",
+      kind: "thatch",
+      x: 52,
+      y: 648,
+      radiusX: 30,
+      radiusY: 12,
+      angle: -0.13,
+      speedMultiplier: 0.66,
+      noiseFloor: 0.64,
+    },
+  ];
+  const FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE =
+    48;
+  const FOOTING_PLAQUE_PRESSURE_CLOSE_DISTANCE =
+    36;
+  const FOOTING_PLAQUE_PRESSURE_CRITICAL_DISTANCE =
+    24;
+  const MOVEMENT_FEEDBACK_AFTERGLOW_DURATION =
+    0.42;
+  const FOOTING_FEEDBACK_AFTERGLOW_DURATION =
+    0.26;
   const COURSE_ZONES = [
     {
       id: "tee",
@@ -1245,6 +1362,9 @@
     if (!hole || hole.messageTimer <= 0) {
       return "";
     }
+    if (interactionRejectionOwnsBottomRail()) {
+      return `BLOCKED // ${hole.message}`;
+    }
     const zone = courseZoneAt(
       state.player.y,
     );
@@ -1274,6 +1394,7 @@
     const hole = state.hole;
     return Boolean(
       hole?.prompt &&
+      !interactionRejectionOwnsBottomRail() &&
       !hole.tutorialVisible &&
       !hole.ballAim.active &&
       !hole.ballFlight &&
@@ -1287,6 +1408,32 @@
       !listeningSearchReadOwnsSignalLane() &&
       !emergencyAppealOwnsSignalLane() &&
       !openingBriefingOwnsSignalLane(),
+    );
+  }
+
+  function activeInteractionRejection(
+    targetId = null,
+  ) {
+    const rejection =
+      state.hole?.interactionRejection;
+    if (
+      !rejection ||
+      rejection.timer <= 0 ||
+      rejection.message !==
+        state.hole.message ||
+      (
+        targetId &&
+        rejection.targetId !== targetId
+      )
+    ) {
+      return null;
+    }
+    return rejection;
+  }
+
+  function interactionRejectionOwnsBottomRail() {
+    return Boolean(
+      activeInteractionRejection(),
     );
   }
   const ZONE_SET_PIECES = [
@@ -2180,6 +2327,15 @@
       refreshTimer: 0,
       direction: "STRAIGHT",
       distance: 0,
+      selectionReason:
+        "nearest_available",
+      nearestCandidateId: null,
+      nearestCandidateDistance: 0,
+      incumbentId: null,
+      incumbentDistance: 0,
+      challengerAdvantageMeters: 0,
+      switchThresholdMeters:
+        NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS,
     };
   }
 
@@ -2213,6 +2369,25 @@
       coverAudit: null,
       coverAuditCount: 0,
       coverAuditCooldownSeconds: 6,
+    };
+  }
+
+  /**
+   * Tracks the pressure created when the player crosses Joe's forward line.
+   * Joe only follows the last exposed wake, so waiting under cover remains a
+   * deliberate counterplay instead of turning this into omniscient pursuit.
+   */
+  function freshVerticalPassPressure() {
+    return {
+      active: false,
+      awareness: 0,
+      target: null,
+      playerLead: 0,
+      lateralSeparation: 0,
+      warnings: 0,
+      creepSeconds: 0,
+      warningCooldown: 0,
+      lastOutcome: "clear",
     };
   }
 
@@ -2919,6 +3094,12 @@
       sandSeconds: 0,
       sandZoneEntries: 0,
       activeSandZoneId: null,
+      footingHazardSeconds: 0,
+      footingHazardEntries: 0,
+      activeFootingHazardId: null,
+      footingRecoveryTimer: 0,
+      footingRecoveryZoneId: null,
+      footingRecoveryKind: null,
       drainUnlocked: false,
       escapeRoute: null,
       escapeFiling: {
@@ -2953,6 +3134,12 @@
           !savedCareer.golfLessonCompleted,
         ),
       prompt: "",
+      interactionRejection: {
+        targetId: null,
+        localStatus: null,
+        message: null,
+        timer: 0,
+      },
       message: "South gate locked. Find the shed key — or open the drain valve.",
       messageTimer: 4,
       elapsed: 0,
@@ -2969,6 +3156,9 @@
       panicTarget: 0,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
+      moveHintDuration:
+        MOVEMENT_FEEDBACK_AFTERGLOW_DURATION,
+      moveHintActive: false,
       controlHintTimer: 12,
       controlHintSource: "onboarding",
       travelDistance: 0,
@@ -3061,6 +3251,8 @@
       dreadTimer: 0,
       tensionDirector:
         freshTensionDirector(),
+      verticalPassPressure:
+        freshVerticalPassPressure(),
       shelterMemory:
         freshShelterMemory(),
       mowerAcoustics:
@@ -8756,7 +8948,7 @@
             ? "Hold LB near hard cover or in rough."
             : `Hold ${keyboardBindingLabel("crouch")} near hard cover or in rough.`,
         subdetail:
-          "LOOK BACK PRESERVES YOUR MOVEMENT DIRECTION.",
+          "MARKED FOOTING SLOWS YOU: CROSS, ROUTE WIDE, OR WAIT.",
       },
     ];
     for (const step of steps) {
@@ -9270,6 +9462,12 @@
       sandSeconds: 0,
       sandZoneEntries: 0,
       activeSandZoneId: null,
+      footingHazardSeconds: 0,
+      footingHazardEntries: 0,
+      activeFootingHazardId: null,
+      footingRecoveryTimer: 0,
+      footingRecoveryZoneId: null,
+      footingRecoveryKind: null,
       drainUnlocked: false,
       escapeRoute: null,
       escapeFiling: {
@@ -9306,6 +9504,12 @@
             !overtime,
         ),
       prompt: "",
+      interactionRejection: {
+        targetId: null,
+        localStatus: null,
+        message: null,
+        timer: 0,
+      },
       message: overtime
         ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
         : "South gate locked. Find the shed key — or open the drain valve.",
@@ -9324,6 +9528,9 @@
       panicTarget: 0,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
+      moveHintDuration:
+        MOVEMENT_FEEDBACK_AFTERGLOW_DURATION,
+      moveHintActive: false,
       controlHintTimer: 12,
       controlHintSource: "onboarding",
       travelDistance: 0,
@@ -9416,6 +9623,8 @@
       dreadTimer: 0,
       tensionDirector:
         freshTensionDirector(),
+      verticalPassPressure:
+        freshVerticalPassPressure(),
       shelterMemory:
         freshShelterMemory(),
       mowerAcoustics:
@@ -11626,6 +11835,546 @@
     };
   }
 
+  /**
+   * Resolves the nearest avoidable footing hazard using the same rotated
+   * ellipse that is rendered in the course world and route map.
+   */
+  function footingHazardStateAt(point) {
+    let nearestZone = null;
+    let nearestNormalizedDistance =
+      Infinity;
+    let nearestEdgeDistance =
+      Infinity;
+    for (
+      let index = 0;
+      index <
+        FOOTING_HAZARD_ZONES.length;
+      index += 1
+    ) {
+      const zone =
+        FOOTING_HAZARD_ZONES[index];
+      const deltaX = point.x - zone.x;
+      const deltaY = point.y - zone.y;
+      const cosine = Math.cos(
+        -(zone.angle || 0),
+      );
+      const sine = Math.sin(
+        -(zone.angle || 0),
+      );
+      const rotatedX =
+        deltaX * cosine -
+        deltaY * sine;
+      const rotatedY =
+        deltaX * sine +
+        deltaY * cosine;
+      const normalizedDistance =
+        Math.hypot(
+          rotatedX / zone.radiusX,
+          rotatedY / zone.radiusY,
+        );
+      const edgeDistance =
+        (normalizedDistance - 1) *
+        Math.min(
+          zone.radiusX * 0.72,
+          zone.radiusY,
+        );
+      if (
+        edgeDistance <
+        nearestEdgeDistance
+      ) {
+        nearestZone = zone;
+        nearestNormalizedDistance =
+          normalizedDistance;
+        nearestEdgeDistance =
+          edgeDistance;
+      }
+    }
+    return {
+      active:
+        nearestNormalizedDistance <= 1,
+      zone: nearestZone,
+      normalizedDistance:
+        nearestNormalizedDistance,
+      edgeDistance:
+        nearestEdgeDistance,
+      speedMultiplier:
+        nearestNormalizedDistance <= 1
+          ? nearestZone
+              .speedMultiplier
+          : 1,
+      noiseFloor:
+        nearestNormalizedDistance <= 1
+          ? nearestZone.noiseFloor
+          : 0,
+    };
+  }
+
+  /**
+   * Selects one honest full-speed lane around the nearest footing hazard.
+   * Candidate lanes must clear both the hazard edge and authored collision
+   * geometry, so first-person guidance never promises a blocked route.
+   */
+  function footingHazardBypassGuidance(
+    footing = footingHazardStateAt(
+      state.player,
+    ),
+  ) {
+    const zone = footing.zone;
+    if (!zone) {
+      return null;
+    }
+    const visible =
+      footing.active ||
+      (
+        footing.edgeDistance >= 0 &&
+        footing.edgeDistance <= 34
+      );
+    if (!visible) {
+      return {
+        zone,
+        active: footing.active,
+        visible: false,
+        selected: null,
+        alternatives: [],
+        distanceToClear: null,
+        joeDistance: worldDistance(
+          state.player,
+          state.hole.joe,
+        ),
+        waitRecommended: false,
+        decision: "outside_guidance_range",
+      };
+    }
+    const candidates = [];
+    for (const side of [-1, 1]) {
+      let bestCandidate = null;
+      for (const margin of [
+        9,
+        15,
+        21,
+        27,
+      ]) {
+        const laneX = clamp(
+          zone.x +
+            side *
+              (
+                zone.radiusX +
+                margin
+              ),
+          -COURSE_MAX_X + 7,
+          COURSE_MAX_X - 7,
+        );
+        const entry = {
+          x: laneX,
+          y:
+            zone.y -
+            zone.radiusY * 0.62,
+        };
+        const exit = {
+          x: laneX,
+          y:
+            zone.y +
+            zone.radiusY + 9,
+        };
+        const middle = {
+          x: laneX,
+          y: zone.y + 1,
+        };
+        const minimumClearance =
+          Math.min(
+            nearestObstacleClearance(
+              entry,
+            ),
+            nearestObstacleClearance(
+              middle,
+            ),
+            nearestObstacleClearance(
+              exit,
+            ),
+          );
+        const approachBlocker =
+          joeObstacleOnSegment(
+            state.player,
+            entry,
+            PLAYER_COLLISION_RADIUS +
+              0.9,
+          );
+        const laneBlocker =
+          joeObstacleOnSegment(
+            entry,
+            exit,
+            PLAYER_COLLISION_RADIUS +
+              0.9,
+          );
+        const valid =
+          minimumClearance >
+            PLAYER_COLLISION_RADIUS +
+              0.7 &&
+          !approachBlocker &&
+          !laneBlocker;
+        const courseEdgeClearance =
+          COURSE_MAX_X -
+          Math.abs(laneX);
+        const playerDistance =
+          worldDistance(
+            state.player,
+            entry,
+          );
+        const joeSeparation =
+          worldDistance(
+            state.hole.joe,
+            middle,
+          );
+        const score =
+          minimumClearance +
+          courseEdgeClearance * 0.12 +
+          Math.min(
+            joeSeparation,
+            96,
+          ) *
+            0.035 -
+          playerDistance * 0.055 -
+          margin * 0.035 +
+          (valid ? 160 : 0);
+        const candidate = {
+          side,
+          sideLabel:
+            side < 0
+              ? "LEFT"
+              : "RIGHT",
+          margin,
+          entry,
+          middle,
+          exit,
+          minimumClearance,
+          approachBlocker:
+            approachBlocker?.id ||
+            null,
+          laneBlocker:
+            laneBlocker?.id || null,
+          valid,
+          score,
+        };
+        if (
+          !bestCandidate ||
+          candidate.score >
+            bestCandidate.score
+        ) {
+          bestCandidate = candidate;
+        }
+      }
+      candidates.push(bestCandidate);
+    }
+    candidates.sort(
+      (a, b) => b.score - a.score,
+    );
+    const selected = candidates[0];
+    const distanceToClear =
+      footing.active
+        ? Math.max(
+            0,
+            worldDistance(
+              state.player,
+              selected.middle,
+            ) -
+              3,
+          )
+        : worldDistance(
+            state.player,
+            selected.entry,
+          );
+    const joeDistance =
+      worldDistance(
+        state.player,
+        state.hole.joe,
+      );
+    const waitRecommended =
+      !footing.active &&
+      state.hole.environment
+        ?.hardCover &&
+      joeDistance < 82 &&
+      state.hole.joe.mode !==
+        "chase";
+    return {
+      zone,
+      active: footing.active,
+      visible,
+      selected,
+      alternatives: candidates,
+      distanceToClear,
+      joeDistance,
+      waitRecommended,
+      decision: footing.active
+        ? "clear_recommended_edge"
+        : waitRecommended
+          ? "wait_or_take_recommended_bypass"
+          : "cross_or_take_recommended_bypass",
+    };
+  }
+
+  function footingHazardGuidanceForText() {
+    const footing =
+      footingHazardStateAt(
+        state.player,
+      );
+    const guidance =
+      footingHazardBypassGuidance(
+        footing,
+      );
+    if (!guidance) {
+      return null;
+    }
+    if (!guidance.selected) {
+      return {
+        visible: false,
+        plaqueVisible: false,
+        plaqueDeferredBy: null,
+        zone: guidance.zone.id,
+        active: guidance.active,
+        decision: guidance.decision,
+        presentation:
+          "guidance_suppressed_outside_local_decision_range",
+      };
+    }
+    const plaqueDeferredBy =
+      footingHazardPlaqueDeferralOwner();
+    const plaqueProjection =
+      footingHazardPlaqueProjection(
+        guidance,
+      );
+    const plaqueThreat =
+      footingHazardPlaqueThreatState(
+        guidance,
+      );
+    return {
+      visible: guidance.visible,
+      plaqueVisible:
+        guidance.visible &&
+        plaqueProjection.visible &&
+        !plaqueDeferredBy,
+      plaqueDeferredBy,
+      plaqueTone:
+        plaqueThreat.tone,
+      closeJoePressure:
+        plaqueThreat
+          .closeJoePressure,
+      joePressureAmount: Number(
+        plaqueThreat
+          .pressureAmount.toFixed(
+            2,
+          ),
+      ),
+      joePressureBand:
+        plaqueThreat.pressureBand,
+      joePressureMotion:
+        plaqueThreat.pressureMotion,
+      visibleJoeDistance:
+        plaqueThreat.joeLabel
+          .visible
+          ? Number(
+              plaqueThreat
+                .joeDistance.toFixed(
+                  2,
+                ),
+            )
+          : null,
+      zone: guidance.zone.id,
+      active: guidance.active,
+      recommendedSide:
+        guidance.selected.sideLabel.toLowerCase(),
+      valid:
+        guidance.selected.valid,
+      minimumClearance: Number(
+        guidance.selected
+          .minimumClearance.toFixed(
+            2,
+          ),
+      ),
+      distanceToClear: Number(
+        guidance.distanceToClear.toFixed(
+          2,
+        ),
+      ),
+      entry: {
+        x: Number(
+          guidance.selected.entry.x.toFixed(
+            2,
+          ),
+        ),
+        y: Number(
+          guidance.selected.entry.y.toFixed(
+            2,
+          ),
+        ),
+      },
+      exit: {
+        x: Number(
+          guidance.selected.exit.x.toFixed(
+            2,
+          ),
+        ),
+        y: Number(
+          guidance.selected.exit.y.toFixed(
+            2,
+          ),
+        ),
+      },
+      waitRecommended:
+        guidance.waitRecommended,
+      decision: guidance.decision,
+      alternatives:
+        guidance.alternatives.map(
+          (candidate) => ({
+            side:
+              candidate.sideLabel.toLowerCase(),
+            valid: candidate.valid,
+            minimumClearance: Number(
+              candidate.minimumClearance.toFixed(
+                2,
+              ),
+            ),
+            blocker:
+              candidate.approachBlocker ||
+              candidate.laneBlocker,
+          }),
+        ),
+      presentation:
+        "one_collision_aware_grounded_full_speed_bypass_under_physical_cover",
+    };
+  }
+
+  function footingHazardPlaqueProjection(
+    guidance,
+  ) {
+    if (!guidance?.selected) {
+      return {
+        anchor: null,
+        point: null,
+        visible: false,
+      };
+    }
+    const anchor = guidance.active
+      ? guidance.selected.exit
+      : guidance.zone;
+    const point = worldToScreen(
+      anchor.x,
+      anchor.y,
+    );
+    return {
+      anchor,
+      point,
+      visible:
+        point.visible &&
+        point.x > -180 &&
+        point.x < WIDTH + 180,
+    };
+  }
+
+  /**
+   * Escalates the existing local route plaque when visible Joe pressure makes
+   * the slow-terrain decision immediately dangerous.
+   */
+  function footingHazardPlaqueThreatState(
+    guidance,
+  ) {
+    const joeLabel =
+      joeWorldLabelState();
+    const visiblePressure = Boolean(
+      guidance?.active &&
+      joeLabel.visible,
+    );
+    const pressureAmount =
+      visiblePressure
+        ? clamp(
+            (FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE -
+              joeLabel.distance) /
+              (FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE -
+                FOOTING_PLAQUE_PRESSURE_CRITICAL_DISTANCE),
+            0,
+            1,
+          )
+        : 0;
+    const closeJoePressure = Boolean(
+      visiblePressure &&
+      joeLabel.distance <=
+        FOOTING_PLAQUE_PRESSURE_CLOSE_DISTANCE,
+    );
+    const pressureBand =
+      pressureAmount <= 0
+        ? "quiet"
+        : joeLabel.distance <=
+              FOOTING_PLAQUE_PRESSURE_CRITICAL_DISTANCE
+          ? "critical"
+          : closeJoePressure
+            ? "close"
+            : "approaching";
+    return {
+      joeLabel,
+      closeJoePressure,
+      joeDistance:
+        joeLabel.distance,
+      pressureAmount,
+      pressureBand,
+      pressureMotion:
+        state.reducedMotion
+          ? "static_proximity_tone"
+          : closeJoePressure
+            ? "bounded_border_cadence"
+            : "static_proximity_tone",
+      tone: closeJoePressure
+        ? "danger_orange"
+        : "route_amber",
+    };
+  }
+
+  function footingHazardEntryFeedbackActive() {
+    return Boolean(
+      state.hole?.messageTimer >
+        0.75 &&
+        state.hole.message?.startsWith(
+          "SLOW FOOTING",
+        ),
+    );
+  }
+
+  /**
+   * Names the current slow-footing presentation owner without changing any
+   * hazard timing or geometry.
+   */
+  function footingHazardSignalOwner() {
+    if (
+      footingHazardEntryFeedbackActive()
+    ) {
+      return "footing_entry_feedback";
+    }
+    if (
+      state.hole?.environment
+        ?.footingHazard
+    ) {
+      return "footing_hazard_guidance";
+    }
+    return null;
+  }
+
+  /**
+   * Keeps a near contact-noise warning above slower tactical route advice.
+   */
+  function footingHazardPlaqueDeferralOwner() {
+    if (
+      footingHazardEntryFeedbackActive()
+    ) {
+      return "footing_entry_feedback";
+    }
+    const noise = nearestNoiseHazard();
+    if (
+      noise.hazard &&
+      noise.distance <= 8
+    ) {
+      return "imminent_noise_hazard";
+    }
+    return null;
+  }
+
   function updateTurfMarks(dt) {
     const hole = state.hole;
     hole.livingRoadmap.pulseTimer =
@@ -12095,6 +12844,8 @@
     const turf = turfStateAt(player);
     const wet = wetStateAt(player);
     const sand = sandStateAt(player);
+    const footing =
+      footingHazardStateAt(player);
     const effectiveRough =
       inRough &&
       !turf.mowed &&
@@ -12169,6 +12920,8 @@
           ? "cover nearby"
         : sand.active
           ? "sand / exposed"
+        : footing.active
+          ? "slow footing / exposed"
         : turf.mowed
             ? "fast / quiet / exposed"
           : effectiveRough
@@ -12189,6 +12942,16 @@
       sandZone: sand.zone,
       sandZoneEdgeDistance:
         sand.edgeDistance,
+      footingHazard:
+        footing.active,
+      footingHazardZone:
+        footing.zone,
+      footingHazardEdgeDistance:
+        footing.edgeDistance,
+      footingSpeedMultiplier:
+        footing.speedMultiplier,
+      footingNoiseFloor:
+        footing.noiseFloor,
       nearestTrack: turf.nearestTrack,
       nearestTrackDistance:
         turf.nearestTrackDistance,
@@ -12203,7 +12966,9 @@
           mowed: turf.mowed,
           sand: sand.active,
         }),
-      turfLabel: sand.active
+      turfLabel: footing.active
+        ? footing.zone.name
+        : sand.active
         ? wet.active
           ? "SOAKED BUNKER"
           : "BUNKER SAND"
@@ -12731,7 +13496,29 @@
         0,
         1,
       );
-    const cadence = sprinting
+    const footingZone =
+      state.hole.environment
+        ?.footingHazard
+        ? state.hole.environment
+            .footingHazardZone
+        : null;
+    const footingKind =
+      footingZone?.kind || null;
+    const footingDrag =
+      footingZone
+        ? 1 -
+          footingZone.speedMultiplier
+        : 0;
+    const footingCadenceMultiplier =
+      footingKind === "mud"
+        ? 0.84
+        : footingKind === "thatch"
+          ? 0.9
+          : footingKind === "roots"
+            ? 0.93
+            : 1;
+    const cadence = (
+      sprinting
       ? secondWind
         ? 14.2 +
           panic * 1.1
@@ -12740,7 +13527,8 @@
       : crouched
         ? 6.1
         : 8.9 +
-          panic * 2.5;
+          panic * 2.5
+    ) * footingCadenceMultiplier;
     const phase =
       state.hole.elapsed * cadence;
     const baseBob = sprinting
@@ -12767,6 +13555,36 @@
           ) *
           panic
         : 0;
+    const footingLurch =
+      state.reducedMotion ||
+      !moving ||
+      !footingKind
+        ? 0
+        : footingKind === "mud"
+          ? Math.sin(
+              phase * 0.52,
+            ) *
+            2.4 *
+            footingDrag
+          : footingKind ===
+              "thatch"
+            ? Math.sin(
+                phase * 1.45 +
+                  0.7,
+              ) *
+              1.65 *
+              footingDrag
+            : Math.pow(
+                  Math.max(
+                    0,
+                    -Math.sin(
+                      phase * 0.86,
+                    ),
+                  ),
+                  4,
+                ) *
+                2.6 *
+                footingDrag;
     const bob =
       state.reducedMotion
         ? 0
@@ -12774,7 +13592,8 @@
             baseBob +
           Math.sin(phase * 2) *
             baseBob *
-            0.22;
+            0.22 +
+          footingLurch;
     renderFrameCache.locomotion = {
       moving,
       sprinting,
@@ -12785,6 +13604,8 @@
       panic,
       strideImpact,
       cadence,
+      footingKind,
+      footingDrag,
       roll:
         state.reducedMotion ||
         !moving ||
@@ -12801,6 +13622,16 @@
             (
               0.45 +
               panic * 0.55
+            ) +
+            (
+              footingKind ===
+                "roots"
+                ? Math.sin(
+                    phase * 0.73,
+                  ) *
+                  0.0028 *
+                  footingDrag
+                : 0
             ),
       intensity: sprinting
         ? secondWind
@@ -12850,7 +13681,8 @@
                 sprinting
                   ? 2.6
                   : 1.55
-              ),
+              ) +
+            footingLurch * 0.42,
     };
     return renderFrameCache.locomotion;
   }
@@ -14325,6 +15157,49 @@
             state.player,
             definition.target,
           );
+        const inReach =
+          definition.available &&
+          distance <
+            definition.target.radius;
+        const interactablePresentation =
+          worldInteractablePresentation(
+            point,
+          );
+        const supportsCenteredPresentation =
+          definition.id === "shed-key" ||
+          definition.id === "sprinkler";
+        const usesEdgeMarker =
+          supportsCenteredPresentation
+            ? interactablePresentation
+                .mode === "edge"
+            : interactablePresentation
+                .centerSafetyClearance <= 0;
+        const markerPresentation =
+          usesEdgeMarker
+            ? worldMarkerPlacement(
+                point,
+                definition.target.radius,
+              )
+            : null;
+        const markerLabelPresentation =
+          markerPresentation
+            ? worldMarkerLabelPresentation(
+                definition.label,
+                markerPresentation,
+                definition.target.radius,
+                distance,
+              )
+            : null;
+        const guidancePresentation =
+          worldMarkerGuidancePresentation(
+            definition.id,
+            inReach,
+          );
+        const approachReadiness =
+          interactionApproachReadiness(
+            definition.target,
+            distance,
+          );
         return {
           id: definition.id,
           label: definition.label,
@@ -14337,10 +15212,22 @@
           ),
           interactionRadius:
             definition.target.radius,
-          inReach:
-            definition.available &&
-            distance <
-              definition.target.radius,
+          inReach,
+          approachReadiness: Number(
+            approachReadiness.toFixed(2),
+          ),
+          approachBand: inReach
+            ? "ready"
+            : approachReadiness >= 0.78
+              ? "near"
+              : approachReadiness > 0
+                ? "approaching"
+                : "far",
+          reachPresentation: inReach
+            ? worldMarkerReachPresentation(
+                definition.id,
+              )
+            : null,
           visible:
             definition.available &&
             point.visible &&
@@ -14352,6 +15239,85 @@
           screenY: Math.round(
             point.y,
           ),
+          usesEdgeMarker,
+          presentationMode:
+            supportsCenteredPresentation
+              ? interactablePresentation.mode
+              : "world_marker",
+          presentationBlend:
+            supportsCenteredPresentation
+              ? {
+                  centeredPanelAlpha: Number(
+                    interactablePresentation
+                      .centeredPanelAlpha.toFixed(
+                        2,
+                      ),
+                  ),
+                  morphPanelAlpha: Number(
+                    interactablePresentation
+                      .morphPanelAlpha.toFixed(
+                        2,
+                      ),
+                  ),
+                  edgeMarkerAlpha: Number(
+                    interactablePresentation
+                      .edgeMarkerAlpha.toFixed(
+                        2,
+                      ),
+                  ),
+                  propAlpha: Number(
+                    interactablePresentation
+                      .propAlpha.toFixed(
+                        2,
+                      ),
+                  ),
+                  blendProgress: Number(
+                    interactablePresentation
+                      .blendProgress.toFixed(
+                        2,
+                      ),
+                  ),
+                  centerSafetyClearance: Number(
+                    interactablePresentation
+                      .centerSafetyClearance.toFixed(
+                        2,
+                      ),
+                  ),
+                  transitionWidth:
+                    interactablePresentation
+                      .transitionWidth,
+                  protectedLane:
+                    interactablePresentation
+                      .protectedLane,
+                  safePanelRegion:
+                    interactablePresentation
+                      .safePanelRegion,
+                  directionCue:
+                    interactablePresentation
+                      .directionCue
+                      ? {
+                          direction:
+                            interactablePresentation
+                              .directionCue.direction,
+                          alpha: Number(
+                            interactablePresentation
+                              .directionCue.alpha.toFixed(
+                                2,
+                              ),
+                          ),
+                        }
+                      : null,
+                }
+              : null,
+          edgeMarker:
+            markerPresentation
+              ? {
+                  ...markerPresentation,
+                  labelPresentation:
+                    markerLabelPresentation,
+                }
+              : null,
+          guidancePresentation,
           worldImage:
             definition.worldImage,
         };
@@ -14584,6 +15550,46 @@
     state.hole.messageTimer = duration;
   }
 
+  /**
+   * Gives a blocked interaction one short consequence lane before the valid
+   * retry prompt returns. The matching world marker carries the local state.
+   */
+  function presentInteractionRejection(
+    targetId,
+    localStatus,
+    message,
+    duration = 2.35,
+  ) {
+    state.hole.interactionRejection = {
+      targetId,
+      localStatus,
+      message,
+      timer: duration,
+    };
+    setHoleMessage(message, duration);
+  }
+
+  /**
+   * Retires a completed field action before its confirmation is presented.
+   * Route-changing actions also refresh the guide immediately so neither the
+   * world marker nor the minimap points back to an item that just disappeared.
+   */
+  function completeFieldInteraction(
+    refreshNavigation = false,
+  ) {
+    state.hole.prompt = "";
+    state.hole.interactionRejection = {
+      targetId: null,
+      localStatus: null,
+      message: null,
+      timer: 0,
+    };
+    if (refreshNavigation) {
+      updatePlayerNavigationGuide(0);
+      miniMapRenderedAt = -Infinity;
+    }
+  }
+
   function directionFromPlayer(source) {
     if (!source) {
       return null;
@@ -14667,12 +15673,80 @@
     const hole = state.hole;
     return Boolean(
       hole &&
+      !hole.tutorialVisible &&
       hole.zoneIndex === 0 &&
       hole.controlHintSource ===
         "onboarding" &&
       hole.controlHintTimer > 0.01 &&
       hole.travelDistance <
         ONBOARDING_MOVEMENT_CUE_DISTANCE
+    );
+  }
+
+  function compactCourseViewport() {
+    return Boolean(
+      window.innerHeight <= 460 ||
+      window.innerWidth <= 880,
+    );
+  }
+
+  function openingMovementInstructionOwner() {
+    if (!openingMovementCueActive()) {
+      return null;
+    }
+    return compactCourseViewport()
+      ? "bottom_instruction_rail"
+      : "first_steps_panel";
+  }
+
+  function onboardingMovementMessageActive() {
+    const hole = state.hole;
+    return Boolean(
+      hole?.controlHintSource ===
+        "onboarding" &&
+      hole.messageTimer > 0 &&
+      (
+        hole.message?.startsWith(
+          "MOVE ",
+        ) ||
+        hole.message?.startsWith(
+          "DRAG ",
+        )
+      ),
+    );
+  }
+
+  function openingMovementMessageDeferredByPanel() {
+    return Boolean(
+      openingMovementInstructionOwner() ===
+        "first_steps_panel" &&
+      onboardingMovementMessageActive(),
+    );
+  }
+
+  function firstPersonHudExpanded() {
+    const hole = state.hole;
+    const compactOnboardingCourseView =
+      compactCourseViewport() &&
+      hole.controlHintSource ===
+        "onboarding" &&
+      !hole.focus;
+    const requested = Boolean(
+      !golfAimOwnsSignalLane() &&
+      !activeDistractionOwnsSignalLane() &&
+      !nerveHoldOwnsSignalLane() &&
+      !cutTraceOwnsSignalLane() &&
+      !listeningSearchReadOwnsSignalLane() &&
+      (
+        hole.controlHintTimer > 0.01 ||
+        hole.focus
+      ),
+    );
+    return Boolean(
+      requested &&
+      !compactOnboardingCourseView &&
+      openingMovementInstructionOwner() !==
+        "bottom_instruction_rail",
     );
   }
 
@@ -14804,6 +15878,15 @@
       !openingBriefingOwnsSignalLane() &&
       !hole.riskAward &&
       !hole.deliveryAward
+    );
+  }
+
+  function footingRecoveryBannerActive() {
+    return Boolean(
+      state.hole
+        ?.footingRecoveryTimer > 0 &&
+      state.hole.stateBanner ===
+        "FOOTING CLEAR // FULL PACE",
     );
   }
 
@@ -15325,11 +16408,24 @@
     sprinting,
     wet = false,
     sand = false,
+    footingKind = null,
   ) {
     const count = sand
       ? sprinting
         ? 14
         : 9
+      : footingKind === "mud"
+        ? sprinting
+          ? 12
+          : 8
+        : footingKind === "thatch"
+          ? sprinting
+            ? 11
+            : 7
+          : footingKind === "roots"
+            ? sprinting
+              ? 8
+              : 5
       : wet
       ? sprinting
         ? 13
@@ -15350,6 +16446,15 @@
         duration: 0.48 + hash(index * 7 + seed) * 0.34,
         size: sand
           ? 2 + hash(index + seed) * 4
+          : footingKind === "mud"
+            ? 2 +
+              hash(index + seed) * 4
+            : footingKind === "thatch"
+              ? 2 +
+                hash(index + seed) * 5
+              : footingKind === "roots"
+                ? 2 +
+                  hash(index + seed) * 3
           : wet
           ? 2 + hash(index + seed) * 3
           : inRough
@@ -15359,6 +16464,18 @@
           ? index % 4 === 0
             ? "#e1c98c"
             : "#9d7945"
+          : footingKind === "mud"
+            ? index % 4 === 0
+              ? "#9b7954"
+              : "#493b2d"
+            : footingKind === "thatch"
+              ? index % 3 === 0
+                ? "#c0aa5c"
+                : "#68733d"
+              : footingKind === "roots"
+                ? index % 3 === 0
+                  ? "#b79a69"
+                  : "#73573a"
           : wet
           ? index % 3 === 0
             ? "#b8e4d7"
@@ -15393,9 +16510,17 @@
       state.hole.crouched
         ? 0.72
         : 1.02;
+    const footingKind =
+      environment.footingHazard
+        ? environment
+            .footingHazardZone
+            ?.kind || null
+        : null;
     const kind =
       environment.sand
         ? "sand"
+        : footingKind
+          ? `footing_${footingKind}`
         : environment.wet
           ? "wet"
           : environment.effectiveRough
@@ -15428,6 +16553,15 @@
       duration:
         kind === "wet"
           ? 1.45
+          : kind ===
+              "footing_mud"
+            ? 1.62
+            : kind ===
+                "footing_thatch"
+              ? 1.38
+              : kind ===
+                  "footing_roots"
+                ? 1.22
           : kind === "rough"
             ? 1.3
             : kind === "sand"
@@ -16888,6 +18022,7 @@
       return false;
     }
     hole.changeRequestCollected = true;
+    completeFieldInteraction();
     hole.noise = Math.max(
       hole.noise,
       0.36,
@@ -17074,6 +18209,7 @@
       state.hole.keyCollected = true;
       state.hole.phase = "return_to_shed";
       state.hole.joe.alert = Math.max(state.hole.joe.alert, 0.38);
+      completeFieldInteraction(true);
       setHoleMessage("KEY ACQUIRED — Joe heard that.", 3.2);
       addWorldEffect("pickup", key.x, key.y, 1.7);
       playPickupCue();
@@ -17099,6 +18235,7 @@
       if (!state.hole.keyCollected) {
         state.hole.phase = "drain_open";
       }
+      completeFieldInteraction(true);
       state.hole.distraction = { x: 104, y: 178 };
       state.hole.distractionTimer = 5.5;
       state.hole.joe.mode = "investigate";
@@ -17175,9 +18312,10 @@
       worldDistance(state.player, shed) <
       shed.radius
     ) {
-      setHoleMessage(
+      presentInteractionRejection(
+        "maintenance-shed",
+        "LOCKED",
         `SHED LOCKED — ${activeRunVariant().keyHint}.`,
-        3.2,
       );
       state.hole.phase = "find_key";
       playDoorRattle();
@@ -17188,9 +18326,10 @@
       worldDistance(state.player, drain) <
       drain.radius
     ) {
-      setHoleMessage(
+      presentInteractionRejection(
+        "drain-exit",
+        "SEALED",
         "DRAIN SEALED — open the drain valve to release pressure.",
-        3.2,
       );
       playDoorRattle();
     }
@@ -18588,6 +19727,7 @@
       );
     hole.golfBalls += 1;
     hole.ballsRecovered += 1;
+    completeFieldInteraction();
     awardDeliveryBeat(
       practiceRecovery
         ? "TRAINING BALL RECOVERY"
@@ -19067,6 +20207,202 @@
     return true;
   }
 
+  /**
+   * Builds a non-omniscient wake when the player advances beyond Joe's
+   * vertical line. Exposed movement refreshes Joe's approximate target;
+   * lateral routing or waiting under cover lets the wake decay.
+   */
+  function updateVerticalPassPressure(
+    dt,
+    moving,
+    environment,
+  ) {
+    const hole = state.hole;
+    const pressure =
+      hole.verticalPassPressure;
+    const joe = hole.joe;
+    const playerLead =
+      state.player.y - joe.y;
+    const lateralSeparation =
+      Math.abs(
+        state.player.x - joe.x,
+      );
+    const joeDistance = worldDistance(
+      joe,
+      state.player,
+    );
+    pressure.playerLead = playerLead;
+    pressure.lateralSeparation =
+      lateralSeparation;
+    pressure.warningCooldown =
+      Math.max(
+        0,
+        pressure.warningCooldown - dt,
+      );
+    const maximumTrackedLead =
+      pressure.active
+        ? VERTICAL_PASS_MAX_LEAD +
+          72
+        : VERTICAL_PASS_MAX_LEAD;
+    const maximumTrackedDistance =
+      pressure.active
+        ? VERTICAL_PASS_MAX_DISTANCE +
+          64
+        : VERTICAL_PASS_MAX_DISTANCE;
+    const crossedLine =
+      playerLead >=
+        VERTICAL_PASS_MIN_LEAD &&
+      playerLead <=
+        maximumTrackedLead &&
+      joeDistance <=
+        maximumTrackedDistance &&
+      hole.joe.mode !== "chase" &&
+      !hole.escapeFiling.active &&
+      !hole.escapeFiling.sealing;
+    const sheltered =
+      environment.hardCover ||
+      (
+        hole.crouched &&
+        environment.effectiveRough
+      );
+    let awarenessDelta = -0.38;
+    if (crossedLine) {
+      if (moving) {
+        const movementWeight =
+          sprintHeld() &&
+          !hole.crouched &&
+          !hole.focus
+            ? 0.68
+            : hole.crouched ||
+                hole.focus
+              ? 0.18
+              : 0.34;
+        const lateralWeight = lerp(
+          1,
+          0.52,
+          clamp(
+            lateralSeparation / 104,
+            0,
+            1,
+          ),
+        );
+        const coverWeight = sheltered
+          ? 0.32
+          : environment.blocker
+            ? 0.52
+            : 1;
+        awarenessDelta =
+          movementWeight *
+          lateralWeight *
+          coverWeight;
+      } else {
+        awarenessDelta = sheltered
+          ? -0.58
+          : -0.22;
+      }
+    }
+    pressure.awareness = clamp(
+      pressure.awareness +
+        awarenessDelta * dt,
+      0,
+      1,
+    );
+    if (
+      crossedLine &&
+      moving &&
+      !sheltered
+    ) {
+      const target = {
+        x: state.player.x,
+        y: clamp(
+          state.player.y - 18,
+          joe.y + 6,
+          COURSE_LENGTH - 12,
+        ),
+      };
+      pressure.target = pressure.target
+        ? {
+            x: lerp(
+              pressure.target.x,
+              target.x,
+              0.22,
+            ),
+            y: lerp(
+              pressure.target.y,
+              target.y,
+              0.3,
+            ),
+          }
+        : target;
+    }
+    if (
+      !pressure.active &&
+      pressure.awareness >= 0.2 &&
+      pressure.target
+    ) {
+      pressure.active = true;
+      pressure.warnings += 1;
+      pressure.warningCooldown = 8;
+      pressure.lastOutcome =
+        "wake_acquired";
+      if (
+        hole.stateBannerLockTimer <= 0
+      ) {
+        hole.stateBanner =
+          "VERTICAL PASS // JOE FELT YOUR WAKE";
+        hole.stateBannerTimer = 2.8;
+        hole.stateBannerLockTimer = 2.8;
+      }
+      setHoleMessage(
+        "JOE IS CREEPING INTO YOUR WAKE — break laterally, hide, or wait for his sweep.",
+        3.5,
+      );
+      pushThreatCaption(
+        "MOWER CREEPS IN BEHIND",
+        joe,
+        "danger",
+        2.8,
+        "vertical_pass",
+      );
+      playThreatCue("investigate");
+    }
+    if (pressure.active) {
+      pressure.creepSeconds += dt;
+      joe.alert = Math.max(
+        joe.alert,
+        0.16 +
+          pressure.awareness * 0.28,
+      );
+      if (
+        pressure.awareness <= 0.055 ||
+        playerLead < -4 ||
+        playerLead >
+          VERTICAL_PASS_MAX_LEAD + 88
+      ) {
+        pressure.active = false;
+        pressure.target = null;
+        pressure.lastOutcome = sheltered
+          ? "waited_out_under_cover"
+          : "wake_lost";
+      }
+    }
+  }
+
+  function verticalPassCreepActive() {
+    const pressure =
+      state.hole
+        .verticalPassPressure;
+    return Boolean(
+      pressure.active &&
+        pressure.target &&
+        state.hole.joe.mode !==
+          "chase" &&
+        !state.hole.distraction &&
+        !state.hole
+          .predatorTactics.active,
+    );
+  }
+
   function updateJoe(dt) {
     const hole = state.hole;
     const joe = hole.joe;
@@ -19233,8 +20569,20 @@
           ? OVERTIME_DETECTION_MULTIPLIER
           : 1
       );
+    const wakeDetectionFloor =
+      hole.verticalPassPressure
+        .active
+        ? 0.08 +
+          hole.verticalPassPressure
+            .awareness *
+            0.38
+        : 0;
     hole.detection = clamp(
-      hole.detection + detectionGain * dt,
+      Math.max(
+        hole.detection +
+          detectionGain * dt,
+        wakeDetectionFloor,
+      ),
       0,
       1,
     );
@@ -19249,6 +20597,9 @@
         : trailEvidence ||
             hole.trailWarningTimer > 0
           ? "trail"
+          : hole.verticalPassPressure
+                .active
+            ? "wake"
           : null;
     hole.playerAudible = directSound;
     if (actionableSight) {
@@ -19299,8 +20650,15 @@
         0.48,
       );
       if (!trailEvidence) {
+        const wakeContact =
+          !actionableSight &&
+          !directSound &&
+          hole.verticalPassPressure
+            .active;
         setHoleMessage(
-          actionableSight
+          wakeContact
+            ? "JOE IS CREEPING INTO YOUR WAKE — break laterally, hide, or wait for his sweep."
+          : actionableSight
             ? "JOE IS LOOKING — break the sightline before attention locks."
             : "JOE HEARD THAT — stop, crouch, or change direction.",
           2.2,
@@ -19309,7 +20667,9 @@
           "investigate",
         );
         pushThreatCaption(
-          actionableSight
+          wakeContact
+            ? "MOWER CREEPS INTO YOUR WAKE"
+          : actionableSight
             ? "MOWER TURNS TOWARD YOU"
             : "MOWER REACTS TO NOISE",
           joe,
@@ -19481,6 +20841,37 @@
         hole.lostSightTimer = 0;
         hole.trailTarget = null;
         hole.trailApproachTimer = 0;
+      }
+    } else if (
+      verticalPassCreepActive()
+    ) {
+      const pressure =
+        hole.verticalPassPressure;
+      joe.mode = "investigate";
+      moveJoeToward(
+        pressure.target,
+        18 +
+          pressure.awareness * 20,
+        dt,
+      );
+      joe.alert = Math.max(
+        joe.alert,
+        0.18 +
+          pressure.awareness * 0.3,
+      );
+      if (
+        worldDistance(
+          joe,
+          pressure.target,
+        ) < 5.5 &&
+        !moving
+      ) {
+        pressure.awareness =
+          Math.max(
+            0,
+            pressure.awareness -
+              dt * 0.28,
+          );
       }
     } else {
       joe.mode = "patrol";
@@ -20432,7 +21823,69 @@
           b.target,
         ),
     );
-    return choices[0];
+    const nearest = choices[0];
+    const incumbent =
+      choices.find(
+        (choice) =>
+          choice.id ===
+          hole.navigationGuide.targetId,
+      ) || null;
+    const nearestDistance =
+      worldDistance(
+        state.player,
+        nearest.target,
+      );
+    const incumbentDistance =
+      incumbent
+        ? worldDistance(
+            state.player,
+            incumbent.target,
+          )
+        : nearestDistance;
+    const challengerAdvantageMeters =
+      incumbent &&
+      incumbent.id !== nearest.id
+        ? Math.max(
+            0,
+            incumbentDistance -
+              nearestDistance,
+          )
+        : 0;
+    const retainIncumbent =
+      incumbent &&
+      incumbent.id !== nearest.id &&
+      challengerAdvantageMeters <
+        NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS;
+    const selected =
+      retainIncumbent
+        ? incumbent
+        : nearest;
+    const selectionReason =
+      retainIncumbent
+        ? "held_by_commitment_margin"
+        : incumbent &&
+            incumbent.id === nearest.id
+          ? "current_is_nearest"
+          : incumbent
+            ? "switched_for_clear_advantage"
+            : hole.navigationGuide
+                  .targetId
+              ? "incumbent_completed"
+              : "nearest_available";
+    return {
+      ...selected,
+      selectionReason,
+      nearestCandidateId:
+        nearest.id,
+      nearestCandidateDistance:
+        nearestDistance,
+      incumbentId:
+        incumbent?.id || null,
+      incumbentDistance,
+      challengerAdvantageMeters,
+      switchThresholdMeters:
+        NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS,
+    };
   }
 
   function objectiveApproachCandidates(
@@ -20693,8 +22146,28 @@
       guide.target = null;
       guide.approach = null;
       guide.path = [];
+      guide.selectionReason =
+        "no_available_target";
+      guide.nearestCandidateId = null;
+      guide.incumbentId = null;
+      guide.challengerAdvantageMeters =
+        0;
       return;
     }
+    guide.selectionReason =
+      definition.selectionReason;
+    guide.nearestCandidateId =
+      definition.nearestCandidateId;
+    guide.nearestCandidateDistance =
+      definition.nearestCandidateDistance;
+    guide.incumbentId =
+      definition.incumbentId;
+    guide.incumbentDistance =
+      definition.incumbentDistance;
+    guide.challengerAdvantageMeters =
+      definition.challengerAdvantageMeters;
+    guide.switchThresholdMeters =
+      definition.switchThresholdMeters;
     const targetDistance =
       worldDistance(
         state.player,
@@ -23451,6 +24924,367 @@
       : null;
   }
 
+  function worldMarkerPlacement(
+    point,
+    interactionRadius = null,
+  ) {
+    const markerWidth =
+      interactionRadius !== null
+        ? INTERACTABLE_EDGE_CARD_WIDTH
+        : 148;
+    const safeGutter =
+      FIELD_MARKER_SAFE_GUTTER;
+    const markerPadding =
+      markerWidth * 0.5 +
+      safeGutter;
+    const safeRegion =
+      state.mode === "first_hole"
+        ? "canvas_left_to_course_map"
+        : "canvas";
+    const rightBoundary =
+      state.mode === "first_hole"
+        ? COURSE_MAP_X - safeGutter
+        : WIDTH - safeGutter;
+    const maximumX = Math.max(
+      markerPadding,
+      rightBoundary - markerWidth * 0.5,
+    );
+    const leftProtectedCenter =
+      SECONDARY_HUD_RIGHT +
+      safeGutter +
+      markerWidth * 0.5;
+    const rightProtectedCenter =
+      rightBoundary -
+      markerWidth * 0.5;
+    const x = clamp(
+      point.x,
+      markerPadding,
+      maximumX,
+    );
+    const y =
+      point.x <
+        leftProtectedCenter &&
+      point.y < 370
+        ? 414
+        : point.x >
+              rightProtectedCenter &&
+            point.y < 430
+          ? 454
+          : point.y;
+    return {
+      x,
+      y,
+      width: markerWidth,
+      safeGutter,
+      safeRegion,
+      rightBoundary,
+      edgeDirection:
+        point.x < markerPadding
+          ? "left"
+          : point.x > maximumX
+            ? "right"
+            : "none",
+      fullyInsideCanvas:
+        x - markerWidth * 0.5 >=
+          safeGutter &&
+        x + markerWidth * 0.5 <=
+          WIDTH - safeGutter,
+      fullyInsideFieldRegion:
+        x - markerWidth * 0.5 >=
+          safeGutter &&
+        x + markerWidth * 0.5 <=
+          rightBoundary,
+      fullyClearOfCourseMap:
+        state.mode !== "first_hole" ||
+        x + markerWidth * 0.5 <=
+          COURSE_MAP_X - safeGutter,
+    };
+  }
+
+  /**
+   * Blends an interactable from its protected edge card into its centered
+   * world prop only after it clears the HUD and map safety regions. The blend
+   * follows player position rather than time, so the presentation cannot lag
+   * behind the authoritative world anchor.
+   */
+  function worldInteractablePresentation(
+    point,
+  ) {
+    const transitionWidth =
+      INTERACTABLE_HANDOFF_WIDTH;
+    const leftCanvasClearance =
+      point.x - 76;
+    const rightCanvasClearance =
+      WIDTH - 76 - point.x;
+    const leftHudClearance = Math.max(
+      point.x -
+        INTERACTABLE_LEFT_SAFE_CENTER,
+      point.y - 370,
+    );
+    const rightHudClearance = Math.max(
+      INTERACTABLE_RIGHT_SAFE_CENTER -
+        point.x,
+      point.y - 430,
+    );
+    const centerSafetyClearance =
+      Math.min(
+        leftCanvasClearance,
+        rightCanvasClearance,
+        leftHudClearance,
+        rightHudClearance,
+      );
+    const blendProgress =
+      smoothstep(
+        centerSafetyClearance /
+          transitionWidth,
+      );
+    const mode =
+      blendProgress <= 0.01
+        ? "edge"
+        : blendProgress >= 0.99
+          ? "centered"
+          : "handoff";
+    const protectedLane =
+      point.y < 370 &&
+      leftHudClearance <=
+        centerSafetyClearance + 0.01
+        ? "left_secondary_hud"
+        : point.y < 430 &&
+            rightHudClearance <=
+              centerSafetyClearance + 0.01
+          ? "right_course_map"
+          : null;
+    const directionCue =
+      mode === "handoff" &&
+      protectedLane ===
+        "right_course_map"
+        ? {
+            direction: "right",
+            alpha: smoothstep(
+              (0.55 - blendProgress) /
+                0.55,
+            ),
+          }
+        : null;
+    return {
+      mode,
+      centeredPanelAlpha:
+        mode === "centered" ? 1 : 0,
+      edgeMarkerAlpha:
+        mode === "edge" ? 1 : 0,
+      morphPanelAlpha:
+        mode === "handoff" ? 1 : 0,
+      propAlpha: blendProgress,
+      blendProgress,
+      protectedLane,
+      directionCue,
+      safePanelRegion: {
+        left:
+          SECONDARY_HUD_RIGHT +
+          FIELD_MARKER_SAFE_GUTTER,
+        right:
+          COURSE_MAP_X -
+          FIELD_MARKER_SAFE_GUTTER,
+      },
+      centerSafetyClearance,
+      transitionWidth,
+    };
+  }
+
+  /**
+   * Fits a marker's complete directional label inside its authored card so
+   * long exit names and three-digit distances retain the shared edge gutter.
+   */
+  function worldMarkerLabelPresentation(
+    label,
+    placement,
+    interactionRadius = null,
+    distance = null,
+  ) {
+    const distanceLabel =
+      interactionRadius !== null &&
+      distance !== null
+        ? `  //  ${Math.ceil(
+            distance,
+          )}m`
+        : "";
+    const edgeDirection =
+      placement.edgeDirection === "left"
+        ? "◀ "
+        : placement.edgeDirection === "right"
+          ? " ▶"
+          : "";
+    const text =
+      placement.edgeDirection === "left"
+        ? `${edgeDirection}${label}${distanceLabel}`
+        : `${label}${distanceLabel}${edgeDirection}`;
+    const maximumWidth =
+      placement.width - 16;
+    const fontSize = fittedTextSize(
+      text,
+      12,
+      maximumWidth,
+      10,
+      true,
+    );
+    ctx.save();
+    ctx.font =
+      `bold ${fontSize}px "Courier New", monospace`;
+    const measuredWidth =
+      ctx.measureText(text).width;
+    ctx.restore();
+    return {
+      text,
+      fontSize,
+      maximumWidth,
+      measuredWidth: Number(
+        measuredWidth.toFixed(2),
+      ),
+      fullyInsideCard:
+        measuredWidth <=
+        maximumWidth + 0.01,
+    };
+  }
+
+  /**
+   * Gives the selected navigation target a stable visual lead while keeping
+   * every alternate objective readable and immediately usable.
+   */
+  function worldMarkerGuidancePresentation(
+    targetId = null,
+    inReach = false,
+  ) {
+    const navigationTargetIds = [
+      "shed-key",
+      "sprinkler",
+      "maintenance-shed",
+      "drain-exit",
+    ];
+    if (
+      !targetId ||
+      !navigationTargetIds.includes(
+        targetId,
+      )
+    ) {
+      return {
+        role: "context",
+        alphaMultiplier: 1,
+        frameWidthBoost: 0,
+        topRail: false,
+        interactionOverride: false,
+      };
+    }
+    const selected =
+      state.hole?.navigationGuide
+        ?.targetId === targetId;
+    const interactionOverride =
+      inReach && !selected;
+    return {
+      role: selected
+        ? "selected_route"
+        : "alternate_route",
+      alphaMultiplier:
+        selected || interactionOverride
+          ? 1
+          : 0.72,
+      frameWidthBoost:
+        selected ? 1 : 0,
+      topRail:
+        selected || interactionOverride,
+      interactionOverride,
+    };
+  }
+
+  /**
+   * Returns a stable zero-to-one read of how close the player is to an
+   * interactable's usable footprint. This is presentation-only and reaches
+   * full readiness exactly at the authoritative interaction radius.
+   */
+  function interactionApproachReadiness(
+    target,
+    distance = null,
+  ) {
+    const radius =
+      target?.radius || 0;
+    if (radius <= 0) {
+      return 0;
+    }
+    const resolvedDistance =
+      distance === null
+        ? worldDistance(
+            state.player,
+            target,
+          )
+        : distance;
+    const outerDistance =
+      radius * 2.25;
+    return smoothstep(
+      (outerDistance -
+        resolvedDistance) /
+        (outerDistance - radius),
+    );
+  }
+
+  /**
+   * Keeps the world panel as a spatial readiness marker while the bottom
+   * action rail owns the exact binding and verb. If that rail is unavailable,
+   * the local panel retains the binding as a reliable fallback.
+   */
+  function worldMarkerReachPresentation(
+    targetId = null,
+  ) {
+    const rejection =
+      activeInteractionRejection(
+        targetId,
+      );
+    if (rejection) {
+      return {
+        localText:
+          rejection.localStatus,
+        localRole: "rejection_state",
+        localAlign: "left",
+        localInset: 12,
+        bindingOwner:
+          "bottom_rejection_rail",
+        actionText: null,
+      };
+    }
+    const bottomRailOwnsBinding =
+      fieldInteractionPromptOwnsBottomRail();
+    return {
+      localText:
+        bottomRailOwnsBinding
+          ? "IN REACH"
+          : inputCopy(
+              `${keyboardBindingLabel(
+                "interact",
+              )} USE  //  IN REACH`,
+              "A USE  //  IN REACH",
+              "TAP USE  //  IN REACH",
+            ),
+      localRole:
+        bottomRailOwnsBinding
+          ? "spatial_readiness"
+          : "binding_fallback",
+      localAlign:
+        bottomRailOwnsBinding
+          ? "left"
+          : "center",
+      localInset:
+        bottomRailOwnsBinding
+          ? 12
+          : 0,
+      bindingOwner:
+        bottomRailOwnsBinding
+          ? "bottom_action_rail"
+          : "world_marker",
+      actionText:
+        bottomRailOwnsBinding
+          ? state.hole.prompt
+          : null,
+    };
+  }
+
   function drawWorldMarker(
     worldX,
     worldY,
@@ -23458,37 +25292,21 @@
     color,
     glyph,
     interactionRadius = null,
+    targetId = null,
+    presentationAlpha = 1,
+    includeGroundRing = true,
   ) {
     const point = worldToScreen(worldX, worldY);
     if (!point.visible || point.x < -180 || point.x > WIDTH + 180) {
       return;
     }
-    const markerPadding =
-      interactionRadius !== null
-        ? 106
-        : 82;
-    const markerX = clamp(
-      point.x,
-      markerPadding,
-      WIDTH - markerPadding,
-    );
-    const markerY =
-      interactionRadius !== null &&
-      point.x < 490 &&
-      point.y < 370
-        ? 414
-        : interactionRadius !== null &&
-            point.x > WIDTH - 304 &&
-            point.y < 430
-          ? 454
-          : point.y;
-    const edgeDirection =
-      point.x < markerPadding
-        ? "◀ "
-        : point.x >
-              WIDTH - markerPadding
-          ? " ▶"
-          : "";
+    const placement =
+      worldMarkerPlacement(
+        point,
+        interactionRadius,
+      );
+    const markerX = placement.x;
+    const markerY = placement.y;
     const distance = worldDistance(
       state.player,
       { x: worldX, y: worldY },
@@ -23496,7 +25314,15 @@
     const inReach =
       interactionRadius !== null &&
       distance < interactionRadius;
-    if (interactionRadius !== null) {
+    const guidancePresentation =
+      worldMarkerGuidancePresentation(
+        targetId,
+        inReach,
+      );
+    if (
+      interactionRadius !== null &&
+      includeGroundRing
+    ) {
       drawInteractionGroundRing(
         {
           x: worldX,
@@ -23507,16 +25333,13 @@
         inReach,
       );
     }
-    const distanceLabel =
-      interactionRadius !== null
-        ? `  //  ${Math.ceil(
-            distance,
-          )}m`
-        : "";
-    const markerLabel =
-      point.x < markerPadding
-        ? `${edgeDirection}${label}${distanceLabel}`
-        : `${label}${distanceLabel}${edgeDirection}`;
+    const labelPresentation =
+      worldMarkerLabelPresentation(
+        label,
+        placement,
+        interactionRadius,
+        distance,
+      );
     const markerScale = clamp(point.scale, 0.58, 1.35);
     const joePoint =
       state.mode === "first_hole"
@@ -23541,12 +25364,12 @@
     ctx.save();
     ctx.globalAlpha =
       clamp(1.25 - Math.abs(point.forwardDistance) / 120, 0.28, 1) *
-      (joeGuardingMarker || joeOverlapsMarker ? 0.22 : 1);
+      (joeGuardingMarker || joeOverlapsMarker ? 0.22 : 1) *
+      guidancePresentation.alphaMultiplier *
+      presentationAlpha;
     ctx.fillStyle = "rgba(2,8,4,0.82)";
     const markerWidth =
-      interactionRadius !== null
-        ? 196
-        : 148;
+      placement.width;
     const markerHeight =
       inReach ? 51 : 34;
     ctx.fillRect(
@@ -23555,31 +25378,61 @@
       markerWidth,
       markerHeight,
     );
+    if (
+      guidancePresentation.topRail
+    ) {
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        markerX -
+          markerWidth * 0.5 +
+          8,
+        markerY -
+          50 * markerScale +
+          4,
+        markerWidth - 16,
+        2,
+      );
+    }
     strokeRect(
       markerX - markerWidth * 0.5,
       markerY - 50 * markerScale,
       markerWidth,
       markerHeight,
       color,
-      inReach ? 3 : 2,
+      inReach
+        ? 3
+        : 2 +
+          guidancePresentation
+            .frameWidthBoost,
     );
     drawText(glyph, markerX, markerY - 58 * markerScale, Math.round(24 * markerScale + 10), color, "center", true);
-    drawText(markerLabel, markerX, markerY - 28 * markerScale, 12, "#f0ead1", "center", true);
+    drawText(
+      labelPresentation.text,
+      markerX,
+      markerY - 28 * markerScale,
+      labelPresentation.fontSize,
+      "#f0ead1",
+      "center",
+      true,
+    );
     if (inReach) {
+      const reachPresentation =
+        worldMarkerReachPresentation(
+          targetId,
+        );
       drawText(
-        inputCopy(
-          `${keyboardBindingLabel(
-            "interact",
-          )} USE  //  IN REACH`,
-          "A USE  //  IN REACH",
-          "TAP USE  //  IN REACH",
-        ),
-        markerX,
+        reachPresentation.localText,
+        reachPresentation.localAlign ===
+          "left"
+          ? markerX -
+              markerWidth * 0.5 +
+              reachPresentation.localInset
+          : markerX,
         markerY -
           10 * markerScale,
         10,
         color,
-        "center",
+        reachPresentation.localAlign,
         true,
       );
     }
@@ -23591,6 +25444,18 @@
     color,
     inReach,
   ) {
+    const distance =
+      state.mode === "first_hole"
+        ? worldDistance(
+            state.player,
+            target,
+          )
+        : Infinity;
+    const approach =
+      interactionApproachReadiness(
+        target,
+        distance,
+      );
     const footprint =
       projectedGroundRadius(
         target,
@@ -23602,14 +25467,25 @@
     const pulse = state.reducedMotion
       ? 0
       : Math.sin(state.time * 5.2) *
-        (inReach ? 0.08 : 0.035);
+        lerp(
+          0.035,
+          0.08,
+          inReach ? 1 : approach,
+        );
     ctx.save();
     ctx.globalAlpha =
-      inReach ? 0.92 : 0.5;
+      inReach
+        ? 0.92
+        : lerp(0.5, 0.82, approach);
     ctx.strokeStyle = color;
-    ctx.lineWidth = inReach ? 3 : 1.5;
+    ctx.lineWidth = inReach
+      ? 3
+      : lerp(1.5, 2.4, approach);
     if (!inReach) {
-      ctx.setLineDash([6, 5]);
+      ctx.setLineDash([
+        lerp(6, 4, approach),
+        lerp(5, 2, approach),
+      ]);
     }
     ctx.beginPath();
     ctx.ellipse(
@@ -23627,8 +25503,50 @@
     ctx.setLineDash([]);
     ctx.fillStyle = inReach
       ? "rgba(231,189,88,0.09)"
-      : "rgba(4,12,7,0.08)";
+      : `rgba(4,12,7,${lerp(
+          0.08,
+          0.16,
+          approach,
+        ).toFixed(3)})`;
     ctx.fill();
+    if (!inReach && approach > 0.04) {
+      ctx.globalAlpha *= approach;
+      ctx.lineWidth = lerp(
+        1.5,
+        2.5,
+        approach,
+      );
+      const tickLength = lerp(
+        4,
+        8,
+        approach,
+      );
+      for (
+        let index = 0;
+        index < 4;
+        index += 1
+      ) {
+        const angle =
+          index * Math.PI * 0.5;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const innerX =
+          footprint.point.x +
+          cos *
+            (footprint.radiusX + 2);
+        const innerY =
+          footprint.point.y +
+          sin *
+            (footprint.radiusY + 1);
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(
+          innerX + cos * tickLength,
+          innerY + sin * tickLength,
+        );
+        ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
@@ -23862,30 +25780,13 @@
     iconIndex,
     label,
     color,
+    targetId = null,
   ) {
     const point = worldToScreen(
       target.x,
       target.y,
     );
     if (!point.visible) {
-      return;
-    }
-    if (
-      point.x < 76 ||
-      point.x > WIDTH - 76 ||
-      (point.x < 490 &&
-        point.y < 370) ||
-      (point.x > WIDTH - 304 &&
-        point.y < 430)
-    ) {
-      drawWorldMarker(
-        target.x,
-        target.y,
-        label,
-        color,
-        "!",
-        target.radius,
-      );
       return;
     }
     const distance =
@@ -23895,6 +25796,37 @@
       );
     const inReach =
       distance < target.radius;
+    const guidancePresentation =
+      worldMarkerGuidancePresentation(
+        targetId,
+        inReach,
+      );
+    const interactablePresentation =
+      worldInteractablePresentation(
+        point,
+      );
+    drawInteractionGroundRing(
+      target,
+      color,
+      inReach,
+    );
+    if (
+      interactablePresentation
+        .mode === "edge"
+    ) {
+      drawWorldMarker(
+        target.x,
+        target.y,
+        label,
+        color,
+        "!",
+        target.radius,
+        targetId,
+        1,
+        false,
+      );
+      return;
+    }
     const propCell =
       INTERACTABLE_PROP_CELLS[
         iconIndex
@@ -23929,12 +25861,10 @@
       point.y -
       drawHeight +
       bob;
-    drawInteractionGroundRing(
-      target,
-      color,
-      inReach,
-    );
     ctx.save();
+    ctx.globalAlpha *=
+      interactablePresentation
+        .propAlpha;
     ctx.fillStyle =
       "rgba(0,2,1,0.58)";
     ctx.beginPath();
@@ -23991,6 +25921,203 @@
       imageTop -
       11 -
       (inReach ? 28 : 0);
+    if (
+      interactablePresentation.mode ===
+      "handoff"
+    ) {
+      const amount =
+        interactablePresentation
+          .blendProgress;
+      const placement = {
+        ...worldMarkerPlacement(
+          point,
+          target.radius,
+        ),
+      };
+      if (
+        interactablePresentation
+          .protectedLane ===
+        "left_secondary_hud"
+      ) {
+        placement.y = 414;
+      }
+      if (
+        interactablePresentation
+          .protectedLane ===
+        "right_course_map"
+      ) {
+        placement.y = 454;
+      }
+      const markerScale = clamp(
+        point.scale,
+        0.58,
+        1.35,
+      );
+      const startHeight = inReach
+        ? 51
+        : 34;
+      const endHeight = inReach
+        ? 43
+        : 25;
+      const handoffX = lerp(
+        placement.x,
+        point.x,
+        amount,
+      );
+      const handoffTop = lerp(
+        placement.y -
+          50 * markerScale,
+        panelY - 16,
+        amount,
+      );
+      const handoffWidth = lerp(
+        placement.width,
+        panelWidth,
+        amount,
+      );
+      const handoffHeight = lerp(
+        startHeight,
+        endHeight,
+        amount,
+      );
+      const handoffLabelY = lerp(
+        placement.y -
+          28 * markerScale,
+        panelY,
+        amount,
+      );
+      const handoffLabel =
+        `${label}  //  ${Math.ceil(
+          distance,
+        )}m`;
+      const handoffFontSize =
+        fittedTextSize(
+          handoffLabel,
+          lerp(12, 11, amount),
+          handoffWidth - 16,
+          10,
+          true,
+        );
+      ctx.save();
+      ctx.globalAlpha *=
+        guidancePresentation
+          .alphaMultiplier;
+      ctx.fillStyle = inReach
+        ? "rgba(18,31,16,0.94)"
+        : "rgba(2,8,4,0.84)";
+      ctx.fillRect(
+        handoffX -
+          handoffWidth * 0.5,
+        handoffTop,
+        handoffWidth,
+        handoffHeight,
+      );
+      if (
+        guidancePresentation.topRail
+      ) {
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          handoffX -
+            handoffWidth * 0.5 +
+            8,
+          handoffTop + 4,
+          handoffWidth - 16,
+          2,
+        );
+      }
+      strokeRect(
+        handoffX -
+          handoffWidth * 0.5,
+        handoffTop,
+        handoffWidth,
+        handoffHeight,
+        color,
+        lerp(
+          2,
+          1.5,
+          amount,
+        ) +
+          guidancePresentation
+            .frameWidthBoost,
+      );
+      drawText(
+        handoffLabel,
+        handoffX,
+        handoffLabelY,
+        handoffFontSize,
+        "#f1ead4",
+        "center",
+        true,
+      );
+      if (
+        interactablePresentation
+          .directionCue?.alpha > 0.01
+      ) {
+        ctx.save();
+        ctx.globalAlpha *=
+          interactablePresentation
+            .directionCue.alpha;
+        drawText(
+          "\u25b6",
+          handoffX +
+            handoffWidth * 0.5 -
+            13,
+          handoffLabelY,
+          11,
+          color,
+          "center",
+          true,
+        );
+        ctx.restore();
+      }
+      if (inReach) {
+        const reachPresentation =
+          worldMarkerReachPresentation(
+            targetId,
+          );
+        drawText(
+          reachPresentation.localText,
+          reachPresentation.localAlign ===
+            "left"
+            ? handoffX -
+                handoffWidth * 0.5 +
+                reachPresentation.localInset
+            : handoffX,
+          handoffLabelY + 18,
+          10,
+          color,
+          reachPresentation.localAlign,
+          true,
+        );
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha *=
+        smoothstep(
+          (0.55 - amount) /
+            0.55,
+        );
+      drawText(
+        "!",
+        placement.x,
+        placement.y -
+          58 * markerScale,
+        Math.round(
+          24 * markerScale + 10,
+        ),
+        color,
+        "center",
+        true,
+      );
+      ctx.restore();
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha *=
+      guidancePresentation
+        .alphaMultiplier *
+      interactablePresentation
+        .centeredPanelAlpha;
     ctx.fillStyle = inReach
       ? "rgba(18,31,16,0.94)"
       : "rgba(2,8,4,0.84)";
@@ -24000,13 +26127,30 @@
       panelWidth,
       inReach ? 43 : 25,
     );
+    if (
+      guidancePresentation.topRail
+    ) {
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        point.x -
+          panelWidth * 0.5 +
+          8,
+        panelY - 12,
+        panelWidth - 16,
+        2,
+      );
+    }
     strokeRect(
       point.x - panelWidth * 0.5,
       panelY - 16,
       panelWidth,
       inReach ? 43 : 25,
       color,
-      inReach ? 3 : 1.5,
+      inReach
+        ? 3
+        : 1.5 +
+          guidancePresentation
+            .frameWidthBoost,
     );
     drawText(
       `${label}  //  ${Math.ceil(
@@ -24020,22 +26164,26 @@
       true,
     );
     if (inReach) {
+      const reachPresentation =
+        worldMarkerReachPresentation(
+          targetId,
+        );
       drawText(
-        inputCopy(
-          `${keyboardBindingLabel(
-            "interact",
-          )} USE  //  IN REACH`,
-          "A USE  //  IN REACH",
-          "TAP USE  //  IN REACH",
-        ),
-        point.x,
+        reachPresentation.localText,
+        reachPresentation.localAlign ===
+          "left"
+          ? point.x -
+              panelWidth * 0.5 +
+              reachPresentation.localInset
+          : point.x,
         panelY + 18,
         10,
         color,
-        "center",
+        reachPresentation.localAlign,
         true,
       );
     }
+    ctx.restore();
   }
 
   function drawCourseCollisionFootprints() {
@@ -24194,6 +26342,110 @@
     return candidates;
   }
 
+  /**
+   * Finds the closest usable world interaction that has entered its final
+   * readiness band. Its panel can then own the local reading lane while
+   * genuinely imminent hazards still interrupt it.
+   */
+  function interactableContextOwnerState() {
+    if (
+      state.mode !== "first_hole" ||
+      !state.hole
+    ) {
+      return null;
+    }
+    const changeRequest =
+      activeChangeRequest();
+    const candidates = [
+      {
+        id: "shed-key",
+        target: activeKeyPoint(),
+        available:
+          !state.hole.keyCollected,
+      },
+      {
+        id: "sprinkler",
+        target:
+          activeSprinklerPoint(),
+        available:
+          !state.hole.sprinklerUsed,
+      },
+      {
+        id: changeRequest.id,
+        target: changeRequest,
+        available:
+          !state.hole
+            .changeRequestCollected &&
+          !state.hole.appealUsed,
+      },
+      {
+        id: "maintenance-shed",
+        target: SHED_EXIT,
+        available: true,
+      },
+      {
+        id: "drain-exit",
+        target: DRAIN_EXIT,
+        available: true,
+      },
+    ];
+    let owner = null;
+    for (
+      let index = 0;
+      index < candidates.length;
+      index += 1
+    ) {
+      const candidate =
+        candidates[index];
+      if (!candidate.available) {
+        continue;
+      }
+      const distance = worldDistance(
+        state.player,
+        candidate.target,
+      );
+      const readiness =
+        interactionApproachReadiness(
+          candidate.target,
+          distance,
+        );
+      if (readiness < 0.78) {
+        continue;
+      }
+      const inReach =
+        distance <
+        candidate.target.radius;
+      if (
+        !owner ||
+        (
+          inReach &&
+          !owner.inReach
+        ) ||
+        (
+          inReach === owner.inReach &&
+          readiness >
+            owner.readiness
+        ) ||
+        (
+          inReach === owner.inReach &&
+          Math.abs(
+            readiness -
+              owner.readiness,
+          ) < 0.001 &&
+          distance < owner.distance
+        )
+      ) {
+        owner = {
+          id: candidate.id,
+          distance,
+          readiness,
+          inReach,
+        };
+      }
+    }
+    return owner;
+  }
+
   function worldContextCueState() {
     if (renderFrameCache.worldContextCue) {
       return renderFrameCache.worldContextCue;
@@ -24222,6 +26474,21 @@
     const imminentNoise =
       noise.hazard &&
       noise.distance <= 8;
+    const footingSignalOwner =
+      footingHazardSignalOwner();
+    if (
+      footingSignalOwner &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy:
+          footingSignalOwner,
+      };
+      return renderFrameCache.worldContextCue;
+    }
     if (
       golfAimOwnsSignalLane() &&
       !imminentNoise
@@ -24359,6 +26626,29 @@
           joeDialogueActive
             ? "joe_dialogue_lane"
             : "threat_caption_lane",
+      };
+      return renderFrameCache.worldContextCue;
+    }
+    const interactableOwner =
+      interactableContextOwnerState();
+    if (
+      interactableOwner &&
+      !imminentNoise
+    ) {
+      renderFrameCache.worldContextCue = {
+        kind: "none",
+        id: null,
+        distance: null,
+        deferredBy:
+          interactableOwner.inReach
+            ? "interactable_action"
+            : "interactable_approach",
+        ownerId:
+          interactableOwner.id,
+        ownerDistance:
+          interactableOwner.distance,
+        ownerReadiness:
+          interactableOwner.readiness,
       };
       return renderFrameCache.worldContextCue;
     }
@@ -24884,6 +27174,140 @@
     return segments;
   }
 
+  /**
+   * Keeps the diegetic route readable as the course palette darkens without
+   * lifting it above physical cover or turning it into a screen-space HUD.
+   */
+  function navigationRibbonPresentation(
+    samples = navigationRibbonSamples(),
+  ) {
+    const contrastZones = [
+      "maintenance_maze",
+      "dead_green",
+      "night_range",
+      "release_corridor",
+    ];
+    const sampledZones = [
+      ...new Set(
+        samples.map(
+          (sample) =>
+            courseZoneAt(sample.y).id,
+        ),
+      ),
+    ];
+    const lateCourseContrast =
+      sampledZones.some((zoneId) =>
+        contrastZones.includes(zoneId),
+      );
+    return {
+      mode: lateCourseContrast
+        ? "late_course_ground_contrast"
+        : "restrained_ground_thread",
+      lateCourseContrast,
+      sampledZones,
+      dash: lateCourseContrast
+        ? [3, 5]
+        : [2, 7],
+      underlayWidth: lateCourseContrast
+        ? 5.5
+        : 4,
+      underlayAlpha: lateCourseContrast
+        ? 0.78
+        : 0.68,
+      threadWidth: lateCourseContrast
+        ? 2
+        : 1.5,
+      threadAlphaBase: lateCourseContrast
+        ? 0.5
+        : 0.28,
+      threadAlphaPulse: lateCourseContrast
+        ? 0.08
+        : 0.05,
+      reflectorAlphaMinimum:
+        lateCourseContrast ? 0.42 : 0.26,
+      reflectorAlphaMaximum:
+        lateCourseContrast ? 0.9 : 0.82,
+    };
+  }
+
+  /**
+   * Lets an urgent footing consequence own the central reading lane while
+   * preserving the objective route geometry underneath it.
+   */
+  function navigationRibbonCaptionPresentation(
+    visibleReflectors =
+      visibleNavigationRibbonEntries()
+        .length,
+  ) {
+    const footingSignalOwner =
+      footingHazardSignalOwner();
+    const placement =
+      navigationRibbonCaptionPlacement();
+    return {
+      visible:
+        visibleReflectors > 0 &&
+        !footingSignalOwner,
+      deferredBy:
+        footingSignalOwner,
+      routeGeometryVisible:
+        visibleReflectors > 0,
+      placement,
+    };
+  }
+
+  /**
+   * Keeps the world-route caption attached to its first reflector while
+   * protecting both canvas edges and the persistent course map.
+   */
+  function navigationRibbonCaptionPlacement(
+    visible =
+      visibleNavigationRibbonEntries(),
+    guide =
+      state.hole.navigationGuide,
+  ) {
+    if (
+      !guide?.target ||
+      visible.length === 0
+    ) {
+      return null;
+    }
+    const source = visible[0].point;
+    const text =
+      `${guide.targetLabel}  //  FOLLOW LANTERNS`;
+    const width = Math.ceil(
+      text.length * 5.5,
+    );
+    const halfWidth = width * 0.5;
+    const safeLeft =
+      18 + halfWidth;
+    const safeRight = Math.max(
+      safeLeft,
+      COURSE_MAP_X -
+        18 -
+        halfWidth,
+    );
+    const x = clamp(
+      source.x,
+      safeLeft,
+      safeRight,
+    );
+    return {
+      text,
+      x,
+      y: source.y + 24,
+      sourceX: source.x,
+      width,
+      edgeAdjusted:
+        Math.abs(x - source.x) > 0.5,
+      fullyInsideSafeArea:
+        x - halfWidth >= 18 &&
+        x + halfWidth <=
+          COURSE_MAP_X - 18,
+      safeRegion:
+        "canvas_left_to_course_map",
+    };
+  }
+
   function drawWorldNavigationRibbon() {
     const guide =
       state.hole.navigationGuide;
@@ -24900,20 +27324,35 @@
       visibleNavigationRibbonEntries();
     const segments =
       visibleNavigationRibbonSegments();
+    const presentation =
+      navigationRibbonPresentation(
+        samples,
+      );
+    const captionPresentation =
+      navigationRibbonCaptionPresentation(
+        visible.length,
+      );
     ctx.save();
     if (segments.length > 0) {
       const threadPulse =
         state.reducedMotion
-          ? 0.34
-          : 0.28 +
+          ? presentation
+              .threadAlphaBase +
+            presentation
+              .threadAlphaPulse
+          : presentation
+              .threadAlphaBase +
             (
               Math.sin(
                 state.time * 2.4,
               ) + 1
             ) *
-              0.05;
+              presentation
+                .threadAlphaPulse;
       ctx.lineCap = "round";
-      ctx.setLineDash([2, 7]);
+      ctx.setLineDash(
+        presentation.dash,
+      );
       ctx.beginPath();
       for (
         let index = 0;
@@ -24932,13 +27371,15 @@
         );
       }
       ctx.strokeStyle =
-        "rgba(2,8,5,0.68)";
-      ctx.lineWidth = 4;
+        `rgba(2,8,5,${presentation.underlayAlpha})`;
+      ctx.lineWidth =
+        presentation.underlayWidth;
       ctx.stroke();
       ctx.globalAlpha = threadPulse;
       ctx.strokeStyle =
         guide.targetColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth =
+        presentation.threadWidth;
       ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.setLineDash([]);
@@ -24987,8 +27428,10 @@
           0.3 +
           point.scale * 0.34
         ) * pulse,
-        0.26,
-        0.82,
+        presentation
+          .reflectorAlphaMinimum,
+        presentation
+          .reflectorAlphaMaximum,
       );
       ctx.strokeStyle =
         guide.targetColor;
@@ -25026,18 +27469,144 @@
       ctx.fill();
       ctx.restore();
     }
-    if (visible.length > 0) {
-      const first =
-        visible[0].point;
+    if (
+      captionPresentation.visible &&
+      captionPresentation.placement
+    ) {
+      const placement =
+        captionPresentation.placement;
       drawText(
-        `${guide.targetLabel}  //  FOLLOW LANTERNS`,
-        first.x,
-        first.y + 24,
+        placement.text,
+        placement.x,
+        placement.y,
         9,
         guide.targetColor,
         "center",
         true,
       );
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draws the selected footing bypass as a short world-space route. It is
+   * rendered beneath physical entities so cover still occludes the lane.
+   */
+  function drawFootingHazardBypassRoute(
+    guidance,
+  ) {
+    if (
+      !guidance?.visible ||
+      !guidance.selected.valid
+    ) {
+      return;
+    }
+    const route = [
+      guidance.selected.entry,
+      guidance.selected.middle,
+      guidance.selected.exit,
+    ].map((sample) => ({
+      sample,
+      point: worldToScreen(
+        sample.x,
+        sample.y,
+      ),
+    }));
+    const visibleRoute =
+      route.filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -80 &&
+          entry.point.x < WIDTH + 80,
+      );
+    if (visibleRoute.length < 2) {
+      return;
+    }
+    const color = guidance.active
+      ? "rgba(236,125,72,0.9)"
+      : "rgba(214,170,87,0.84)";
+    const pulse = state.reducedMotion
+      ? 0.72
+      : 0.64 +
+        (
+          Math.sin(
+            state.hole.elapsed *
+              3.1,
+          ) +
+          1
+        ) *
+          0.08;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.setLineDash([5, 8]);
+    ctx.beginPath();
+    ctx.moveTo(
+      visibleRoute[0].point.x,
+      visibleRoute[0].point.y - 2,
+    );
+    for (
+      let index = 1;
+      index < visibleRoute.length;
+      index += 1
+    ) {
+      ctx.lineTo(
+        visibleRoute[index].point.x,
+        visibleRoute[index].point.y - 2,
+      );
+    }
+    ctx.strokeStyle =
+      "rgba(2,8,5,0.78)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (
+      let index = 0;
+      index < visibleRoute.length - 1;
+      index += 1
+    ) {
+      const current =
+        visibleRoute[index].point;
+      const next =
+        visibleRoute[index + 1]
+          .point;
+      const direction = Math.atan2(
+        next.y - current.y,
+        next.x - current.x,
+      );
+      const size = clamp(
+        current.scale * 9,
+        5,
+        16,
+      );
+      ctx.save();
+      ctx.translate(
+        current.x,
+        current.y - 2,
+      );
+      ctx.rotate(direction);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = clamp(
+        current.scale * 1.4,
+        1,
+        2.6,
+      );
+      ctx.beginPath();
+      ctx.moveTo(
+        -size * 0.7,
+        -size * 0.55,
+      );
+      ctx.lineTo(size * 0.3, 0);
+      ctx.lineTo(
+        -size * 0.7,
+        size * 0.55,
+      );
+      ctx.stroke();
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -25729,6 +28298,492 @@
       }
     }
     ctx.restore();
+  }
+
+  /**
+   * Draws avoidable slow-footing patches as grounded course materials. Their
+   * rendered ellipse is shared with collision so the visible edge is the
+   * authoritative gameplay edge.
+   */
+  function drawFootingHazards() {
+    const zones =
+      FOOTING_HAZARD_ZONES
+        .map((zone) => ({
+          zone,
+          point: worldToScreen(
+            zone.x,
+            zone.y,
+          ),
+        }))
+        .filter(
+          (entry) =>
+            entry.point.visible &&
+            entry.point.x > -700 &&
+            entry.point.x <
+              WIDTH + 700,
+        )
+        .sort(
+          (a, b) =>
+            a.point.y - b.point.y,
+        );
+    for (
+      let index = 0;
+      index < zones.length;
+      index += 1
+    ) {
+      const zone = zones[index].zone;
+      const point = zones[index].point;
+      const radiusX = Math.min(
+        WIDTH,
+        Math.max(
+          9,
+          zone.radiusX *
+            COURSE_CAMERA.worldUnitMeters *
+            point.pixelsPerMeter,
+        ),
+      );
+      const radiusY = Math.min(
+        HEIGHT * 0.38,
+        Math.max(
+          3,
+          zone.radiusY *
+            COURSE_CAMERA.worldUnitMeters *
+            point.pixelsPerMeter *
+            0.2,
+        ),
+      );
+      const active =
+        state.hole.environment
+          ?.footingHazardZone?.id ===
+          zone.id &&
+        state.hole.environment
+          .footingHazard;
+      const pulse =
+        active && !state.reducedMotion
+          ? 0.5 +
+            (Math.sin(
+              state.time * 4.1,
+            ) +
+              1) *
+              0.12
+          : active
+            ? 0.62
+            : 0.34;
+      const palette =
+        zone.kind === "mud"
+          ? {
+              center: "58,48,34",
+              middle: "41,38,27",
+              edge: "19,25,18",
+              line: "123,103,65",
+              marker: "197,145,69",
+            }
+          : zone.kind === "roots"
+            ? {
+                center: "86,63,37",
+                middle: "57,44,29",
+                edge: "24,29,17",
+                line: "174,129,72",
+                marker: "207,159,78",
+              }
+            : {
+                center: "89,89,43",
+                middle: "55,69,31",
+                edge: "22,35,19",
+                line: "159,151,72",
+                marker: "211,166,72",
+              };
+      ctx.save();
+      ctx.translate(
+        point.x,
+        point.y,
+      );
+      ctx.rotate(zone.angle || 0);
+      const shadow =
+        ctx.createRadialGradient(
+          0,
+          radiusY * 0.18,
+          radiusX * 0.12,
+          0,
+          radiusY * 0.18,
+          radiusX * 1.08,
+        );
+      shadow.addColorStop(
+        0,
+        "rgba(2,5,3,0.42)",
+      );
+      shadow.addColorStop(
+        0.78,
+        "rgba(2,5,3,0.25)",
+      );
+      shadow.addColorStop(
+        1,
+        "rgba(2,5,3,0)",
+      );
+      ctx.fillStyle = shadow;
+      ctx.beginPath();
+      ctx.ellipse(
+        0,
+        radiusY * 0.12,
+        radiusX * 1.08,
+        radiusY * 1.28,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+
+      const ground =
+        ctx.createRadialGradient(
+          -radiusX * 0.18,
+          -radiusY * 0.2,
+          0,
+          0,
+          0,
+          radiusX,
+        );
+      ground.addColorStop(
+        0,
+        `rgba(${palette.center},0.88)`,
+      );
+      ground.addColorStop(
+        0.58,
+        `rgba(${palette.middle},0.82)`,
+      );
+      ground.addColorStop(
+        1,
+        `rgba(${palette.edge},0.2)`,
+      );
+      ctx.fillStyle = ground;
+      ctx.beginPath();
+      ctx.ellipse(
+        0,
+        0,
+        radiusX,
+        radiusY,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.clip();
+
+      for (
+        let markIndex = 0;
+        markIndex < 12;
+        markIndex += 1
+      ) {
+        const seed = hash(
+          index * 97 +
+            markIndex * 23,
+        );
+        const crossSeed = hash(
+          index * 41 +
+            markIndex * 67,
+        );
+        const x =
+          (seed - 0.5) *
+          radiusX * 1.7;
+        const y =
+          (crossSeed - 0.5) *
+          radiusY * 1.45;
+        ctx.strokeStyle =
+          `rgba(${palette.line},${0.2 + seed * 0.34})`;
+        ctx.fillStyle =
+          `rgba(${palette.line},${0.12 + seed * 0.2})`;
+        ctx.lineWidth = Math.max(
+          1,
+          point.scale *
+            (zone.kind === "roots"
+              ? 1.2
+              : 0.75),
+        );
+        if (zone.kind === "mud") {
+          ctx.beginPath();
+          ctx.ellipse(
+            x,
+            y,
+            radiusX *
+              (0.035 + seed * 0.055),
+            Math.max(
+              1,
+              radiusY * 0.08,
+            ),
+            seed * 0.3,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        } else if (
+          zone.kind === "roots"
+        ) {
+          ctx.beginPath();
+          ctx.moveTo(
+            x - radiusX * 0.09,
+            y + radiusY * 0.12,
+          );
+          ctx.quadraticCurveTo(
+            x,
+            y - radiusY * 0.22,
+            x + radiusX * 0.1,
+            y + radiusY * 0.06,
+          );
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(
+            x - radiusX * 0.11,
+            y,
+          );
+          ctx.lineTo(
+            x + radiusX * 0.12,
+            y + radiusY * 0.08,
+          );
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(
+        point.x,
+        point.y,
+      );
+      ctx.rotate(zone.angle || 0);
+      ctx.strokeStyle =
+        `rgba(${palette.marker},${pulse})`;
+      ctx.lineWidth = active ? 2.2 : 1.25;
+      ctx.setLineDash(
+        active ? [] : [7, 5],
+      );
+      ctx.beginPath();
+      ctx.ellipse(
+        0,
+        0,
+        radiusX,
+        radiusY,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      for (const side of [-1, 1]) {
+        const markerX =
+          side * radiusX * 0.92;
+        ctx.fillStyle =
+          `rgba(${palette.marker},0.82)`;
+        ctx.fillRect(
+          markerX - 1.5,
+          -radiusY * 0.88,
+          3,
+          radiusY * 0.9,
+        );
+        ctx.fillRect(
+          markerX - 4,
+          -radiusY * 0.9,
+          8,
+          Math.max(2, radiusY * 0.15),
+        );
+      }
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Warns before contact so the hazard creates a route choice instead of a
+   * surprise movement penalty.
+   */
+  function drawFootingHazardApproachCue(
+    guidance,
+  ) {
+    if (
+      !guidance?.visible ||
+      !guidance.selected.valid ||
+      footingHazardPlaqueDeferralOwner()
+    ) {
+      return;
+    }
+    const footing = {
+      zone: guidance.zone,
+      active: guidance.active,
+    };
+    const plaqueProjection =
+      footingHazardPlaqueProjection(
+        guidance,
+      );
+    const point =
+      plaqueProjection.point;
+    if (!plaqueProjection.visible) {
+      return;
+    }
+    const panelWidth = 228;
+    const panelHeight = 42;
+    const panelX = clamp(
+      footing.active
+        ? WIDTH * 0.5 -
+          panelWidth * 0.5
+        : point.x -
+          panelWidth * 0.5,
+      18,
+      WIDTH - panelWidth - 18,
+    );
+    let panelY = clamp(
+      point.y - 82,
+      86,
+      HEIGHT - 202,
+    );
+    const plaqueThreat =
+      footingHazardPlaqueThreatState(
+        guidance,
+      );
+    const joeLabel =
+      plaqueThreat.joeLabel;
+    if (
+      joeLabel.visible &&
+      panelX <
+        joeLabel.centerX +
+          joeLabel.panelWidth * 0.5 &&
+      panelX + panelWidth >
+        joeLabel.centerX -
+          joeLabel.panelWidth * 0.5 &&
+      panelY <
+        joeLabel.centerY +
+          joeLabel.panelHeight * 0.5 &&
+      panelY + panelHeight >
+        joeLabel.centerY -
+          joeLabel.panelHeight * 0.5
+    ) {
+      panelY = clamp(
+        panelY -
+          panelHeight -
+          14,
+        86,
+        HEIGHT - 202,
+      );
+    }
+    const crosshairX = WIDTH * 0.5;
+    const crosshairY = HEIGHT * 0.52;
+    const overlapsCrosshair =
+      panelX < crosshairX + 18 &&
+      panelX + panelWidth >
+        crosshairX - 18 &&
+      panelY < crosshairY + 14 &&
+      panelY + panelHeight >
+        crosshairY - 14;
+    if (overlapsCrosshair) {
+      panelY = clamp(
+        panelY - panelHeight - 14,
+        86,
+        HEIGHT - 202,
+      );
+    }
+    const pressureAmount =
+      plaqueThreat.pressureAmount;
+    const pressureCadence =
+      plaqueThreat.closeJoePressure
+        ? state.reducedMotion
+          ? 0.5
+          : 0.5 +
+            Math.sin(
+              state.time *
+                (3.4 +
+                  pressureAmount *
+                    2.8),
+            ) *
+              0.5
+        : 0;
+    const borderRed = Math.round(
+      210 + pressureAmount * 29,
+    );
+    const borderGreen = Math.round(
+      158 - pressureAmount * 46,
+    );
+    const borderBlue = Math.round(
+      76 - pressureAmount * 8,
+    );
+    const borderAlpha =
+      0.72 +
+      pressureAmount * 0.08 +
+      pressureCadence *
+        pressureAmount *
+        0.08;
+    const headingRed = Math.round(
+      224 + pressureAmount * 16,
+    );
+    const headingGreen = Math.round(
+      189 - pressureAmount * 29,
+    );
+    const headingBlue = Math.round(
+      120 - pressureAmount * 10,
+    );
+    const detailRed = Math.round(
+      174 + pressureAmount * 58,
+    );
+    const detailGreen = Math.round(
+      185 + pressureAmount * 7,
+    );
+    const detailBlue = Math.round(
+      160 - pressureAmount * 6,
+    );
+    ctx.fillStyle =
+      "rgba(8,15,9,0.9)";
+    ctx.fillRect(
+      panelX,
+      panelY,
+      panelWidth,
+      panelHeight,
+    );
+    strokeRect(
+      panelX,
+      panelY,
+      panelWidth,
+      panelHeight,
+      `rgba(${borderRed},${borderGreen},${borderBlue},${borderAlpha.toFixed(2)})`,
+      1,
+    );
+    if (plaqueThreat.closeJoePressure) {
+      ctx.save();
+      ctx.globalAlpha =
+        0.12 +
+        pressureAmount * 0.08 +
+        pressureCadence * 0.1;
+      strokeRect(
+        panelX - 2,
+        panelY - 2,
+        panelWidth + 4,
+        panelHeight + 4,
+        "#ef7044",
+        1,
+      );
+      ctx.restore();
+    }
+    drawText(
+      footing.active
+        ? `SLOW FOOTING // ${Math.round(footing.zone.speedMultiplier * 100)}% SPEED`
+        : `${footing.zone.name} // ${Math.round(footing.zone.speedMultiplier * 100)}% CROSS`,
+      panelX + panelWidth * 0.5,
+      panelY + 17,
+      10,
+      `rgb(${headingRed},${headingGreen},${headingBlue})`,
+      "center",
+      true,
+    );
+    drawText(
+      footing.active
+        ? plaqueThreat.closeJoePressure
+          ? `CLEAR ${guidance.selected.sideLabel} // ${Math.ceil(guidance.distanceToClear)}m // JOE ${Math.ceil(plaqueThreat.joeDistance)}m`
+          : `CLEAR ${guidance.selected.sideLabel} // ${Math.ceil(guidance.distanceToClear)}m`
+        : guidance.waitRecommended
+          ? `WAIT IN COVER // BYPASS ${guidance.selected.sideLabel}`
+          : `FULL-SPEED BYPASS ${guidance.selected.sideLabel}`,
+      panelX + panelWidth * 0.5,
+      panelY + 33,
+      9,
+      `rgb(${detailRed},${detailGreen},${detailBlue})`,
+      "center",
+      true,
+    );
   }
 
   function drawBunkerSand() {
@@ -26527,6 +29582,17 @@
                 1,
               ),
             );
+      const surfaceWidth =
+        response.kind ===
+        "footing_mud"
+          ? 1.18
+          : response.kind ===
+              "footing_thatch"
+            ? 1.12
+            : response.kind ===
+                "footing_roots"
+              ? 1.04
+              : 1;
       const baseWidth = clamp(
         (
           5.2 +
@@ -26536,7 +29602,8 @@
           (
             0.8 +
             arrival * 0.2
-          ),
+          ) *
+          surfaceWidth,
         4,
         38,
       );
@@ -26561,6 +29628,15 @@
       ctx.fillStyle =
         response.kind === "sand"
           ? "rgba(64,45,25,0.62)"
+          : response.kind ===
+              "footing_mud"
+            ? "rgba(38,30,22,0.78)"
+            : response.kind ===
+                "footing_thatch"
+              ? "rgba(35,43,20,0.72)"
+              : response.kind ===
+                  "footing_roots"
+                ? "rgba(45,33,21,0.72)"
           : response.kind === "wet"
             ? "rgba(7,34,31,0.68)"
             : "rgba(5,18,9,0.7)";
@@ -26577,6 +29653,189 @@
       ctx.fill();
 
       if (
+        response.kind ===
+        "footing_thatch"
+      ) {
+        const fiberCount =
+          quality < 0.75
+            ? 6
+            : 9;
+        ctx.lineWidth = Math.max(
+          1,
+          point.scale * 0.46,
+        );
+        for (
+          let fiber = 0;
+          fiber < fiberCount;
+          fiber += 1
+        ) {
+          const seed = hash(
+            response.seed * 83 +
+              fiber * 29,
+          );
+          const fiberX =
+            (seed * 2 - 1) *
+            baseWidth * 0.78;
+          const fiberY =
+            (
+              hash(seed * 41) -
+              0.5
+            ) *
+            baseHeight * 1.25;
+          const fiberLength =
+            baseWidth *
+            (
+              0.22 +
+              hash(seed * 67) *
+                0.34
+            ) *
+            arrival;
+          const direction =
+            fiber % 2 === 0
+              ? -1
+              : 1;
+          ctx.strokeStyle =
+            fiber % 3 === 0
+              ? `rgba(199,175,88,${life * 0.66})`
+              : `rgba(104,118,58,${life * 0.72})`;
+          ctx.beginPath();
+          ctx.moveTo(
+            fiberX -
+              fiberLength *
+                direction *
+                0.35,
+            fiberY,
+          );
+          ctx.quadraticCurveTo(
+            fiberX,
+            fiberY -
+              baseHeight *
+                0.55,
+            fiberX +
+              fiberLength *
+                direction,
+            fiberY -
+              baseHeight *
+                0.12,
+          );
+          ctx.stroke();
+        }
+      } else if (
+        response.kind ===
+        "footing_mud"
+      ) {
+        ctx.strokeStyle =
+          `rgba(151,112,72,${life * 0.72})`;
+        ctx.lineWidth = Math.max(
+          1,
+          point.scale * 0.62,
+        );
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          baseWidth *
+            (
+              0.62 +
+              progress * 0.08
+            ),
+          baseHeight * 0.78,
+          0,
+          Math.PI * 0.03,
+          Math.PI * 0.97,
+        );
+        ctx.stroke();
+        ctx.globalCompositeOperation =
+          "screen";
+        ctx.fillStyle =
+          `rgba(174,139,94,${life * 0.42})`;
+        for (
+          let clod = 0;
+          clod < 4;
+          clod += 1
+        ) {
+          const seed = hash(
+            response.seed * 71 +
+              clod * 23,
+          );
+          const clodSize = Math.max(
+            1,
+            Math.round(
+              point.scale *
+                (
+                  0.38 +
+                  seed * 0.28
+                ),
+            ),
+          );
+          ctx.fillRect(
+            Math.round(
+              (
+                seed - 0.5
+              ) *
+                baseWidth * 1.35,
+            ),
+            Math.round(
+              (
+                hash(seed * 59) -
+                0.5
+              ) *
+                baseHeight * 1.15,
+            ),
+            clodSize,
+            clodSize,
+          );
+        }
+      } else if (
+        response.kind ===
+        "footing_roots"
+      ) {
+        ctx.strokeStyle =
+          `rgba(177,140,85,${life * 0.68})`;
+        ctx.lineWidth = Math.max(
+          1,
+          point.scale * 0.52,
+        );
+        for (
+          let branch = 0;
+          branch < 4;
+          branch += 1
+        ) {
+          const seed = hash(
+            response.seed * 89 +
+              branch * 37,
+          );
+          const side =
+            branch % 2 === 0
+              ? -1
+              : 1;
+          const reach =
+            baseWidth *
+            (
+              0.38 +
+              seed * 0.38
+            );
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(
+            side * reach * 0.48,
+            -baseHeight *
+              (
+                0.52 +
+                seed * 0.5
+              ),
+          );
+          ctx.lineTo(
+            side * reach,
+            baseHeight *
+              (
+                seed - 0.5
+              ) *
+              0.65,
+          );
+          ctx.stroke();
+        }
+      } else if (
         response.kind === "rough"
       ) {
         const bladeCount =
@@ -31532,6 +34791,58 @@
         active ? 2 : 1;
       ctx.stroke();
     }
+    for (
+      let index = 0;
+      index <
+        FOOTING_HAZARD_ZONES.length;
+      index += 1
+    ) {
+      const hazard =
+        FOOTING_HAZARD_ZONES[index];
+      const point = mapPoint(
+        hazard.x,
+        hazard.y,
+      );
+      const active =
+        state.hole.environment
+          ?.footingHazardZone?.id ===
+          hazard.id &&
+        state.hole.environment
+          .footingHazard;
+      ctx.fillStyle = active
+        ? "rgba(202,139,62,0.66)"
+        : hazard.kind === "mud"
+          ? "rgba(81,63,39,0.56)"
+          : hazard.kind === "roots"
+            ? "rgba(116,76,39,0.5)"
+            : "rgba(99,104,48,0.5)";
+      ctx.strokeStyle = active
+        ? "#e0a454"
+        : "#857044";
+      ctx.lineWidth = active
+        ? 2
+        : 1;
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        Math.max(
+          3,
+          hazard.radiusX *
+            mapScaleX,
+        ),
+        Math.max(
+          2,
+          hazard.radiusY *
+            mapScaleY,
+        ),
+        hazard.angle || 0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.stroke();
+    }
     if (state.hole.sprinklerSoakTimer > 0) {
       const wetAlpha = clamp(
         state.hole.sprinklerSoakTimer / 3.5,
@@ -32654,6 +35965,9 @@
 
   function movementFeedbackState() {
     const input = movementInput();
+    const afterglowDuration =
+      state.hole.moveHintDuration ||
+      movementFeedbackAfterglowDuration();
     const moving =
       Math.hypot(
         input.x,
@@ -32689,6 +36003,12 @@
     );
     const escapeCopy =
       state.hole.blockedEscape || "";
+    const footingRecovery =
+      state.hole
+        .footingRecoveryTimer > 0 &&
+      !state.hole.environment
+        ?.footingHazard &&
+      !state.hole.environment?.sand;
     const left = escapeOverride
       ? escapeCopy.includes("LEFT")
       : inputLeft;
@@ -32712,7 +36032,7 @@
         ? 1
         : clamp(
             state.hole.moveHintTimer /
-              0.42,
+              afterglowDuration,
             0,
             1,
           );
@@ -32751,18 +36071,29 @@
         label &&
         joeBarkVisible()
       );
+    const labelDeferredByFooting =
+      label
+        ? footingHazardSignalOwner()
+        : null;
+    const labelDeferredBy =
+      labelDeferredByJoeBark
+        ? "joe_bark"
+        : labelDeferredByFooting;
     return {
       visible,
       moving,
       afterglow,
+      afterglowDuration,
+      afterglowMode:
+        afterglowDuration ===
+          FOOTING_FEEDBACK_AFTERGLOW_DURATION
+          ? "quick_footing_correction"
+          : "standard_direction_echo",
       label,
       labelVisible:
         Boolean(label) &&
-        !labelDeferredByJoeBark,
-      labelDeferredBy:
-        labelDeferredByJoeBark
-          ? "joe_bark"
-          : null,
+        !labelDeferredBy,
+      labelDeferredBy,
       labelOffsetY:
         displacedByContextCue
           ? 116
@@ -32770,6 +36101,12 @@
       displacedByContextCue,
       contextCueKind:
         contextCue.kind,
+      footingRecovery,
+      footingRecoveryKind:
+        footingRecovery
+          ? state.hole
+              .footingRecoveryKind
+          : null,
       escapeOverride,
       attemptedDirections: {
         left: inputLeft,
@@ -32785,7 +36122,7 @@
       },
       presentation: escapeOverride
         ? "collision_escape_override"
-        : labelDeferredByJoeBark
+        : labelDeferredBy
           ? "live_input_chevrons_with_label_deferred"
         : moving
           ? "live_input_with_chevrons"
@@ -32793,6 +36130,17 @@
             ? "directional_afterglow_only"
             : "hidden",
     };
+  }
+
+  /**
+   * Keeps short corrections crisp while slow footing already lengthens the
+   * physical response. Ordinary terrain retains the established readable echo.
+   */
+  function movementFeedbackAfterglowDuration() {
+    return state.hole.environment
+      ?.footingHazard
+      ? FOOTING_FEEDBACK_AFTERGLOW_DURATION
+      : MOVEMENT_FEEDBACK_AFTERGLOW_DURATION;
   }
 
   function drawMovementFeedback(walkBob) {
@@ -32822,6 +36170,11 @@
           0.72,
           pulse,
         )})`
+      : feedback.footingRecovery
+        ? `rgba(168,222,176,${Math.max(
+            0.68,
+            pulse,
+          )})`
       : `rgba(226,210,148,${pulse})`;
     ctx.lineWidth =
       1.5 +
@@ -32861,7 +36214,9 @@
         centerY +
           feedback.labelOffsetY,
         12,
-        "#dfd29c",
+        feedback.footingRecovery
+          ? "#a8deb0"
+          : "#dfd29c",
         "center",
         true,
       );
@@ -35888,17 +39243,37 @@
       stateBannerThreatCaption();
     const direction =
       mergedCaption?.direction || null;
+    const footingRecovery =
+      footingRecoveryBannerActive();
+    const dangerTheme =
+      hole.joe.mode === "chase" &&
+      !footingRecovery;
     const visible = clamp(hole.stateBannerTimer * 2.2, 0, 1);
-    const width = hole.joe.mode === "chase" ? 340 : 330;
+    const width = dangerTheme ? 340 : 330;
     const height = direction ? 50 : 42;
     const bannerCenterX = WIDTH * 0.5 + 108;
     const x = bannerCenterX - width * 0.5;
     const y = hole.zoneBannerTimer > 0 ? 128 : 42;
     ctx.save();
     ctx.globalAlpha = visible;
-    ctx.fillStyle = hole.joe.mode === "chase" ? "rgba(39,5,2,0.93)" : "rgba(3,13,7,0.91)";
+    ctx.fillStyle = footingRecovery
+      ? "rgba(3,20,12,0.93)"
+      : dangerTheme
+        ? "rgba(39,5,2,0.93)"
+        : "rgba(3,13,7,0.91)";
     ctx.fillRect(x, y, width, height);
-    strokeRect(x, y, width, height, hole.joe.mode === "chase" ? "#d04d28" : "#a4773f", 2);
+    strokeRect(
+      x,
+      y,
+      width,
+      height,
+      footingRecovery
+        ? "#6fa781"
+        : dangerTheme
+          ? "#d04d28"
+          : "#a4773f",
+      2,
+    );
     drawText(
       hole.stateBanner,
       bannerCenterX,
@@ -35910,7 +39285,11 @@
         10,
         true,
       ),
-      hole.joe.mode === "chase" ? "#ffbc83" : "#e2cf9c",
+      footingRecovery
+        ? "#b9e3c1"
+        : dangerTheme
+          ? "#ffbc83"
+          : "#e2cf9c",
       "center",
       true,
     );
@@ -36070,7 +39449,7 @@
             ? "LB CROUCH  •  LT LISTEN"
             : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN`,
         subdetail:
-          "SMART PLAYS LINK FOR 14s // CLOSER BREAKS PAY MORE",
+          "MARKED FOOTING: CROSS, ROUTE WIDE, OR WAIT",
       },
     ];
     for (const card of cards) {
@@ -38878,15 +42257,7 @@
     const objective =
       currentHoleObjective();
     const expandedHud =
-      !golfAimOwnsSignalLane() &&
-      !activeDistractionOwnsSignalLane() &&
-      !nerveHoldOwnsSignalLane() &&
-      !cutTraceOwnsSignalLane() &&
-      !listeningSearchReadOwnsSignalLane() &&
-      (
-        hole.controlHintTimer > 0.01 ||
-        hole.focus
-      );
+      firstPersonHudExpanded();
     const activeStampCount =
       performanceStampsFor(
         variant.id,
@@ -39551,6 +42922,7 @@
       !hole.nerveHold.active &&
       !cutTraceScanOwnsSignalLane() &&
       !listeningSearchReadOwnsSignalLane() &&
+      !openingMovementMessageDeferredByPanel() &&
       hole.messageTimer > 0
     ) {
       const presentedMessage =
@@ -42026,6 +45398,8 @@
     const zone = courseZoneAt(state.player.y);
     const walkBob =
       courseLocomotionState().bob;
+    const footingGuidance =
+      footingHazardBypassGuidance();
 
     ctx.fillStyle = "#07120c";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -42082,6 +45456,7 @@
 
     drawPerspectiveCourse(progress, walkBob);
     drawDeadGreenGround();
+    drawFootingHazards();
     drawBunkerSand();
     drawWetTurf();
     drawTurfMarks();
@@ -42109,6 +45484,9 @@
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
     drawCourseWayfindingStakes();
     drawWorldNavigationRibbon();
+    drawFootingHazardBypassRoute(
+      footingGuidance,
+    );
     drawCadenceForecast();
     drawCourseCollisionFootprints();
     drawMowerWorldParticles(
@@ -42134,6 +45512,7 @@
         0,
         "SHED KEY",
         "#e7bd58",
+        "shed-key",
       );
     }
     if (!state.hole.sprinklerUsed) {
@@ -42142,6 +45521,7 @@
         2,
         "DRAIN VALVE",
         "#6aa8a0",
+        "sprinkler",
       );
     }
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
@@ -42228,6 +45608,7 @@
         state.hole.drainUnlocked ? "#73c9aa" : "#778178",
         state.hole.drainUnlocked ? "⇩" : "×",
         DRAIN_EXIT.radius,
+        "drain-exit",
       );
     }
     const shedExitDistance =
@@ -42251,6 +45632,7 @@
         "#d8b46b",
         "⌂",
         SHED_EXIT.radius,
+        "maintenance-shed",
       );
     }
 
@@ -42312,6 +45694,9 @@
     drawStatusRequestFeedback();
     drawBlindsideTransferFeedback();
     drawGolfBallTactics();
+    drawFootingHazardApproachCue(
+      footingGuidance,
+    );
     drawFirstHoleOverlay();
     drawEscapeFiling();
     drawJoeStateBanner();
@@ -44243,16 +47628,35 @@
         hole.controlHintSource = null;
       }
       hole.messageTimer = Math.max(0, hole.messageTimer - dt);
+      hole.interactionRejection.timer =
+        Math.max(
+          0,
+          hole.interactionRejection.timer -
+            dt,
+        );
+      if (
+        hole.interactionRejection.timer <=
+        0
+      ) {
+        hole.interactionRejection.targetId =
+          null;
+        hole.interactionRejection.localStatus =
+          null;
+        hole.interactionRejection.message =
+          null;
+      }
       if (
         hole.controlHintSource ===
           "onboarding" &&
         hole.travelDistance >=
           ONBOARDING_MOVEMENT_CUE_DISTANCE
       ) {
-        hole.messageTimer = Math.min(
-          hole.messageTimer,
-          ONBOARDING_CONTROL_COLLAPSE_DELAY,
-        );
+        if (
+          onboardingMovementMessageActive()
+        ) {
+          hole.message = "";
+          hole.messageTimer = 0;
+        }
       }
       hole.joeBarkTimer = Math.max(
         0,
@@ -44321,6 +47725,12 @@
         0,
         hole.stateBannerLockTimer - dt,
       );
+      hole.footingRecoveryTimer =
+        Math.max(
+          0,
+          hole.footingRecoveryTimer -
+            dt,
+        );
       hole.zoneBannerTimer = Math.max(0, hole.zoneBannerTimer - dt);
       hole.blackoutTimer = Math.max(0, hole.blackoutTimer - dt);
       hole.dreadTimer = Math.max(0, hole.dreadTimer - dt);
@@ -44401,8 +47811,15 @@
         hole.hasMoved = true;
         hole.moveVector.x = movement.x;
         hole.moveVector.y = movement.y;
-        hole.moveHintTimer = 0.42;
+        if (!hole.moveHintActive) {
+          hole.moveHintDuration =
+            movementFeedbackAfterglowDuration();
+        }
+        hole.moveHintActive = true;
+        hole.moveHintTimer =
+          hole.moveHintDuration;
       } else {
+        hole.moveHintActive = false;
         hole.moveHintTimer = Math.max(0, hole.moveHintTimer - dt);
       }
       const sprinting =
@@ -44492,6 +47909,9 @@
         getPlayerEnvironmentState();
       const preMoveSand =
         preMoveEnvironment.sand;
+      const footingSpeedMultiplier =
+        preMoveEnvironment
+          .footingSpeedMultiplier || 1;
       const roadmapSpeedMultiplier =
         livingRoadmapSpeedMultiplier(
           preMoveEnvironment,
@@ -44506,10 +47926,11 @@
                 ? 38
                 : 24
         ) *
-        (
+        Math.min(
           preMoveSand
             ? SAND_PLAYER_SPEED_MULTIPLIER
-            : 1
+            : 1,
+          footingSpeedMultiplier,
         ) *
         roadmapSpeedMultiplier *
         (
@@ -44561,6 +47982,8 @@
           if (
             stepEnvironment.sand ||
             stepEnvironment.wet ||
+            stepEnvironment
+              .footingHazard ||
             !hole.crouched ||
             !inStepRough
           ) {
@@ -44569,6 +47992,9 @@
               sprinting,
               stepEnvironment.wet,
               stepEnvironment.sand,
+              stepEnvironment
+                .footingHazardZone
+                ?.kind || null,
             );
           }
         }
@@ -44713,6 +48139,99 @@
         hole.activeSandZoneId =
           null;
       }
+      if (environment.footingHazard) {
+        hole.footingHazardSeconds +=
+          dt;
+        const footingZone =
+          environment
+            .footingHazardZone;
+        if (
+          footingZone?.id &&
+          footingZone.id !==
+            hole.activeFootingHazardId
+        ) {
+          hole.footingHazardEntries +=
+            1;
+          hole.activeFootingHazardId =
+            footingZone.id;
+          hole.footingRecoveryTimer =
+            0;
+          hole.footingRecoveryZoneId =
+            null;
+          hole.footingRecoveryKind =
+            null;
+          hole.stateBanner =
+            `${footingZone.name} // ${Math.round(footingZone.speedMultiplier * 100)}% FOOTING`;
+          hole.stateBannerTimer = 2.75;
+          hole.stateBannerLockTimer =
+            Math.max(
+              hole.stateBannerLockTimer,
+              2.75,
+            );
+          const entryGuidance =
+            footingHazardBypassGuidance();
+          const clearSide =
+            entryGuidance?.selected
+              ?.sideLabel ||
+            "WIDE";
+          setHoleMessage(
+            `SLOW FOOTING — clear ${clearSide} now; next patch, route wide or wait under cover.`,
+            3.35,
+          );
+          pushThreatCaption(
+            "FOOTING DRAG // JOE KEEPS MOVING",
+            state.player,
+            "world",
+            2.55,
+            "footing_hazard",
+          );
+          playFootingHazardCue(
+            footingZone.kind,
+          );
+        }
+      } else {
+        const clearedFootingId =
+          hole.activeFootingHazardId;
+        if (clearedFootingId) {
+          const clearedFooting =
+            FOOTING_HAZARD_ZONES.find(
+              (zone) =>
+                zone.id ===
+                clearedFootingId,
+            );
+          if (clearedFooting) {
+            hole.footingRecoveryTimer =
+              1.45;
+            hole.footingRecoveryZoneId =
+              clearedFooting.id;
+            hole.footingRecoveryKind =
+              clearedFooting.kind;
+            const staleFootingBanner =
+              `${clearedFooting.name} // ${Math.round(clearedFooting.speedMultiplier * 100)}% FOOTING`;
+            if (
+              hole.stateBanner ===
+              staleFootingBanner
+            ) {
+              hole.stateBanner =
+                "FOOTING CLEAR // FULL PACE";
+              hole.stateBannerTimer =
+                1.45;
+              hole.stateBannerLockTimer =
+                1.45;
+            }
+            if (
+              hole.message?.startsWith(
+                "SLOW FOOTING",
+              )
+            ) {
+              hole.message = "";
+              hole.messageTimer = 0;
+            }
+          }
+        }
+        hole.activeFootingHazardId =
+          null;
+      }
       const movementNoise = moving
         ? hole.focus
           ? environment.sand
@@ -44752,6 +48271,20 @@
               ? 0.12
               : 0.26
         : 0;
+      const footingNoise =
+        moving &&
+        environment.footingHazard
+          ? environment
+              .footingNoiseFloor *
+            (
+              hole.crouched ||
+              hole.focus
+                ? 0.58
+                : sprinting
+                  ? 1
+                  : 0.78
+            )
+          : 0;
       const filingNoise =
         hole.escapeFiling.active
           ? hole.escapeFiling.route ===
@@ -44772,7 +48305,10 @@
           ? CROSSWIND_NOISE_MULTIPLIER
           : 1;
       const targetNoise = Math.max(
-        movementNoise *
+        Math.max(
+          movementNoise,
+          footingNoise,
+        ) *
           Math.min(
             counterRouteNoise,
             crosswindNoise,
@@ -44986,6 +48522,11 @@
       }
 
       updateShelterMemory(
+        dt,
+        moving,
+        environment,
+      );
+      updateVerticalPassPressure(
         dt,
         moving,
         environment,
@@ -46155,6 +49696,58 @@
       0.026,
       "triangle",
     );
+  }
+
+  /**
+   * Gives each slow-footing family a readable material hit without adding a
+   * persistent audio layer.
+   */
+  function playFootingHazardCue(
+    kind,
+  ) {
+    if (kind === "mud") {
+      playNoiseBurst(
+        0.42,
+        0.062,
+        430,
+        "lowpass",
+      );
+      playTransientTone(
+        92,
+        48,
+        0.22,
+        0.028,
+        "triangle",
+      );
+    } else if (kind === "roots") {
+      playNoiseBurst(
+        0.28,
+        0.05,
+        1650,
+        "highpass",
+      );
+      playTransientTone(
+        184,
+        82,
+        0.14,
+        0.024,
+        "square",
+      );
+    } else {
+      playNoiseBurst(
+        0.34,
+        0.052,
+        980,
+        "bandpass",
+      );
+      playTransientTone(
+        132,
+        68,
+        0.17,
+        0.022,
+        "triangle",
+      );
+    }
   }
 
   function playHeartbeat(strength) {
@@ -49066,14 +52659,23 @@
           onBunkerSand:
             (state.hole.environment ||
               getPlayerEnvironmentState()).sand,
+          onFootingHazard:
+            (state.hole.environment ||
+              getPlayerEnvironmentState())
+              .footingHazard,
           movementSpeedMultiplier:
-            (
+            Math.min(
               (
                 state.hole.environment ||
                 getPlayerEnvironmentState()
               ).sand
                 ? SAND_PLAYER_SPEED_MULTIPLIER
-                : 1
+                : 1,
+              (
+                state.hole.environment ||
+                getPlayerEnvironmentState()
+              ).footingSpeedMultiplier ||
+                1,
             ) *
             (
               state.hole
@@ -49232,6 +52834,21 @@
                       2,
                     ),
                 ),
+              footingMaterial:
+                courseLocomotionState()
+                  .footingKind,
+              footingDrag:
+                Number(
+                  courseLocomotionState()
+                    .footingDrag.toFixed(
+                      2,
+                    ),
+                ),
+              footingResponse:
+                courseLocomotionState()
+                  .footingKind
+                  ? "surface_specific_cadence_and_bounded_lurch"
+                  : null,
               strideImpact:
                 Number(
                   courseLocomotionState()
@@ -49303,6 +52920,11 @@
                   feedback.displacedByContextCue,
                 contextCueKind:
                   feedback.contextCueKind,
+                footingRecovery:
+                  feedback.footingRecovery,
+                footingRecoveryKind:
+                  feedback
+                    .footingRecoveryKind,
                 escapeOverride:
                   feedback.escapeOverride,
                 afterglow:
@@ -49311,6 +52933,10 @@
                       2,
                     ),
                   ),
+                afterglowDurationSeconds:
+                  feedback.afterglowDuration,
+                afterglowMode:
+                  feedback.afterglowMode,
                 directions: {
                   ...feedback.directions,
                 },
@@ -49320,7 +52946,7 @@
                 presentation:
                   feedback.presentation,
                 rule:
-                  "labels_follow_live_input; chevrons_may_fade_after_release",
+                  "labels_follow_live_input;_slow_footing_uses_a_shorter_release_echo_for_precise_corrections",
                 collisionRule:
                   "collision_contact_temporarily_replaces_attempted_input_with_the_viable_escape_lane",
               };
@@ -49485,15 +53111,7 @@
               ),
             })) || [],
           hudExpanded:
-            !golfAimOwnsSignalLane() &&
-            !activeDistractionOwnsSignalLane() &&
-            !nerveHoldOwnsSignalLane() &&
-            !cutTraceOwnsSignalLane() &&
-            !listeningSearchReadOwnsSignalLane() &&
-            (
-              state.hole.controlHintTimer > 0.01 ||
-              state.hole.focus
-            ),
+            firstPersonHudExpanded(),
           hudExpansionReason:
             golfAimOwnsSignalLane()
               ? "golf_aim_focus"
@@ -49507,6 +53125,14 @@
                       ? "listening_search"
                       : state.hole.focus
                         ? "focus"
+                        : compactCourseViewport() &&
+                            state.hole
+                              .controlHintSource ===
+                              "onboarding" &&
+                            state.hole
+                              .controlHintTimer >
+                              0.01
+                          ? "compact_onboarding_course_view"
                         : state.hole.controlHintTimer >
                               0.01
                           ? state.hole
@@ -49541,6 +53167,45 @@
                       "MOVE LEFT STICK / D-PAD // FOLLOW MINT ROUTE",
                       "DRAG LEFT PAD // FOLLOW MINT ROUTE",
                     ),
+                  instructionOwner:
+                    openingMovementInstructionOwner(),
+                  compactViewport:
+                    compactCourseViewport(),
+                  duplicateInstructionRails:
+                    0,
+                }
+              : null,
+          onboardingPresentation:
+            state.hole
+              .controlHintSource ===
+              "onboarding"
+              ? {
+                  phase:
+                    state.hole.tutorialVisible
+                      ? "survival_briefing"
+                      : openingMovementCueActive()
+                        ? "first_steps"
+                        : "tactical_handoff",
+                  owner:
+                    state.hole.tutorialVisible
+                      ? "survival_briefing"
+                      : openingMovementInstructionOwner() ||
+                        (
+                          firstPersonHudExpanded()
+                            ? "surroundings_panel"
+                            : "course_view"
+                        ),
+                  compactViewport:
+                    compactCourseViewport(),
+                  secondaryPanelVisible:
+                    firstPersonHudExpanded(),
+                  bottomInstructionVisible:
+                    Boolean(
+                      onboardingMovementMessageActive() &&
+                      !openingMovementMessageDeferredByPanel(),
+                    ),
+                  duplicateInstructionRails:
+                    0,
                 }
               : null,
           courseEcho:
@@ -50623,6 +54288,74 @@
               ),
             ),
           },
+          footingHazards: {
+            activeZone:
+              state.hole.environment
+                ?.footingHazard
+                ? state.hole.environment
+                    .footingHazardZone
+                    ?.id || null
+                : null,
+            entries:
+              state.hole
+                .footingHazardEntries,
+            seconds: Number(
+              state.hole
+                .footingHazardSeconds.toFixed(
+                  2,
+                ),
+            ),
+            recovery: {
+              active:
+                state.hole
+                  .footingRecoveryTimer > 0,
+              remainingSeconds: Number(
+                state.hole
+                  .footingRecoveryTimer.toFixed(
+                    2,
+                  ),
+              ),
+              clearedZone:
+                state.hole
+                  .footingRecoveryZoneId,
+              material:
+                state.hole
+                  .footingRecoveryKind,
+              movementSpeedMultiplier:
+                state.hole
+                  .footingRecoveryTimer > 0
+                  ? 1
+                  : null,
+              presentation:
+                state.hole
+                  .footingRecoveryTimer > 0
+                  ? "stale_drag_copy_replaced_by_brief_full_pace_handoff"
+                  : null,
+            },
+            guidance:
+              footingHazardGuidanceForText(),
+            zones:
+              FOOTING_HAZARD_ZONES.map(
+                (zone) => ({
+                  id: zone.id,
+                  name: zone.name,
+                  kind: zone.kind,
+                  x: zone.x,
+                  y: zone.y,
+                  radiusX:
+                    zone.radiusX,
+                  radiusY:
+                    zone.radiusY,
+                  speedMultiplier:
+                    zone.speedMultiplier,
+                  noiseFloor:
+                    zone.noiseFloor,
+                  avoidable: true,
+                }),
+              ),
+            decision:
+              "cross_and_accept_drag_and_noise_or_route_around_or_wait_for_joe_to_turn",
+          },
           noise: Number(state.hole.noise.toFixed(2)),
           noiseHazards: {
             total:
@@ -50756,6 +54489,15 @@
                 "ground_compression",
                 "surface_specific_debris",
                 "dew_or_water_displacement",
+              ],
+              surfaceVariants: [
+                "fairway",
+                "rough",
+                "wet",
+                "sand",
+                "footing_thatch",
+                "footing_mud",
+                "footing_roots",
               ],
               motion:
                 state.reducedMotion
@@ -51950,6 +55692,31 @@
             zoneVisits:
               state.hole.zoneVisits.slice(),
           },
+          interactionRejection:
+            activeInteractionRejection()
+              ? {
+                  targetId:
+                    state.hole
+                      .interactionRejection
+                      .targetId,
+                  localStatus:
+                    state.hole
+                      .interactionRejection
+                      .localStatus,
+                  secondsRemaining:
+                    Number(
+                      state.hole
+                        .interactionRejection
+                        .timer.toFixed(2),
+                    ),
+                  bottomRailOwner:
+                    "blocked_feedback",
+                  localMarkerOwner:
+                    "rejection_state",
+                  retryPromptReturns:
+                    true,
+                }
+              : null,
           message:
             state.hole.messageTimer > 0 &&
             !state.hole.statusRequest.active &&
@@ -51958,7 +55725,8 @@
             !state.hole.nerveHold.active &&
             !cutTraceScanOwnsSignalLane() &&
             !listeningSearchReadOwnsSignalLane() &&
-            !fieldInteractionPromptOwnsBottomRail()
+            !fieldInteractionPromptOwnsBottomRail() &&
+            !openingMovementMessageDeferredByPanel()
               ? holeMessageForPresentation()
               : null,
           messageSource:
@@ -51971,6 +55739,7 @@
               cutTraceScanOwnsSignalLane() ||
               listeningSearchReadOwnsSignalLane() ||
               fieldInteractionPromptOwnsBottomRail() ||
+              openingMovementMessageDeferredByPanel() ||
               holeMessageForPresentation() !==
                 state.hole.message
             )
@@ -51985,7 +55754,8 @@
               state.hole.nerveHold.active ||
               cutTraceScanOwnsSignalLane() ||
               listeningSearchReadOwnsSignalLane() ||
-              fieldInteractionPromptOwnsBottomRail()
+              fieldInteractionPromptOwnsBottomRail() ||
+              openingMovementMessageDeferredByPanel()
             )
               ? state.hole.statusRequest.active
                 ? "status_request"
@@ -51998,10 +55768,13 @@
                       : cutTraceScanOwnsSignalLane()
                         ? "cut_trace"
                         : listeningSearchReadOwnsSignalLane()
-                          ? "listening_search"
+                        ? "listening_search"
+                        : openingMovementMessageDeferredByPanel()
+                          ? "first_steps_panel"
                           : "interaction_prompt"
               : null,
           prompt:
+            interactionRejectionOwnsBottomRail() ||
             state.hole.statusRequest.active ||
             emergencyAppealOwnsSignalLane() ||
             golfAimOwnsSignalLane() ||
@@ -52012,6 +55785,7 @@
               : state.hole.prompt || null,
           promptSource:
             (
+              interactionRejectionOwnsBottomRail() ||
               state.hole.statusRequest.active ||
               emergencyAppealOwnsSignalLane() ||
               golfAimOwnsSignalLane() ||
@@ -52024,6 +55798,7 @@
               : null,
           promptDeferredBy:
             (
+              interactionRejectionOwnsBottomRail() ||
               state.hole.statusRequest.active ||
               emergencyAppealOwnsSignalLane() ||
               golfAimOwnsSignalLane() ||
@@ -52034,6 +55809,8 @@
             state.hole.prompt
               ? state.hole.statusRequest.active
                 ? "status_request"
+                : interactionRejectionOwnsBottomRail()
+                  ? "interaction_rejection"
                 : emergencyAppealOwnsSignalLane()
                   ? "emergency_appeal"
                   : golfAimOwnsSignalLane()
@@ -52206,6 +55983,14 @@
                           state.hole
                             .stateBanner,
                       ).length,
+                  theme:
+                    footingRecoveryBannerActive()
+                      ? "recovery_mint"
+                      : state.hole.joe
+                            .mode ===
+                          "chase"
+                        ? "danger_red"
+                        : "field_amber",
                   presentation:
                     stateBannerThreatCaption()
                       ? "single_banner_with_direction"
@@ -52287,6 +56072,29 @@
                         kind: "none",
                         deferredBy:
                           cue.deferredBy,
+                        ownerId:
+                          cue.ownerId ||
+                          null,
+                        ownerDistance:
+                          Number.isFinite(
+                            cue.ownerDistance,
+                          )
+                            ? Number(
+                                cue.ownerDistance.toFixed(
+                                  2,
+                                ),
+                              )
+                            : null,
+                        ownerReadiness:
+                          Number.isFinite(
+                            cue.ownerReadiness,
+                          )
+                            ? Number(
+                                cue.ownerReadiness.toFixed(
+                                  2,
+                                ),
+                              )
+                            : null,
                       }
                     : null
                   : {
@@ -52325,6 +56133,48 @@
                       2,
                     ),
                 ),
+              targetSelection: {
+                reason:
+                  state.hole
+                    .navigationGuide
+                    .selectionReason,
+                nearestCandidateId:
+                  state.hole
+                    .navigationGuide
+                    .nearestCandidateId,
+                nearestCandidateDistance:
+                  Number(
+                    state.hole
+                      .navigationGuide
+                      .nearestCandidateDistance.toFixed(
+                        2,
+                      ),
+                  ),
+                incumbentId:
+                  state.hole
+                    .navigationGuide
+                    .incumbentId,
+                incumbentDistance:
+                  Number(
+                    state.hole
+                      .navigationGuide
+                      .incumbentDistance.toFixed(
+                        2,
+                      ),
+                  ),
+                challengerAdvantageMeters:
+                  Number(
+                    state.hole
+                      .navigationGuide
+                      .challengerAdvantageMeters.toFixed(
+                        2,
+                      ),
+                  ),
+                switchThresholdMeters:
+                  state.hole
+                    .navigationGuide
+                    .switchThresholdMeters,
+              },
               direction:
                 effectiveGuidanceDirection(),
               rearBearingCue:
@@ -52437,12 +56287,34 @@
                 visibleSegments:
                   visibleNavigationRibbonSegments()
                     .length,
-                presentation:
-                  "restrained_dashed_ground_thread_between_consecutive_reflectors",
+                presentation: (() => {
+                  const presentation =
+                    navigationRibbonPresentation();
+                  return {
+                    mode:
+                      presentation.mode,
+                    lateCourseContrast:
+                      presentation
+                        .lateCourseContrast,
+                    sampledZones:
+                      presentation
+                        .sampledZones,
+                    dash:
+                      presentation.dash,
+                    underlayWidth:
+                      presentation
+                        .underlayWidth,
+                    threadWidth:
+                      presentation
+                        .threadWidth,
+                  };
+                })(),
                 worldOcclusion:
                   "drawn_before_physical_entities_so_cover_remains_authoritative",
                 reducedMotion:
                   "static_thread_without_pulse",
+                caption:
+                  navigationRibbonCaptionPresentation(),
               },
               visiblePathLanterns:
                 visiblePathLanternCount(),
@@ -53022,6 +56894,26 @@
                         2,
                       ),
                   ),
+                footingHazard:
+                  state.hole.environment
+                    .footingHazard,
+                footingHazardZone:
+                  state.hole.environment
+                    .footingHazardZone
+                    ?.id || null,
+                footingHazardEdgeDistance:
+                  Number(
+                    state.hole.environment
+                      .footingHazardEdgeDistance.toFixed(
+                        2,
+                      ),
+                  ),
+                footingSpeedMultiplier:
+                  state.hole.environment
+                    .footingSpeedMultiplier,
+                footingNoiseFloor:
+                  state.hole.environment
+                    .footingNoiseFloor,
                 wetZone:
                   state.hole.environment.wetZone?.id ||
                   null,
@@ -53103,6 +56995,72 @@
             sand:
               state.hole.joe.sand,
             distance: Math.round(worldDistance(state.hole.joe, state.player)),
+            verticalPassPressure: {
+              active:
+                state.hole
+                  .verticalPassPressure
+                  .active,
+              awareness: Number(
+                state.hole
+                  .verticalPassPressure
+                  .awareness.toFixed(2),
+              ),
+              playerLead: Number(
+                state.hole
+                  .verticalPassPressure
+                  .playerLead.toFixed(2),
+              ),
+              lateralSeparation: Number(
+                state.hole
+                  .verticalPassPressure
+                  .lateralSeparation.toFixed(
+                    2,
+                  ),
+              ),
+              target:
+                state.hole
+                  .verticalPassPressure
+                  .target
+                  ? {
+                      x: Number(
+                        state.hole
+                          .verticalPassPressure
+                          .target.x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        state.hole
+                          .verticalPassPressure
+                          .target.y.toFixed(
+                            2,
+                          ),
+                      ),
+                    }
+                  : null,
+              warnings:
+                state.hole
+                  .verticalPassPressure
+                  .warnings,
+              creepSeconds: Number(
+                state.hole
+                  .verticalPassPressure
+                  .creepSeconds.toFixed(
+                    2,
+                  ),
+              ),
+              lastOutcome:
+                state.hole
+                  .verticalPassPressure
+                  .lastOutcome,
+              counters: [
+                "break_laterally",
+                "wait_under_cover",
+                "cross_after_joe_turns",
+              ],
+              rule:
+                "exposed_forward_crossing_refreshes_an_approximate_wake;_joe_creeps_toward_that_wake_while_cover_and_waiting_decay_it",
+            },
             worldLabelVisible:
               joeWorldLabelState().visible,
             worldLabel: (() => {
@@ -53368,7 +57326,7 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       keyboard: {
@@ -53376,13 +57334,13 @@
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
         result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; hold R3 to look behind without changing movement direction; bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
         result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
       },
@@ -53390,7 +57348,7 @@
         gate: "Tap to begin",
         intro: "Tap to skip",
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
-        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
         result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
