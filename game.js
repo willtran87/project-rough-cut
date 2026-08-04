@@ -64,6 +64,7 @@
     locomotion: null,
     blockerCallouts: null,
     worldContextCue: null,
+    coverGroundCue: null,
   };
   const layeredCourseEntities = [];
   let layeredCourseEntityCount = 0;
@@ -13962,37 +13963,92 @@
       state.player.x - obstacle.x;
     const awayY =
       state.player.y - obstacle.y;
-    if (Math.abs(awayX) > 0.35) {
-      return awayX < 0
-        ? "MOVE LEFT AWAY"
-        : "MOVE RIGHT AWAY";
-    }
-    if (
-      Math.abs(awayX) >
-      Math.abs(awayY) * 0.7
-    ) {
-      return awayX < 0
-        ? "MOVE LEFT AWAY"
-        : "MOVE RIGHT AWAY";
-    }
-    if (awayY > 0) {
-      return "MOVE FORWARD AWAY";
-    }
+    const currentDistance =
+      obstacleNormalizedDistance(
+        state.player,
+        obstacle,
+        PLAYER_COLLISION_RADIUS,
+      );
+    const escapeProbeIsViable = (
+      deltaX,
+      deltaY,
+    ) => {
+      const probe = {
+        x: clamp(
+          state.player.x + deltaX,
+          -COURSE_MAX_X,
+          COURSE_MAX_X,
+        ),
+        y: clamp(
+          state.player.y + deltaY,
+          COURSE_MIN_Y,
+          COURSE_LENGTH,
+        ),
+      };
+      const blocker =
+        obstacleAtPosition(
+          probe.x,
+          probe.y,
+        );
+      if (!blocker) {
+        return true;
+      }
+      return (
+        blocker.id === obstacle.id &&
+        obstacleNormalizedDistance(
+          probe,
+          obstacle,
+          PLAYER_COLLISION_RADIUS,
+        ) >
+          currentDistance + 0.001
+      );
+    };
     const leftClear =
-      !obstacleAtPosition(
-        state.player.x - 5,
-        state.player.y,
-      );
+      escapeProbeIsViable(-5, 0);
     const rightClear =
-      !obstacleAtPosition(
-        state.player.x + 5,
-        state.player.y,
-      );
+      escapeProbeIsViable(5, 0);
+    if (
+      Math.abs(awayX) > 0.35
+    ) {
+      if (awayX < 0 && leftClear) {
+        return "MOVE LEFT TO CLEAR";
+      }
+      if (awayX > 0 && rightClear) {
+        return "MOVE RIGHT TO CLEAR";
+      }
+    }
     if (leftClear && !rightClear) {
       return "MOVE LEFT AROUND";
     }
     if (rightClear && !leftClear) {
       return "MOVE RIGHT AROUND";
+    }
+    if (leftClear && rightClear) {
+      const routeDirection =
+        state.hole.navigationGuide
+          ?.direction;
+      if (
+        routeDirection === "BEAR LEFT"
+      ) {
+        return "MOVE LEFT AROUND";
+      }
+      if (
+        routeDirection === "BEAR RIGHT"
+      ) {
+        return "MOVE RIGHT AROUND";
+      }
+    }
+    if (
+      awayY > 0 &&
+      escapeProbeIsViable(0, 5)
+    ) {
+      return "MOVE FORWARD TO CLEAR";
+    }
+    if (
+      awayY <= 0 &&
+      escapeProbeIsViable(0, -5)
+    ) {
+      return "MOVE BACK TO CLEAR";
     }
     return "MOVE LEFT OR RIGHT AROUND";
   }
@@ -24299,6 +24355,57 @@
     return renderFrameCache.worldContextCue;
   }
 
+  function blockerCalloutPresentation(
+    candidate,
+  ) {
+    const footprint =
+      projectedObstacleFootprint(
+        candidate.obstacle,
+        PLAYER_COLLISION_RADIUS,
+      );
+    const labelX = clamp(
+      candidate.point.x,
+      154,
+      COURSE_MAP_X - 116,
+    );
+    const protectedLabelFloor =
+      COURSE_CAMERA.horizonY + 58;
+    const initialLabelY = clamp(
+      candidate.point.y -
+        footprint.radiusY -
+        12,
+      370,
+      HEIGHT - 176,
+    );
+    const crosshairX = WIDTH * 0.5;
+    const crosshairY = HEIGHT * 0.52;
+    const wouldOverlapCrosshair =
+      Math.abs(
+        labelX - crosshairX,
+      ) < 118 &&
+      Math.abs(
+        initialLabelY - crosshairY,
+      ) < 30;
+    const labelY = wouldOverlapCrosshair
+      ? clamp(
+          initialLabelY - 42,
+          protectedLabelFloor,
+          HEIGHT - 176,
+        )
+      : initialLabelY;
+    return {
+      footprint,
+      labelX,
+      labelY,
+      crosshairAvoided:
+        wouldOverlapCrosshair,
+      crosshairClearance:
+        Math.abs(
+          labelY - crosshairY,
+        ) - 14,
+    };
+  }
+
   function drawNearbyBlockerCallouts() {
     const cue = worldContextCueState();
     if (cue.kind !== "blocker") {
@@ -24314,23 +24421,14 @@
     if (!candidate) {
       return;
     }
-    const footprint =
-      projectedObstacleFootprint(
-        candidate.obstacle,
-        PLAYER_COLLISION_RADIUS,
+    const presentation =
+      blockerCalloutPresentation(
+        candidate,
       );
-    const labelX = clamp(
-      candidate.point.x,
-      154,
-      COURSE_MAP_X - 116,
-    );
-    const labelY = clamp(
-      candidate.point.y -
-        footprint.radiusY -
-        12,
-      370,
-      HEIGHT - 176,
-    );
+    const labelX =
+      presentation.labelX;
+    const labelY =
+      presentation.labelY;
     ctx.save();
     ctx.globalAlpha = clamp(
       1 -
@@ -24380,11 +24478,8 @@
     ctx.restore();
   }
 
-  function drawCollisionContactOverlay() {
-    if (state.hole.blockedTimer <= 0) {
-      return;
-    }
-    const obstacle =
+  function activeCollisionObstacle() {
+    return (
       COURSE_OBSTACLES.find(
         (candidate) =>
           candidate.id ===
@@ -24401,7 +24496,13 @@
           state.hole.blockedRadiusY,
         landmark:
           state.hole.blockedLandmark,
-      };
+      }
+    );
+  }
+
+  function collisionContactPresentation(
+    obstacle,
+  ) {
     const footprint =
       projectedObstacleFootprint(
         obstacle,
@@ -24411,11 +24512,6 @@
       transformCourseScreenPoint(
         footprint.point,
       );
-    const alpha = clamp(
-      state.hole.blockedTimer * 1.65,
-      0,
-      1,
-    );
     const targetX = clamp(
       transformedPoint.x,
       108,
@@ -24426,10 +24522,80 @@
       COURSE_CAMERA.horizonY + 52,
       HEIGHT - 190,
     );
-    const labelY = clamp(
+    const initialLabelY = clamp(
       targetY - 76,
       COURSE_CAMERA.horizonY + 18,
       HEIGHT - 252,
+    );
+    const crosshairX = WIDTH * 0.5;
+    const crosshairY = HEIGHT * 0.52;
+    const panelTop = initialLabelY - 18;
+    const panelBottom = initialLabelY + 36;
+    const wouldOverlapCrosshair =
+      Math.abs(
+        targetX - crosshairX,
+      ) < 134 &&
+      crosshairY + 12 >= panelTop &&
+      crosshairY - 12 <= panelBottom;
+    const labelY = wouldOverlapCrosshair
+      ? clamp(
+          crosshairY - 70,
+          COURSE_CAMERA.horizonY + 18,
+          HEIGHT - 252,
+        )
+      : initialLabelY;
+    return {
+      footprint,
+      transformedPoint,
+      targetX,
+      targetY,
+      labelY,
+      crosshairAvoided:
+        wouldOverlapCrosshair,
+      crosshairClearance:
+        wouldOverlapCrosshair
+          ? crosshairY -
+            (labelY + 36)
+          : Math.max(
+              Math.abs(
+                targetX - crosshairX,
+              ) - 118,
+              Math.min(
+                Math.abs(
+                  crosshairY - panelTop,
+                ),
+                Math.abs(
+                  crosshairY - panelBottom,
+                ),
+              ),
+            ),
+    };
+  }
+
+  function drawCollisionContactOverlay() {
+    if (state.hole.blockedTimer <= 0) {
+      return;
+    }
+    const obstacle =
+      activeCollisionObstacle();
+    const presentation =
+      collisionContactPresentation(
+        obstacle,
+      );
+    const footprint =
+      presentation.footprint;
+    const transformedPoint =
+      presentation.transformedPoint;
+    const targetX =
+      presentation.targetX;
+    const targetY =
+      presentation.targetY;
+    const labelY =
+      presentation.labelY;
+    const alpha = clamp(
+      state.hole.blockedTimer * 1.65,
+      0,
+      1,
     );
     const blockedName = (
       obstacle.landmark ||
@@ -24587,6 +24753,61 @@
     return samples;
   }
 
+  function navigationRibbonEntries() {
+    return navigationRibbonSamples()
+      .map((sample, index) => ({
+        sample,
+        index,
+        point: worldToScreen(
+          sample.x,
+          sample.y,
+        ),
+      }));
+  }
+
+  function visibleNavigationRibbonEntries() {
+    return navigationRibbonEntries()
+      .filter(
+        (entry) =>
+          entry.point.visible &&
+          entry.point.x > -90 &&
+          entry.point.x <
+            WIDTH + 90,
+      );
+  }
+
+  function visibleNavigationRibbonSegments() {
+    const entries =
+      navigationRibbonEntries();
+    const segments = [];
+    for (
+      let index = 0;
+      index < entries.length - 1;
+      index += 1
+    ) {
+      const start = entries[index];
+      const end = entries[index + 1];
+      if (
+        start.point.visible &&
+        end.point.visible &&
+        Math.max(
+          start.point.x,
+          end.point.x,
+        ) > -90 &&
+        Math.min(
+          start.point.x,
+          end.point.x,
+        ) < WIDTH + 90
+      ) {
+        segments.push({
+          start,
+          end,
+        });
+      }
+    }
+    return segments;
+  }
+
   function drawWorldNavigationRibbon() {
     const guide =
       state.hole.navigationGuide;
@@ -24599,23 +24820,53 @@
     ) {
       return;
     }
-    const visible = samples
-      .map((sample, index) => ({
-        sample,
-        index,
-        point: worldToScreen(
-          sample.x,
-          sample.y,
-        ),
-      }))
-      .filter(
-        (entry) =>
-          entry.point.visible &&
-          entry.point.x > -90 &&
-          entry.point.x <
-            WIDTH + 90,
-      );
+    const visible =
+      visibleNavigationRibbonEntries();
+    const segments =
+      visibleNavigationRibbonSegments();
     ctx.save();
+    if (segments.length > 0) {
+      const threadPulse =
+        state.reducedMotion
+          ? 0.34
+          : 0.28 +
+            (
+              Math.sin(
+                state.time * 2.4,
+              ) + 1
+            ) *
+              0.05;
+      ctx.lineCap = "round";
+      ctx.setLineDash([2, 7]);
+      ctx.beginPath();
+      for (
+        let index = 0;
+        index < segments.length;
+        index += 1
+      ) {
+        const segment =
+          segments[index];
+        ctx.moveTo(
+          segment.start.point.x,
+          segment.start.point.y - 2,
+        );
+        ctx.lineTo(
+          segment.end.point.x,
+          segment.end.point.y - 2,
+        );
+      }
+      ctx.strokeStyle =
+        "rgba(2,8,5,0.68)";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.globalAlpha = threadPulse;
+      ctx.strokeStyle =
+        guide.targetColor;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+    }
     for (
       let index = visible.length - 1;
       index >= 0;
@@ -27654,6 +27905,101 @@
     };
   }
 
+  function coverGroundCuePresentation() {
+    if (renderFrameCache.coverGroundCue) {
+      return renderFrameCache.coverGroundCue;
+    }
+    const candidates = [];
+    for (
+      let index = 0;
+      index < COURSE_OBSTACLES.length;
+      index += 1
+    ) {
+      const obstacle =
+        COURSE_OBSTACLES[index];
+      if (
+        !obstacle.sight ||
+        obstacle.draw === false
+      ) {
+        continue;
+      }
+      const coverRadius =
+        obstacle.coverRadius ||
+        obstacle.radius;
+      const distance = worldDistance(
+        state.player,
+        obstacle,
+      );
+      if (distance >= coverRadius + 11) {
+        continue;
+      }
+      const point = worldToScreen(
+        obstacle.x,
+        obstacle.y,
+      );
+      if (
+        !point.visible ||
+        point.x < -90 ||
+        point.x > WIDTH + 90
+      ) {
+        continue;
+      }
+      candidates.push({
+        id: obstacle.id,
+        distance,
+        clearance:
+          distance - coverRadius,
+        occupied:
+          distance < coverRadius,
+      });
+    }
+    const shedDistance = worldDistance(
+      state.player,
+      SHED_EXIT,
+    );
+    if (shedDistance < 46) {
+      const shedPoint = worldToScreen(
+        SHED_EXIT.x,
+        SHED_EXIT.y + 2,
+      );
+      if (
+        shedPoint.visible &&
+        shedPoint.x >= -90 &&
+        shedPoint.x <= WIDTH + 90
+      ) {
+        candidates.push({
+          id: "maintenance-shed",
+          distance: shedDistance,
+          clearance: shedDistance - 35,
+          occupied: shedDistance < 35,
+        });
+      }
+    }
+    candidates.sort(
+      (first, second) =>
+        Number(second.occupied) -
+          Number(first.occupied) ||
+        first.clearance -
+          second.clearance ||
+        first.distance -
+          second.distance,
+    );
+    renderFrameCache.coverGroundCue = {
+      ownerId:
+        candidates[0]?.id || null,
+      nearbyIds: candidates.map(
+        (candidate) => candidate.id,
+      ),
+      suppressedCount: Math.max(
+        0,
+        candidates.length - 1,
+      ),
+      presentation:
+        "one_primary_cover_socket_with_subdued_secondary_grounding",
+    };
+    return renderFrameCache.coverGroundCue;
+  }
+
   function drawGroundSocket(
     obstacle,
     point,
@@ -27694,6 +28040,14 @@
         (obstacle.coverRadius ||
           obstacle.radius) +
           11;
+    const collisionOwnsGroundCue =
+      state.hole.blockedTimer > 0 &&
+      state.hole.blockedObstacle ===
+        obstacle.id;
+    const coverCue =
+      coverGroundCuePresentation();
+    const ownsCoverGroundCue =
+      coverCue.ownerId === obstacle.id;
     const soil = ctx.createRadialGradient(
       point.x,
       point.y,
@@ -27730,25 +28084,29 @@
       Math.PI * 2,
     );
     ctx.fill();
-    ctx.strokeStyle = inCover
-      ? "rgba(126,207,163,0.86)"
-      : closeToCover
-        ? "rgba(169,191,125,0.62)"
-        : "rgba(80,101,54,0.3)";
-    ctx.lineWidth = inCover
-      ? 2.5
-      : 1;
-    ctx.beginPath();
-    ctx.ellipse(
-      point.x,
-      point.y,
-      radiusX * 0.94,
-      radiusY * 0.9,
-      0,
-      0,
-      Math.PI * 2,
-    );
-    ctx.stroke();
+    if (!collisionOwnsGroundCue) {
+      ctx.strokeStyle =
+        ownsCoverGroundCue
+          ? inCover
+            ? "rgba(126,207,163,0.86)"
+            : "rgba(169,191,125,0.62)"
+          : "rgba(80,101,54,0.22)";
+      ctx.lineWidth =
+        ownsCoverGroundCue && inCover
+          ? 2.5
+          : 1;
+      ctx.beginPath();
+      ctx.ellipse(
+        point.x,
+        point.y,
+        radiusX * 0.94,
+        radiusY * 0.9,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    }
     const bladeCount = clamp(
       Math.round(radiusX / 24),
       4,
@@ -27797,7 +28155,11 @@
       );
       ctx.stroke();
     }
-    if (closeToCover) {
+    if (
+      closeToCover &&
+      ownsCoverGroundCue &&
+      !collisionOwnsGroundCue
+    ) {
       drawText(
         inCover
           ? "IN COVER"
@@ -32221,38 +32583,63 @@
         input.x,
         input.y,
       ) > 0.12;
-    const afterglow = moving
-      ? 1
-      : clamp(
-          state.hole.moveHintTimer /
-            0.42,
-          0,
-          1,
-        );
-    const left =
+    const inputLeft =
       input.x < -0.12 ||
       (
         state.hole.moveHintTimer > 0 &&
         state.hole.moveVector.x < 0
       );
-    const right =
+    const inputRight =
       input.x > 0.12 ||
       (
         state.hole.moveHintTimer > 0 &&
         state.hole.moveVector.x > 0
       );
-    const forward =
+    const inputForward =
       input.y > 0.12 ||
       (
         state.hole.moveHintTimer > 0 &&
         state.hole.moveVector.y > 0
       );
-    const back =
+    const inputBack =
       input.y < -0.12 ||
       (
         state.hole.moveHintTimer > 0 &&
         state.hole.moveVector.y < 0
       );
+    const escapeOverride = Boolean(
+      state.hole.blockedTimer > 0 &&
+      state.hole.blockedEscape
+    );
+    const escapeCopy =
+      state.hole.blockedEscape || "";
+    const left = escapeOverride
+      ? escapeCopy.includes("LEFT")
+      : inputLeft;
+    const right = escapeOverride
+      ? escapeCopy.includes("RIGHT")
+      : inputRight;
+    const forward = escapeOverride
+      ? escapeCopy.includes("FORWARD")
+      : inputForward;
+    const back = escapeOverride
+      ? escapeCopy.includes("BACK")
+      : inputBack;
+    const afterglow = escapeOverride
+      ? clamp(
+          state.hole.blockedTimer /
+            0.24,
+          0,
+          1,
+        )
+      : moving
+        ? 1
+        : clamp(
+            state.hole.moveHintTimer /
+              0.42,
+            0,
+            1,
+          );
     const visible = Boolean(
       afterglow > 0.01 &&
       (
@@ -32262,7 +32649,8 @@
         back
       )
     );
-    const label = !moving
+    const label =
+      escapeOverride || !moving
       ? null
       : state.hole.environment?.sand
         ? state.hole.crouched
@@ -32296,17 +32684,26 @@
       displacedByContextCue,
       contextCueKind:
         contextCue.kind,
+      escapeOverride,
+      attemptedDirections: {
+        left: inputLeft,
+        right: inputRight,
+        forward: inputForward,
+        back: inputBack,
+      },
       directions: {
         left,
         right,
         forward,
         back,
       },
-      presentation: moving
-        ? "live_input_with_chevrons"
-        : visible
-          ? "directional_afterglow_only"
-          : "hidden",
+      presentation: escapeOverride
+        ? "collision_escape_override"
+        : moving
+          ? "live_input_with_chevrons"
+          : visible
+            ? "directional_afterglow_only"
+            : "hidden",
     };
   }
 
@@ -32332,7 +32729,12 @@
       ) *
       feedback.afterglow;
     ctx.save();
-    ctx.strokeStyle = `rgba(226,210,148,${pulse})`;
+    ctx.strokeStyle = feedback.escapeOverride
+      ? `rgba(239,126,69,${Math.max(
+          0.72,
+          pulse,
+        )})`
+      : `rgba(226,210,148,${pulse})`;
     ctx.lineWidth =
       1.5 +
       feedback.afterglow * 1.5;
@@ -43464,6 +43866,8 @@
       null;
     renderFrameCache.worldContextCue =
       null;
+    renderFrameCache.coverGroundCue =
+      null;
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     switch (state.mode) {
@@ -48514,6 +48918,8 @@
                   feedback.displacedByContextCue,
                 contextCueKind:
                   feedback.contextCueKind,
+                escapeOverride:
+                  feedback.escapeOverride,
                 afterglow:
                   Number(
                     feedback.afterglow.toFixed(
@@ -48523,10 +48929,15 @@
                 directions: {
                   ...feedback.directions,
                 },
+                attemptedDirections: {
+                  ...feedback.attemptedDirections,
+                },
                 presentation:
                   feedback.presentation,
                 rule:
                   "labels_follow_live_input; chevrons_may_fade_after_release",
+                collisionRule:
+                  "collision_contact_temporarily_replaces_attempted_input_with_the_viable_escape_lane",
               };
             })(),
             secondWind: {
@@ -51255,6 +51666,25 @@
                           2,
                         ),
                     ),
+                  presentation:
+                    (() => {
+                      const contact =
+                        collisionContactPresentation(
+                          activeCollisionObstacle(),
+                        );
+                      return {
+                        mode:
+                          "grounded_contact_card_crosshair_safe",
+                        crosshairAvoided:
+                          contact.crosshairAvoided,
+                        crosshairClearancePixels:
+                          Number(
+                            contact.crosshairClearance.toFixed(
+                              1,
+                            ),
+                          ),
+                      };
+                    })(),
                 }
               : null,
           hudPresentation: {
@@ -51450,7 +51880,10 @@
                         cue.kind ===
                         "practice"
                           ? "binding_aware_bottom_prompt_plus_world_art_and_ground_ring"
-                          : "single_world_label",
+                          : cue.kind ===
+                              "blocker"
+                            ? "single_world_label_crosshair_safe"
+                            : "single_world_label",
                       arbitration:
                         "one_nearest_ambient_context_owner; imminent noise and close practice override blockers",
                     };
@@ -51577,21 +52010,19 @@
                         .target.radius,
                 ),
               visibleReflectors:
-                navigationRibbonSamples()
-                  .filter((sample) => {
-                    const point =
-                      worldToScreen(
-                        sample.x,
-                        sample.y,
-                      );
-                    return (
-                      point.visible &&
-                      point.x > -90 &&
-                      point.x <
-                        WIDTH + 90
-                    );
-                  })
+                visibleNavigationRibbonEntries()
                   .length,
+              routeThread: {
+                visibleSegments:
+                  visibleNavigationRibbonSegments()
+                    .length,
+                presentation:
+                  "restrained_dashed_ground_thread_between_consecutive_reflectors",
+                worldOcclusion:
+                  "drawn_before_physical_entities_so_cover_remains_authoritative",
+                reducedMotion:
+                  "static_thread_without_pulse",
+              },
               visiblePathLanterns:
                 visiblePathLanternCount(),
               fieldPosition:
@@ -52199,6 +52630,36 @@
                       state.hole.environment.nearestCoverDistance.toFixed(2),
                     )
                   : null,
+                coverGroundCue:
+                  (() => {
+                    const cue =
+                      coverGroundCuePresentation();
+                    if (!cue.ownerId) {
+                      return null;
+                    }
+                    const collisionOwnsCue =
+                      state.hole.blockedTimer > 0 &&
+                      state.hole.blockedObstacle ===
+                        cue.ownerId;
+                    return {
+                      obstacleId:
+                        cue.ownerId,
+                      visible:
+                        !collisionOwnsCue,
+                      statePreserved:
+                        true,
+                      deferredBy:
+                        collisionOwnsCue
+                          ? "collision_contact"
+                          : null,
+                      nearbyIds:
+                        cue.nearbyIds,
+                      suppressedNearby:
+                        cue.suppressedCount,
+                      presentation:
+                        cue.presentation,
+                    };
+                  })(),
                 nearestLandmark:
                   state.hole.environment.nearestLandmark?.landmark || null,
                 lightExposure: Number(
