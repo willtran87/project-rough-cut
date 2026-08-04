@@ -713,3 +713,65 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Exact replay passed nine drain, shed, pursuit, cancellation-state, compact, Reduced Motion, expiry, and browser-error assertions. Visual review covered 2560x1600, 1280x720, 844x390, and both exits.
 - The required uninstrumented gameplay route produced no error artifact and retained the ordinary opening hierarchy, averaging 2.52ms canvas work with a 1.50ms final sample across 205 rendered frames.
 - Evidence is recorded in `qa/final-filing-withdrawal-handoff-polish-2026-08-03.md`. Suggested next refinement: human-playtest a natural last-second filing abort and adjust only the 2.5-second rail lifetime if it obscures the resumed route longer than necessary.
+
+## Blocker-callout reticle-clearance polish
+
+- The published opening route exposed `SOLID // GROUNDS CART` directly beneath the always-centered `+` reticle. Because the reticle renders later, it deleted part of `CART` and made the key collision callout look like clipped or corrupt text.
+- Added a bounded reticle exclusion rule to blocker-callout geometry. Only a card whose default panel would overlap the center reticle takes a 340px upper slot; off-center cards retain the established 370px slot, map clearance, world tether, and obstacle anchor.
+- Preserved the reticle, obstacle art, collision footprints, cue arbitration, camera, map, route ribbon, gameplay, and Reduced Camera Motion behavior. The text-state contract now identifies blocker cues as `single_world_label_crosshair_safe`.
+- Focused replay passed nine centered, off-center, high-resolution, compact, Reduced Motion, map-clearance, state-contract, and browser-error assertions. The existing score-handoff context suite retained all eight assertions.
+- Visual review covered 2560x1600, 1280x720, 844x390, Reduced Motion, centered cart contact, and an off-center cart approach.
+- The required uninstrumented opening route reproduced the original cart frame with the full label readable and the reticle intact, no error artifact, and 2.25ms average / 2.10ms last canvas work across 202 rendered frames.
+- Evidence is recorded in `qa/blocker-callout-reticle-clearance-polish-2026-08-03.md`. Suggested next refinement: observe other centered obstacle names during natural play and adjust only the exclusion threshold if a longer label still touches the reticle; preserve off-center stability.
+
+## Collision-contact reticle-clearance polish
+
+- Extended the reticle-safe presentation rule from ambient obstacle approach labels to the authoritative orange impact card. A solid directly ahead could previously place the later-rendered `+` inside the `BLOCKED BY` panel even though an off-center cart contact looked correct.
+- Centralized active collision-obstacle resolution and contact-card geometry. A card that would intersect the reticle now rises into a protected slot with 34px of canvas clearance while its tether still lands on the authored orange collision footprint; off-center impacts retain the original lower placement.
+- Preserved the reticle, collision ellipse, escape direction, obstacle art, map, route guidance, input, collision response, sound, timers, and Reduced Camera Motion behavior.
+- Added synchronized collision presentation diagnostics to `render_game_to_text`: presentation mode, whether the reticle-safe slot was needed, and measured reticle clearance.
+- Focused replay passed seven centered, off-center, high-resolution, compact, Reduced Motion, state-contract, and browser-error assertions. Visual review covered 2560x1600, 1280x720, 844x390, Reduced Motion, and the natural off-center cart impact.
+- The required uninstrumented collision route retained the grounded cart contact, escape instruction, reticle, and map with no error artifact. Canvas work averaged 1.90ms with a 1.70ms final sample across 233 rendered frames.
+- Evidence is recorded in `qa/collision-contact-reticle-clearance-polish-2026-08-03.md`. Suggested next refinement: human-playtest repeated straight-on impacts at different depths and adjust only the protected-slot threshold if the tether feels too long; preserve its physical footprint anchor.
+
+## Collision-recovery guidance polish
+
+- Reproduced a sustained obstacle bump and found the ordinary forward movement chevron plus `RUNNING` label rendering after the collision card, visually contradicting `MOVE LEFT OR RIGHT AROUND` while the player remained stuck.
+- Gave active collision recovery temporary ownership of the center movement cue. The blocked-input chevron and locomotion label now yield to one orange escape chevron that agrees with the `BLOCKED BY` card; normal live-input labels and the 0.42-second afterglow return when contact feedback ends.
+- Replaced the former arbitrary centered choice with a five-meter viability probe against authoritative collision geometry. An off-center contact points outward; a centered contact follows the current objective-side route when both lateral lanes improve clearance; an obstructed side is never recommended.
+- Kept boundary-specific instructions and added a back/forward clearance fallback for cases where neither lateral lane is viable. Collision physics, sliding, obstacle footprints, movement speed, camera motion, pathfinding, and objective selection are unchanged.
+- Extended `render_game_to_text` with visible versus attempted directions, the collision override flag, presentation mode, and a separate collision-rule contract while retaining the established movement-feedback rule unchanged.
+- Focused replay passed 10/10 centered, off-center, left-route, right-route, held-input, high-resolution, compact, Reduced Motion, state-contract, and browser-error assertions. The established movement release suite passed 10/10 after its impossible sand seed was moved from the physical bunker-rake center to open sand; blocker and score-handoff suites retained 9/9 and 8/8.
+- The required uninstrumented collision route produced one left escape instruction and orange chevron, no false locomotion label, no error artifact, and 1.68ms average / 1.40ms last canvas work across 226 rendered frames.
+- Evidence is recorded in `qa/collision-recovery-guidance-polish-2026-08-03.md`. Suggested next refinement: human-playtest repeated impacts within the hedge tunnels and adjust only the five-meter probe if a visually open lane is consistently too narrow; preserve authoritative collision ownership.
+
+## First-person route-thread polish
+
+- Natural collision review showed two teal route reflectors pointing left at different screen positions. They were consecutive samples of one collision-aware path, but without a visual relationship they could read as duplicated instructions.
+- Joined consecutive world-route samples with a restrained dashed ground thread and dark turf underlay. Reflector chevrons, the `FOLLOW LANTERNS` label, objective target, map, path planner, and interaction logic remain unchanged.
+- Kept the thread in the existing ground-navigation draw pass before physical entities. Hedges, carts, and cover therefore occlude it honestly, preserving obstacle scale and preventing guidance from floating through scenery.
+- Reduced Camera Motion retains a static thread at the same contrast while ordinary presentation uses only a subtle slow alpha pulse. No path, input, collision, player, Joe, score, detection, or route-commitment rule changed.
+- Added text-state diagnostics for visible thread segments, presentation mode, world-occlusion ownership, and Reduced Motion behavior while reusing one shared projected-entry calculation for visible reflector counts.
+- Focused replay passed 17/17 collision, clear-ground route, high-resolution, standard, compact, Reduced Motion, route-occlusion, state-contract, and browser-error assertions. The established movement suite retained 10/10; key and valve route-commitment handoffs remained correct; all eight zone-spanning obstructed route samples remained collision-clear and reached their targets without browser errors.
+- The required uninstrumented collision route reported two visible reflectors and two visible thread segments, retained honest grounds-cart occlusion, produced no error artifact, and averaged 1.87ms canvas work with a 1.50ms final sample across 235 rendered frames.
+- Evidence is recorded in `qa/first-person-route-thread-polish-2026-08-03.md`. Suggested next refinement: human-playtest the thread through the most visually dense Dead Green and Release Corridor turns; adjust only contrast or dash spacing if it disappears against those surfaces, never draw it above cover.
+
+## Collision/cover ground-cue handoff polish
+
+- High-resolution impact review exposed two ellipses for the same grounds cart: the authoritative orange collision footprint and the ordinary mint hard-cover socket with an `IN COVER` label. The duplicated geometry made one physical object appear to have two different boundaries.
+- During active contact, the matching cover socket ring and cover label now yield to the orange collision footprint and recovery card. The cart art, contact shadow, soil grounding, concealment, line-of-sight break, and hard-cover state remain active.
+- The mint cover cue returns automatically after the 1.15-second contact feedback retires, and unrelated cover cues remain eligible. Collision response, obstacle geometry, Joe routing, detection, objective routing, camera, controls, and Reduced Camera Motion behavior are unchanged.
+- Extended the text-state contract with `coverGroundCue.visible`, `statePreserved`, and `deferredBy: collision_contact`, making the visual handoff independently auditable without conflating it with gameplay cover state.
+- Focused replay passed 19/19 centered, off-center, high-resolution, standard, compact, Reduced Motion, route-thread, cover-handoff, state-contract, and browser-error assertions. Visual review confirmed one authoritative boundary in 2560x1600, 1280x720, and 844x390 frames while ordinary clear-ground navigation remained intact.
+- The required uninstrumented collision route preserved hard cover on the grounds cart while deferring only its mint ground cue, produced no error artifact, and averaged 1.93ms canvas work with a 1.40ms final sample across 231 rendered frames.
+- Evidence is recorded in `qa/collision-cover-ground-cue-handoff-polish-2026-08-03.md`. Suggested next refinement: human-playtest repeated cover-edge bumps and adjust only the 1.15-second feedback lifetime if the mint cue returns too early or too late; preserve the single-boundary ownership rule.
+
+## Nearby-cover socket hierarchy polish
+
+- A late-route gameplay capture exposed the start hedge and grounds cart rendering simultaneous full-strength cover ellipses and separate `COVER` labels. The physical choices were valid, but the duplicated emphasis competed with the shot-correction rail, Joe dialogue, distraction marker, and first-person route.
+- Ordinary shelter guidance now ranks visible nearby sockets by occupied state, footprint clearance, and distance. One primary shelter owns the full ring and `COVER`/`IN COVER` label; secondary shelters retain their dedicated art, contact shadow, soil grounding, collision, concealment, and line-of-sight behavior with a subdued unlabeled ground stroke.
+- Included the maintenance shed in the same presentation ranking without changing its filing terminal, exit logic, or physical geometry. Collision contact still supersedes a matching primary cover cue under the established single-boundary rule.
+- Extended `render_game_to_text` with the primary cover-cue owner, all nearby candidate IDs, suppressed count, and `one_primary_cover_socket_with_subdued_secondary_grounding` presentation contract.
+- Focused replay passed 12/12 primary-owner, secondary-suppression, high-resolution, standard, compact, Reduced Motion, and browser-error checks. The established collision/route/cover suite retained all 19 assertions.
+- The required uninstrumented late-route capture selected `start-hedge`, retained `service-cart` as a suppressed nearby shelter, produced no error artifact, and averaged 2.02ms canvas work with a 1.90ms final sample across 461 rendered frames.
+- Evidence is recorded in `qa/nearby-cover-socket-hierarchy-polish-2026-08-03.md`. Suggested next refinement: human-playtest a dense shelter transition in Service Maze; adjust only the 11-meter presentation margin if the primary label changes too early, never remove secondary shelter mechanics.
