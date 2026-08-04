@@ -84,6 +84,14 @@
     worldContextCue: null,
     coverGroundCue: null,
   };
+  const COVER_GROUND_RING_HANDOFF_SECONDS =
+    0.16;
+  const coverGroundRingHandoff = {
+    ownerId: null,
+    currentRole: null,
+    previousRole: null,
+    changedAt: 0,
+  };
   const layeredCourseEntities = [];
   let layeredCourseEntityCount = 0;
   const ATLAS_CELL_CACHE_MAX_DIMENSION =
@@ -445,7 +453,9 @@
 
   function freshCourseCameraMotion() {
     return {
+      requestedLateralInput: 0,
       lateralInput: 0,
+      lateralAcceptance: 1,
       offsetX: 0,
       targetOffsetX: 0,
       roll: 0,
@@ -797,6 +807,12 @@
     18;
   const JOE_BARK_HISTORY_LIMIT =
     12;
+  const JOE_BARK_COLLISION_MIN_RESUME_SECONDS =
+    0.72;
+  const JOE_BARK_COLLISION_SETTLE_SECONDS =
+    0.12;
+  const JOE_BARK_COLLISION_RESUME_FADE_SECONDS =
+    0.16;
   const JOE_AWARD_QUEUED_BARK_CONTEXTS =
     new Set([
       "change_request",
@@ -897,6 +913,18 @@
   const COURSE_MIN_Y = 0;
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
+  const COLLISION_CONTACT_FULL_EMPHASIS_SECONDS =
+    0.18;
+  const COLLISION_CONTACT_SETTLE_SECONDS =
+    0.42;
+  const COLLISION_CONTACT_STEADY_EMPHASIS =
+    0.66;
+  const COLLISION_CONTACT_REFRESH_GRACE_SECONDS =
+    0.08;
+  const COLLISION_CONTACT_RELEASE_ECHO_SECONDS =
+    0.36;
+  const COLLISION_CONTACT_TRANSFER_SECONDS =
+    0.12;
   const BALL_MIN_RANGE = 56;
   const BALL_MAX_RANGE = 96;
   const BALL_CHARGE_SECONDS = 0.8;
@@ -1106,6 +1134,8 @@
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
   const SHED_EXIT = { x: -18, y: 710, radius: 16 };
   const DRAIN_EXIT = { x: -78, y: 699, radius: 17 };
+  const INTERACTION_REJECTION_RETREAT_MULTIPLIER =
+    1.35;
   const SHED_FILING_TERMINAL = {
     x: SHED_EXIT.x + 11,
     y: SHED_EXIT.y + 1,
@@ -3139,6 +3169,8 @@
         localStatus: null,
         message: null,
         timer: 0,
+        attemptsSuppressed: 0,
+        retreatRadius: 0,
       },
       message: "South gate locked. Find the shed key — or open the drain valve.",
       messageTimer: 4,
@@ -3154,6 +3186,14 @@
         freshLookBackState(),
       panicMomentum: 0,
       panicTarget: 0,
+      locomotionPhase: 0,
+      lastMovementRequestedDistance: 0,
+      lastMovementAppliedDistance: 0,
+      lastMovementDeltaSeconds: 0,
+      lastMovementRequestedX: 0,
+      lastMovementRequestedY: 0,
+      lastMovementAppliedX: 0,
+      lastMovementAppliedY: 0,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
       moveHintDuration:
@@ -3176,12 +3216,21 @@
       blockedRadius: 0,
       blockedRadiusX: 0,
       blockedRadiusY: 0,
+      blockedContactStartedAt:
+        -Infinity,
+      blockedContactRefreshedAt:
+        -Infinity,
+      blockedTransferFrom: null,
+      blockedTransferTimer: 0,
       blockedCueCooldown: 0,
       navigationGuide:
         freshNavigationGuide(),
       previousJoeMode: "patrol",
       joeBark: null,
       joeBarkTimer: 0,
+      joeBarkDeferredByCollision: false,
+      joeBarkCollisionSettleTimer: 0,
+      joeBarkResumeFadeTimer: 0,
       joeBarkSerial: 0,
       joeBarkContext: null,
       joeBarkHistory: [],
@@ -7797,6 +7846,8 @@
     baselineY,
     baseSize = 16,
     color = "#f2e8c5",
+    frameColor = "rgba(132,154,111,0.72)",
+    minimumFrameOpacity = 0,
   ) {
     const size = Math.round(baseSize * state.subtitleSize);
     ctx.save();
@@ -7805,15 +7856,26 @@
     const height = size + 20;
     ctx.fillStyle = `rgba(2,8,4,${state.captionBackground * 0.92})`;
     ctx.fillRect(centerX - width * 0.5, baselineY - size - 11, width, height);
-    if (state.captionBackground > 0.05) {
+    if (
+      state.captionBackground > 0.05 ||
+      minimumFrameOpacity > 0
+    ) {
+      const inheritedAlpha =
+        ctx.globalAlpha;
+      if (state.captionBackground <= 0.05) {
+        ctx.globalAlpha =
+          inheritedAlpha *
+          minimumFrameOpacity;
+      }
       strokeRect(
         centerX - width * 0.5,
         baselineY - size - 11,
         width,
         height,
-        "rgba(132,154,111,0.72)",
+        frameColor,
         1,
       );
+      ctx.globalAlpha = inheritedAlpha;
     }
     drawText(text, centerX, baselineY, size, color, "center", true);
     ctx.restore();
@@ -9099,16 +9161,35 @@
       }
     }
     ctx.fillStyle = "rgba(15,30,17,0.86)";
-    ctx.fillRect(676, 480, 420, 57);
-    strokeRect(676, 480, 420, 57, "#4e6442", 1);
-    drawText("CAPTION PREVIEW", 688, 497, 9, "#819277", "left", true);
+    ctx.fillRect(676, 480, 420, 60);
+    strokeRect(676, 480, 420, 60, "#4e6442", 1);
+    drawText("CAPTION PREVIEW", 688, 494, 9, "#819277", "left", true);
+    drawText(
+      state.threatCaptions
+        ? "MOWER // AMBER"
+        : "DISABLED",
+      1084,
+      494,
+      9,
+      state.threatCaptions
+        ? threatCaptionTheme("mower")
+            .textColor
+        : "#788274",
+      "right",
+      true,
+    );
     if (state.threatCaptions) {
       drawSubtitleCard(
         "[ JOE APPROACHING — RIGHT ]",
         886,
         526,
         12,
-        "#e6b06d",
+        threatCaptionTheme("mower")
+          .textColor,
+        threatCaptionTheme("mower")
+          .frameColor,
+        threatCaptionTheme("mower")
+          .minimumFrameOpacity,
       );
     } else {
       drawText(
@@ -9509,6 +9590,8 @@
         localStatus: null,
         message: null,
         timer: 0,
+        attemptsSuppressed: 0,
+        retreatRadius: 0,
       },
       message: overtime
         ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
@@ -9526,6 +9609,14 @@
         freshLookBackState(),
       panicMomentum: 0,
       panicTarget: 0,
+      locomotionPhase: 0,
+      lastMovementRequestedDistance: 0,
+      lastMovementAppliedDistance: 0,
+      lastMovementDeltaSeconds: 0,
+      lastMovementRequestedX: 0,
+      lastMovementRequestedY: 0,
+      lastMovementAppliedX: 0,
+      lastMovementAppliedY: 0,
       moveVector: { x: 0, y: 0 },
       moveHintTimer: 0,
       moveHintDuration:
@@ -9548,12 +9639,21 @@
       blockedRadius: 0,
       blockedRadiusX: 0,
       blockedRadiusY: 0,
+      blockedContactStartedAt:
+        -Infinity,
+      blockedContactRefreshedAt:
+        -Infinity,
+      blockedTransferFrom: null,
+      blockedTransferTimer: 0,
       blockedCueCooldown: 0,
       navigationGuide:
         freshNavigationGuide(),
       previousJoeMode: "patrol",
       joeBark: null,
       joeBarkTimer: 0,
+      joeBarkDeferredByCollision: false,
+      joeBarkCollisionSettleTimer: 0,
+      joeBarkResumeFadeTimer: 0,
       joeBarkSerial: 0,
       joeBarkContext: null,
       joeBarkHistory: [],
@@ -13227,16 +13327,29 @@
 
   function updateCourseCameraMotion(
     dt,
-    lateralInput,
+    requestedLateralInput,
+    acceptedLateralInput,
     sprinting,
   ) {
     const motion =
       courseCameraMotion();
-    const input =
-      Math.abs(lateralInput) < 0.04
+    const requestedInput =
+      Math.abs(
+        requestedLateralInput,
+      ) < 0.04
         ? 0
         : clamp(
-            lateralInput,
+            requestedLateralInput,
+            -1,
+            1,
+          );
+    const input =
+      Math.abs(
+        acceptedLateralInput,
+      ) < 0.04
+        ? 0
+        : clamp(
+            acceptedLateralInput,
             -1,
             1,
           );
@@ -13255,8 +13368,21 @@
     if (state.reducedMotion) {
       amplitude *= 0.34;
     }
+    motion.requestedLateralInput =
+      requestedInput;
     motion.lateralInput =
       input;
+    motion.lateralAcceptance =
+      requestedInput === 0
+        ? 1
+        : clamp(
+            Math.abs(
+              input /
+                requestedInput,
+            ),
+            0,
+            1,
+          );
     motion.targetOffsetX =
       -input *
       amplitude;
@@ -13470,6 +13596,23 @@
       );
   }
 
+  function strideRadiansPerMeter(
+    sprinting,
+    crouched,
+    secondWind,
+    panic,
+  ) {
+    if (crouched) {
+      return 0.407;
+    }
+    if (sprinting) {
+      return secondWind
+        ? 0.34 + panic * 0.026
+        : 0.334 + panic * 0.039;
+    }
+    return 0.371 + panic * 0.104;
+  }
+
   function courseLocomotionState() {
     if (renderFrameCache.locomotion) {
       return renderFrameCache.locomotion;
@@ -13509,39 +13652,59 @@
         ? 1 -
           footingZone.speedMultiplier
         : 0;
-    const footingCadenceMultiplier =
-      footingKind === "mud"
-        ? 0.84
-        : footingKind === "thatch"
-          ? 0.9
-          : footingKind === "roots"
-            ? 0.93
-            : 1;
-    const cadence = (
-      sprinting
-      ? secondWind
-        ? 14.2 +
-          panic * 1.1
-        : 12.7 +
-          panic * 1.5
-      : crouched
-        ? 6.1
-        : 8.9 +
-          panic * 2.5
-    ) * footingCadenceMultiplier;
-    const phase =
-      state.hole.elapsed * cadence;
-    const baseBob = sprinting
-      ? 5.4 +
-        panic * 1.55
-      : crouched
-        ? 1.25
-        : moving
-          ? 3.15 +
-            panic * 1.35
-          : 0.65;
-    const strideImpact =
+    const requestedDistance =
+      state.hole
+        .lastMovementRequestedDistance ||
+      0;
+    const appliedDistance =
+      state.hole
+        .lastMovementAppliedDistance ||
+      0;
+    const movementDeltaSeconds =
+      state.hole
+        .lastMovementDeltaSeconds ||
+      0;
+    const translationRatio =
       moving &&
+      requestedDistance > 0.0001
+        ? clamp(
+            appliedDistance /
+              requestedDistance,
+            0,
+            1,
+          )
+        : 0;
+    const translating =
+      moving &&
+      appliedDistance > 0.0001;
+    const strideRate =
+      strideRadiansPerMeter(
+        sprinting,
+        crouched,
+        secondWind,
+        panic,
+      );
+    const cadence =
+      translating &&
+      movementDeltaSeconds > 0
+        ? appliedDistance /
+          movementDeltaSeconds *
+          strideRate
+        : 0;
+    const phase =
+      state.hole.locomotionPhase ||
+      0;
+    const baseBob = translating
+      ? sprinting
+        ? 5.4 +
+          panic * 1.55
+        : crouched
+          ? 1.25
+          : 3.15 +
+            panic * 1.35
+      : 0;
+    const strideImpact =
+      translating &&
       !crouched &&
       !state.reducedMotion
         ? Math.pow(
@@ -13557,7 +13720,7 @@
         : 0;
     const footingLurch =
       state.reducedMotion ||
-      !moving ||
+      !translating ||
       !footingKind
         ? 0
         : footingKind === "mud"
@@ -13596,6 +13759,7 @@
           footingLurch;
     renderFrameCache.locomotion = {
       moving,
+      translating,
       sprinting,
       crouched,
       secondWind,
@@ -13604,11 +13768,17 @@
       panic,
       strideImpact,
       cadence,
+      strideRate,
+      requestedDistance,
+      appliedDistance,
+      translationRatio,
+      phaseSource:
+        "applied_world_distance",
       footingKind,
       footingDrag,
       roll:
         state.reducedMotion ||
-        !moving ||
+        !translating ||
         crouched
           ? 0
           : Math.sin(
@@ -13633,22 +13803,23 @@
                   footingDrag
                 : 0
             ),
-      intensity: sprinting
-        ? secondWind
-          ? 1.2 +
-            panic * 0.12
-          : 0.96 +
-            panic * 0.22
-        : moving
+      intensity: translating
+        ? sprinting
           ? secondWind
+            ? 1.2 +
+              panic * 0.12
+            : 0.96 +
+              panic * 0.22
+          : secondWind
             ? 0.78 +
               panic * 0.16
             : 0.52 +
               panic * 0.3
-          : 0,
+        : 0,
       zoom: state.reducedMotion
         ? 0
-        : sprinting
+        : translating &&
+            sprinting
           ? 0.012 +
             panic * 0.006 +
             (
@@ -13662,7 +13833,7 @@
                 ? 0.004
                 : 0
             )
-          : moving &&
+          : translating &&
               !crouched
             ? 0.0035 +
               panic * 0.0045 +
@@ -13691,7 +13862,7 @@
     locomotion,
   ) {
     if (
-      !locomotion.moving ||
+      !locomotion.translating ||
       state.reducedMotion
     ) {
       return 0;
@@ -13830,7 +14001,7 @@
     const locomotion =
       courseLocomotionState();
     if (
-      !locomotion.moving ||
+      !locomotion.translating ||
       state.reducedMotion
     ) {
       return;
@@ -13878,15 +14049,16 @@
         side * lane;
       const phase =
         (
-          state.hole.elapsed *
+          state.hole
+            .travelDistance *
             (
               locomotion.sprinting
-                ? 480 +
+                ? 13 +
                   locomotion.panic *
-                    140
-                : 250 +
+                    3.1
+                : 10.4 +
                   locomotion.panic *
-                    120
+                    2.4
             ) +
           index * 71
         ) %
@@ -13950,11 +14122,12 @@
             edge * 220;
       const travel =
         (
-          state.hole.elapsed *
+          state.hole
+            .travelDistance *
             (
               locomotion.sprinting
-                ? 720
-                : 430
+                ? 19
+                : 17.8
             ) +
           index * 89
         ) %
@@ -13985,6 +14158,78 @@
         y + length,
       );
       ctx.stroke();
+    }
+    const rushBandCount =
+      effectQualityScale() >= 0.85
+        ? 5
+        : 3;
+    ctx.strokeStyle =
+      `rgba(188,205,151,${
+        0.07 +
+        locomotion.panic * 0.055
+      })`;
+    ctx.lineWidth =
+      locomotion.sprinting
+        ? 1.65
+        : 1.15;
+    for (
+      let index = 0;
+      index < rushBandCount;
+      index += 1
+    ) {
+      const depth =
+        (
+          state.hole
+            .travelDistance *
+            (
+              locomotion.sprinting
+                ? 0.048
+                : 0.036
+            ) +
+          index /
+            rushBandCount
+        ) % 1;
+      const easedDepth =
+        depth * depth;
+      const bandY = lerp(
+        COURSE_CAMERA.horizonY +
+          154,
+        HEIGHT + 20,
+        easedDepth,
+      );
+      const halfSpan = lerp(
+        112,
+        WIDTH * 0.56,
+        easedDepth,
+      );
+      const bandLength = lerp(
+        20,
+        104,
+        easedDepth,
+      ) *
+        locomotion.intensity;
+      for (
+        let side = -1;
+        side <= 1;
+        side += 2
+      ) {
+        const innerX =
+          WIDTH * 0.5 +
+          side * halfSpan;
+        ctx.beginPath();
+        ctx.moveTo(
+          innerX,
+          bandY,
+        );
+        ctx.lineTo(
+          innerX +
+            side * bandLength,
+          bandY +
+            3 +
+            easedDepth * 11,
+        );
+        ctx.stroke();
+      }
     }
     if (
       !locomotion.crouched &&
@@ -15174,11 +15419,22 @@
                 .mode === "edge"
             : interactablePresentation
                 .centerSafetyClearance <= 0;
+        const usesWorldMarkerPanel =
+          !supportsCenteredPresentation ||
+          usesEdgeMarker;
+        const approachReadiness =
+          interactionApproachReadiness(
+            definition.target,
+            distance,
+          );
         const markerPresentation =
-          usesEdgeMarker
-            ? worldMarkerPlacement(
+          usesWorldMarkerPanel
+            ? worldMarkerPanelPresentation(
                 point,
                 definition.target.radius,
+                definition.id,
+                inReach,
+                approachReadiness,
               )
             : null;
         const markerLabelPresentation =
@@ -15194,11 +15450,6 @@
           worldMarkerGuidancePresentation(
             definition.id,
             inReach,
-          );
-        const approachReadiness =
-          interactionApproachReadiness(
-            definition.target,
-            distance,
           );
         return {
           id: definition.id,
@@ -15310,11 +15561,60 @@
                 }
               : null,
           edgeMarker:
+            usesEdgeMarker &&
             markerPresentation
               ? {
                   ...markerPresentation,
                   labelPresentation:
                     markerLabelPresentation,
+                }
+              : null,
+          worldMarkerPanel:
+            markerPresentation
+              ? {
+                  x: Number(
+                    markerPresentation.x.toFixed(
+                      2,
+                    ),
+                  ),
+                  y: Number(
+                    markerPresentation.y.toFixed(
+                      2,
+                    ),
+                  ),
+                  rawY: Number(
+                    markerPresentation.rawY.toFixed(
+                      2,
+                    ),
+                  ),
+                  markerScale:
+                    markerPresentation.markerScale,
+                  panelHeight:
+                    markerPresentation.panelHeight,
+                  panelTop:
+                    markerPresentation.panelTop,
+                  panelBottom:
+                    markerPresentation.panelBottom,
+                  liftedBy:
+                    markerPresentation.liftedBy,
+                  targetY:
+                    markerPresentation.targetY,
+                  liftProgress:
+                    markerPresentation.liftProgress,
+                  approachReadiness:
+                    markerPresentation.approachReadiness,
+                  bottomRailOwner:
+                    markerPresentation.bottomRailOwner,
+                  reserveReason:
+                    markerPresentation.reserveReason,
+                  bottomRailTop:
+                    markerPresentation.bottomRailTop,
+                  safePanelBottom:
+                    markerPresentation.safePanelBottom,
+                  localTextInsideFrame:
+                    markerPresentation.localTextInsideFrame,
+                  clearsBottomRail:
+                    markerPresentation.clearsBottomRail,
                 }
               : null,
           guidancePresentation,
@@ -15353,8 +15653,43 @@
     return visible;
   }
 
+  /**
+   * Starts or refreshes the presentation state for an authoritative player
+   * collision without changing collision resolution itself.
+   */
+  function updateCollisionContactPresentationState(
+    blocker,
+    newContact,
+  ) {
+    const hole = state.hole;
+    if (newContact) {
+      if (
+        !state.reducedMotion &&
+        hole.blockedObstacle &&
+        hole.blockedObstacle !== blocker.id &&
+        collisionContactActivelyRefreshed()
+      ) {
+        hole.blockedTransferFrom = {
+          ...activeCollisionObstacle(),
+        };
+        hole.blockedTransferTimer =
+          COLLISION_CONTACT_TRANSFER_SECONDS;
+      }
+      else if (state.reducedMotion) {
+        hole.blockedTransferFrom = null;
+        hole.blockedTransferTimer = 0;
+      }
+      hole.blockedContactStartedAt =
+        state.time;
+    }
+    hole.blockedContactRefreshedAt =
+      state.time;
+  }
+
   function movePlayerBy(deltaX, deltaY) {
     const player = state.player;
+    const initialX = player.x;
+    const initialY = player.y;
     const requestedDistance = Math.hypot(deltaX, deltaY);
     const steps = Math.max(1, Math.ceil(requestedDistance / 1.15));
     const stepX = deltaX / steps;
@@ -15499,6 +15834,10 @@
         state.hole.blockedObstacle !==
           initialBlocker.id ||
         state.hole.blockedTimer <= 0.12;
+      updateCollisionContactPresentationState(
+        initialBlocker,
+        newContact,
+      );
       state.hole.blockedTimer = 1.15;
       state.hole.blockedObstacle = initialBlocker.id;
       state.hole.blockedDirection =
@@ -15539,15 +15878,99 @@
       }
     }
     state.hole.travelDistance += appliedDistance;
+    state.hole.lastMovementRequestedDistance =
+      requestedDistance;
+    state.hole.lastMovementAppliedDistance =
+      appliedDistance;
+    state.hole.lastMovementRequestedX =
+      deltaX;
+    state.hole.lastMovementRequestedY =
+      deltaY;
+    state.hole.lastMovementAppliedX =
+      player.x - initialX;
+    state.hole.lastMovementAppliedY =
+      player.y - initialY;
     state.hole.minimumPlayerClearance = Math.min(
       state.hole.minimumPlayerClearance,
       nearestObstacleClearance(player),
     );
+    return appliedDistance;
   }
 
   function setHoleMessage(message, duration = 2.6) {
     state.hole.message = message;
     state.hole.messageTimer = duration;
+  }
+
+  function interactionRejectionTarget(
+    targetId,
+  ) {
+    if (targetId === "maintenance-shed") {
+      return SHED_EXIT;
+    }
+    if (targetId === "drain-exit") {
+      return DRAIN_EXIT;
+    }
+    return null;
+  }
+
+  function clearInteractionRejection(
+    clearMatchingMessage = false,
+  ) {
+    const rejection =
+      state.hole.interactionRejection;
+    if (
+      !rejection.targetId &&
+      !rejection.message &&
+      rejection.timer <= 0 &&
+      rejection.attemptsSuppressed === 0 &&
+      rejection.retreatRadius === 0
+    ) {
+      return;
+    }
+    if (
+      clearMatchingMessage &&
+      rejection.message &&
+      state.hole.message ===
+        rejection.message
+    ) {
+      state.hole.message = "";
+      state.hole.messageTimer = 0;
+    }
+    state.hole.interactionRejection = {
+      targetId: null,
+      localStatus: null,
+      message: null,
+      timer: 0,
+      attemptsSuppressed: 0,
+      retreatRadius: 0,
+    };
+  }
+
+  /**
+   * Releases grounded blocked feedback once the player has clearly retreated
+   * from its source. The padded radius prevents boundary jitter while making
+   * an intentional escape immediately restore the live chase presentation.
+   */
+  function releaseInteractionRejectionOnRetreat() {
+    const rejection =
+      activeInteractionRejection();
+    if (!rejection) {
+      return;
+    }
+    const target =
+      interactionRejectionTarget(
+        rejection.targetId,
+      );
+    if (
+      target &&
+      worldDistance(
+        state.player,
+        target,
+      ) > rejection.retreatRadius
+    ) {
+      clearInteractionRejection(true);
+    }
   }
 
   /**
@@ -15560,13 +15983,28 @@
     message,
     duration = 2.35,
   ) {
+    const active =
+      activeInteractionRejection(targetId);
+    if (active) {
+      active.attemptsSuppressed += 1;
+      return false;
+    }
+    const target =
+      interactionRejectionTarget(
+        targetId,
+      );
     state.hole.interactionRejection = {
       targetId,
       localStatus,
       message,
       timer: duration,
+      attemptsSuppressed: 0,
+      retreatRadius:
+        (target?.radius || 0) *
+        INTERACTION_REJECTION_RETREAT_MULTIPLIER,
     };
     setHoleMessage(message, duration);
+    return true;
   }
 
   /**
@@ -15578,12 +16016,7 @@
     refreshNavigation = false,
   ) {
     state.hole.prompt = "";
-    state.hole.interactionRejection = {
-      targetId: null,
-      localStatus: null,
-      message: null,
-      timer: 0,
-    };
+    clearInteractionRejection(true);
     if (refreshNavigation) {
       updatePlayerNavigationGuide(0);
       miniMapRenderedAt = -Infinity;
@@ -15915,16 +16348,135 @@
     return null;
   }
 
+  /**
+   * Gives threat captions one shared layout contract. During the short mint
+   * collision-release echo, the most urgent threat keeps its warning but moves
+   * to a single measured lane above the grounded release card.
+   */
+  function threatCaptionPresentation(
+    focus = activeHudPresentationFocus(),
+  ) {
+    const suppressed =
+      hudFocusSuppressesThreatCaptions(
+        focus,
+      );
+    const collisionRelease =
+      collisionReleaseEchoActive();
+    let firstBaselineY =
+      focus === "field" ? 494 : 504;
+    let collisionReleaseGutter = null;
+    if (collisionRelease) {
+      const collision =
+        collisionContactPresentation(
+          activeCollisionObstacle(),
+        );
+      const releasePanelTop =
+        collision.labelY - 18;
+      firstBaselineY = Math.min(
+        firstBaselineY,
+        releasePanelTop - 21,
+      );
+      collisionReleaseGutter =
+        releasePanelTop -
+        (firstBaselineY + 9);
+    }
+    return {
+      maximumCards:
+        suppressed
+          ? 0
+          : collisionRelease
+            ? 1
+            : focus === "field"
+              ? 2
+              : 1,
+      centerX: WIDTH * 0.5,
+      firstBaselineY,
+      rowGap: 38,
+      layout:
+        suppressed
+          ? "suppressed_by_hud_focus"
+          : collisionRelease
+            ? "single_card_above_collision_release"
+            : focus === "field"
+              ? "field_stack"
+              : "focused_single_card",
+      selectionPolicy:
+        collisionRelease
+          ? "severity_then_recency"
+          : "recency",
+      collisionReleaseGutter,
+    };
+  }
+
+  /**
+   * Selects one warning without reordering the live caption queue. Newer copy
+   * wins ties, but a danger read cannot be displaced by later ambient flavor.
+   */
+  function mostUrgentThreatCaption(captions) {
+    const categoryPriority = {
+      world: 0,
+      mower: 1,
+      danger: 2,
+    };
+    let selected = null;
+    let selectedPriority = -1;
+    for (
+      let index = captions.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      const caption = captions[index];
+      const priority =
+        categoryPriority[caption.category] ?? 0;
+      if (priority > selectedPriority) {
+        selected = caption;
+        selectedPriority = priority;
+      }
+    }
+    return selected;
+  }
+
+  /**
+   * Keeps caption text and framing on the same semantic threat palette.
+   */
+  function threatCaptionTheme(category) {
+    if (category === "danger") {
+      return {
+        textColor: "#f09a69",
+        frameColor:
+          "rgba(240,116,65,0.86)",
+        frameTheme: "danger_orange",
+        minimumFrameOpacity: 0.42,
+      };
+    }
+    if (category === "mower") {
+      return {
+        textColor: "#e6b06d",
+        frameColor:
+          "rgba(214,158,76,0.78)",
+        frameTheme: "mower_amber",
+        minimumFrameOpacity: 0.42,
+      };
+    }
+    return {
+      textColor: "#c9d8bd",
+      frameColor:
+        "rgba(132,154,111,0.72)",
+      frameTheme: "world_sage",
+      minimumFrameOpacity: 0.42,
+    };
+  }
+
   function visibleThreatCaptions(
     focus = activeHudPresentationFocus(),
   ) {
+    const presentation =
+      threatCaptionPresentation(focus);
     if (
       !state.threatCaptions ||
       !state.hole.captions?.length ||
       state.hole.tutorialVisible ||
-      hudFocusSuppressesThreatCaptions(
-        focus,
-      )
+      presentation.maximumCards === 0
     ) {
       return [];
     }
@@ -15936,8 +16488,16 @@
             caption !== merged,
         )
       : state.hole.captions;
+    if (
+      presentation.layout ===
+      "single_card_above_collision_release"
+    ) {
+      const selected =
+        mostUrgentThreatCaption(captions);
+      return selected ? [selected] : [];
+    }
     return captions.slice(
-      focus === "field" ? -2 : -1,
+      -presentation.maximumCards,
     );
   }
 
@@ -15951,13 +16511,13 @@
     }
     const focus =
       activeHudPresentationFocus();
+    const presentation =
+      threatCaptionPresentation(focus);
     const captions =
       visibleThreatCaptions(focus);
     if (!captions.length) {
       return;
     }
-    const focused =
-      focus !== "field";
     for (let index = 0; index < captions.length; index += 1) {
       const caption = captions[index];
       const remaining = caption.duration - caption.age;
@@ -15966,27 +16526,23 @@
         0,
         1,
       );
-      const color =
-        caption.category === "danger"
-          ? "#f09a69"
-          : caption.category === "mower"
-            ? "#e6b06d"
-            : "#c9d8bd";
+      const theme =
+        threatCaptionTheme(
+          caption.category,
+        );
       const direction = caption.direction
         ? ` — ${caption.direction}`
         : "";
       ctx.globalAlpha = fade;
       drawSubtitleCard(
         `[ ${caption.text}${direction} ]`,
-        WIDTH * 0.5,
-        (
-          focused
-            ? 504
-            : 494
-        ) +
-          index * 38,
+        presentation.centerX,
+        presentation.firstBaselineY +
+          index * presentation.rowGap,
         13,
-        color,
+        theme.textColor,
+        theme.frameColor,
+        theme.minimumFrameOpacity,
       );
       ctx.globalAlpha = 1;
     }
@@ -16010,8 +16566,19 @@
       0,
       1,
     );
+    const resumeFade =
+      hole.joeBarkResumeFadeTimer > 0
+        ? clamp(
+            1 -
+              hole.joeBarkResumeFadeTimer /
+                JOE_BARK_COLLISION_RESUME_FADE_SECONDS,
+            0,
+            1,
+          )
+        : 1;
     ctx.save();
-    ctx.globalAlpha = fade;
+    ctx.globalAlpha =
+      fade * resumeFade;
     drawSubtitleCard(
       `JOE // "${hole.joeBark}"`,
       WIDTH * 0.5,
@@ -16890,6 +17457,11 @@
           ? 3.2
           : 2.65
       ) + awardQueueSeconds;
+    state.hole.joeBarkDeferredByCollision =
+      false;
+    state.hole.joeBarkCollisionSettleTimer =
+      0;
+    state.hole.joeBarkResumeFadeTimer = 0;
   }
 
   function selectJoeCaptureDialogue() {
@@ -17519,8 +18091,31 @@
       state.subtitles &&
       state.hole?.joeBark &&
       state.hole.joeBarkTimer > 0 &&
+      !joeBarkCollisionDeferralActive() &&
       !state.hole.tutorialVisible &&
       state.hole.messageTimer <= 0.75,
+    );
+  }
+
+  /**
+   * Keeps optional dialogue out of the local correction lane through active
+   * rejection and its short visible release echo, not collision memory.
+   */
+  function collisionContactOwnsDialogueLane() {
+    return Boolean(
+      collisionContactActivelyRefreshed() ||
+      collisionReleaseEchoActive(),
+    );
+  }
+
+  /**
+   * Keeps a preserved bark quiet until collision contact has stayed clear
+   * long enough that repeated glancing impacts cannot make it chatter.
+   */
+  function joeBarkCollisionDeferralActive() {
+    return Boolean(
+      collisionContactOwnsDialogueLane() ||
+      state.hole?.joeBarkDeferredByCollision,
     );
   }
 
@@ -17530,6 +18125,7 @@
       !state.subtitles ||
       !hole?.joeBark ||
       hole.joeBarkTimer <= 0 ||
+      joeBarkCollisionDeferralActive() ||
       hole.tutorialVisible ||
       hole.riskAward ||
       hole.deliveryAward ||
@@ -18312,13 +18908,16 @@
       worldDistance(state.player, shed) <
       shed.radius
     ) {
-      presentInteractionRejection(
-        "maintenance-shed",
-        "LOCKED",
-        `SHED LOCKED — ${activeRunVariant().keyHint}.`,
-      );
+      const presented =
+        presentInteractionRejection(
+          "maintenance-shed",
+          "LOCKED",
+          `SHED LOCKED — ${activeRunVariant().keyHint}.`,
+        );
       state.hole.phase = "find_key";
-      playDoorRattle();
+      if (presented) {
+        playDoorRattle();
+      }
       return;
     }
 
@@ -18326,12 +18925,15 @@
       worldDistance(state.player, drain) <
       drain.radius
     ) {
-      presentInteractionRejection(
-        "drain-exit",
-        "SEALED",
-        "DRAIN SEALED — open the drain valve to release pressure.",
-      );
-      playDoorRattle();
+      const presented =
+        presentInteractionRejection(
+          "drain-exit",
+          "SEALED",
+          "DRAIN SEALED — open the drain valve to release pressure.",
+        );
+      if (presented) {
+        playDoorRattle();
+      }
     }
   }
 
@@ -25285,6 +25887,134 @@
     };
   }
 
+  /**
+   * Measures the complete world-marker card, including its local readiness
+   * row, and raises that card above a bottom action or rejection rail. This
+   * keeps close-perspective status text inside its frame and out of the rail.
+   */
+  function worldMarkerPanelPresentation(
+    point,
+    interactionRadius = null,
+    targetId = null,
+    inReach = false,
+    approachReadiness = inReach ? 1 : 0,
+  ) {
+    const placement =
+      worldMarkerPlacement(
+        point,
+        interactionRadius,
+      );
+    const markerScale = clamp(
+      point.scale,
+      0.58,
+      1.35,
+    );
+    const reachPresentation =
+      inReach
+        ? worldMarkerReachPresentation(
+            targetId,
+          )
+        : null;
+    const panelHeight = inReach
+      ? 40 * markerScale + 8
+      : 34;
+    const bottomRailOwner =
+      reachPresentation?.bindingOwner ===
+        "bottom_action_rail" ||
+      reachPresentation?.bindingOwner ===
+        "bottom_rejection_rail"
+        ? reachPresentation.bindingOwner
+        : null;
+    const approachLiftProgress =
+      smoothstep(
+        (
+          approachReadiness - 0.78
+        ) /
+          0.22,
+      );
+    const reserveReason =
+      bottomRailOwner ||
+      approachLiftProgress > 0
+        ? bottomRailOwner ||
+          "approach_preclear"
+        : null;
+    const bottomRailTop =
+      reserveReason
+        ? HEIGHT - 112
+        : null;
+    const safePanelBottom =
+      bottomRailTop === null
+        ? null
+        : bottomRailTop -
+          FIELD_MARKER_SAFE_GUTTER;
+    const rawY = placement.y;
+    const clearancePanelHeight =
+      40 * markerScale + 8;
+    const maximumY =
+      safePanelBottom === null
+        ? rawY
+        : safePanelBottom -
+          clearancePanelHeight +
+          50 * markerScale;
+    const targetY = Math.min(
+      rawY,
+      maximumY,
+    );
+    const liftProgress =
+      bottomRailOwner
+        ? 1
+        : approachLiftProgress;
+    const y = lerp(
+      rawY,
+      targetY,
+      liftProgress,
+    );
+    const panelTop =
+      y - 50 * markerScale;
+    const panelBottom =
+      panelTop + panelHeight;
+    return {
+      ...placement,
+      y,
+      rawY,
+      markerScale,
+      panelHeight: Number(
+        panelHeight.toFixed(2),
+      ),
+      panelTop: Number(
+        panelTop.toFixed(2),
+      ),
+      panelBottom: Number(
+        panelBottom.toFixed(2),
+      ),
+      liftedBy: Number(
+        (rawY - y).toFixed(2),
+      ),
+      targetY: Number(
+        targetY.toFixed(2),
+      ),
+      liftProgress: Number(
+        liftProgress.toFixed(3),
+      ),
+      approachReadiness: Number(
+        approachReadiness.toFixed(3),
+      ),
+      bottomRailOwner,
+      reserveReason,
+      bottomRailTop,
+      safePanelBottom,
+      localTextInsideFrame:
+        !inReach ||
+        y - 10 * markerScale + 7 <=
+          panelBottom,
+      clearsBottomRail:
+        bottomRailTop === null ||
+        panelBottom <=
+          safePanelBottom + 0.01,
+      reachPresentation,
+    };
+  }
+
   function drawWorldMarker(
     worldX,
     worldY,
@@ -25300,13 +26030,6 @@
     if (!point.visible || point.x < -180 || point.x > WIDTH + 180) {
       return;
     }
-    const placement =
-      worldMarkerPlacement(
-        point,
-        interactionRadius,
-      );
-    const markerX = placement.x;
-    const markerY = placement.y;
     const distance = worldDistance(
       state.player,
       { x: worldX, y: worldY },
@@ -25314,6 +26037,28 @@
     const inReach =
       interactionRadius !== null &&
       distance < interactionRadius;
+    const approachReadiness =
+      interactionRadius === null
+        ? 0
+        : interactionApproachReadiness(
+            {
+              x: worldX,
+              y: worldY,
+              radius:
+                interactionRadius,
+            },
+            distance,
+          );
+    const placement =
+      worldMarkerPanelPresentation(
+        point,
+        interactionRadius,
+        targetId,
+        inReach,
+        approachReadiness,
+      );
+    const markerX = placement.x;
+    const markerY = placement.y;
     const guidancePresentation =
       worldMarkerGuidancePresentation(
         targetId,
@@ -25340,7 +26085,8 @@
         interactionRadius,
         distance,
       );
-    const markerScale = clamp(point.scale, 0.58, 1.35);
+    const markerScale =
+      placement.markerScale;
     const joePoint =
       state.mode === "first_hole"
         ? worldToScreen(state.hole.joe.x, state.hole.joe.y)
@@ -25371,7 +26117,7 @@
     const markerWidth =
       placement.width;
     const markerHeight =
-      inReach ? 51 : 34;
+      placement.panelHeight;
     ctx.fillRect(
       markerX - markerWidth * 0.5,
       markerY - 50 * markerScale,
@@ -25417,9 +26163,7 @@
     );
     if (inReach) {
       const reachPresentation =
-        worldMarkerReachPresentation(
-          targetId,
-        );
+        placement.reachPresentation;
       drawText(
         reachPresentation.localText,
         reachPresentation.localAlign ===
@@ -26198,7 +26942,7 @@
         continue;
       }
       const active =
-        state.hole.blockedTimer > 0 &&
+        collisionContactActivelyRefreshed() &&
         state.hole.blockedObstacle ===
           obstacle.id;
       const clearance =
@@ -26319,11 +27063,12 @@
         clearance >= 0 &&
         clearance < 10 &&
         !(
-          state.hole.blockedTimer >
-            0 &&
-          state.hole
-            .blockedObstacle ===
-            obstacle.id
+          state.hole.blockedObstacle ===
+            obstacle.id &&
+          (
+            collisionContactActivelyRefreshed() ||
+            collisionReleaseEchoActive()
+          )
         )
       ) {
         candidates.push({
@@ -26665,6 +27410,8 @@
           practice,
         )
       : Infinity;
+    const collisionDeferralOwner =
+      collisionContextCueDeferralOwner();
     let cue = null;
     if (
       noise.hazard &&
@@ -26686,7 +27433,8 @@
       };
     } else if (
       blocker &&
-      blocker.clearance < 10
+      blocker.clearance < 10 &&
+      !collisionDeferralOwner
     ) {
       cue = {
         kind: "blocker",
@@ -26717,6 +27465,12 @@
         kind: "none",
         id: null,
         distance: null,
+        deferredBy:
+          blocker &&
+          blocker.clearance < 10 &&
+          collisionDeferralOwner
+            ? collisionDeferralOwner
+            : null,
       };
     return renderFrameCache.worldContextCue;
   }
@@ -26938,6 +27692,230 @@
     };
   }
 
+  /**
+   * Lets a sustained scrape remain readable without holding the entire
+   * collision treatment at fresh-impact intensity forever.
+   */
+  function collisionContactFeedbackPresentation() {
+    const contactAge = Math.max(
+      0,
+      state.time -
+        state.hole.blockedContactStartedAt,
+    );
+    const settleLinear = clamp(
+      (
+        contactAge -
+        COLLISION_CONTACT_FULL_EMPHASIS_SECONDS
+      ) /
+        COLLISION_CONTACT_SETTLE_SECONDS,
+      0,
+      1,
+    );
+    const settleProgress =
+      state.reducedMotion
+        ? settleLinear > 0
+          ? 1
+          : 0
+        : smoothstep(settleLinear);
+    const sustainedEmphasis =
+      1 -
+      (
+        1 -
+        COLLISION_CONTACT_STEADY_EMPHASIS
+      ) * settleProgress;
+    const timerEmphasis = clamp(
+      state.hole.blockedTimer * 1.65,
+      0,
+      1,
+    );
+    const activelyRefreshed =
+      collisionContactActivelyRefreshed();
+    const releaseAge = Math.max(
+      0,
+      state.time -
+        state.hole.blockedContactRefreshedAt -
+        COLLISION_CONTACT_REFRESH_GRACE_SECONDS,
+    );
+    const releaseProgress = clamp(
+      releaseAge /
+        COLLISION_CONTACT_RELEASE_ECHO_SECONDS,
+      0,
+      1,
+    );
+    const releaseEnvelope =
+      activelyRefreshed
+        ? 1
+        : state.reducedMotion
+          ? releaseProgress < 1
+            ? 1
+            : 0
+          : 1 - smoothstep(releaseProgress);
+    const emphasis =
+      Math.min(
+        sustainedEmphasis,
+        timerEmphasis,
+      ) * releaseEnvelope;
+    const visualVisible =
+      emphasis > 0.01;
+    return {
+      contactAge,
+      settleProgress,
+      emphasis,
+      visualVisible,
+      activelyRefreshed,
+      correctionActive:
+        activelyRefreshed,
+      instructionMode:
+        activelyRefreshed
+          ? "blocked_escape"
+          : "released_live_input",
+      instruction:
+        activelyRefreshed
+          ? state.hole.blockedEscape ||
+            "MOVE AROUND"
+          : "LIVE INPUT  //  KEEP MOVING",
+      releaseAge,
+      releaseProgress,
+      releaseDurationSeconds:
+        COLLISION_CONTACT_RELEASE_ECHO_SECONDS,
+      mode:
+        !activelyRefreshed
+          ? visualVisible
+            ? state.reducedMotion
+              ? "release_static"
+              : "release_fade"
+            : "release_complete"
+          : settleProgress >= 1
+            ? "steady_scrape"
+            : settleProgress > 0
+              ? "impact_settle"
+              : "fresh_impact",
+    };
+  }
+
+  /**
+   * Distinguishes movement that is still being rejected by a blocker from
+   * the longer visual collision echo retained for readability.
+   */
+  function collisionContactActivelyRefreshed() {
+    return Boolean(
+      state.hole?.blockedTimer > 0 &&
+      state.time -
+        state.hole.blockedContactRefreshedAt <=
+        COLLISION_CONTACT_REFRESH_GRACE_SECONDS,
+    );
+  }
+
+  /**
+   * Keeps one short positive confirmation after physical correction yields.
+   */
+  function collisionReleaseEchoActive() {
+    return Boolean(
+      state.hole?.blockedTimer > 0 &&
+      !collisionContactActivelyRefreshed() &&
+      state.time -
+        state.hole.blockedContactRefreshedAt -
+        COLLISION_CONTACT_REFRESH_GRACE_SECONDS <
+        COLLISION_CONTACT_RELEASE_ECHO_SECONDS,
+    );
+  }
+
+  function pendingCollisionDialogueHandoff() {
+    return Boolean(
+      state.hole?.joeBarkDeferredByCollision &&
+      state.hole.joeBark &&
+      state.hole.joeBarkTimer > 0,
+    );
+  }
+
+  /**
+   * Gives ambient obstacle guidance a precise reason to yield without tying
+   * it to the longer collision-memory timer.
+   */
+  function collisionContextCueDeferralOwner() {
+    if (collisionContactActivelyRefreshed()) {
+      return "collision_contact";
+    }
+    if (collisionReleaseEchoActive()) {
+      return "collision_release";
+    }
+    if (pendingCollisionDialogueHandoff()) {
+      return "collision_settle";
+    }
+    return null;
+  }
+
+  function collisionContactTransferPresentation() {
+    const active = Boolean(
+      !state.reducedMotion &&
+      state.hole.blockedTransferFrom &&
+      state.hole.blockedTransferTimer > 0,
+    );
+    return {
+      active,
+      previousId:
+        active
+          ? state.hole.blockedTransferFrom.id
+          : null,
+      progress:
+        active
+          ? clamp(
+              1 -
+                state.hole.blockedTransferTimer /
+                  COLLISION_CONTACT_TRANSFER_SECONDS,
+              0,
+              1,
+            )
+          : 1,
+      durationSeconds:
+        COLLISION_CONTACT_TRANSFER_SECONDS,
+      mode:
+        active
+          ? "authoritative_new_contact_with_retiring_footprint"
+          : state.reducedMotion
+            ? "instant_reduced_motion"
+            : "settled",
+    };
+  }
+
+  function drawCollisionContactTransferAfterimage() {
+    const transfer =
+      collisionContactTransferPresentation();
+    if (!transfer.active) {
+      return;
+    }
+    const presentation =
+      collisionContactPresentation(
+        state.hole.blockedTransferFrom,
+      );
+    const footprint = presentation.footprint;
+    const point = presentation.transformedPoint;
+    ctx.save();
+    ctx.globalAlpha =
+      (1 - transfer.progress) * 0.28;
+    ctx.strokeStyle = "#ef7e45";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.ellipse(
+      presentation.targetX,
+      presentation.targetY,
+      Math.max(
+        12,
+        footprint.radiusX * point.scale,
+      ),
+      Math.max(
+        5,
+        footprint.radiusY * point.scale,
+      ),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawCollisionContactOverlay() {
     if (state.hole.blockedTimer <= 0) {
       return;
@@ -26958,11 +27936,23 @@
       presentation.targetY;
     const labelY =
       presentation.labelY;
-    const alpha = clamp(
-      state.hole.blockedTimer * 1.65,
-      0,
-      1,
-    );
+    const feedback =
+      collisionContactFeedbackPresentation();
+    const alpha = feedback.emphasis;
+    const correctionActive =
+      feedback.correctionActive;
+    const contactColor =
+      correctionActive
+        ? "#ef7e45"
+        : "#79d1aa";
+    const contactTextColor =
+      correctionActive
+        ? "#f4d1a7"
+        : "#c8efdc";
+    drawCollisionContactTransferAfterimage();
+    if (!feedback.visualVisible) {
+      return;
+    }
     const blockedName = (
       obstacle.landmark ||
       obstacle.id ||
@@ -26970,15 +27960,17 @@
     ).toUpperCase();
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle =
-      "rgba(105,28,10,0.12)";
-    ctx.fillRect(
-      0,
-      HEIGHT * 0.48,
-      WIDTH,
-      HEIGHT * 0.52,
-    );
-    ctx.strokeStyle = "#ef7e45";
+    if (correctionActive) {
+      ctx.fillStyle =
+        "rgba(105,28,10,0.12)";
+      ctx.fillRect(
+        0,
+        HEIGHT * 0.48,
+        WIDTH,
+        HEIGHT * 0.52,
+      );
+    }
+    ctx.strokeStyle = contactColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.ellipse(
@@ -27009,6 +28001,13 @@
       targetY - 8,
     );
     ctx.stroke();
+    ctx.globalAlpha =
+      correctionActive
+        ? alpha
+        : Math.min(
+            0.56,
+            alpha * 1.65,
+          );
     ctx.fillStyle =
       "rgba(15,6,3,0.94)";
     ctx.fillRect(
@@ -27022,25 +28021,28 @@
       labelY - 18,
       236,
       54,
-      "#ef7e45",
+      contactColor,
       2,
     );
     drawText(
-      `BLOCKED BY  //  ${blockedName}`,
+      correctionActive
+        ? `BLOCKED BY  //  ${blockedName}`
+        : `CLEAR OF  //  ${blockedName}`,
       targetX,
       labelY,
       11,
-      "#f4d1a7",
+      contactTextColor,
       "center",
       true,
     );
     drawText(
-      state.hole.blockedEscape ||
-        "MOVE AROUND",
+      feedback.instruction,
       targetX,
       labelY + 20,
       12,
-      "#ef8b54",
+      correctionActive
+        ? "#ef8b54"
+        : "#79d1aa",
       "center",
       true,
     );
@@ -27980,6 +28982,724 @@
           moteSize,
         );
       }
+    }
+    ctx.restore();
+  }
+
+  function courseBoundaryPresentation() {
+    const eastDistance =
+      COURSE_MAX_X -
+      state.player.x;
+    const westDistance =
+      state.player.x +
+      COURSE_MAX_X;
+    const side =
+      eastDistance <= westDistance
+        ? "east"
+        : "west";
+    const distance = Math.max(
+      0,
+      Math.min(
+        eastDistance,
+        westDistance,
+      ),
+    );
+    const warningAmount = clamp(
+      1 - distance / 34,
+      0,
+      1,
+    );
+    const placardPlacement =
+      courseBoundaryPlacardPlacement(
+        side,
+      );
+    let visibleSegments = 0;
+    for (
+      let sideIndex = -1;
+      sideIndex <= 1;
+      sideIndex += 2
+    ) {
+      let previous = null;
+      for (
+        let offset = 7;
+        offset <= 119;
+        offset += 14
+      ) {
+        const point = worldToScreen(
+          COURSE_MAX_X *
+            sideIndex,
+          clamp(
+            state.player.y + offset,
+            COURSE_MIN_Y,
+            COURSE_LENGTH,
+          ),
+        );
+        if (
+          previous?.visible &&
+          point.visible &&
+          Math.max(
+            previous.x,
+            point.x,
+          ) > -120 &&
+          Math.min(
+            previous.x,
+            point.x,
+          ) < WIDTH + 120
+        ) {
+          visibleSegments += 1;
+        }
+        previous = point;
+      }
+    }
+    return {
+      visible:
+        visibleSegments > 0,
+      side,
+      distance,
+      warningAmount,
+      warningBand:
+        distance <= 34,
+      contact:
+        distance <= 0.01,
+      placardVisible:
+        distance <= 34 &&
+        distance > 0.01,
+      placardPlacement,
+      eastWorldX:
+        COURSE_MAX_X,
+      westWorldX:
+        -COURSE_MAX_X,
+      verge: {
+        worldWidthMeters: 14,
+        placement:
+          "outside_collision_boundary_only",
+        texture:
+          "perspective_dead_turf_with_broken_verge_tufts",
+        communicatesPlayableSide:
+          true,
+        affectsCollision:
+          false,
+      },
+      visibleSegments,
+      matchesCollisionBoundary:
+        true,
+      presentation:
+        "exact_world_boundary_rope_with_grounded_reflectors_and_near_edge_placard",
+    };
+  }
+
+  function courseBoundaryPlacardPlacement(
+    side,
+  ) {
+    const expandedHud =
+      firstPersonHudExpanded();
+    const leftHudRight =
+      expandedHud
+        ? 466
+        : 438;
+    const safeLeft =
+      leftHudRight + 12;
+    const safeRight =
+      COURSE_MAP_X - 18;
+    const halfWidth = 70;
+    const firstMarkerY =
+      Math.floor(
+        state.player.y / 14,
+      ) *
+        14 +
+      7;
+    const points = [];
+    for (
+      let worldY = firstMarkerY;
+      worldY <=
+        state.player.y + 119;
+      worldY += 14
+    ) {
+      const point = worldToScreen(
+        COURSE_MAX_X *
+          (
+            side === "west"
+              ? -1
+              : 1
+          ),
+        clamp(
+          worldY,
+          COURSE_MIN_Y,
+          COURSE_LENGTH,
+        ),
+      );
+      if (
+        point.visible &&
+        point.x > -140 &&
+        point.x < WIDTH + 140
+      ) {
+        points.push({
+          point,
+          worldY,
+        });
+      }
+    }
+    const minimumCenter =
+      safeLeft + halfWidth;
+    const maximumCenter =
+      safeRight - halfWidth;
+    const placard =
+      points.find(
+        (entry) =>
+          entry.point.x >=
+            minimumCenter &&
+          entry.point.x <=
+            maximumCenter &&
+          entry.point.y >
+            COURSE_CAMERA.horizonY +
+              12,
+      ) ||
+      points.find(
+        (entry) =>
+          entry.point.y >
+            COURSE_CAMERA.horizonY +
+              12,
+      ) ||
+      points[points.length - 1];
+    if (!placard) {
+      return {
+        available: false,
+        expandedHud,
+        safeLeft,
+        safeRight,
+        cardWidth:
+          halfWidth * 2,
+        presentation:
+          "unavailable_outside_view",
+      };
+    }
+    const point = placard.point;
+    const labelX = clamp(
+      point.x,
+      minimumCenter,
+      maximumCenter,
+    );
+    const labelY =
+      point.y -
+      clamp(
+        point.pixelsPerMeter *
+          0.92,
+        18,
+        48,
+      );
+    const displaced =
+      Math.abs(
+        labelX - point.x,
+      ) > 0.5;
+    return {
+      available: true,
+      expandedHud,
+      safeLeft,
+      safeRight,
+      cardWidth:
+        halfWidth * 2,
+      anchorX: point.x,
+      anchorY: point.y,
+      labelX,
+      labelY,
+      displaced,
+      clearsHud:
+        labelX - halfWidth >=
+        safeLeft,
+      clearsCourseMap:
+        labelX + halfWidth <=
+        safeRight,
+      presentation: displaced
+        ? "hud_safe_card_tethered_to_boundary_stake"
+        : "card_grounded_at_boundary_stake",
+    };
+  }
+
+  function drawCourseBoundaryVerge(
+    points,
+    sideIndex,
+    emphasis,
+  ) {
+    const outerWorldX =
+      (
+        COURSE_MAX_X + 14
+      ) * sideIndex;
+    const outerPoints =
+      points.map((entry) => ({
+        point: worldToScreen(
+          outerWorldX,
+          entry.worldY,
+        ),
+        worldY: entry.worldY,
+      }));
+    if (
+      outerPoints.length !==
+        points.length ||
+      outerPoints.some(
+        (entry) =>
+          !entry.point.visible,
+      )
+    ) {
+      return;
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(
+      points[0].point.x,
+      points[0].point.y,
+    );
+    for (
+      let index = 1;
+      index < points.length;
+      index += 1
+    ) {
+      ctx.lineTo(
+        points[index].point.x,
+        points[index].point.y,
+      );
+    }
+    for (
+      let index =
+        outerPoints.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      ctx.lineTo(
+        outerPoints[index].point.x,
+        outerPoints[index].point.y,
+      );
+    }
+    ctx.closePath();
+    const nearInner =
+      points[points.length - 1]
+        .point;
+    const nearOuter =
+      outerPoints[
+        outerPoints.length - 1
+      ].point;
+    const vergeGradient =
+      ctx.createLinearGradient(
+        nearInner.x,
+        nearInner.y,
+        nearOuter.x,
+        nearOuter.y,
+      );
+    vergeGradient.addColorStop(
+      0,
+      "rgba(24,28,14,0.08)",
+    );
+    vergeGradient.addColorStop(
+      0.3,
+      "rgba(18,22,12," +
+        (
+          0.18 +
+          emphasis * 0.12
+        ).toFixed(3) +
+        ")",
+    );
+    vergeGradient.addColorStop(
+      1,
+      "rgba(7,10,7," +
+        (
+          0.34 +
+          emphasis * 0.14
+        ).toFixed(3) +
+        ")",
+    );
+    ctx.fillStyle = vergeGradient;
+    ctx.fill();
+
+    for (
+      let index = 0;
+      index < points.length;
+      index += 1
+    ) {
+      const worldY =
+        points[index].worldY;
+      const seed =
+        worldY * 1.91 +
+        sideIndex * 43.7;
+      const tuftWorldX =
+        (
+          COURSE_MAX_X +
+          3.8 +
+          hash(seed) * 7.8
+        ) * sideIndex;
+      const tuft = worldToScreen(
+        tuftWorldX,
+        clamp(
+          worldY +
+            (
+              hash(seed + 9.4) -
+              0.5
+            ) *
+              5,
+          COURSE_MIN_Y,
+          COURSE_LENGTH,
+        ),
+      );
+      if (
+        !tuft.visible ||
+        tuft.y <=
+          COURSE_CAMERA.horizonY + 5
+      ) {
+        continue;
+      }
+      const tuftHeight = clamp(
+        tuft.pixelsPerMeter *
+          (
+            0.24 +
+            hash(seed + 3.2) *
+              0.2
+          ),
+        2.5,
+        13,
+      );
+      const spread = clamp(
+        tuft.scale * 2.8,
+        1.2,
+        6,
+      );
+      ctx.globalAlpha = clamp(
+        0.28 +
+          emphasis * 0.38 +
+          tuft.scale * 0.08,
+        0.24,
+        0.78,
+      );
+      ctx.strokeStyle =
+        hash(seed + 7.1) > 0.52
+          ? "#827047"
+          : "#4f5935";
+      ctx.lineWidth = clamp(
+        tuft.scale * 1.1,
+        1,
+        2,
+      );
+      ctx.beginPath();
+      const windLean =
+        sideIndex *
+        (
+          0.16 +
+          hash(seed + 11.3) *
+            0.18
+        );
+      for (
+        let bladeIndex = 0;
+        bladeIndex < 5;
+        bladeIndex += 1
+      ) {
+        const bladeSeed =
+          seed +
+          bladeIndex * 5.17;
+        const baseOffset =
+          (
+            bladeIndex - 2
+          ) *
+            spread *
+            0.26 +
+          (
+            hash(bladeSeed + 1.4) -
+            0.5
+          ) *
+            spread *
+            0.24;
+        const bladeHeight =
+          tuftHeight *
+          (
+            0.48 +
+            hash(bladeSeed + 4.8) *
+              0.48
+          );
+        const tipOffset =
+          windLean *
+            bladeHeight +
+          (
+            hash(bladeSeed + 8.6) -
+            0.5
+          ) *
+            spread *
+            0.72;
+        ctx.moveTo(
+          tuft.x + baseOffset,
+          tuft.y,
+        );
+        ctx.lineTo(
+          tuft.x +
+            baseOffset +
+            tipOffset,
+          tuft.y - bladeHeight,
+        );
+      }
+      ctx.stroke();
+      ctx.fillStyle =
+        "rgba(171,123,63,0.64)";
+      const scarSize = Math.max(
+        1,
+        Math.round(
+          tuft.scale * 1.8,
+        ),
+      );
+      ctx.fillRect(
+        Math.round(
+          tuft.x -
+            scarSize * 0.5,
+        ),
+        Math.round(tuft.y),
+        scarSize,
+        Math.max(
+          1,
+          Math.round(
+            scarSize * 0.55,
+          ),
+        ),
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawCourseBoundaryRopes() {
+    const presentation =
+      courseBoundaryPresentation();
+    const firstMarkerY =
+      Math.floor(
+        state.player.y / 14,
+      ) *
+        14 +
+      7;
+    ctx.save();
+    ctx.lineCap = "round";
+    for (
+      let sideIndex = -1;
+      sideIndex <= 1;
+      sideIndex += 2
+    ) {
+      const side =
+        sideIndex < 0
+          ? "west"
+          : "east";
+      const nearSide =
+        presentation.side === side;
+      const emphasis =
+        nearSide
+          ? 0.34 +
+            presentation.warningAmount *
+              0.58
+          : 0.26;
+      const points = [];
+      for (
+        let worldY = firstMarkerY;
+        worldY <=
+          state.player.y + 119;
+        worldY += 14
+      ) {
+        const point = worldToScreen(
+          COURSE_MAX_X *
+            sideIndex,
+          clamp(
+            worldY,
+            COURSE_MIN_Y,
+            COURSE_LENGTH,
+          ),
+        );
+        if (
+          point.visible &&
+          point.x > -140 &&
+          point.x < WIDTH + 140
+        ) {
+          points.push({
+            point,
+            worldY,
+          });
+        }
+      }
+      if (points.length < 2) {
+        continue;
+      }
+      drawCourseBoundaryVerge(
+        points,
+        sideIndex,
+        emphasis,
+      );
+      ctx.beginPath();
+      ctx.moveTo(
+        points[0].point.x,
+        points[0].point.y - 5,
+      );
+      for (
+        let index = 1;
+        index < points.length;
+        index += 1
+      ) {
+        ctx.lineTo(
+          points[index].point.x,
+          points[index].point.y - 5,
+        );
+      }
+      ctx.strokeStyle =
+        `rgba(2,6,4,${
+          emphasis * 0.88
+        })`;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.setLineDash([7, 5]);
+      ctx.strokeStyle = nearSide
+        ? `rgba(224,154,66,${emphasis})`
+        : `rgba(132,153,103,${emphasis})`;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      for (
+        let index = 0;
+        index < points.length;
+        index += 1
+      ) {
+        const point =
+          points[index].point;
+        const stakeHeight = clamp(
+          point.pixelsPerMeter *
+            0.82,
+          8,
+          44,
+        );
+        ctx.globalAlpha = clamp(
+          emphasis *
+            (
+              0.64 +
+              point.scale * 0.42
+            ),
+          0.2,
+          0.94,
+        );
+        ctx.strokeStyle =
+          nearSide
+            ? "#d8974b"
+            : "#80956a";
+        ctx.lineWidth = clamp(
+          point.scale * 1.7,
+          1,
+          3,
+        );
+        ctx.beginPath();
+        ctx.moveTo(
+          point.x,
+          point.y + 1,
+        );
+        ctx.lineTo(
+          point.x,
+          point.y -
+            stakeHeight,
+        );
+        ctx.stroke();
+        ctx.fillStyle = nearSide
+          ? "#f0b45e"
+          : "#a5b680";
+        const reflectorSize =
+          Math.max(
+            2,
+            Math.round(
+              point.scale * 2.2,
+            ),
+          );
+        ctx.fillRect(
+          Math.round(
+            point.x -
+              reflectorSize * 0.5,
+          ),
+          Math.round(
+            point.y -
+              stakeHeight * 0.72,
+          ),
+          reflectorSize,
+          reflectorSize,
+        );
+      }
+
+      if (
+        nearSide &&
+        presentation
+          .placardVisible &&
+        presentation
+          .placardPlacement
+          .available
+      ) {
+        const placement =
+          presentation
+            .placardPlacement;
+        const labelX =
+          placement.labelX;
+        const labelY =
+          placement.labelY;
+        ctx.globalAlpha = clamp(
+          0.5 +
+            presentation
+              .warningAmount *
+              0.46,
+          0,
+          0.96,
+        );
+        if (placement.displaced) {
+          ctx.strokeStyle =
+            "rgba(2,6,4,0.9)";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(
+            placement.anchorX,
+            placement.anchorY - 5,
+          );
+          ctx.lineTo(
+            labelX,
+            labelY + 11,
+          );
+          ctx.stroke();
+          ctx.strokeStyle =
+            "rgba(216,151,75,0.9)";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.fillStyle =
+            "#f0b45e";
+          ctx.beginPath();
+          ctx.arc(
+            placement.anchorX,
+            placement.anchorY - 5,
+            2.5,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+        ctx.fillStyle =
+          "rgba(4,8,5,0.88)";
+        ctx.fillRect(
+          labelX - 70,
+          labelY - 13,
+          140,
+          24,
+        );
+        strokeRect(
+          labelX - 70,
+          labelY - 13,
+          140,
+          24,
+          "#d8974b",
+          1.5,
+        );
+        drawText(
+          `COURSE LIMIT // ${
+            side === "east"
+              ? "KEEP LEFT"
+              : "KEEP RIGHT"
+          }`,
+          labelX,
+          labelY + 3,
+          9,
+          "#edc078",
+          "center",
+          true,
+        );
+      }
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
@@ -31240,6 +32960,31 @@
     };
   }
 
+  function coverGroundCueTarget(
+    targetId,
+  ) {
+    if (targetId === "maintenance-shed") {
+      return {
+        id: "maintenance-shed",
+        x: SHED_EXIT.x,
+        y: SHED_EXIT.y + 2,
+        radius: 31,
+        coverRadius: 35,
+        blockerIds: [
+          "shed-left-wall",
+          "shed-right-wall",
+        ],
+        sight: true,
+      };
+    }
+    return (
+      COURSE_OBSTACLES.find(
+        (obstacle) =>
+          obstacle.id === targetId,
+      ) || null
+    );
+  }
+
   function coverGroundCuePresentation() {
     if (renderFrameCache.coverGroundCue) {
       return renderFrameCache.coverGroundCue;
@@ -31288,14 +33033,21 @@
           distance < coverRadius,
       });
     }
+    const shed =
+      coverGroundCueTarget(
+        "maintenance-shed",
+      );
     const shedDistance = worldDistance(
       state.player,
-      SHED_EXIT,
+      shed,
     );
-    if (shedDistance < 46) {
+    if (
+      shedDistance <
+      shed.coverRadius + 11
+    ) {
       const shedPoint = worldToScreen(
-        SHED_EXIT.x,
-        SHED_EXIT.y + 2,
+        shed.x,
+        shed.y,
       );
       if (
         shedPoint.visible &&
@@ -31305,8 +33057,12 @@
         candidates.push({
           id: "maintenance-shed",
           distance: shedDistance,
-          clearance: shedDistance - 35,
-          occupied: shedDistance < 35,
+          clearance:
+            shedDistance -
+            shed.coverRadius,
+          occupied:
+            shedDistance <
+            shed.coverRadius,
         });
       }
     }
@@ -31383,6 +33139,15 @@
       coverGroundCuePresentation();
     const ownsCoverGroundCue =
       coverCue.ownerId === obstacle.id;
+    const labelPresentation =
+      coverGroundLabelPresentation(
+        obstacle,
+        inCover,
+        closeToCover,
+        ownsCoverGroundCue,
+        collisionOwnsGroundCue,
+        point,
+      );
     const soil = ctx.createRadialGradient(
       point.x,
       point.y,
@@ -31420,27 +33185,78 @@
     );
     ctx.fill();
     if (!collisionOwnsGroundCue) {
-      ctx.strokeStyle =
-        ownsCoverGroundCue
-          ? inCover
-            ? "rgba(126,207,163,0.86)"
-            : "rgba(169,191,125,0.62)"
-          : "rgba(80,101,54,0.22)";
-      ctx.lineWidth =
-        ownsCoverGroundCue && inCover
-          ? 2.5
-          : 1;
-      ctx.beginPath();
-      ctx.ellipse(
-        point.x,
-        point.y,
-        radiusX * 0.94,
-        radiusY * 0.9,
-        0,
-        0,
-        Math.PI * 2,
+      const handoff =
+        labelPresentation.ringHandoff;
+      const drawRing = (
+        role,
+        alpha,
+      ) => {
+        if (!role || alpha <= 0.001) {
+          return;
+        }
+        const baseAlpha =
+          ctx.globalAlpha;
+        ctx.globalAlpha =
+          baseAlpha * alpha;
+        ctx.strokeStyle =
+          ownsCoverGroundCue
+            ? role ===
+              "authoritative_concealment"
+              ? "rgba(126,207,163,0.9)"
+              : role ===
+                  "socket_occupancy"
+                ? "rgba(154,179,126,0.68)"
+                : "rgba(169,191,125,0.5)"
+            : "rgba(80,101,54,0.22)";
+        ctx.lineWidth =
+          ownsCoverGroundCue
+            ? role ===
+              "authoritative_concealment"
+              ? 2.5
+              : role ===
+                  "socket_occupancy"
+                ? 1.75
+                : 1
+            : 1;
+        ctx.setLineDash(
+          !ownsCoverGroundCue ||
+            role ===
+              "authoritative_concealment"
+            ? []
+            : role ===
+                "socket_occupancy"
+              ? [6, 5]
+              : [3, 6],
+        );
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y,
+          radiusX * 0.94,
+          radiusY * 0.9,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = baseAlpha;
+      };
+      drawRing(
+        handoff.previousRole,
+        labelPresentation.ringEmphasis *
+          0.38 *
+          (1 - handoff.progress),
       );
-      ctx.stroke();
+      drawRing(
+        labelPresentation.ringRole,
+        labelPresentation.ringEmphasis *
+          lerp(
+            0.72,
+            1,
+            handoff.progress,
+          ),
+      );
     }
     const bladeCount = clamp(
       Math.round(radiusX / 24),
@@ -31490,27 +33306,209 @@
       );
       ctx.stroke();
     }
-    if (
-      closeToCover &&
-      ownsCoverGroundCue &&
-      !collisionOwnsGroundCue
-    ) {
+    if (labelPresentation.visible) {
       drawText(
-        inCover
-          ? "IN COVER"
-          : "COVER",
+        labelPresentation.text,
         point.x,
         point.y +
           radiusY +
           15,
         9,
-        inCover
-          ? "#9be1bd"
-          : "#c2ce9b",
+        labelPresentation.color,
         "center",
         true,
       );
     }
+  }
+
+  /**
+   * Softens a visual ring-pattern switch without delaying the authoritative
+   * cover label or any underlying detection state.
+   */
+  function coverGroundRingHandoffPresentation(
+    obstacle,
+    ringRole,
+    eligible,
+    ownsCoverGroundCue,
+  ) {
+    if (!eligible || !ownsCoverGroundCue) {
+      return {
+        previousRole: null,
+        progress: 1,
+        durationSeconds: 0,
+        mode: "inactive",
+      };
+    }
+    if (
+      coverGroundRingHandoff.ownerId !==
+      obstacle.id
+    ) {
+      coverGroundRingHandoff.ownerId =
+        obstacle.id;
+      coverGroundRingHandoff.currentRole =
+        ringRole;
+      coverGroundRingHandoff.previousRole =
+        null;
+      coverGroundRingHandoff.changedAt =
+        state.time;
+    } else if (
+      coverGroundRingHandoff.currentRole !==
+      ringRole
+    ) {
+      coverGroundRingHandoff.previousRole =
+        coverGroundRingHandoff.currentRole;
+      coverGroundRingHandoff.currentRole =
+        ringRole;
+      coverGroundRingHandoff.changedAt =
+        state.time;
+    }
+    const progress = state.reducedMotion
+      ? 1
+      : smoothstep(
+          clamp(
+            (state.time -
+              coverGroundRingHandoff.changedAt) /
+              COVER_GROUND_RING_HANDOFF_SECONDS,
+            0,
+            1,
+          ),
+        );
+    if (progress >= 1) {
+      coverGroundRingHandoff.previousRole =
+        null;
+    }
+    return {
+      previousRole:
+        coverGroundRingHandoff.previousRole,
+      progress,
+      durationSeconds:
+        state.reducedMotion
+          ? 0
+          : COVER_GROUND_RING_HANDOFF_SECONDS,
+      mode: state.reducedMotion
+        ? "instant_reduced_motion"
+        : progress < 1
+          ? "authoritative_crossfade"
+          : "settled",
+    };
+  }
+
+  /**
+   * Distinguishes socket occupancy from authoritative sightline concealment
+   * and lets the optional local label yield to a bottom interaction rail.
+   * The socket art and actual cover behavior remain present throughout.
+   */
+  function coverGroundLabelPresentation(
+    obstacle,
+    socketOccupied,
+    closeToCover,
+    ownsCoverGroundCue,
+    collisionOwnsGroundCue,
+    point = null,
+  ) {
+    const environment =
+      state.hole.environment;
+    const coverBlockerIds =
+      obstacle.blockerIds || [obstacle.id];
+    const blockerMatches = Boolean(
+      environment?.blocker &&
+      coverBlockerIds.includes(
+        environment.blocker,
+      ),
+    );
+    const concealmentActive = Boolean(
+      socketOccupied &&
+      environment?.hardCover &&
+      blockerMatches,
+    );
+    const text = concealmentActive
+      ? "CONCEALED"
+      : socketOccupied
+        ? "AT COVER"
+        : "COVER";
+    const interactionOwner =
+      interactionRejectionOwnsBottomRail()
+        ? "interaction_rejection"
+        : fieldInteractionPromptOwnsBottomRail()
+          ? "interaction_action"
+          : null;
+    const eligible = Boolean(
+      closeToCover &&
+      ownsCoverGroundCue,
+    );
+    const screenVisible = Boolean(
+      point?.visible &&
+      point.x >=
+        FIELD_MARKER_SAFE_GUTTER + 36 &&
+      point.x <=
+        COURSE_MAP_X -
+          FIELD_MARKER_SAFE_GUTTER -
+          36,
+    );
+    const deferredBy =
+      collisionOwnsGroundCue
+        ? "collision_contact"
+        : interactionOwner ||
+          (!screenVisible
+            ? "offscreen"
+            : null);
+    const ringRole = concealmentActive
+      ? "authoritative_concealment"
+      : socketOccupied
+        ? "socket_occupancy"
+        : "cover_approach";
+    const ringHandoff =
+      coverGroundRingHandoffPresentation(
+        obstacle,
+        ringRole,
+        eligible,
+        ownsCoverGroundCue,
+      );
+    const ringEmphasis =
+      collisionOwnsGroundCue
+        ? 0
+        : interactionOwner
+          ? 0.44
+          : 1;
+    return {
+      text,
+      color: concealmentActive
+        ? "#9be1bd"
+        : socketOccupied
+          ? "#b8d3a5"
+          : "#c2ce9b",
+      role: concealmentActive
+        ? "authoritative_concealment"
+        : socketOccupied
+          ? "socket_occupancy"
+          : "cover_approach",
+      ringRole,
+      ringPattern: concealmentActive
+        ? "solid"
+        : socketOccupied
+          ? "segmented"
+          : "dotted",
+      coverBlockerIds,
+      authoritativeBlockerId:
+        environment?.blocker || null,
+      blockerMatches,
+      ringHandoff,
+      ringEmphasis,
+      ringHierarchy:
+        collisionOwnsGroundCue
+          ? "deferred_to_collision"
+          : interactionOwner
+            ? "subordinate_to_interaction"
+            : "primary_cover_geometry",
+      socketOccupied,
+      concealmentActive,
+      screenVisible,
+      eligible,
+      visible:
+        eligible && !deferredBy,
+      deferredBy:
+        eligible ? deferredBy : null,
+    };
   }
 
   function drawCourseObstacle(obstacle) {
@@ -31618,14 +33616,10 @@
     ) {
       return;
     }
-    const shed = {
-      id: "maintenance-shed",
-      x: SHED_EXIT.x,
-      y: SHED_EXIT.y + 2,
-      radius: 31,
-      coverRadius: 35,
-      sight: true,
-    };
+    const shed =
+      coverGroundCueTarget(
+        "maintenance-shed",
+      );
     const point = worldToScreen(
       shed.x,
       shed.y,
@@ -34907,7 +36901,7 @@
         obstacle.y,
       );
       const blocked =
-        state.hole.blockedTimer > 0 &&
+        collisionContactActivelyRefreshed() &&
         state.hole.blockedObstacle ===
           obstacle.id;
       ctx.fillStyle = blocked
@@ -35998,7 +37992,7 @@
         state.hole.moveVector.y < 0
       );
     const escapeOverride = Boolean(
-      state.hole.blockedTimer > 0 &&
+      collisionContactActivelyRefreshed() &&
       state.hole.blockedEscape
     );
     const escapeCopy =
@@ -45482,6 +47476,7 @@
     drawReleaseBeacon();
 
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
+    drawCourseBoundaryRopes();
     drawCourseWayfindingStakes();
     drawWorldNavigationRibbon();
     drawFootingHazardBypassRoute(
@@ -47638,12 +49633,7 @@
         hole.interactionRejection.timer <=
         0
       ) {
-        hole.interactionRejection.targetId =
-          null;
-        hole.interactionRejection.localStatus =
-          null;
-        hole.interactionRejection.message =
-          null;
+        clearInteractionRejection();
       }
       if (
         hole.controlHintSource ===
@@ -47658,10 +49648,44 @@
           hole.messageTimer = 0;
         }
       }
+      const joeBarkCorrectionWasActive =
+        collisionContactActivelyRefreshed();
+      const joeBarkReleaseEchoWasActive =
+        collisionReleaseEchoActive();
+      const joeBarkCollisionPresentationWasActive =
+        joeBarkCorrectionWasActive ||
+        joeBarkReleaseEchoWasActive;
+      if (
+        joeBarkCollisionPresentationWasActive &&
+        hole.joeBark &&
+        hole.joeBarkTimer > 0
+      ) {
+        hole.joeBarkDeferredByCollision =
+          true;
+        if (joeBarkCorrectionWasActive) {
+          hole.joeBarkCollisionSettleTimer =
+            JOE_BARK_COLLISION_SETTLE_SECONDS;
+        }
+        hole.joeBarkResumeFadeTimer = 0;
+      }
       hole.joeBarkTimer = Math.max(
         0,
         hole.joeBarkTimer - dt,
       );
+      hole.joeBarkResumeFadeTimer =
+        Math.max(
+          0,
+          hole.joeBarkResumeFadeTimer -
+            dt,
+        );
+      if (!joeBarkCorrectionWasActive) {
+        hole.joeBarkCollisionSettleTimer =
+          Math.max(
+            0,
+            hole.joeBarkCollisionSettleTimer -
+              dt,
+          );
+      }
       updateThreatCaptions(dt);
       if (hole.riskAward) {
         hole.riskAward.age += dt;
@@ -47716,10 +49740,44 @@
         );
       }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
+      if (
+        hole.joeBarkDeferredByCollision
+      ) {
+        if (
+          hole.joeBarkTimer <
+          JOE_BARK_COLLISION_MIN_RESUME_SECONDS
+        ) {
+          hole.joeBarkTimer = 0;
+          hole.joeBarkDeferredByCollision =
+            false;
+          hole.joeBarkCollisionSettleTimer =
+            0;
+          hole.joeBarkResumeFadeTimer = 0;
+        }
+        else if (
+          !joeBarkCollisionPresentationWasActive &&
+          hole.joeBarkCollisionSettleTimer <=
+            0
+        ) {
+          hole.joeBarkDeferredByCollision =
+            false;
+          hole.joeBarkResumeFadeTimer =
+            state.reducedMotion
+              ? 0
+              : JOE_BARK_COLLISION_RESUME_FADE_SECONDS;
+        }
+      }
       hole.blockedCueCooldown = Math.max(
         0,
         hole.blockedCueCooldown - dt,
       );
+      hole.blockedTransferTimer = Math.max(
+        0,
+        hole.blockedTransferTimer - dt,
+      );
+      if (hole.blockedTransferTimer <= 0) {
+        hole.blockedTransferFrom = null;
+      }
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
       hole.stateBannerLockTimer = Math.max(
         0,
@@ -47797,6 +49855,13 @@
       const moving =
         !hole.escapeFiling.sealing &&
         playerIsMoving();
+      hole.lastMovementRequestedDistance = 0;
+      hole.lastMovementAppliedDistance = 0;
+      hole.lastMovementDeltaSeconds = dt;
+      hole.lastMovementRequestedX = 0;
+      hole.lastMovementRequestedY = 0;
+      hole.lastMovementAppliedX = 0;
+      hole.lastMovementAppliedY = 0;
       if (
         hole.escapeFiling.active &&
         moving
@@ -47893,11 +49958,6 @@
         dt,
         moving ? movement.x : 0,
       );
-      updateCourseCameraMotion(
-        dt,
-        moving ? movement.x : 0,
-        sprinting,
-      );
       if (moving && hole.crouched) {
         hole.crouchedSeconds += dt;
       }
@@ -47948,7 +50008,21 @@
       inputY /= inputLength;
       if (moving) {
         state.player.heading = Math.atan2(inputY, inputX);
-        movePlayerBy(inputX * speed, inputY * speed);
+        const appliedMovement =
+          movePlayerBy(
+            inputX * speed,
+            inputY * speed,
+          );
+        hole.locomotionPhase +=
+          appliedMovement *
+          strideRadiansPerMeter(
+            sprinting,
+            hole.crouched,
+            hole.secondWindTimer > 0 &&
+              !hole.crouched &&
+              !hole.focus,
+            hole.panicMomentum,
+          );
         recordPlayerTrack(sprinting);
         const stepSpacing = hole.crouched ? 5.8 : sprinting ? 5.3 : 4.1;
         if (hole.travelDistance - hole.lastStepDistance >= stepSpacing) {
@@ -47999,6 +50073,28 @@
           }
         }
       }
+      const requestedLateralInput =
+        moving ? inputX : 0;
+      const lateralAcceptance =
+        Math.abs(
+          hole.lastMovementRequestedX,
+        ) > 0.0001
+          ? clamp(
+              Math.abs(
+                hole.lastMovementAppliedX /
+                  hole.lastMovementRequestedX,
+              ),
+              0,
+              1,
+            )
+          : 1;
+      updateCourseCameraMotion(
+        dt,
+        requestedLateralInput,
+        requestedLateralInput *
+          lateralAcceptance,
+        sprinting,
+      );
       addCourseEchoSample();
       updatePlayerNavigationGuide(
         dt,
@@ -48353,6 +50449,7 @@
         dt,
         moving,
       );
+      releaseInteractionRejectionOnRetreat();
 
       const key = activeKeyPoint();
       const sprinkler = activeSprinklerPoint();
@@ -52313,6 +54410,75 @@
       returnTarget: state.settingsReturnMode,
       persisted: preferencesStorageAvailable,
       page: state.settingsPage,
+      captionPreviewPresentation:
+        state.mode === "settings" &&
+        state.settingsPage === "mix"
+          ? (() => {
+              const previewSize =
+                Math.round(
+                  12 * state.subtitleSize,
+                );
+              const cardTop =
+                526 - previewSize - 11;
+              const cardBottom = 526 + 9;
+              return {
+                panelTop: 480,
+                panelBottom: 540,
+                headerBaseline: 494,
+                headerTextBottom: 496,
+                cardTop,
+                cardBottom,
+                headerClearancePixels:
+                  cardTop - 496,
+                bottomPaddingPixels:
+                  540 - cardBottom,
+                footerBaseline: 548,
+                footerClearancePixels:
+                  548 - 540,
+                categoryLabel:
+                  state.threatCaptions
+                    ? "MOWER // AMBER"
+                    : "DISABLED",
+                frameTheme:
+                  state.threatCaptions
+                    ? threatCaptionTheme(
+                        "mower",
+                      ).frameTheme
+                    : null,
+                backdropFillAlpha:
+                  Number(
+                    (
+                      state.captionBackground *
+                      0.92
+                    ).toFixed(2),
+                  ),
+                semanticFrameVisible:
+                  Boolean(
+                    state.threatCaptions &&
+                    (
+                      state.captionBackground >
+                        0.05 ||
+                      threatCaptionTheme(
+                        "mower",
+                      ).minimumFrameOpacity > 0
+                    ),
+                  ),
+                semanticFrameOpacityMultiplier:
+                  state.threatCaptions
+                    ? state.captionBackground >
+                      0.05
+                      ? 1
+                      : threatCaptionTheme(
+                          "mower",
+                        ).minimumFrameOpacity
+                    : 0,
+                transparentInterior:
+                  state.captionBackground === 0,
+                rule:
+                  "maximum_caption_size_and_semantic_frame_remain_readable_with_zero_backdrop",
+              };
+            })()
+          : null,
       selected:
         state.settingsPage === "bindings"
           ? KEYBOARD_BINDING_ROWS[
@@ -52768,6 +54934,21 @@
                     : null,
               };
             })(),
+            requestedLateralInput: Number(
+              courseCameraMotion()
+                .requestedLateralInput.toFixed(
+                  2,
+                ),
+            ),
+            acceptedLateralInput: Number(
+              courseCameraMotion().lateralInput.toFixed(2),
+            ),
+            lateralAcceptance: Number(
+              courseCameraMotion()
+                .lateralAcceptance.toFixed(
+                  2,
+                ),
+            ),
             lateralInput: Number(
               courseCameraMotion().lateralInput.toFixed(2),
             ),
@@ -52786,6 +54967,8 @@
                 0.46
               ).toFixed(2),
             ),
+            lateralMotionContract:
+              "camera_pan_roll_and_edge_rush_follow_accepted_lateral_translation;_input_and_collision_guidance_remain_authoritative",
             rollDegrees: Number(
               (
                 courseCameraMotion().roll *
@@ -52804,6 +54987,9 @@
               moving:
                 courseLocomotionState()
                   .moving,
+              translating:
+                courseLocomotionState()
+                  .translating,
               sprinting:
                 courseLocomotionState()
                   .sprinting,
@@ -52831,6 +55017,30 @@
                 Number(
                   courseLocomotionState()
                     .cadence.toFixed(
+                      2,
+                    ),
+                ),
+              phaseSource:
+                courseLocomotionState()
+                  .phaseSource,
+              requestedDistanceThisFrame:
+                Number(
+                  courseLocomotionState()
+                    .requestedDistance.toFixed(
+                      3,
+                    ),
+                ),
+              appliedDistanceThisFrame:
+                Number(
+                  courseLocomotionState()
+                    .appliedDistance.toFixed(
+                      3,
+                    ),
+                ),
+              translationRatio:
+                Number(
+                  courseLocomotionState()
+                    .translationRatio.toFixed(
                       2,
                     ),
                 ),
@@ -52885,7 +55095,7 @@
               peripheralRush:
                 !state.reducedMotion &&
                 courseLocomotionState()
-                  .moving
+                  .translating
                   ? Math.max(
                       4,
                       Math.round(
@@ -52899,6 +55109,17 @@
                       ),
                     )
                   : 0,
+              turfRushBands:
+                !state.reducedMotion &&
+                courseLocomotionState()
+                  .translating
+                  ? effectQualityScale() >=
+                    0.85
+                    ? 5
+                    : 3
+                  : 0,
+              movementPhaseContract:
+                "camera_bob_and_ground_rush_advance_only_with_applied_world_distance",
             },
             movementFeedback: (() => {
               const feedback =
@@ -55715,6 +57936,33 @@
                     "rejection_state",
                   retryPromptReturns:
                     true,
+                  repeatAttemptsExtendTimer:
+                    false,
+                  attemptsSuppressed:
+                    state.hole
+                      .interactionRejection
+                      .attemptsSuppressed,
+                  retreatClearsFeedback:
+                    true,
+                  retreatRadius:
+                    Number(
+                      state.hole
+                        .interactionRejection
+                        .retreatRadius.toFixed(
+                          2,
+                        ),
+                    ),
+                  targetDistance:
+                    Number(
+                      worldDistance(
+                        state.player,
+                        interactionRejectionTarget(
+                          state.hole
+                            .interactionRejection
+                            .targetId,
+                        ),
+                      ).toFixed(2),
+                    ),
                 }
               : null,
           message:
@@ -55821,7 +58069,12 @@
                         ? "cut_trace"
                         : "listening_search"
               : null,
-          blockedBy: state.hole.blockedTimer > 0 ? state.hole.blockedObstacle : null,
+          blockedBy:
+            state.hole.blockedTimer > 0 &&
+            collisionContactFeedbackPresentation()
+              .visualVisible
+              ? state.hole.blockedObstacle
+              : null,
           collisionContact:
             state.hole.blockedTimer > 0
               ? {
@@ -55871,6 +58124,8 @@
                         collisionContactPresentation(
                           activeCollisionObstacle(),
                         );
+                      const feedback =
+                        collisionContactFeedbackPresentation();
                       return {
                         mode:
                           "grounded_contact_card_crosshair_safe",
@@ -55882,6 +58137,73 @@
                               1,
                             ),
                           ),
+                        feedbackMode:
+                          feedback.mode,
+                        feedbackEmphasis:
+                          Number(
+                            feedback.emphasis.toFixed(
+                              2,
+                            ),
+                          ),
+                        visualVisible:
+                          feedback.visualVisible,
+                        contactAgeSeconds:
+                          Number(
+                            feedback.contactAge.toFixed(
+                              2,
+                            ),
+                          ),
+                        settleProgress:
+                          Number(
+                            feedback.settleProgress.toFixed(
+                              2,
+                            ),
+                          ),
+                        activelyRefreshed:
+                          feedback.activelyRefreshed,
+                        correctionActive:
+                          feedback.correctionActive,
+                        instructionMode:
+                          feedback.instructionMode,
+                        instruction:
+                          feedback.instruction,
+                        releaseAgeSeconds:
+                          Number(
+                            feedback.releaseAge.toFixed(
+                              2,
+                            ),
+                          ),
+                        releaseProgress:
+                          Number(
+                            feedback.releaseProgress.toFixed(
+                              2,
+                            ),
+                          ),
+                        releaseDurationSeconds:
+                          feedback.releaseDurationSeconds,
+                        steadyEmphasis:
+                          COLLISION_CONTACT_STEADY_EMPHASIS,
+                        transfer:
+                          (() => {
+                            const transfer =
+                              collisionContactTransferPresentation();
+                            return {
+                              active:
+                                transfer.active,
+                              previousId:
+                                transfer.previousId,
+                              progress:
+                                Number(
+                                  transfer.progress.toFixed(
+                                    2,
+                                  ),
+                                ),
+                              durationSeconds:
+                                transfer.durationSeconds,
+                              mode:
+                                transfer.mode,
+                            };
+                          })(),
                       };
                     })(),
                 }
@@ -55935,14 +58257,62 @@
               visibleThreatCaptions()
                 .length,
             maximumThreatCaptionCards:
-              hudFocusSuppressesThreatCaptions(
-                activeHudPresentationFocus(),
-              )
-                ? 0
-                : activeHudPresentationFocus() ===
-                    "field"
-                  ? 2
-                  : 1,
+              threatCaptionPresentation()
+                .maximumCards,
+            threatCaptionLayout:
+              threatCaptionPresentation()
+                .layout,
+            threatCaptionSelectionPolicy:
+              threatCaptionPresentation()
+                .selectionPolicy,
+            primaryThreatCaption:
+              visibleThreatCaptions()[0]
+                ? {
+                    text:
+                      visibleThreatCaptions()[0]
+                        .text,
+                    category:
+                      visibleThreatCaptions()[0]
+                        .category,
+                    frameTheme:
+                      threatCaptionTheme(
+                        visibleThreatCaptions()[0]
+                          .category,
+                      ).frameTheme,
+                    transparentInterior:
+                      state.captionBackground === 0,
+                    semanticFrameVisible:
+                      Boolean(
+                        state.captionBackground >
+                          0.05 ||
+                        threatCaptionTheme(
+                          visibleThreatCaptions()[0]
+                            .category,
+                        ).minimumFrameOpacity > 0,
+                      ),
+                    frameOpacityMultiplier:
+                      state.captionBackground >
+                      0.05
+                        ? 1
+                        : threatCaptionTheme(
+                            visibleThreatCaptions()[0]
+                              .category,
+                          ).minimumFrameOpacity,
+                  }
+                : null,
+            threatCaptionBaselineY:
+              Number(
+                threatCaptionPresentation()
+                  .firstBaselineY.toFixed(1),
+              ),
+            threatCaptionCollisionReleaseGutterPixels:
+              threatCaptionPresentation()
+                  .collisionReleaseGutter === null
+                ? null
+                : Number(
+                    threatCaptionPresentation()
+                      .collisionReleaseGutter.toFixed(1),
+                  ),
             zoneBannerVisible:
               state.hole
                   .zoneBannerTimer > 0 &&
@@ -55953,12 +58323,67 @@
             joeBarkVisible:
               joeBarkVisible(),
             joeBarkDeferredBy:
-              state.hole.joeBark &&
-              state.hole.joeBarkTimer > 0 &&
-              !joeBarkVisible() &&
-              practiceCorrectionOwnsSignalLane()
-                ? "practice_correction"
-                : null,
+              !state.hole.joeBark ||
+              state.hole.joeBarkTimer <= 0 ||
+              joeBarkVisible()
+                ? null
+                : collisionContactActivelyRefreshed()
+                  ? "collision_contact"
+                  : collisionReleaseEchoActive()
+                    ? "collision_release"
+                  : state.hole
+                        .joeBarkDeferredByCollision
+                    ? "collision_settle"
+                    : practiceCorrectionOwnsSignalLane()
+                      ? "practice_correction"
+                      : null,
+            joeBarkCollisionHandoff: {
+              deferred:
+                state.hole
+                  .joeBarkDeferredByCollision,
+              settleActive:
+                state.hole
+                  .joeBarkCollisionSettleTimer > 0,
+              settleProgress:
+                state.hole
+                    .joeBarkCollisionSettleTimer > 0
+                  ? clamp(
+                      1 -
+                        state.hole
+                          .joeBarkCollisionSettleTimer /
+                          JOE_BARK_COLLISION_SETTLE_SECONDS,
+                      0,
+                      1,
+                    )
+                  : 1,
+              settleSeconds:
+                JOE_BARK_COLLISION_SETTLE_SECONDS,
+              resumeActive:
+                state.hole
+                  .joeBarkResumeFadeTimer > 0,
+              resumeProgress:
+                state.hole
+                    .joeBarkResumeFadeTimer > 0
+                  ? clamp(
+                      1 -
+                        state.hole
+                          .joeBarkResumeFadeTimer /
+                          JOE_BARK_COLLISION_RESUME_FADE_SECONDS,
+                      0,
+                      1,
+                    )
+                  : 1,
+              minimumRemainingSeconds:
+                JOE_BARK_COLLISION_MIN_RESUME_SECONDS,
+              policy:
+                "resume_after_visible_release_and_stable_clearance_if_relevant_without_extending_timer",
+              releaseEchoActive:
+                collisionReleaseEchoActive(),
+              clearanceRunsDuringRelease:
+                true,
+              collisionMemoryOwnsDialogue:
+                false,
+            },
           },
           stateBanner: state.hole.stateBannerTimer > 0 ? state.hole.stateBanner : null,
           stateBannerPresentation:
@@ -56033,6 +58458,49 @@
               true,
             mapRole:
               "persistent_with_field_bearing",
+            courseBoundary: (() => {
+              const boundary =
+                courseBoundaryPresentation();
+              return {
+                visible:
+                  boundary.visible,
+                nearestSide:
+                  boundary.side,
+                distanceMeters:
+                  Number(
+                    boundary.distance.toFixed(
+                      2,
+                    ),
+                  ),
+                warningAmount:
+                  Number(
+                    boundary.warningAmount.toFixed(
+                      2,
+                    ),
+                  ),
+                warningBand:
+                  boundary.warningBand,
+                contact:
+                  boundary.contact,
+                placardVisible:
+                  boundary.placardVisible,
+                placardPlacement:
+                  boundary
+                    .placardPlacement,
+                eastWorldX:
+                  boundary.eastWorldX,
+                westWorldX:
+                  boundary.westWorldX,
+                verge:
+                  boundary.verge,
+                visibleSegments:
+                  boundary.visibleSegments,
+                matchesCollisionBoundary:
+                  boundary.matchesCollisionBoundary,
+                presentation:
+                  boundary.presentation,
+              };
+            })(),
             dedicatedLandmarks: {
               shed: true,
               hedgeHides: true,
@@ -56954,6 +59422,39 @@
                       state.hole.blockedTimer > 0 &&
                       state.hole.blockedObstacle ===
                         cue.ownerId;
+                    const target =
+                      coverGroundCueTarget(
+                        cue.ownerId,
+                      );
+                    const coverRadius =
+                      target?.coverRadius ||
+                      target?.radius ||
+                      0;
+                    const distance = target
+                      ? worldDistance(
+                          state.player,
+                          target,
+                        )
+                      : Infinity;
+                    const point = target
+                      ? worldToScreen(
+                          target.x,
+                          target.y,
+                        )
+                      : null;
+                    const labelPresentation =
+                      target
+                        ? coverGroundLabelPresentation(
+                            target,
+                            distance <
+                              coverRadius,
+                            distance <
+                              coverRadius + 11,
+                            true,
+                            collisionOwnsCue,
+                            point,
+                          )
+                        : null;
                     return {
                       obstacleId:
                         cue.ownerId,
@@ -56971,6 +59472,43 @@
                         cue.suppressedCount,
                       presentation:
                         cue.presentation,
+                      socketOccupied:
+                        labelPresentation
+                          ?.socketOccupied ||
+                        false,
+                      concealmentActive:
+                        labelPresentation
+                          ?.concealmentActive ||
+                        false,
+                      localLabel:
+                        labelPresentation
+                          ? {
+                              text:
+                                labelPresentation.text,
+                              role:
+                                labelPresentation.role,
+                              visible:
+                                labelPresentation.visible,
+                              screenVisible:
+                                labelPresentation.screenVisible,
+                              deferredBy:
+                                labelPresentation.deferredBy,
+                              ringRole:
+                                labelPresentation.ringRole,
+                              ringPattern:
+                                labelPresentation.ringPattern,
+                              authoritativeBlockerId:
+                                labelPresentation.authoritativeBlockerId,
+                              blockerMatches:
+                                labelPresentation.blockerMatches,
+                              ringHandoff:
+                                labelPresentation.ringHandoff,
+                              ringEmphasis:
+                                labelPresentation.ringEmphasis,
+                              ringHierarchy:
+                                labelPresentation.ringHierarchy,
+                            }
+                          : null,
                     };
                   })(),
                 nearestLandmark:

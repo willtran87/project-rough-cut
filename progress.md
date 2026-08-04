@@ -1203,3 +1203,322 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Direct inspection confirmed the orange explanation is legible at high resolution and compact size, while the target, objective HUD, course context, and persistent map remain visible.
 - The required official-client smoke preserved the uninstrumented opening, selected drain-valve route, first-steps guidance, map, and generated course art with no browser-error artifact. Canvas work averaged 8.23ms with a 4.80ms final sample across 95 rendered frames.
 - Evidence is recorded in `qa/interaction-rejection-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid repeated attempts during close pursuit and tune only the rejection duration if necessary; preserve the local blocked state and automatic retry restoration.
+
+## Interaction rejection pressure-release polish
+
+- Exercised rapid repeated Use attempts at the locked maintenance shed and sealed drain. Each press previously restarted the complete 2.35-second explanation and replayed the rattle, allowing panic input to prolong blocked feedback indefinitely.
+- Latched the first rejection for its existing presentation window. Further attempts on the same target are absorbed without extending the timer or replaying audio; the text-state contract reports their count and the non-extension policy.
+- Grounded rejection feedback now releases when the player retreats beyond 1.35 times the target interaction radius. The boundary uses authoritative weighted world distance, keeps a generous anti-flicker pad, and clears only the matching rejection message.
+- Re-entering the footprint restores the exact input-aware action prompt. A later deliberate attempt rearms one fresh rejection, and successful field actions retain their atomic completion handoff.
+- Preserved all interaction radii, exit availability, objective routes, map behavior, movement, collision, detection, Joe AI, scoring, generated course and target art, and hazard priority.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 284/284 and covers both exits in ready, blocked, repeat-latched, retreated, re-entered, rearmed, and timed-retry states at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the repeated attempt retains one readable orange consequence rail, while retreat immediately returns the unobstructed course, persistent map, objectives, and chase presentation.
+- The required official-client smoke preserved the uninstrumented opening, selected drain-valve route, first-steps handoff, persistent map, generated course art, and input behavior with no browser-error artifact. Canvas work averaged 6.19ms with a 4.00ms final sample across 107 rendered frames.
+- Evidence is recorded in `qa/interaction-rejection-pressure-release-polish-2026-08-04.md`. Suggested next refinement: human-playtest a natural Joe chase through both exit footprints and tune only the 1.35-radius retreat padding if necessary; preserve the latched first attempt and exact prompt restoration.
+
+## World-marker bottom-rail clearance polish
+
+- High-resolution inspection exposed a close-perspective layout defect at both exits. The fixed 51-pixel card ended near logical y=637, its `IN REACH`, `LOCKED`, or `SEALED` baseline landed around y=640 outside the frame, and the bottom action/consequence rail began at y=608.
+- Added one shared scale-aware world-marker panel measurement. Its frame now encloses the complete local status row at every projected scale.
+- When the bottom action or rejection rail owns the exact verb or consequence, the grounded card lifts only enough to preserve the existing 18-pixel gutter. Distant markers and local-binding fallbacks keep their original position.
+- The target ring, world anchor, glyph, label, authored exit art, and generated course composition remain grounded and unchanged. Rendering and text state share panel top, bottom, scale, lift, owner, local-text containment, and rail-clearance truth.
+- Preserved all interaction radii, exit availability, prompt ordering, pressure-release behavior, objective routes, map behavior, movement, collision, detection, Joe AI, scoring, audio, and art assets.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 292/292 across isolated layouts and covers ready/action and blocked/rejection ownership for both exits at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed `IN REACH` and `LOCKED` remain fully inside their grounded card, the bottom rail retains a separate job, and the full 18-pixel gap survives high-resolution scaling.
+- The required official-client smoke preserved the uninstrumented opening, selected drain-valve route, first-steps handoff, persistent map, generated course art, and input behavior with no browser-error artifact. Canvas work averaged 6.27ms with a 2.00ms final sample across 100 rendered frames.
+- Evidence is recorded in `qa/world-marker-bottom-rail-clearance-polish-2026-08-04.md`. Suggested next refinement: human-playtest the exit approach while alternating ordinary movement and Listening Focus and tune only the vertical gutter if necessary; preserve complete local-text containment and exclusive owners.
+
+## World-marker approach-clearance continuity polish
+
+- Audited the corrected close exit card across the interaction boundary. Its final layout was clear, but the complete roughly 58-pixel lift began on the same frame that introduced the bottom action rail and local status, producing a visible vertical pop during small lateral corrections.
+- Reused the existing interaction-readiness curve to pre-clear the card progressively after the established 0.78 `near` threshold. The lift is derived from live world distance and reaches the final safe y before the action rail appears.
+- Kept the approach card compact. Crossing the real interaction radius expands the framed local-status row downward into the reserved gap rather than moving the card again; blocked feedback inherits the identical final position.
+- Reduced Camera Motion retains the same position-driven geometry without ambient animation. Rendering and text state share readiness, lift progress, raw and target y, actual lift, reserve reason, and clearance truth.
+- Preserved all interaction radii, readiness thresholds, exit availability, prompt timing, objective routes, map behavior, movement, collision, detection, Joe AI, scoring, audio, and art assets.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 300/300 across isolated layouts and covers mid approach, near edge, ready/action, and blocked/rejection states for both exits at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed a measured partial lift at mid approach, near-final placement immediately outside the radius, and no vertical jump when the bottom rail and framed local status appear.
+- The required official-client smoke preserved the uninstrumented opening, selected drain-valve route, first-steps handoff, persistent map, generated course art, and input behavior with no browser-error artifact. Canvas work averaged 6.03ms with a 1.60ms final sample across 120 rendered frames.
+- Evidence is recorded in `qa/world-marker-approach-clearance-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest alternating lateral taps at the final boundary and tune only the 0.78 pre-clear threshold if necessary; preserve authoritative reach and the final 18-pixel gap.
+
+## Cover-ground label truth polish
+
+- Audited the ground socket beneath the locked maintenance shed and found its proximity-derived `IN COVER` copy could contradict the authoritative environment state, which still reported `hardCover: false`. The same low-priority label also competed with the exact action or blocked-result rail at the bottom of the view.
+- Centralized the shed cover target and added one shared label-presentation contract. `CONCEALED` is now reserved for an occupied socket whose authoritative hard-cover blocker matches the shelter, `AT COVER` truthfully reports socket occupancy without concealment, and `COVER` remains the approach state.
+- The small ground label now yields to collision contact, the exact action rail, or the blocked-result rail. If the projected socket leaves the playable field, its text defers instead of clipping against the canvas edge; the cover ring, soil treatment, shelter art, collision footprint, and state remain present.
+- Rendering and `render_game_to_text` consume the same target, projected point, ownership, screen-safety, occupancy, concealment, role, and deferral result. No cover radius, hard-cover test, collision, interaction, prompt timing, route state, map behavior, movement, detection, Joe AI, scoring, audio, or art asset changed.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 308/308 across isolated layouts and covers ready/action, blocked/rejection, and retreated states for both exits at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the blocked rail has exclusive explanatory ownership, the grounded cover geometry remains readable, and retreat neither claims false concealment nor paints clipped offscreen text. Compact and high-resolution compositions retain clear course and map navigation.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 6.28ms with a 1.90ms final sample across 107 rendered frames.
+- Evidence is recorded in `qa/cover-ground-label-truth-polish-2026-08-04.md`. Suggested next refinement: human-playtest natural entry and exit angles around the shed and solid shelters; preserve authoritative concealment truth, exclusive interaction ownership, and the always-visible physical cover geometry.
+
+## Compound-cover visual truth polish
+
+- Exercised natural exposed and blocked sightline angles at the maintenance shed. Its socket was already presented as one shelter, but authoritative cover resolves against the two invisible collision/sight members (`shed-left-wall` and `shed-right-wall`), so the synthetic `maintenance-shed` cue could never recognize genuine wall concealment.
+- Added explicit compound blocker ownership to the shared shed target. The local cue now treats either authored shed wall as the same visual shelter while leaving the actual sightline resolver, hard-cover calculation, collision footprints, and wall geometry unchanged.
+- Gave the existing ground ring restrained state language: solid mint means the matching shelter is genuinely blocking Joe, muted segmented sage means the player occupies the socket but remains exposed, and a light dotted ring marks approach. `CONCEALED`, `AT COVER`, and `COVER` use the same shared state.
+- Rendering and `render_game_to_text` now expose the ring role, pattern, authoritative blocker, and blocker match from the same presentation contract. Compound association changes presentation truth only; no concealment, collision, interaction, route, movement, detection, Joe AI, scoring, audio, map, or art behavior changed.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 312/312 across isolated layouts and includes both an exposed occupied socket and a true shed-wall sightline block at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed that the segmented and solid rings remain distinct against final-corridor soil and fog at high resolution and compact scale, while the exit card, interaction footprint, persistent map, and maintenance-shed art retain their established hierarchy.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 6.25ms with a 2.50ms final sample across 102 rendered frames.
+- Evidence is recorded in `qa/compound-cover-visual-truth-polish-2026-08-04.md`. Suggested next refinement: human-playtest the solid-to-segmented transition while Joe crosses behind the shed; tune only presentation contrast if necessary and preserve the authoritative blocker relationship.
+
+## Cover-ring transition continuity polish
+
+- Audited the exposed-to-concealed switch at the compound maintenance shed. The state and new ring language were correct, but a single-frame replacement between segmented sage and solid mint made Joe grazing a wall edge read like visual flicker.
+- Added a 160-millisecond presentation-only handoff. The newly authoritative ring and `CONCEALED` or `AT COVER` label appear on the first correct frame; the previous pattern remains only as a faint retiring afterimage beneath it.
+- The handoff is owner-aware, resets instead of smearing between different shelters, and becomes fully settled after its bounded interval. Reduced Camera Motion skips the crossfade and switches instantly while preserving the same authoritative state.
+- Rendering and `render_game_to_text` share the previous ring role, eased progress, duration, and `authoritative_crossfade`, `settled`, or `instant_reduced_motion` mode. No sightline, hard-cover, collision, interaction, detection, route, movement, Joe AI, scoring, audio, map, label timing, or art behavior changed.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 316/316 across isolated layouts and covers the initial authoritative frame, 80-millisecond midpoint, settled result, and Reduced Camera Motion bypass at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the new mint state is immediately readable, the retiring segmented trace remains subordinate, the midpoint does not thicken or obscure the exit card, and compact presentation retains distinct geometry.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 6.14ms with a 1.50ms final sample across 104 rendered frames.
+- Evidence is recorded in `qa/cover-ring-transition-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest repeated lateral Joe passes at the shed and tune only the 160-millisecond visual duration if necessary; preserve immediate authoritative truth and the Reduced Motion bypass.
+
+## Cover-versus-interaction hierarchy polish
+
+- Inspected the close shed and drain action states after the cover-ring improvements. The cover socket and interaction footprint were both truthful, but two complete high-emphasis ellipses competed beneath the target card precisely when the player needed to read and execute an action.
+- Added one presentation-only hierarchy rule. While the exact action or blocked-result rail owns the local command lane, the cover ring retains its geometry and pattern at 44% emphasis behind the gold interaction footprint. Retreat automatically restores full cover emphasis.
+- Collision contact still fully defers the optional ring to its stronger physical warning. The socket soil, cover art, authoritative concealment, interaction radius, action footprint, labels, map, and all gameplay state remain intact.
+- Rendering and `render_game_to_text` share numeric ring emphasis plus `primary_cover_geometry`, `subordinate_to_interaction`, or `deferred_to_collision` ownership. No radius, sightline, collision, interaction, rejection timing, route, movement, detection, Joe AI, scoring, audio, map, transition duration, or art behavior changed.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 324/324 across isolated layouts and covers both ready/action and blocked/rejection hierarchy at the shed and drain, plus full-emphasis retreat, at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the actionable gold footprint and exact bottom rail now form one dominant command hierarchy, while the cover socket remains visible as grounded context. Compact layouts retain the same separation without losing terrain readability.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 5.79ms with a 2.00ms final sample across 101 rendered frames.
+- Evidence is recorded in `qa/cover-versus-interaction-hierarchy-polish-2026-08-04.md`. Suggested next refinement: human-playtest entering and retreating from both exits during pursuit and tune only the 44% subordinate emphasis if necessary; preserve exact action ownership and full-strength cover recovery.
+
+## Collision-versus-dialogue hierarchy polish
+
+- Inspected movement, footing, noise, and vertical-pass captures after the exit work. The wake scenario exposed the clearest remaining clutter: contacting the water pine could show the grounded `BLOCKED BY` escape card, the larger wake warning, and an optional Joe joke at the same time.
+- Gave the short collision contact window priority over optional Joe dialogue. The tethered obstacle card and viable escape direction remain immediate, while the larger wake or pursuit consequence stays on the bottom rail for suspense and tactical context.
+- The active bark and its countdown remain in state rather than being cleared or rerolled, so Joe's personality can resume if presentation time remains after the physical correction. This changes presentation ownership only.
+- Updated Joe's dialogue signal ownership and `render_game_to_text` diagnostics so a retained hidden bark reports `collision_contact` as its deferral reason. No collision duration, blocker, escape calculation, wake, message, dialogue selection, Joe AI, movement, detection, scoring, audio, map, subtitle setting, or art changed.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 328/328 across isolated layouts and verifies the simultaneous water-pine collision plus vertical-pass wake at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the high-resolution and compact wake frames now keep one local physical correction plus one larger suspense consequence, with no overlapping Joe subtitle. The obstacle footprint, escape chevron, persistent map, route thread, attention state, and environment remain readable.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 6.50ms with a 2.10ms final sample across 105 rendered frames.
+- Evidence is recorded in `qa/collision-versus-dialogue-hierarchy-polish-2026-08-04.md`. Suggested next refinement: human-playtest repeated glancing impacts during a natural chase and verify the preserved bark returns only when still relevant; preserve collision correction and threat-consequence priority.
+
+## Collision-dialogue resume polish
+
+- Followed the preserved Joe subtitle through the end of collision contact. A nearly expired line could previously regain the lane for only a few frames, creating a stale visual flash immediately after the player finished reading the physical escape correction.
+- Added a relevance-aware release policy without pausing or extending the bark timer. Dialogue with at least 0.72 seconds remaining resumes; older dialogue retires silently and is not rerolled.
+- Relevant dialogue returns through a bounded 160-millisecond opacity handoff after collision clears. The line is authoritative immediately, no collision information is delayed, and Reduced Camera Motion uses an instant return.
+- Reset the handoff whenever a fresh bark is selected and exposed deferred, active, progress, threshold, and policy state through `render_game_to_text` for deterministic validation.
+- Preserved collision duration, obstacle geometry, escape selection, wake and pursuit warnings, dialogue selection, Joe AI, movement, detection, scoring, audio, map, subtitle settings, and all generated art.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 336/336 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including resume-start, midpoint, settled, and stale-retirement states.
+- Direct inspection confirmed the high-resolution handoff moves from an unobstructed collision-release frame through a restrained partial subtitle into one crisp settled card. Compact retains the hierarchy, and Reduced Camera Motion restores relevant copy without animation.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 5.70ms with a 2.10ms final sample across 113 rendered frames.
+- Evidence is recorded in `qa/collision-dialogue-resume-polish-2026-08-04.md`. Suggested next refinement: human-playtest repeated glancing impacts during an active chase and tune only the 0.72-second relevance threshold if needed; preserve uninterrupted countdown and collision priority.
+
+## Collision-dialogue glancing-contact continuity polish
+
+- Exercised two fast collision contacts separated by a short clear gap. The relevance-aware resume was correct for one impact, but repeated glances could still let a preserved Joe subtitle surface briefly between physical corrections and then disappear again.
+- Added a 120-millisecond stable-clearance check before deferred dialogue may return. A new collision during that interval resets the check, preventing subtitle chatter while the player is still scraping along the same obstacle family.
+- The bark countdown remains uninterrupted throughout contact and clearance. Relevance is checked again at release, so the grace interval never grants extra dialogue time; lines below the existing 0.72-second threshold retire without replay or replacement.
+- After stable clearance, standard motion retains the existing 160-millisecond opacity return. Reduced Camera Motion preserves the stable-clearance protection and restores a relevant line instantly after it completes.
+- Rendering ownership and `render_game_to_text` now distinguish `collision_contact` from `collision_settle` and expose settle activity, progress, duration, resume activity, relevance threshold, and the non-extension policy.
+- Preserved collision duration, obstacle art and geometry, escape direction, wake and pursuit warnings, Joe dialogue selection and AI, movement, detection, scoring, audio, map, and subtitle settings.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 340/340 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including first release, partial clearance, repeated contact, restarted clearance, fade, settled, and stale-retirement states.
+- Direct inspection confirmed the grounded pine contact card remains the sole local voice through both high-resolution and compact clear gaps, then hands off once to Joe's subtitle. Reduced Camera Motion keeps the same stable ownership without the opacity fade.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 5.72ms with a 1.80ms final sample across 110 rendered frames.
+- Evidence is recorded in `qa/collision-dialogue-glancing-contact-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest sustained wall scraping and natural obstacle-to-obstacle transfers during pursuit; preserve the bounded clearance check and uninterrupted bark countdown.
+
+## Sustained collision-feedback emphasis polish
+
+- Audited sustained wall scraping after the repeated-contact dialogue work. Because every blocked movement frame refreshed the 1.15-second collision timer, the orange footprint, card, tether, screen wash, and escape chevron could remain at fresh-impact intensity indefinitely.
+- Added a presentation-only contact age. Fresh impacts stay at full strength for 180 milliseconds, then settle smoothly over 420 milliseconds to a 66% steady scrape state while contact continues to refresh.
+- A genuinely new obstacle or a nearly expired re-contact resets the age and restores full emphasis. Releasing the obstacle retains the established timer-driven fade, capped by the current settled strength so the overlay cannot brighten again on release.
+- Reduced Camera Motion preserves the strong impact and readable 66% scrape states but skips the intermediate opacity animation.
+- The blocker name, grounded footprint, tether, viable escape direction, movement chevron, wake warning, and collision ownership remain present at every stage. Only repeated-contact emphasis changes.
+- `render_game_to_text` now reports feedback mode, emphasis, contact age, settle progress, active refresh, and steady target from the same presentation contract used by the renderer.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 348/348 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including fresh impact, mid-settle, steady scrape, release fade, repeated-contact dialogue, movement, route, interaction, and cover states.
+- Direct inspection confirmed the high-resolution and compact steady scrape remains fully legible but reveals more of the pine, turf, route, and fog than the initial hit. Reduced Camera Motion makes the same hierarchy change without interpolation.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 6.08ms with a 1.80ms final sample across 103 rendered frames.
+- Evidence is recorded in `qa/collision-feedback-sustained-emphasis-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid obstacle-to-obstacle transfers and tune only the 66% steady emphasis if necessary; preserve full emphasis for genuinely new contact and the existing escape guidance.
+
+## Collision obstacle-transfer continuity polish
+
+- Audited a rapid transfer from the Water Hazard pine to the nearby audit board. The authoritative card and escape direction changed correctly, but the grounded footprint could teleport across the field and the lower-priority `SOLID // PINE` proximity plaque could remain visible beside the new `BLOCKED BY // AUDIT BOARD` instruction.
+- Added a 120-millisecond spatial handoff for direct obstacle-ID changes. The new obstacle receives the full-impact footprint, blocker card, tether, and escape direction on the first correct frame; only the prior footprint remains as a faint dashed retiring trace.
+- The previous contact never keeps a label, tether, card, screen wash, or escape instruction. Repeated transfers replace the one retiring trace rather than accumulating a trail of stale contacts.
+- Active collision correction now suppresses ambient `SOLID` blocker plaques. Imminent noise and other safety-critical context can still retain their existing priority; only the redundant proximity blocker yields.
+- Reduced Camera Motion switches immediately to the new authoritative obstacle and omits the footprint afterimage.
+- `render_game_to_text` reports transfer activity, previous obstacle ID, progress, duration, and presentation mode, while the shared context-cue contract reports `collision_contact` as the ambient blocker deferral owner.
+- Preserved player collision, obstacle geometry, escape calculation, contact duration and emphasis, audio cooldown, wake warnings, Joe dialogue and AI, movement, detection, scoring, map, and all generated art.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 352/352 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including transfer start, midpoint, settled ownership, sustained scraping, dialogue recovery, routes, interactions, and cover.
+- High-resolution inspection directly caught and removed the stale pine plaque. The corrected high-resolution and compact captures show one audit-board card and escape instruction plus only the faint retiring pine footprint; Reduced Camera Motion contains no afterimage.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 8.65ms with a 3.20ms final sample across 97 rendered frames.
+- Evidence is recorded in `qa/collision-obstacle-transfer-continuity-polish-2026-08-04.md`. Suggested next refinement: human-playtest zig-zag movement through the densest Service Maze contacts and tune only the 120-millisecond trace duration if needed; preserve immediate new-obstacle authority and single-instruction ownership.
+
+## Collision-context cue handoff polish
+
+- Followed the complete collision-to-dialogue release sequence and found one remaining 120-millisecond ownership gap: the ambient `SOLID // PINE` plaque could appear during stable clearance, then vanish when the preserved Joe subtitle returned.
+- Extended collision ownership through the stable-clearance tail only when dialogue is actually pending. The field now progresses from collision feedback to a clean clearance frame to Joe's resumed subtitle without an unrelated one-frame blocker callout.
+- Ordinary blocker guidance is not delayed after collisions that have no pending dialogue. Imminent noise and practice guidance retain their established higher priorities, and a repeated impact still restarts clearance immediately.
+- `render_game_to_text` now exposes the suppressed ambient cue as `collision_settle`, distinct from active `collision_contact`, so both phases are deterministic and independently testable.
+- Preserved collision geometry and duration, transfer traces, dialogue countdown and relevance rules, Joe AI, movement, detection, pursuit, scoring, audio, map, accessibility settings, and generated art.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 352/352 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including settle start, partial clearance, repeated clearance, dialogue resume, routes, interactions, and cover.
+- Direct inspection confirmed high-resolution and compact clearance frames contain no transient `SOLID` plaque, while standard and Reduced Camera Motion return Joe's relevant line only after stable clearance.
+- The required official uninstrumented client preserved the opening, first-steps handoff, selected drain-valve route, persistent map, layered course art, and input behavior with no browser-error artifact. Canvas work averaged 5.57ms with a 2.20ms final sample across 111 rendered frames.
+- Evidence is recorded in `qa/collision-context-cue-handoff-polish-2026-08-04.md`. Suggested next refinement: human-playtest natural Service Maze scraping with dialogue active; preserve the clean ownership bridge and only tune timing if the clearance tail itself feels perceptible.
+
+## Collision-release input ownership polish
+
+- Audited the release frame after a sustained collision and found the old orange escape chevron could remain authoritative while the player was already moving in a different direction. The lingering `MOVE LEFT TO CLEAR` instruction made responsive controls appear sticky even though physical movement had recovered.
+- Separated actively refreshed collision correction from the longer collision-memory timer. The orange `BLOCKED BY` card and viable escape chevron now own the field only while movement is actually being rejected.
+- Once contact releases, the footprint and card switch to a mint `CLEAR OF` echo, the card reports `LIVE INPUT // KEEP MOVING`, the screen wash retires, the player's current movement chevron returns, and the ordinary locomotion label may render again.
+- Restricted obstacle-transfer afterimages to genuinely continuous active contact. Colliding with a different obstacle after the previous contact has already released now starts a fresh impact instead of drawing a spatially misleading bridge.
+- The map's orange blocked footprint follows active correction rather than historical feedback, while collision geometry, the readable release echo, dialogue timing, and stored text-state evidence remain intact.
+- `render_game_to_text` reports correction activity, instruction mode, and exact instruction alongside the attempted and displayed movement directions, allowing live-input restoration to be validated without visual inference.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 352/352 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed high-resolution, compact, and Reduced Camera Motion release frames show a rightward live-input chevron with no stale leftward escape instruction; the mint echo remains grounded and readable.
+- A long official uninstrumented sprint/chase route completed 892 rendered frames with no browser-error artifact. Canvas work averaged 1.67ms with a 1.60ms final sample, and the run ended with no stale collision or escape owner.
+- Evidence is recorded in `qa/collision-release-input-ownership-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid stop-start contact at tunnel mouths and tune only the 80-millisecond active-contact grace if necessary; preserve immediate live-input restoration and truthful direct-transfer detection.
+
+## Collision-release echo timing polish
+
+- Audited the new mint collision release state over its full lifetime. Although input ownership returned immediately, the visual confirmation could inherit most of the longer 1.15-second collision-memory timer and continue occupying the field well after the player understood the recovery.
+- Added a dedicated 360-millisecond release-echo lifecycle measured from the end of the 80-millisecond active-contact grace. Standard motion fades the mint card, tether, and footprint through a smooth bounded envelope; Reduced Camera Motion shows one stable confirmation and removes it without opacity interpolation.
+- The release echo continues to report `CLEAR OF`, `LIVE INPUT // KEEP MOVING`, and current directional input while present. Once it retires, `blockedBy` no longer reports a visible collision and ordinary `SOLID` proximity guidance may return when no dialogue or threat lane has higher priority.
+- Nearby blocker candidate suppression now follows active correction plus the bounded echo instead of the full collision-memory timer. This prevents both overlapping plaques during release and an unnecessary dead interval afterward.
+- Kept Joe's collision-deferred subtitle countdown, relevance threshold, stable-clearance protection, wake-warning priority, physical collision, transfer traces, map, movement, detection, scoring, audio, and generated art unchanged.
+- `render_game_to_text` now reports release age, progress, duration, visibility, instruction mode, and exact context deferral ownership, including the valid case where a wake warning outranks collision-settle diagnostics.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 356/356 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed the high-resolution and compact mid-release frames remain readable, then hand cleanly to the grounded pine plaque. Reduced Camera Motion performs the same handoff without animated opacity.
+- The official uninstrumented shorter traversal completed 468 rendered frames with no browser-error artifact. Canvas work averaged 2.67ms with a 2.40ms final sample; it ended with no stale collision or escape owner.
+- Evidence is recorded in `qa/collision-release-echo-timing-polish-2026-08-04.md`. Suggested next refinement: human-playtest whether the 360-millisecond positive confirmation remains legible during rapid chase corrections; preserve the separate active-contact, release-echo, and collision-memory responsibilities.
+
+## Collision-dialogue memory decoupling polish
+
+- Followed the shortened mint release echo into Joe's preserved subtitle and found an unnecessary blank interval: dialogue still waited for the older 1.15-second collision-memory timer even though contact feedback had visibly retired after 360 milliseconds.
+- Decoupled dialogue ownership from collision memory. Active physical rejection now owns dialogue and resets the existing 120-millisecond stable-clearance timer; the timer accrues while the mint release echo remains visible, and dialogue can return only after both the clearance requirement and visible echo have completed.
+- A renewed glancing collision immediately resets stable clearance and cancels any pending subtitle fade. The bark countdown remains uninterrupted, so no extra dialogue time is created.
+- Relevant dialogue returns through the established 160-millisecond standard-motion opacity handoff as soon as the release echo yields. Reduced Camera Motion restores it instantly after the static echo, with no intermediate opacity animation.
+- Stale deferred copy is still retired. The deterministic stale-line scenario now also verifies that Joe may select genuinely new context dialogue during the shorter recovery window without replaying the expired line.
+- `render_game_to_text` explicitly reports whether the release echo is active, whether clearance runs during it, whether collision memory owns dialogue, and the revised non-extension policy.
+- Focused gameplay validation passed 18/18 with no browser errors. Responsive visual/state validation passed 356/356 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed high-resolution and compact layouts move from one mint release owner to one Joe subtitle owner without overlap. Reduced Camera Motion performs the same handoff as an immediate state switch.
+- The official uninstrumented traversal completed 459 rendered frames with no browser-error artifact. Canvas work averaged 2.58ms with a 2.10ms final sample, and state confirmed collision memory did not own the live dialogue lane.
+- Evidence is recorded in `qa/collision-dialogue-memory-decoupling-polish-2026-08-04.md`. Suggested next refinement: human-playtest rapid collision-release cycles during chase and tune only the 360-millisecond echo if the subtitle return feels early or late; preserve stable clearance, non-extension, and visible-owner exclusivity.
+
+## Collision-release threat-caption hierarchy polish
+
+- Inspected the repeated collision-release frame and found two simultaneous orange threat captions competing with the mint `CLEAR OF // AUDIT BOARD` card: the upper warning crossed the release panel while the lower warning occupied the navigation/cover lane.
+- Added one shared threat-caption presentation contract. During the bounded mint release echo, one live warning is drawn and its baseline is derived from the actual grounded collision-card geometry.
+- The release layout reserves a measured 12-pixel canvas gutter above the collision panel. It therefore stays stable at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion instead of depending on browser pixels or viewport scaling.
+- Caption contents, queue order, lifetimes, and expiry continue unchanged. Joe's wake awareness, detection, AI, collision, release timing, dialogue handoff, route thread, cover state, map, audio, and scoring are untouched.
+- `render_game_to_text` now reports the maximum visible caption count, presentation layout, baseline, and collision-release gutter from the same contract used to draw the frame.
+- Syntax and diff checks pass. Focused movement/pursuit validation passes 18/18, and responsive visual/state validation passes 356/356 with no browser errors.
+- Direct inspection confirms one current mower warning above one mint recovery card in high-resolution, compact, and Reduced Camera Motion frames; the route line and lower cover lane remain clear, and the subsequent Joe subtitle resumes alone.
+- The required official uninstrumented traversal completed 465 rendered frames without a browser-error artifact. Canvas rendering averaged 4.51ms with a 5.40ms final sample.
+- Evidence is recorded in `qa/collision-release-threat-caption-hierarchy-polish-2026-08-04.md`. Suggested next refinement: human-playtest natural multi-warning releases during close pursuit; preserve single-card recovery ownership and the measured gutter unless a different local card family proves to need the same shared contract.
+
+## Collision-release warning-priority polish
+
+- Hardened the single-card release hierarchy against a subtler failure: a newly added ambient world caption could displace an older danger warning even while Joe was reacting to the player.
+- Added a presentation-only severity policy for the mint release echo. `danger` outranks `mower`, `mower` outranks `world`, and reverse queue order keeps the newest caption authoritative within equal severity.
+- The live caption array is never sorted or rewritten. Deferred captions retain their original order, ages, durations, and expiry, while ordinary field presentation continues to use the established recency-based two-card stack.
+- The deterministic release scenario now seeds an older mower-wake danger plus a newer course-light ambient caption and verifies that only the danger card renders above `CLEAR OF` with the existing 12-pixel gutter.
+- `render_game_to_text` reports the active selection policy plus the primary caption text and category from the same visible-caption result used by the renderer.
+- Focused movement and pursuit validation passed 18/18. Responsive visual/state validation passed 356/356 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion with no browser errors.
+- Direct inspection confirmed the danger warning remains the one visible release card at high resolution, compact landscape, and Reduced Camera Motion; the newer ambient caption stays deferred and the mint card remains clear.
+- The required official uninstrumented traversal completed 464 rendered frames without a browser-error artifact. Canvas rendering averaged 4.16ms with a 4.10ms final sample.
+- Evidence is recorded in `qa/collision-release-warning-priority-polish-2026-08-04.md`. Suggested next refinement: human-playtest mixed warning categories during natural pursuit; preserve severity-first release selection, recency tie-breaking, and the unmodified caption queue.
+
+## Semantic threat-caption frame polish
+
+- Audited the selected danger warning after the priority pass and found its orange copy still enclosed by the generic sage subtitle border, weakening the severity read and making the visual language internally inconsistent.
+- Extended the shared subtitle-card primitive with an optional frame color while preserving its existing sage default for Joe dialogue and the opening subtitle.
+- Added one category theme contract: danger captions use orange text and frame, mower-state captions use amber text and frame, and ambient world captions retain sage text and frame.
+- Updated the Settings caption preview to consume the same mower-amber theme as live gameplay, so accessibility configuration demonstrates the real presentation rather than a partial approximation.
+- `render_game_to_text` now exposes the selected caption's semantic frame theme. The deterministic mixed-priority release verifies that the danger owner reports `danger_orange` while keeping its geometry, timing, and queue behavior unchanged.
+- Responsive visual/state validation passed 356/356 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion. Focused movement and pursuit validation passed 18/18; no browser errors occurred.
+- Direct inspection confirmed the orange danger frame remains crisp and separate from the mint recovery card at high resolution, compact landscape, and Reduced Camera Motion. The official Settings capture confirms the mower-amber preview remains aligned inside its panel.
+- The official Settings run completed 71 rendered frames at 4.46ms average canvas render and 1.30ms final sample. The official course traversal completed 473 frames at 2.58ms average and 2.20ms final, both without browser-error artifacts.
+- Evidence is recorded in `qa/semantic-threat-caption-frame-polish-2026-08-04.md`. Suggested next refinement: human-playtest the full danger/mower/world caption mix against late-course fog and tune only frame alpha if needed; preserve category meaning and caption-background accessibility control.
+
+## Maximum-size caption-preview layout polish
+
+- Audited the Settings preview at the maximum supported 140% caption size. The scaled card rose into the header region while its lower edge retained only about two canvas pixels of breathing room.
+- Expanded the preview panel from 57 to 60 canvas pixels and lifted the header baseline, preserving the existing card baseline and neighboring button layout.
+- Added a right-aligned `MOWER // AMBER` category label driven by the same semantic theme as the live preview. Disabling threat captions swaps that label to `DISABLED` alongside the existing off message.
+- Added a Settings-only text-state geometry contract reporting panel bounds, header and card bounds, category theme, bottom padding, and footer clearance.
+- The deterministic visual suite now opens the real Settings renderer at 140% caption size in every viewport and verifies at least 2px header clearance, 5px bottom padding, and 8px footer separation.
+- Responsive visual/state validation passed 360/360 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion. Focused movement and pursuit validation passed 18/18; no browser errors occurred.
+- Direct inspection confirmed the maximum-size preview stays inside its labeled panel at high resolution, compact landscape, and Reduced Camera Motion without colliding with fullscreen or button controls.
+- The required official keyboard-driven Settings flow reached the `subtitle_size` row at 140%, completed 81 rendered frames without a browser-error artifact, and averaged 2.82ms canvas render with a 1.20ms final sample.
+- Evidence is recorded in `qa/caption-preview-max-size-layout-polish-2026-08-04.md`. Suggested next refinement: human-playtest pointer and controller adjustments between 80% and 140%; preserve the max-size containment contract and live semantic category preview.
+
+## Zero-backdrop semantic-frame polish
+
+- Audited the semantic threat treatment at the minimum `CAPTION BACKDROP` value and found that the existing `> 0.05` frame gate removed the danger/mower/world border together with the fill.
+- Extended the shared subtitle-card primitive with an opt-in minimum frame opacity. Threat captions use a restrained 42% semantic outline at zero backdrop, while their interior remains completely transparent.
+- Opening subtitles and Joe dialogue keep the original zero-backdrop behavior because they do not opt into the semantic minimum. The accessibility setting therefore still removes their full card treatment as expected.
+- The Settings preview and live danger captions consume the same category theme and minimum frame value. Default and nonzero backdrop levels retain their established full frame strength.
+- Added text-state truth for transparent interior, semantic-frame visibility, and effective frame multiplier in both Settings and the live primary-threat contract.
+- The deterministic visual suite now captures the hardest combination—140% caption size plus 0% backdrop—in Settings and captures a zero-backdrop danger warning over actual fog, foliage, obstacle art, route geometry, and the mint collision-release card.
+- Responsive visual/state validation passed 360/360 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion. Focused movement and pursuit validation passed 18/18; no browser errors occurred.
+- Direct inspection confirmed the transparent card reveals the course while its danger-orange boundary and heavy text stroke remain legible at high resolution, compact landscape, and Reduced Camera Motion.
+- The required official keyboard flow reached `caption_background` at 0% with caption size at 140%, completed 104 rendered frames without a browser-error artifact, and averaged 2.04ms canvas render with a 0.90ms final sample.
+- Evidence is recorded in `qa/zero-backdrop-semantic-frame-polish-2026-08-04.md`. Suggested next refinement: human-playtest zero-backdrop captions across Night Range floodlights and Release Corridor fog; tune only the 42% minimum if needed while preserving transparent fill and category identity.
+
+## Applied-distance locomotion polish
+
+- Audited open-field movement and blocked-contact frames after the caption work. Forward bob, surge, and speed streaks were driven by held input and elapsed time, so pressing into a hard boundary could continue to imply travel and terrain slowdown did not fully affect the visual cadence.
+- Added one applied-distance locomotion contract. Each movement step records requested and accepted world distance; the stride phase advances only from accepted travel, preserving partial slide feedback while stopping forward-motion effects on a fully rejected input.
+- Camera bob, shoulder roll, stride impact, surge, forward streaks, and peripheral rush now consume that shared translation state. Existing movement arrows and collision escape guidance continue to report the player's live intent while the forward effects stop.
+- Rebased existing streak motion on accumulated course travel and added three-to-five restrained near-field turf rush bands. These perspective bands move faster during a real sprint, slow naturally with authored surface multipliers, and remain stationary when the player is blocked.
+- Reduced Camera Motion keeps requested-versus-applied movement truth and all collision guidance but continues to omit bob, roll, surge, streaks, and the new animated turf bands.
+- Preserved movement speeds, terrain multipliers, collision footprints, obstacle sliding, Joe AI, detection, scoring, audio, route logic, map behavior, and generated art.
+- Focused movement/pursuit validation passed 18/18. Responsive visual/state validation passed 368/368 across 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion, including real footing travel and a fully rejected course-boundary input.
+- Direct inspection confirmed successful movement retains strong grounded depth cues at high resolution and compact landscape, while the blocked frame keeps its orange correction card and live input direction without fake forward rush. Reduced Camera Motion preserves the same state distinction statically.
+- The required official uninstrumented traversal completed 465 rendered frames without a browser-error artifact. Canvas rendering averaged 2.57ms with a 2.30ms final sample.
+- Evidence is recorded in `qa/applied-distance-locomotion-polish-2026-08-04.md`. Suggested next refinement: human-playtest long diagonal wall slides and terrain-boundary sprint transitions; preserve applied-distance ownership and tune only the turf-band opacity if necessary.
+
+## Accepted-lateral camera polish
+
+- Followed the applied-distance locomotion contract into sideways movement. Forward effects stopped correctly at a wall, but camera pan, counter-roll, and edge-rush still consumed raw lateral input before collision resolution and could imply side travel that never occurred.
+- Recorded requested and applied movement independently on both world axes. The camera now receives requested lateral input for diagnostics and accepted lateral input for presentation.
+- Accepted strafes retain the established eased viewport shift, parallax, roll, and edge cue. Fully blocked lateral input targets a stable view, while partial obstacle slides receive proportional camera response rather than a binary snap.
+- Movement arrows and collision correction remain input-authoritative, so a blocked attempt still communicates the pressed direction and exact escape instruction even though the world no longer drifts falsely.
+- Reduced Camera Motion retains its restrained accepted lateral shift and zero roll. No movement speed, collision, sliding, camera amplitude, camera response timing, route, Joe AI, detection, scoring, audio, map, or art changed.
+- Hardened visual scenario isolation after direct inspection caught a stale boundary collision card in the later accepted-strafe capture. The shared placement reset now clears collision presentation state before every independent scenario.
+- Focused movement/pursuit validation passed 18/18. Responsive visual/state validation passed 372/372 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion.
+- Direct inspection confirmed accepted leftward travel shifts the high-resolution and compact course composition while fully blocked rightward input retains a stable scene behind the grounded orange correction card. Reduced Camera Motion preserves the same truth without roll.
+- The required official uninstrumented traversal completed 468 rendered frames without a browser-error artifact. Canvas rendering averaged 2.61ms with a 2.20ms final sample.
+- Evidence is recorded in `qa/accepted-lateral-camera-polish-2026-08-04.md`. Suggested next refinement: human-playtest diagonal hedge and cart slides during close pursuit; preserve per-axis acceptance and tune only the existing camera amplitude if necessary.
+
+## Diegetic course-boundary polish
+
+- Audited the accepted-lateral boundary frame and found the next source of frustration: fairway lanterns marked a narrower authored lane, while the true course collision edges at `x = -112` and `x = 112` could remain visually open until the player hit them.
+- Added a world-projected perimeter on the exact collision coordinates. Low dashed rope, grounded stakes, and reflective tabs recede through perspective and respond to the existing camera transform instead of behaving like a HUD overlay.
+- The nearest boundary warms from restrained sage to amber inside a 34-meter approach band. One small grounded `COURSE LIMIT // KEEP LEFT|RIGHT` placard appears before contact so the player can reroute based on the first-person view.
+- At contact, the placard yields while the physical rope remains behind the existing orange footprint and escape card. This preserves one authoritative instruction owner rather than repeating the boundary warning.
+- The persistent map and collision logic continue to use the same `±112` width. No playable area, collision, movement, camera, Joe AI, detection, route, scoring, audio, or generated art changed.
+- Added text-state diagnostics for nearest side, exact distance, warning amount, contact, placard visibility, visible segments, and explicit collision-coordinate parity.
+- High-resolution validation passed 94/94. Responsive visual/state validation passed 376/376 at 2560x1600, 1280x720, 844x390, and 1280x720 Reduced Camera Motion. Focused movement/pursuit validation passed 18/18.
+- Direct inspection confirmed the approach perimeter is clear but subordinate at high resolution and compact landscape; Reduced Camera Motion preserves the same static geometry. Contact retains the rope and removes the redundant placard beneath the orange correction card.
+- The required official uninstrumented traversal completed 469 rendered frames without a browser-error artifact. Canvas rendering averaged 2.80ms with a 3.50ms final sample.
+- Evidence is recorded in `qa/diegetic-course-boundary-polish-2026-08-04.md`. Suggested next refinement: human-playtest the west perimeter and late-course narrow lanes; preserve exact coordinate parity and contact ownership, tuning only approach opacity if needed.
+
+## HUD-safe course-boundary placard polish
+
+- Exercised the previously untested mirrored west approach and found that canvas-only clamping did not reserve the expanded 430-pixel left HUD, allowing a grounded course-limit card to project beneath the surroundings panel.
+- Added one shared boundary-card safe-area contract. The left edge follows the actual compact or expanded HUD with a 12-pixel gutter, while the right edge stops 18 pixels before the persistent course map.
+- The 140-pixel placard now selects a naturally safe projected stake when one exists. When the west stake is obscured by the HUD, only the card is displaced and a thin outlined amber tether returns it to the exact world-projected stake.
+- The east card remains naturally grounded when it already fits. Collision coordinates, playable width, rope and stake anchors, movement, camera, routes, Joe AI, detection, map behavior, scoring, audio, and generated art remain unchanged.
+- `render_game_to_text` exposes safe edges, card width, anchor and label geometry, HUD state, displacement, map clearance, HUD clearance, and the resulting presentation mode from the same calculation used by the renderer.
+- Focused movement and pursuit validation passed 18/18. High-resolution validation passed 95/95, and the complete responsive/Reduced Camera Motion matrix passed 380/380 with no browser errors.
+- Direct inspection confirmed the west card clears the expanded HUD at 2560x1600, remains fully inside the field at 844x390, and retains its precise stake origin; the east card receives no unnecessary tether.
+- The required official input traversal completed 467 rendered frames without a browser-error artifact. Canvas rendering averaged 4.87ms with a 4.40ms final sample.
+- Evidence is recorded in `qa/hud-safe-course-boundary-placard-polish-2026-08-04.md`. Suggested next refinement: human-playtest both edges during close pursuit and preserve the shared anchor/safe-area contract unless a more urgent local signal needs presentation priority.
+
+## Course-boundary dead-verge polish
+
+- Audited the new perimeter in first person and found that the rope was geometrically truthful but the turf remained nearly identical on both sides, leaving the player to infer which side was playable.
+- Added a 14-meter perspective-projected dead verge strictly outside the exact collision coordinates. It fades from a restrained boundary stain into darker neglected turf without creating a visual wall.
+- Added deterministic broken reeds and small exposed-soil scars to ground the strip in the game's pixel-horror course art. High-resolution inspection caught an initially symmetrical grass silhouette that resembled a route arrow; it was replaced with irregular, wind-leaning clusters of staggered height and position.
+- The treatment uses the existing course projection, camera shift, fog, depth, and foreground occlusion. Reduced Camera Motion receives the same static composition without extra animation.
+- Text state now reports verge width, outside-only placement, texture contract, playable-side communication, and explicit non-collision behavior.
+- Course width, collision response, movement, footing, camera behavior, map presentation, routes, Joe AI, detection, scoring, audio, and generated art remain unchanged.
+- Focused gameplay validation passed 18/18. High-resolution validation passed 95/95, and the complete responsive/Reduced Camera Motion matrix passed 380/380 with no browser errors.
+- Direct inspection confirmed the safe side reads more clearly at 2560x1600 and 844x390 while the rope, stakes, placard, and persistent map retain priority.
+- The required official input traversal completed 467 rendered frames without a browser-error artifact. Canvas rendering averaged 2.99ms with a 3.40ms final sample.
+- Evidence is recorded in `qa/course-boundary-dead-verge-polish-2026-08-04.md`. Suggested next refinement: human-playtest the verge during close pursuit and late-course fog, preserving its outside-only non-collision contract.
