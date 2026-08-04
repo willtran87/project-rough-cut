@@ -775,3 +775,101 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Focused replay passed 12/12 primary-owner, secondary-suppression, high-resolution, standard, compact, Reduced Motion, and browser-error checks. The established collision/route/cover suite retained all 19 assertions.
 - The required uninstrumented late-route capture selected `start-hedge`, retained `service-cart` as a suppressed nearby shelter, produced no error artifact, and averaged 2.02ms canvas work with a 1.90ms final sample across 461 rendered frames.
 - Evidence is recorded in `qa/nearby-cover-socket-hierarchy-polish-2026-08-03.md`. Suggested next refinement: human-playtest a dense shelter transition in Service Maze; adjust only the 11-meter presentation margin if the primary label changes too early, never remove secondary shelter mechanics.
+
+## Starter Bell correction-focus polish
+
+- The natural late-route replay exposed the optional Starter Bell miss rail and Joe's `A new Outcome entered the portfolio` subtitle simultaneously. The correction already reported aim, power, miss distance, ball recovery, and the next choice; the extra center subtitle competed with the short teaching moment.
+- Added an explicit `practice_correction` presentation focus while a truthful `BELL MISSED` rail is active. That focus defers Joe's optional subtitle, threat captions, generic Joe-state cards, and ambient context plaques while preserving the grounded Distraction marker, attention panel, map, cover geometry, route guidance, and Joe's actual investigation behavior.
+- Centralized Joe-subtitle visibility so the renderer and `render_game_to_text` now share one rule. The state contract exposes `practiceCorrectionVisible`, `joeBarkVisible`, and `joeBarkDeferredBy: practice_correction` rather than reporting a subtitle that is not drawn.
+- The correction focus retires at the existing 0.75-second message threshold. Joe dialogue becomes eligible again if its timer remains, and ordinary non-practice distractions retain the established single character line; shot physics, target size, correction math, ball recovery, Joe diversion, dialogue pools, and all timers are unchanged.
+- Focused replay passed 24/24 high-resolution, standard, compact, Reduced Motion, correction-retirement, ordinary-distraction, state-contract, and browser-error checks. The existing Joe-dialogue focus suite retained all four assertions, Starter Bell miss/retry/completion retained all eleven assertions, and golf terrain retained all fifteen assertions.
+- The required uninstrumented late-route replay reproduced the original 16-meter compound miss with `focus: practice_correction`, `joeBarkVisible: false`, and no error artifact. Canvas rendering averaged 2.02ms with a 1.50ms final sample across 458 frames.
+- Evidence is recorded in `qa/starter-bell-correction-focus-polish-2026-08-03.md`. Suggested next refinement: human-playtest the first miss without prior instructions and shorten only the correction sentence if players cannot act on it before the 4.2-second rail retires; preserve the quiet teaching lane.
+
+## Pause modal-ownership polish
+
+- The in-run pause audit found the frozen onboarding card, map labels, and bottom control rail still readable around `ROUND SUSPENDED`. The course context was useful, but two instruction layers competed when the player had paused specifically to review controls or choose a safe action.
+- Replaced the flat 72% pause wash with a center-weighted world veil: 80% over the modal region and 90% at the HUD-heavy edges. The course silhouette, moon, and broad layout remain recognizable while live labels retire behind the modal hierarchy.
+- Kept Resume Round as the safe default, preserved the contextual objective/zone/Joe/sightline dossier, and corrected the selected description to `Continue from the exact point where the audit stopped.`
+- Extended `pauseSnapshot.presentation` with explicit modal ownership, retained world context, veil treatment, and center/edge alpha diagnostics. Simulation freeze, audio, selection, pointer hitboxes, Settings return target, restart, clubhouse return, and resume state are unchanged.
+- Focused replay passed 20/20 high-resolution, standard, compact, Reduced Motion, frozen-state, safe-default, presentation-contract, and browser-error checks. The established pause-to-Settings-to-pause-to-resume route returned to `first_hole`, cleared the pause snapshot, retained the paused Settings target, and produced no error artifact.
+- The required uninstrumented pause capture reported the 0.80/0.90 bounded veil, no browser errors, and 1.70ms final canvas work. The full resume regression averaged 3.51ms with a 1.30ms final sample across 126 rendered frames.
+- Evidence is recorded in `qa/pause-modal-ownership-polish-2026-08-03.md`. Suggested next refinement: human-playtest pausing during an active chase and confirm the dimmed silhouette preserves orientation; adjust only the bounded veil values if context feels too weak, never restore readable live instruction rails behind the modal.
+
+## Capture-aftermath polish
+
+- Replayed the full ordinary-input Audit Row capture and preserved the established generated Joe still, dialogue portrait, Incident Review, three result actions, and cause-specific retry flow after confirming the composition remains cohesive.
+- Added a restrained post-impact camera breath, clipped low ground haze, and a faint periodic review sweep to keep the upper capture tableau alive after the initial hit. Every effect is clipped above the fixed result panel; Reduced Camera Motion retains a static still and fixed haze.
+- Replaced the generic selected-retry sentence with the diagnosed counterplan itself. The largest `NEXT ACTION` lane now tells the player what to change immediately, while the Retry card retains its compact cause label and the reopened run still loads the same counterplan.
+- Extended `render_game_to_text` with capture-art load state, presentation hierarchy, aftermath motion policy, interface-protection contract, and the complete selected action.
+- Focused validation passed 20/20 defeat, loaded-art, concrete-counterplan, high-resolution, standard, compact, Reduced Motion, and browser-error checks. The established incident-review suite still classified every failure cause, persisted repeat issues, reopened Retry with the right target, cleared the streak on victory, and reported no errors.
+- The required uninstrumented capture reached a Sightline Held defeat in Audit Row at eight meters, loaded the dedicated art, promoted the exact break-sight counterplan, produced no error artifact, and averaged 0.35ms canvas work with a 0.30ms final sample.
+- Evidence is recorded in `qa/capture-aftermath-polish-2026-08-03.md`. Suggested next refinement: human-playtest several natural captures and adjust only the aftermath opacity if it draws attention away from Joe's line; preserve the fixed result hierarchy and concrete retry advice.
+
+## Chase subtitle/locomotion handoff polish
+
+- Replayed the established organic pursuit sequence and found the centered `SPRINTING — LOUD` locomotion label drawing directly over Joe's live chase subtitle. Both systems were truthful, but the shared baseline made the two lines look corrupted at the most urgent moment.
+- Gave the live Joe subtitle temporary ownership of only that text lane. Directional movement chevrons remain active, pursuit/contact-break telemetry remains fixed, and the locomotion label returns automatically if movement continues after Joe's line expires.
+- Added `labelDeferredBy: joe_bark` plus a distinct `live_input_chevrons_with_label_deferred` presentation state to the movement-feedback contract. Input, movement, noise, detection, Joe dialogue timers, subtitle settings, and Reduced Camera Motion behavior are unchanged.
+- Focused validation passed 20/20 live-pursuit, Joe-line, chevron-retention, label-return, high-resolution, standard, compact, Reduced Motion, and browser-error checks. The established Joe-dialogue focus suite retained all four assertions and the movement-release suite retained all ten.
+- The organic input chase acquired Joe at 43 meters, reproduced the clean subtitle handoff, reached a 31-meter contact-break frame, recovered into search, and produced no browser errors. The required official client preserved the opening cart scene without an error artifact at 2.12ms average / 1.50ms last canvas work.
+- Evidence is recorded in `qa/chase-subtitle-locomotion-handoff-polish-2026-08-03.md`. Suggested next refinement: observe a long natural pursuit with several barks and adjust only the subtitle timer if locomotion labels remain absent too long; preserve directional chevrons and single-lane ownership.
+
+## Contact Break/concealment handoff polish
+
+- The organic contact-breaking frame exposed three simultaneous center reads: `ROUGH CONCEALMENT — STAY STILL`, the Nerve panel, and the authoritative Contact Break card. The latter rendered later and obscured both smaller panels while a separate bottom action rail already supplied the correct `HOLD Q` instruction.
+- Made Contact Break the sole center owner for the duration of active pursuit. The ordinary rough/hard-cover concealment label and standalone Nerve panel yield visually while concealment, crouch, focus, and Nerve mechanics continue updating unchanged.
+- An armed Nerve opportunity keeps one input-aware bottom action rail. After the player commits, that rail yields and the active Nerve percentage plus configured Crouch/Listen bindings fold into a restrained second row inside the expanded Contact Break card.
+- Emergency Appeal retains priority in its existing expanded chase card, and the primary Contact Break line now uses bounded fitting for long risk/direction variants. Added explicit center-ownership and `nerve_input_on_bottom_rail` / `nerve_progress_integrated` diagnostics.
+- Focused validation passed 20/20 center-ownership, armed-input, active-progress, pursuit-telemetry, high-resolution, standard, compact, Reduced Motion, and browser-error checks. Existing Hold Your Nerve and Emergency Appeal suites completed successfully with no errors.
+- The organic input chase reproduced a clean 40% Contact Break at 31 meters with the armed Nerve action on the bottom rail, then recovered into search. The required official client preserved the opening scene without an error artifact at 1.96ms average / 1.70ms last canvas work.
+- Evidence is recorded in `qa/contact-break-concealment-handoff-polish-2026-08-03.md`. Suggested next refinement: human-playtest committing Nerve near the end of Contact Break and adjust only the integrated row height if the transition feels abrupt; preserve single-center ownership.
+
+## Clubhouse rotation-preview polish
+
+- Audited the resting first-run Clubhouse and found all three locked Night Order dossiers saying `REVIEW OPEN`. The cards looked actionable even though the player can only follow the career rotation until all three Change Requests are filed.
+- Marked the locked board `PREVIEW ONLY // AUTHORIZATION PENDING`, promoted only the actual next order as `NEXT IN ROTATION`, and relabeled later cards `ROTATION PREVIEW`. The footer now states both the three-change unlock requirement and the interim rotation rule.
+- Preserved the motivational dossier contents, next-order identity, Change Request progress, performance stamps, Shot Book, Overtime panel, Begin safe default, and every unlock condition. Fully authorized careers retain the existing orange selected dossier, Left/Right navigation, and `REVIEW OPEN` language.
+- Added `portfolio.presentationMode` to the text-state contract so validation and accessibility tooling can distinguish `rotation_preview` from `interactive` without inferring it from colors.
+- Focused validation passed 20/20 locked/unlocked, career-rotation, authorized-selection, high-resolution, standard, compact, Reduced Motion, and browser-error checks. Visual review covered 2560x1600, 1280x720, 844x390, and the unlocked portfolio.
+- The required official web-game client completed without an error artifact at 2.07ms average / 0.60ms last canvas work across 77 rendered frames.
+- Evidence is recorded in `qa/clubhouse-rotation-preview-polish-2026-08-03.md`. Suggested next refinement: human-playtest the first Clubhouse visit and confirm players understand that `BEGIN THE ROUND` starts Order 01; adjust only the preview wording if needed, preserving visible long-term progression.
+
+## Survival Briefing ownership polish
+
+- High-resolution and compact review found the live in-round HUD still faintly readable behind the pre-round Survival Briefing. The bottom control rail, objective dossier, attention panel, and map created a second instruction layer before play had begun.
+- Moved the tutorial branch earlier in the first-hole presentation order. The course world, authored props, atmosphere, and moonlit depth still render behind the briefing, but all live tactical overlays now wait until the player dismisses it.
+- Preserved the complete three-card briefing, story setup, configured bindings, keyboard movement/confirm dismissal, controller prompts, touch prompts and dismissal, Reduced Motion behavior, round recording, and expanded First Steps handoff.
+- Added `hole.tutorialPresentation` diagnostics with explicit `survival_briefing` ownership, `liveHudVisible: false`, retained world context, and the shared presentation rule.
+- Focused validation passed 36/36 ownership, prompt-mode, dismissal, onboarding-handoff, high-resolution, standard, compact, Reduced Motion, and browser-error checks. The established onboarding regression retained expanded, compact, manual-recall, and Listening Focus states without errors.
+- The required official gameplay client dismissed the briefing, restored the onboarding HUD, moved 19 meters, and produced no error artifact at 4.71ms average / 1.70ms last canvas work across 128 rendered frames.
+- Evidence is recorded in `qa/survival-briefing-ownership-polish-2026-08-03.md`. Suggested next refinement: human-playtest whether the three briefing cards can be scanned in one pause; shorten only card subdetail if necessary, preserving the single-owner handoff.
+
+## Key Bindings footer-clearance polish
+
+- Audited the Settings and Key Bindings branches at rest. The binding grid and workflow were sound, but the final `ARROWS SELECT / ENTER REBIND / CONFLICTS SWAP` guidance was drawn directly across the ledger's inner and outer bottom borders, making the smallest operational copy look clipped.
+- Extended only the Key Bindings modal by 24 pixels, leaving the grid, status lane, reset button, return button, and every pointer hitbox fixed. The help footer now has 19 pixels of measured clearance to the inner border and uses a slightly larger, clearer treatment.
+- Added `settings.bindingsPresentation` diagnostics for the protected footer, panel and border geometry, baseline, clearance, and presentation rule.
+- Focused validation passed 29/29 high-resolution, standard, compact, Reduced Motion, keyboard, gamepad-copy, touch-copy, capture, conflict-swap, cancel, reset, return, and browser-error checks.
+- The required official binding-ledger client produced no error artifact at 3.98ms average / 1.00ms last canvas work across 90 frames. The full official rebind-to-gameplay route retained the A/W conflict swap, updated all live control copy, dismissed onboarding, and traveled seven meters.
+- Evidence is recorded in `qa/key-bindings-footer-clearance-polish-2026-08-03.md`. Suggested next refinement: human-playtest keyboard rebinding from a paused chase and confirm the taller ledger still feels connected to the suspended course; preserve the protected footer and unchanged hitboxes.
+
+## Change Request rejection-recovery polish
+
+- Audited the rejected Change Request branch and found that it replaced the menu description with an authoritative reason but left the generic menu/fullscreen footer in place. Escape and controller B dismissal existed but were not communicated, and touch recovery was implicit.
+- Gave the rejection state temporary footer ownership. Keyboard now reads `ESC DISMISS` plus menu/confirm controls, gamepad reads `B DISMISS`, touch directs the player to another menu item, and an authorized career retains Left/Right order navigation.
+- Preserved direct menu selection from the rejection state, Portfolio Override, Overtime behavior, the selected Change Request item, the reason copy, career rotation, pointer hitboxes, fullscreen, and all menu destinations.
+- Added `changeRequestRejection` diagnostics for reason, footer ownership, keyboard/gamepad/touch recovery, and the single-owner presentation rule.
+- Focused validation passed 33/33 high-resolution, standard, compact, Reduced Motion, keyboard dismissal, keyboard menu recovery, controller-copy, touch-recovery, locked/unlocked portfolio, and browser-error checks.
+- The required official client produced no error artifact at 3.99ms average / 1.00ms last canvas work across 78 frames.
+- Evidence is recorded in `qa/change-request-rejection-recovery-polish-2026-08-03.md`. Suggested next refinement: human-playtest whether the terse rejection joke lands before players dismiss it; adjust only the reason wording if needed, preserving explicit recovery controls.
+
+## Clock Out state-parity polish
+
+- Audited the authored Clock Out alternate ending and found a presentation-state mismatch: the frame said `SHIFT ENDED`, `OUT OF OFFICE`, and `LEFT UNSIGNED`, while `render_game_to_text` retained the old Clubhouse assignment status and exposed no ending outcome or return instruction.
+- Gave Clock Out its own authoritative status and a shared input-aware return-prompt helper so the visible keyboard, controller, or touch copy and reported state cannot drift apart.
+- Added `clockedOutPresentation` diagnostics for the complete outcome, consequence, active input method, visible return prompt, supported return inputs, Reduced Camera Motion state, world context, and modal ownership.
+- Preserved the quiet pre-dawn composition, dossier hierarchy, input handlers, menu destination, pointer behavior, audio handoff, and every career/progression rule.
+- Focused validation passed 35/35 high-resolution, standard, compact, Reduced Motion, keyboard, controller-copy, touch-copy, outcome-parity, return-handoff, and browser-error checks. Escape, Enter, Space, pointer click, and touch tap all returned cleanly to the Clubhouse.
+- The required official client produced no error artifact and reported 3.01ms average / 0.60ms last canvas work across 71 rendered frames.
+- Evidence is recorded in `qa/clock-out-state-parity-polish-2026-08-03.md`. Suggested next refinement: human-playtest whether this intentionally quiet branch feels like a satisfying joke ending; preserve its short runtime and single-action return lane.
