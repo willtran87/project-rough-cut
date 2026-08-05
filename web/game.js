@@ -347,6 +347,10 @@
     new Image();
   rearServiceBoundaryArt.src =
     "./assets/rough-cut-rear-service-boundary-v1.png";
+  const southServiceGateArt =
+    new Image();
+  southServiceGateArt.src =
+    "./assets/rough-cut-south-service-gate-v1.png";
   const signageAtlasArt = new Image();
   signageAtlasArt.src = "./assets/rough-cut-signage-atlas-v1.png";
   const bunkerAtlasArt = new Image();
@@ -410,6 +414,10 @@
     new Image();
   courseMechanicsArt.src =
     "./assets/rough-cut-course-mechanics-atlas-v1.png";
+  const nightOrderObjectiveArt =
+    new Image();
+  nightOrderObjectiveArt.src =
+    "./assets/rough-cut-night-order-objectives-v1.png";
   const turfEvidenceArt =
     new Image();
   turfEvidenceArt.src =
@@ -422,6 +430,26 @@
     new Image();
   courseVergeArt.src =
     "./assets/rough-cut-verge-atlas-v1.png";
+  const courseBoundaryKitArt =
+    new Image();
+  courseBoundaryKitArt.src =
+    "./assets/rough-cut-course-boundary-kit-v1.png";
+  const footingHazardArt =
+    new Image();
+  footingHazardArt.src =
+    "./assets/rough-cut-footing-hazards-v1.png";
+  const wetTurfArt =
+    new Image();
+  wetTurfArt.src =
+    "./assets/rough-cut-wet-turf-atlas-v1.png";
+  const movingGolfBallArt =
+    new Image();
+  movingGolfBallArt.src =
+    "./assets/rough-cut-moving-golf-ball-atlas-v1.png";
+  const courseEchoArt =
+    new Image();
+  courseEchoArt.src =
+    "./assets/rough-cut-course-echo-atlas-v1.png";
   const grassBuffer = document.createElement("canvas");
   grassBuffer.width = WIDTH;
   grassBuffer.height = HEIGHT;
@@ -817,6 +845,9 @@
     new Set([
       "change_request",
       "sprint_review",
+      "night_order_audit_bell",
+      "night_order_field_log",
+      "night_order_release_review",
       "counter_route",
       "blindside_transfer",
       "ball_recovery",
@@ -909,10 +940,21 @@
   };
   const JOE_EXPRESSION_CELL = 512;
   const DRAIN_SOURCE = { x: 145, y: 150, width: 1384, height: 700, heightMeters: 2.35 };
+  const SOUTH_SERVICE_GATE_SOURCE = {
+    x: 0,
+    y: 32,
+    width: 1759,
+    height: 855,
+    heightMeters: 5.6,
+  };
   const COURSE_LENGTH = 720;
   const COURSE_MIN_Y = 0;
   const COURSE_MAX_X = 112;
   const PLAYER_COLLISION_RADIUS = 2.4;
+  const SOUTH_SERVICE_GATE = {
+    x: 0,
+    y: COURSE_MIN_Y,
+  };
   const COLLISION_CONTACT_FULL_EMPHASIS_SECONDS =
     0.18;
   const COLLISION_CONTACT_SETTLE_SECONDS =
@@ -1112,6 +1154,15 @@
   const PREDATOR_TACTIC_COOLDOWN_SECONDS = 10.5;
   const PREDATOR_TACTIC_MIN_DISTANCE = 18;
   const PREDATOR_TACTIC_MAX_DISTANCE = 76;
+  const COVER_SHRED_ESCAPE_MAX_DISTANCE = 28;
+  const COVER_SHRED_ESCAPE_SAMPLE_STEP = 1.4;
+  const COVER_SHRED_ESCAPE_RETRY_SECONDS = 0.8;
+  const COVER_SHRED_ESCAPE_PLAYER_SPEED = 15;
+  const COVER_SHRED_ESCAPE_REACTION_SECONDS = 0.22;
+  const COVER_SHRED_ESCAPE_SAFETY_DISTANCE = 1.5;
+  const COVER_SHRED_TELEGRAPH_SECONDS = 1.05;
+  const COVER_SHRED_TELEGRAPH_SPEED = 9;
+  const COVER_SHRED_COMMIT_SPEED = 23;
   const COMPOSURE_LOW_THRESHOLD = 0.42;
   const HORROR_DIRECTOR_GRACE_SECONDS = 11;
   const HORROR_DIRECTOR_MIN_EVENT_SECONDS = 7.5;
@@ -1140,6 +1191,56 @@
     x: SHED_EXIT.x + 11,
     y: SHED_EXIT.y + 1,
   };
+  const NIGHT_ORDER_ACTIONS = [
+    {
+      id: "audit-bell",
+      code: "CHECK 1",
+      label: "RING AUDIT BELL",
+      shortLabel: "AUDIT BELL",
+      completionLabel: "AUDIT BELL FILED",
+      x: 86,
+      y: 148,
+      radius: 12,
+      cellIndex: 0,
+      color: "#d9af52",
+      soundCue: "brass_bell",
+      barkContext:
+        "night_order_audit_bell",
+      noiseSeconds: 4.4,
+    },
+    {
+      id: "field-log",
+      code: "CHECK 2",
+      label: "STAMP FIELD LOG",
+      shortLabel: "FIELD LOG",
+      completionLabel: "FIELD LOG STAMPED",
+      x: -98,
+      y: 420,
+      radius: 12,
+      cellIndex: 1,
+      color: "#73c7aa",
+      soundCue: "ledger_stamp",
+      barkContext:
+        "night_order_field_log",
+      noiseSeconds: 3.8,
+    },
+    {
+      id: "release-review",
+      code: "CHECK 3",
+      label: "SIGN RELEASE REVIEW",
+      shortLabel: "RELEASE REVIEW",
+      completionLabel: "RELEASE REVIEW SIGNED",
+      x: 97,
+      y: 624,
+      radius: 12,
+      cellIndex: 2,
+      color: "#df8250",
+      soundCue: "review_gong",
+      barkContext:
+        "night_order_release_review",
+      noiseSeconds: 4.8,
+    },
+  ];
   const DRAIN_RELEASE_CONTROL = {
     x: DRAIN_EXIT.x + 11,
     y: DRAIN_EXIT.y + 1,
@@ -1160,6 +1261,63 @@
     { id: "final-approach", name: "FINAL APPROACH", x: -77, y: 503, radius: 28 },
     { id: "night-range", name: "NIGHT RANGE", x: 73, y: 588, radius: 29 },
     { id: "release-corridor", name: "RELEASE CORRIDOR", x: -72, y: 674, radius: 29 },
+  ];
+  const WET_TURF_ART_CELLS = [
+    {
+      id: "soaked_brass_head",
+      x: 14,
+      y: 266,
+      width: 779,
+      height: 385,
+    },
+    {
+      id: "maintenance_bog",
+      x: 986,
+      y: 279,
+      width: 768,
+      height: 385,
+    },
+  ];
+  const MOVING_GOLF_BALL_ART_CELLS = [
+    {
+      id: "pristine_flight",
+      x: 84,
+      y: 170,
+      width: 393,
+      height: 397,
+    },
+    {
+      id: "wet_grass_roll",
+      x: 839,
+      y: 170,
+      width: 393,
+      height: 397,
+    },
+    {
+      id: "scuffed_ground_roll",
+      x: 1593,
+      y: 170,
+      width: 393,
+      height: 397,
+    },
+  ];
+  const COURSE_ECHO_ART_CELLS = [
+    {
+      id: "mint_ahead",
+      x: 62,
+      y: 84,
+      width: 372,
+      height: 832,
+      heightMeters: 1.76,
+    },
+    {
+      id: "amber_behind",
+      x: 1094,
+      y: 84,
+      width: 370,
+      height: 832,
+      heightMeters: 1.76,
+    },
   ];
   const BUNKER_SAND_ZONES = [
     {
@@ -1294,6 +1452,35 @@
       noiseFloor: 0.64,
     },
   ];
+  const FOOTING_HAZARD_ART_CELLS = [
+    {
+      id: "thatch",
+      x: 10,
+      y: 270,
+      width: 648,
+      height: 245,
+    },
+    {
+      id: "mud",
+      x: 724,
+      y: 270,
+      width: 645,
+      height: 254,
+    },
+    {
+      id: "roots",
+      x: 1433,
+      y: 263,
+      width: 657,
+      height: 257,
+    },
+  ];
+  const FOOTING_HAZARD_ART_CELL_BY_KIND =
+    new Map(
+      FOOTING_HAZARD_ART_CELLS.map(
+        (cell) => [cell.id, cell],
+      ),
+    );
   const FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE =
     48;
   const FOOTING_PLAQUE_PRESSURE_CLOSE_DISTANCE =
@@ -1391,6 +1578,24 @@
     const hole = state.hole;
     if (!hole || hole.messageTimer <= 0) {
       return "";
+    }
+    if (
+      falseRetreatSnapbackActive() &&
+      hole.message?.startsWith(
+        "JOE RECOMMITS",
+      )
+    ) {
+      return falseRetreatSnapbackActionCopy();
+    }
+    if (
+      hole.predatorTactics?.active ===
+        "cover_shred" &&
+      hole.predatorTactics.escapePlan &&
+      hole.message?.startsWith(
+        "COVER SHRED //",
+      )
+    ) {
+      return coverShredEscapeActionCopy();
     }
     if (interactionRejectionOwnsBottomRail()) {
       return `BLOCKED // ${hole.message}`;
@@ -1558,6 +1763,32 @@
     { x: 662, y: 551, width: 453, height: 307, heightMeters: 1.75 },
     { x: 1115, y: 563, width: 476, height: 290, heightMeters: 1.55 },
   ];
+  const COURSE_BOUNDARY_KIT_CELLS = [
+    {
+      id: "reflective_stake",
+      x: 50,
+      y: 50,
+      width: 430,
+      height: 900,
+      heightMeters: 1.12,
+    },
+    {
+      id: "course_limit_placard",
+      x: 750,
+      y: 390,
+      width: 750,
+      height: 580,
+      heightMeters: 1.2,
+    },
+  ];
+  const COURSE_BOUNDARY_PLACARD_WIDTH =
+    180;
+  const COURSE_BOUNDARY_PLACARD_HEIGHT =
+    COURSE_BOUNDARY_PLACARD_WIDTH *
+    COURSE_BOUNDARY_KIT_CELLS[1]
+      .height /
+    COURSE_BOUNDARY_KIT_CELLS[1]
+      .width;
   const EXPANDED_OBSTACLE_CELLS = [
     { x: 50, y: 55, width: 520, height: 410, heightMeters: 3.2 },
     { x: 610, y: 65, width: 480, height: 410, heightMeters: 1.55 },
@@ -1666,6 +1897,32 @@
       width: 475,
       height: 556,
       heightMeters: 1.55,
+    },
+  ];
+  const NIGHT_ORDER_OBJECTIVE_CELLS = [
+    {
+      id: "audit_bell",
+      x: 62,
+      y: 65,
+      width: 466,
+      height: 752,
+      heightMeters: 2.35,
+    },
+    {
+      id: "field_log",
+      x: 636,
+      y: 101,
+      width: 486,
+      height: 716,
+      heightMeters: 2.25,
+    },
+    {
+      id: "release_review",
+      x: 1227,
+      y: 55,
+      width: 495,
+      height: 762,
+      heightMeters: 2.35,
     },
   ];
   const TURF_EVIDENCE_CELLS = [
@@ -1961,15 +2218,23 @@
     { id: "range-exit-left", kit: "expanded", type: 0, tunnelWing: "left", x: -11, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.06, blocks: true, sight: true, draw: false, landmark: "release intake" },
     { id: "range-exit-right", kit: "expanded", type: 0, tunnelWing: "right", x: 59, y: 627, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.06, blocks: true, sight: true, draw: false, landmark: "release intake" },
     { id: "release-hedge-west", asset: "hedge-hide", kit: "base", type: 0, x: -88, y: 646, radius: 18, radiusX: 22, radiusY: 8, coverRadius: 28, scale: 1.06, blocks: true, sight: true, landmark: "release hedge" },
-    { id: "release-cart", kit: "expanded", type: 1, x: -44, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
+    { id: "release-cart", kit: "expanded", type: 1, x: -56, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
     { id: "release-board", kit: "expanded", type: 4, x: 76, y: 670, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.96, blocks: true, sight: true, landmark: "release board" },
-    { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 42, y: 680, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
+    { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 58, y: 678, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
     { id: "release-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: -18, y: 694, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
-    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
-    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 694, radius: 15, radiusX: 15, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 694, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 694, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
     { id: "release-pine", kit: "base", type: 2, x: 94, y: 702, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.04, blocks: true, sight: true, landmark: "release pine" },
-    { id: "shed-left-wall", x: -42, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
-    { id: "shed-right-wall", x: 6, y: 710, radius: 11, radiusX: 8.5, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-left-wall", x: -44, y: 710, radius: 11, radiusX: 7, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+    { id: "shed-door", x: -18, y: 710, radius: 15, radiusX: 13, radiusY: 4, coverRadius: 20, blocks: true, sight: true, draw: false, landmark: "shed door" },
+    { id: "shed-right-wall", x: 8, y: 710, radius: 11, radiusX: 7, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
+  ];
+  const SHED_APPROACH_ROUTE = [
+    { x: 24, y: 640 },
+    { x: 18, y: 654 },
+    { x: 6, y: 670 },
+    { x: -8, y: 684 },
+    { x: -18, y: 699 },
   ];
   const COURSE_OBSTACLE_INDEX =
     new Map();
@@ -2226,6 +2491,205 @@
 
   function activeSprinklerPoint() {
     return activeRunVariant().sprinkler;
+  }
+
+  function nightOrderActionCompleted(
+    action,
+  ) {
+    return Boolean(
+      action &&
+      state.hole
+        ?.nightOrderActionsCompleted
+        ?.includes(action.id),
+    );
+  }
+
+  function completedNightOrderActionCount() {
+    return state.hole
+      ?.nightOrderActionsCompleted
+      ?.length || 0;
+  }
+
+  function nightOrderActionsComplete() {
+    return (
+      completedNightOrderActionCount() >=
+      NIGHT_ORDER_ACTIONS.length
+    );
+  }
+
+  function nextNightOrderAction() {
+    return (
+      NIGHT_ORDER_ACTIONS.find(
+        (action) =>
+          !nightOrderActionCompleted(
+            action,
+          ),
+      ) || null
+    );
+  }
+
+  /**
+   * Returns the short field-check completion handoff only while it still owns
+   * the same banner that created it. A newer state banner therefore retires
+   * stale route copy immediately instead of stacking unrelated instructions.
+   */
+  function activeNightOrderHandoff() {
+    const hole = state.hole;
+    const handoff =
+      hole?.nightOrderHandoff;
+    if (
+      !handoff ||
+      handoff.timer <= 0 ||
+      hole.stateBannerTimer <= 0 ||
+      handoff.bannerText !==
+        hole.stateBanner ||
+      handoff.messageText !==
+        hole.message
+    ) {
+      return null;
+    }
+    return handoff;
+  }
+
+  /**
+   * Describes the loud Night Order station Joe is currently investigating so
+   * the world marker, countdown, and inspectable game state share one label.
+   */
+  function activeFieldActionSignal() {
+    const hole = state.hole;
+    const distraction =
+      hole?.distraction;
+    if (
+      !distraction ||
+      distraction.kind !==
+        "field_action" ||
+      hole.distractionTimer <= 0
+    ) {
+      return null;
+    }
+    const action =
+      NIGHT_ORDER_ACTIONS.find(
+        (candidate) =>
+          candidate.id ===
+          distraction.sourceId,
+      );
+    const sourceLabel =
+      distraction.sourceLabel ||
+      action?.shortLabel ||
+      "FIELD CHECK";
+    return {
+      sourceId:
+        distraction.sourceId ||
+        action?.id ||
+        null,
+      sourceLabel,
+      color:
+        distraction.signalColor ||
+        action?.color ||
+        "#d6a74c",
+      remainingSeconds: Number(
+        hole.distractionTimer.toFixed(2),
+      ),
+      worldLabel:
+        `${sourceLabel} SIGNAL // ${hole.distractionTimer.toFixed(1)}s`,
+      mapLabel:
+        `${sourceLabel} ${hole.distractionTimer.toFixed(1)}s`,
+      attentionLabel:
+        `VERIFYING ${sourceLabel} // ${hole.distractionTimer.toFixed(1)}s`,
+      mapHeaderPriority:
+        "active_field_signal",
+      target: {
+        x: distraction.x,
+        y: distraction.y,
+      },
+    };
+  }
+
+  /**
+   * Keeps a completed Night Order station named only during Joe's existing
+   * follow-up sweep; this is presentation state and does not extend the search.
+   */
+  function activeFieldActionSearch() {
+    const hole = state.hole;
+    const source =
+      hole?.searchContext;
+    if (
+      !source ||
+      source.kind !==
+        "field_action" ||
+      hole.joe.mode !== "search" ||
+      hole.searchTimer <= 0
+    ) {
+      return null;
+    }
+    return {
+      ...source,
+      remainingSeconds: Number(
+        hole.searchTimer.toFixed(2),
+      ),
+      attentionLabel:
+        `SWEEPING ${source.sourceLabel} AREA // ${hole.searchTimer.toFixed(1)}s`,
+    };
+  }
+
+  /**
+   * Reports the evidence source that currently owns Joe's existing search.
+   */
+  function activeJoeSearchContext() {
+    const hole = state.hole;
+    const source =
+      hole?.searchContext;
+    if (
+      !source ||
+      hole.joe.mode !== "search" ||
+      hole.searchTimer <= 0
+    ) {
+      return null;
+    }
+    return {
+      ...source,
+      remainingSeconds: Number(
+        hole.searchTimer.toFixed(2),
+      ),
+      attentionLabel:
+        `${source.statusLead} // ${hole.searchTimer.toFixed(1)}s`,
+    };
+  }
+
+  function nearbyNightOrderAction() {
+    let nearby = null;
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      if (
+        nightOrderActionCompleted(
+          action,
+        )
+      ) {
+        continue;
+      }
+      const distance = worldDistance(
+        state.player,
+        action,
+      );
+      if (
+        distance < action.radius &&
+        (
+          !nearby ||
+          distance < nearby.distance
+        )
+      ) {
+        nearby = {
+          action,
+          distance,
+        };
+      }
+    }
+    return nearby;
   }
 
   function activeChangeRequest() {
@@ -2488,12 +2952,15 @@
       cooldown:
         PREDATOR_TACTIC_COOLDOWN_SECONDS,
       target: null,
+      escapePlan: null,
       seed: 0,
       starts: 0,
       completions: 0,
       cancellations: 0,
       falseRetreats: 0,
       coverShreds: 0,
+      coverShredDeferrals: 0,
+      lastCoverShredDeferral: null,
       interceptsObserved: 0,
       lastTactic: null,
       lastOutcome: null,
@@ -3061,6 +3528,9 @@
       overtime: false,
       phase: "find_key",
       keyCollected: false,
+      nightOrderActionsCompleted: [],
+      nightOrderActivation: null,
+      nightOrderHandoff: null,
       changeRequestCollected: false,
       appealUsed: false,
       appealWindowSeen: false,
@@ -3106,6 +3576,7 @@
       },
       distraction: null,
       distractionTimer: 0,
+      searchContext: null,
       noiseHazards:
         freshNoiseHazardState(),
       activeNoiseHazard: null,
@@ -3172,7 +3643,7 @@
         attemptsSuppressed: 0,
         retreatRadius: 0,
       },
-      message: "South gate locked. Find the shed key — or open the drain valve.",
+      message: "South gate locked. Complete three field checks, then secure and file an exit.",
       messageTimer: 4,
       elapsed: 0,
       tutorialVisible: true,
@@ -3216,6 +3687,8 @@
       blockedRadius: 0,
       blockedRadiusX: 0,
       blockedRadiusY: 0,
+      southGateImpactTimer: 0,
+      southGateImpacts: 0,
       blockedContactStartedAt:
         -Infinity,
       blockedContactRefreshedAt:
@@ -5801,6 +6274,64 @@
     );
   }
 
+  /**
+   * Keeps the snapback counterplay aligned with the most recent input method.
+   * Long remapped key pairs retain the immediate action and drop only the
+   * secondary explanation before the shared bottom rail must shrink heavily.
+   */
+  function falseRetreatSnapbackActionCopy() {
+    const keyboardControls =
+      `${keyboardBindingLabel("move_left")} / ${keyboardBindingLabel("move_right")}`;
+    const keyboardCopy =
+      keyboardControls.length > 18
+        ? `JOE RECOMMITS — ${keyboardControls} SIDEWAYS NOW.`
+        : `JOE RECOMMITS — ${keyboardControls} SIDEWAYS NOW; cross the mower's returning line.`;
+    return inputCopy(
+      keyboardCopy,
+      "JOE RECOMMITS — LEFT STICK SIDEWAYS NOW; cross the mower's returning line.",
+      "JOE RECOMMITS — DRAG LEFT PAD SIDEWAYS NOW; cross the mower's returning line.",
+    );
+  }
+
+  function coverShredDirectionBindingId(
+    direction,
+  ) {
+    return direction === "LEFT"
+      ? "move_left"
+      : direction === "RIGHT"
+        ? "move_right"
+        : direction === "FORWARD"
+          ? "move_up"
+          : "move_down";
+  }
+
+  /**
+   * Turns the collision-sampled Cover Shred egress into live keyboard,
+   * controller, or touch instructions without adding another HUD card.
+   */
+  function coverShredEscapeActionCopy() {
+    const plan =
+      state.hole?.predatorTactics
+        ?.escapePlan;
+    if (!plan?.steps?.length) {
+      return "COVER SHRED // CROUCH + CLEAR THE ROUGH.";
+    }
+    const keyboardPath =
+      plan.steps
+        .map(
+          (direction) =>
+            `${keyboardBindingLabel(coverShredDirectionBindingId(direction))} ${direction}`,
+        )
+        .join(", THEN ");
+    const directionalPath =
+      plan.steps.join(", THEN ");
+    return inputCopy(
+      `COVER SHRED // HOLD ${keyboardBindingLabel("crouch")}; ${keyboardPath} TO FAIRWAY.`,
+      `COVER SHRED // HOLD LB; LEFT STICK ${directionalPath} TO FAIRWAY.`,
+      `COVER SHRED // HOLD CROUCH; LEFT PAD ${directionalPath} TO FAIRWAY.`,
+    );
+  }
+
   function keyboardBindingDown(id) {
     return state.keys.has(
       keyboardBindingCode(id),
@@ -7849,10 +8380,16 @@
     frameColor = "rgba(132,154,111,0.72)",
     minimumFrameOpacity = 0,
   ) {
+    const displayText =
+      normalizeDisplayText(text);
     const size = Math.round(baseSize * state.subtitleSize);
     ctx.save();
     ctx.font = `700 ${size}px "Courier New", monospace`;
-    const width = Math.min(WIDTH - 72, ctx.measureText(text).width + 38);
+    const width = Math.min(
+      WIDTH - 72,
+      ctx.measureText(displayText)
+        .width + 38,
+    );
     const height = size + 20;
     ctx.fillStyle = `rgba(2,8,4,${state.captionBackground * 0.92})`;
     ctx.fillRect(centerX - width * 0.5, baselineY - size - 11, width, height);
@@ -7877,7 +8414,15 @@
       );
       ctx.globalAlpha = inheritedAlpha;
     }
-    drawText(text, centerX, baselineY, size, color, "center", true);
+    drawText(
+      displayText,
+      centerX,
+      baselineY,
+      size,
+      color,
+      "center",
+      true,
+    );
     ctx.restore();
   }
 
@@ -8973,6 +9518,30 @@
     );
     drawText("HOW TO SURVIVE", WIDTH * 0.5, 133, 34, "#eee8c9", "center", true);
     drawText("ACCEPTANCE CRITERIA // NIGHT SHIFT", WIDTH * 0.5, 163, 13, "#d77b3b", "center");
+    if (
+      state.settingsReturnMode ===
+      "paused"
+    ) {
+      const pausedAction =
+        objectiveActionHudSummary();
+      const pausedContext =
+        `PAUSED FILE // ${currentHoleObjective()}  •  NEXT // ${pausedAction.text}`;
+      drawText(
+        pausedContext,
+        WIDTH * 0.5,
+        184,
+        fittedTextSize(
+          pausedContext,
+          11,
+          850,
+          9,
+          true,
+        ),
+        pausedAction.color,
+        "center",
+        true,
+      );
+    }
 
     const controllerActive = state.inputMethod === "gamepad";
     const touchActive = state.inputMethod === "touch";
@@ -8981,9 +9550,9 @@
       {
         y: 260,
         icon: 0,
-        title: "1. CHOOSE + FILE AN EXIT",
-        detail: "KEY → SHED  •  DRAIN VALVE → CULVERT",
-        subdetail: "MOVE ABORTS. REVIEWS: BALL + FASTER FILE. CR +650.",
+        title: "1. COMPLETE CHECKS + FILE",
+        detail: "3 FIELD CHECKS  •  KEY → SHED  •  VALVE → DRAIN",
+        subdetail: "CHECKS MAKE NOISE. MOVE ABORTS FILING. CR +650.",
       },
       {
         y: 348,
@@ -9266,6 +9835,11 @@
         hole.escapeFiling.route,
       )}`;
     }
+    if (!nightOrderActionsComplete()) {
+      const nextAction =
+        nextNightOrderAction();
+      return `FIELD CHECKS ${completedNightOrderActionCount()}/${NIGHT_ORDER_ACTIONS.length} // ${nextAction?.shortLabel || "REVIEW ROUTE"}`;
+    }
     if (
       hole.keyCollected &&
       hole.drainUnlocked
@@ -9281,8 +9855,154 @@
     return "FIND SHED KEY OR OPEN DRAIN VALVE";
   }
 
+  /**
+   * Summarizes the optional exit branch without presenting it as another
+   * numbered field check beside the mandatory Night Order route.
+   */
+  function exitRouteHudSummary() {
+    const hole = state.hole;
+    const variant = activeRunVariant();
+    if (
+      hole.keyCollected &&
+      hole.drainUnlocked
+    ) {
+      return {
+        phase: "both_ready",
+        text:
+          "EXIT ROUTES // SHED + DRAIN READY",
+        color: "#92d5ae",
+        deferredBy: null,
+      };
+    }
+    if (hole.keyCollected) {
+      return {
+        phase: "shed_committed",
+        text:
+          "SHED ROUTE // KEY ACQUIRED",
+        color: "#9db57c",
+        deferredBy:
+          nightOrderActionsComplete()
+            ? null
+            : "field_checks",
+      };
+    }
+    if (hole.drainUnlocked) {
+      return {
+        phase: "drain_committed",
+        text:
+          "DRAIN ROUTE // VALVE OPEN",
+        color: "#87cba9",
+        deferredBy:
+          nightOrderActionsComplete()
+            ? null
+            : "field_checks",
+      };
+    }
+    const keyLocation =
+      variant.keyHint.replace(
+        /^FIND\s+/,
+        "",
+      );
+    return {
+      phase: "choose_route",
+      text: `EXIT ROUTE // ${keyLocation} OR VALVE`,
+      color: "#c7bea5",
+      deferredBy:
+        nightOrderActionsComplete()
+          ? null
+          : "field_checks",
+    };
+  }
+
+  /**
+   * Converts the authoritative objective state into the next useful Interact
+   * action shown by the expanded field dossier.
+   */
+  function objectiveActionHudSummary() {
+    const hole = state.hole;
+    const interactLabel = inputCopy(
+      keyboardBindingLabel("interact"),
+      "A",
+      "USE",
+    );
+    if (hole.escapeFiling.sealing) {
+      return {
+        phase: "authorized",
+        text: "✓  RELEASE AUTHORIZED",
+        color: "#92d5ae",
+        targetId: null,
+      };
+    }
+    if (hole.escapeFiling.active) {
+      return {
+        phase: "filing",
+        text: `▣  FINAL FILING ${Math.round(
+          hole.escapeFiling.progress /
+            hole.escapeFiling.duration *
+            100,
+        )}%`,
+        color: "#e2cf9c",
+        targetId:
+          hole.escapeFiling.route,
+      };
+    }
+    if (!nightOrderActionsComplete()) {
+      const nextAction =
+        nextNightOrderAction();
+      return {
+        phase: "field_check",
+        text: nextAction
+          ? `${interactLabel}  ${nextAction.label}`
+          : `${interactLabel}  REVIEW FIELD ROUTE`,
+        color:
+          nextAction?.color || "#e5d9b8",
+        targetId:
+          nextAction?.id || null,
+      };
+    }
+    if (
+      hole.keyCollected &&
+      hole.drainUnlocked
+    ) {
+      return {
+        phase: "choose_exit",
+        text:
+          `${interactLabel}  FILE SHED OR DRAIN EXIT`,
+        color: "#92d5ae",
+        targetId: "shed_or_drain",
+      };
+    }
+    if (hole.drainUnlocked) {
+      return {
+        phase: "file_drain",
+        text:
+          `${interactLabel}  FILE DRAIN EXIT`,
+        color: "#87cba9",
+        targetId: "drain-exit",
+      };
+    }
+    if (hole.keyCollected) {
+      return {
+        phase: "file_shed",
+        text:
+          `${interactLabel}  FILE SHED EXIT`,
+        color: "#9db57c",
+        targetId: "maintenance-shed",
+      };
+    }
+    return {
+      phase: "prepare_exit",
+      text:
+        `${interactLabel}  TAKE KEY OR OPEN VALVE`,
+      color: "#c7bea5",
+      targetId: "key_or_valve",
+    };
+  }
+
   function drawPause() {
     drawFirstHole();
+    const pauseAction =
+      objectiveActionHudSummary();
     const worldVeil =
       ctx.createRadialGradient(
         WIDTH * 0.5,
@@ -9331,6 +10051,21 @@
       "center",
       true,
     );
+    drawText(
+      `NEXT // ${pauseAction.text}`,
+      WIDTH * 0.5,
+      216,
+      fittedTextSize(
+        `NEXT // ${pauseAction.text}`,
+        11,
+        520,
+        9,
+        true,
+      ),
+      pauseAction.color,
+      "center",
+      true,
+    );
     const joeDistance =
       Math.round(
         worldDistance(
@@ -9355,7 +10090,7 @@
           : "SIGHTLINE BLOCKED"
       }`,
       WIDTH * 0.5,
-      216,
+      237,
       11,
       threatColor,
       "center",
@@ -9363,7 +10098,7 @@
     );
 
     for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
-      const y = 250 + index * 68;
+      const y = 264 + index * 68;
       const selected = index === state.pauseIndex;
       ctx.fillStyle = selected
         ? "rgba(118,62,28,0.45)"
@@ -9467,13 +10202,16 @@
       );
     state.player = { x: 0, y: 0, heading: 0 };
     state.shedReached = false;
-    state.status = "South gate locked. Reach an exit across the course.";
+    state.status = "South gate locked. Complete the field checks and file an exit.";
     state.hole = {
       variantIndex,
       variantId: variant.id,
       overtime,
       phase: "find_key",
       keyCollected: false,
+      nightOrderActionsCompleted: [],
+      nightOrderActivation: null,
+      nightOrderHandoff: null,
       changeRequestCollected: false,
       appealUsed: false,
       appealWindowSeen: false,
@@ -9525,6 +10263,7 @@
       },
       distraction: null,
       distractionTimer: 0,
+      searchContext: null,
       noiseHazards:
         freshNoiseHazardState(),
       activeNoiseHazard: null,
@@ -9594,8 +10333,8 @@
         retreatRadius: 0,
       },
       message: overtime
-        ? "OVERTIME AUDIT — two balls, faster Joe, stronger evidence."
-        : "South gate locked. Find the shed key — or open the drain valve.",
+        ? "OVERTIME AUDIT — three field checks, two balls, faster Joe, stronger evidence."
+        : "South gate locked. Complete three field checks, then secure and file an exit.",
       messageTimer: 4,
       elapsed: 0,
       tutorialVisible: true,
@@ -9639,6 +10378,8 @@
       blockedRadius: 0,
       blockedRadiusX: 0,
       blockedRadiusY: 0,
+      southGateImpactTimer: 0,
+      southGateImpacts: 0,
       blockedContactStartedAt:
         -Infinity,
       blockedContactRefreshedAt:
@@ -12381,7 +13122,7 @@
       joeWorldLabelState();
     const visiblePressure = Boolean(
       guidance?.active &&
-      joeLabel.visible,
+      joeLabel.tacticalVisible,
     );
     const pressureAmount =
       visiblePressure
@@ -15001,6 +15742,114 @@
     return null;
   }
 
+  /**
+   * Audits the authored center lane from the release intake to the shed's
+   * interaction apron using the same inflated ellipses as player collision.
+   */
+  function shedApproachReadabilityState() {
+    const samples = [];
+    const blockingIds = new Set();
+    let minimumClearance = Infinity;
+    for (
+      let routeIndex = 0;
+      routeIndex <
+      SHED_APPROACH_ROUTE.length - 1;
+      routeIndex += 1
+    ) {
+      const start =
+        SHED_APPROACH_ROUTE[routeIndex];
+      const end =
+        SHED_APPROACH_ROUTE[
+          routeIndex + 1
+        ];
+      const sampleCount = Math.max(
+        1,
+        Math.ceil(
+          worldDistance(start, end) / 2,
+        ),
+      );
+      for (
+        let sampleIndex = 0;
+        sampleIndex <= sampleCount;
+        sampleIndex += 1
+      ) {
+        if (
+          routeIndex > 0 &&
+          sampleIndex === 0
+        ) {
+          continue;
+        }
+        const amount =
+          sampleIndex / sampleCount;
+        const point = {
+          x: lerp(start.x, end.x, amount),
+          y: lerp(start.y, end.y, amount),
+        };
+        const blocker =
+          obstacleAtPosition(
+            point.x,
+            point.y,
+          );
+        if (blocker) {
+          blockingIds.add(blocker.id);
+        }
+        minimumClearance = Math.min(
+          minimumClearance,
+          nearestObstacleClearance(
+            point,
+          ) - PLAYER_COLLISION_RADIUS,
+        );
+        samples.push({
+          x: Number(
+            point.x.toFixed(2),
+          ),
+          y: Number(
+            point.y.toFixed(2),
+          ),
+          blockerId:
+            blocker?.id || null,
+        });
+      }
+    }
+    const finalPoint =
+      SHED_APPROACH_ROUTE[
+        SHED_APPROACH_ROUTE.length - 1
+      ];
+    return {
+      clear:
+        blockingIds.size === 0,
+      blockingIds: [
+        ...blockingIds,
+      ],
+      minimumClearanceMeters:
+        Number(
+          minimumClearance.toFixed(2),
+        ),
+      interactionReachable:
+        worldDistance(
+          finalPoint,
+          SHED_EXIT,
+        ) < SHED_EXIT.radius,
+      interactionDistanceMeters:
+        Number(
+          worldDistance(
+            finalPoint,
+            SHED_EXIT,
+          ).toFixed(2),
+        ),
+      interactionRadiusMeters:
+        SHED_EXIT.radius,
+      sampledPoints:
+        samples.length,
+      route:
+        SHED_APPROACH_ROUTE.map(
+          (point) => ({ ...point }),
+        ),
+      presentation:
+        "visible_release_chicane_into_widened_gate_and_shed_apron",
+    };
+  }
+
   function projectedGroundRadius(target, radius) {
     const point = worldToScreen(target.x, target.y);
     const nearPoint = worldToScreen(
@@ -15316,6 +16165,241 @@
     return visible.slice(0, 6);
   }
 
+  function customGameObjectArtAudit() {
+    const drawableObstacles =
+      COURSE_OBSTACLES.filter(
+        (obstacle) =>
+          obstacle.draw !== false,
+      );
+    const missingObstacleIds = [];
+    for (
+      let index = 0;
+      index < drawableObstacles.length;
+      index += 1
+    ) {
+      const obstacle =
+        drawableObstacles[index];
+      const dedicatedArt =
+        dedicatedObstacleImage(
+          obstacle.asset,
+        );
+      const cell =
+        courseObstacleCell(
+          obstacle,
+          dedicatedArt,
+        );
+      if (!cell) {
+        missingObstacleIds.push(
+          obstacle.id,
+        );
+      }
+    }
+    const footingHazardKinds = [
+      ...new Set(
+        FOOTING_HAZARD_ZONES.map(
+          (zone) => zone.kind,
+        ),
+      ),
+    ];
+    const missingFootingHazardKinds =
+      footingHazardKinds.filter(
+        (kind) =>
+          !FOOTING_HAZARD_ART_CELL_BY_KIND.has(
+            kind,
+          ),
+      );
+    const generatedObjectFamilies = [
+      {
+        id: "interactable_props",
+        mapped: INTERACTABLE_PROP_CELLS.length,
+        required: 4,
+      },
+      {
+        id: "course_mechanics",
+        mapped: COURSE_MECHANIC_CELLS.length,
+        required: 4,
+      },
+      {
+        id: "night_order_objectives",
+        mapped:
+          NIGHT_ORDER_OBJECTIVE_CELLS.length,
+        required: NIGHT_ORDER_ACTIONS.length,
+      },
+      {
+        id: "south_service_gate",
+        mapped: 1,
+        required: 1,
+      },
+      {
+        id: "course_clutter_and_noise_hazards",
+        mapped: COURSE_CLUTTER_CELLS.length,
+        required: Object.keys(
+          NOISE_HAZARD_TYPES,
+        ).length,
+      },
+      {
+        id: "ornamental_verge",
+        mapped: COURSE_VERGE_CELLS.length,
+        required: 6,
+      },
+      {
+        id: "path_lanterns",
+        mapped: PATH_LANTERN_CELLS.length,
+        required: 4,
+      },
+      {
+        id: "course_signs",
+        mapped: SIGNAGE_ATLAS_CELLS.length,
+        required: 4,
+      },
+      {
+        id: "bunkers",
+        mapped: BUNKER_ATLAS_SOURCES.length,
+        required: BUNKER_SAND_ZONES.length,
+      },
+      {
+        id: "turf_evidence",
+        mapped: TURF_EVIDENCE_CELLS.length,
+        required: 8,
+      },
+      {
+        id: "boundary_hardware",
+        mapped: COURSE_BOUNDARY_KIT_CELLS.length,
+        required: 2,
+      },
+      {
+        id: "wet_turf_hardware",
+        mapped: WET_TURF_ART_CELLS.length,
+        required: 2,
+      },
+      {
+        id: "moving_golf_ball",
+        mapped: MOVING_GOLF_BALL_ART_CELLS.length,
+        required: 3,
+      },
+      {
+        id: "course_echo_entity",
+        mapped: COURSE_ECHO_ART_CELLS.length,
+        required: 2,
+      },
+    ];
+    const missingObjectArtFamilies =
+      generatedObjectFamilies
+        .filter(
+          (family) =>
+            family.mapped <
+            family.required,
+        )
+        .map((family) => family.id);
+    const missingCustomArtIds = [
+      ...missingObstacleIds,
+      ...missingFootingHazardKinds.map(
+        (kind) =>
+          `footing_hazard:${kind}`,
+      ),
+      ...missingObjectArtFamilies.map(
+        (family) =>
+          `object_family:${family}`,
+      ),
+    ];
+    const sourceFiles = [
+      "rough-cut-course-obstacle-kit-v1.png",
+      "rough-cut-expanded-course-kit-v1.png",
+      "rough-cut-hedge-tunnel-v1.png",
+      "rough-cut-maintenance-shed-v2.png",
+      "rough-cut-hedge-hide-v2.png",
+      "rough-cut-stone-cover-v2.png",
+      "rough-cut-service-cart-v2.png",
+      "rough-cut-dead-green-kit-v1.png",
+      "rough-cut-interactable-props-v1.png",
+      "rough-cut-course-mechanics-atlas-v1.png",
+      "rough-cut-night-order-objectives-v1.png",
+      "rough-cut-south-service-gate-v1.png",
+      "rough-cut-course-clutter-v1.png",
+      "rough-cut-verge-atlas-v1.png",
+      "rough-cut-path-lantern-atlas-v1.png",
+      "rough-cut-signage-atlas-v1.png",
+      "rough-cut-bunker-atlas-v2.png",
+      "rough-cut-turf-evidence-atlas-v1.png",
+      "rough-cut-course-boundary-kit-v1.png",
+      "rough-cut-footing-hazards-v1.png",
+      "rough-cut-wet-turf-atlas-v1.png",
+      "rough-cut-moving-golf-ball-atlas-v1.png",
+      "rough-cut-course-echo-atlas-v1.png",
+    ];
+    return {
+      scope:
+        "world_objects_interactables_cover_hazards_landmarks_and_course_hardware",
+      status:
+        missingCustomArtIds.length === 0
+          ? "complete"
+          : "incomplete",
+      drawableCourseObstacles:
+        drawableObstacles.length,
+      mappedCourseObstacles:
+        drawableObstacles.length -
+        missingObstacleIds.length,
+      missingCustomArtIds:
+        missingCustomArtIds,
+      footingHazardKinds:
+        footingHazardKinds.length,
+      mappedFootingHazardKinds:
+        footingHazardKinds.length -
+        missingFootingHazardKinds.length,
+      missingFootingHazardKinds,
+      generatedObjectFamilies,
+      mappedObjectFamilies:
+        generatedObjectFamilies.length -
+        missingObjectArtFamilies.length,
+      requiredObjectFamilies:
+        generatedObjectFamilies.length,
+      missingObjectArtFamilies,
+      generatedVariantCounts: {
+        obstacleAtlas:
+          COURSE_OBSTACLE_CELLS.length,
+        expandedObstacleAtlas:
+          EXPANDED_OBSTACLE_CELLS.length,
+        interactableProps:
+          INTERACTABLE_PROP_CELLS.length,
+        courseMechanics:
+          COURSE_MECHANIC_CELLS.length,
+        nightOrderObjectives:
+          NIGHT_ORDER_OBJECTIVE_CELLS.length,
+        southServiceGate: 1,
+        courseClutter:
+          COURSE_CLUTTER_CELLS.length,
+        ornamentalVerge:
+          COURSE_VERGE_CELLS.length,
+        pathLanterns:
+          PATH_LANTERN_CELLS.length,
+        courseSigns:
+          SIGNAGE_ATLAS_CELLS.length,
+        bunkers:
+          BUNKER_ATLAS_SOURCES.length,
+        turfEvidence:
+          TURF_EVIDENCE_CELLS.length,
+        boundaryHardware:
+          COURSE_BOUNDARY_KIT_CELLS.length,
+        footingHazards:
+          FOOTING_HAZARD_ART_CELLS.length,
+        wetTurf:
+          WET_TURF_ART_CELLS.length,
+        movingGolfBall:
+          MOVING_GOLF_BALL_ART_CELLS.length,
+        courseEcho:
+          COURSE_ECHO_ART_CELLS.length,
+      },
+      sourceFiles,
+      intentionalRuntimeLayers: [
+        "collision_and_interaction_footprints",
+        "navigation_and_accessibility_copy",
+        "rope_connectors_between_generated_stakes",
+        "fog_light_and_particle_effects",
+        "authoritative_terrain_zone_masks_beneath_generated_material_art",
+      ],
+    };
+  }
+
   function interactableWorldState() {
     const key = activeKeyPoint();
     const sprinkler =
@@ -15371,6 +16455,25 @@
           "drain-culvert",
       },
     ];
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      definitions.push({
+        id: action.id,
+        label: action.shortLabel,
+        target: action,
+        available:
+          !nightOrderActionCompleted(
+            action,
+          ),
+        worldImage:
+          "generated-course-mechanic-fixture",
+      });
+    }
     for (
       let index = 0;
       index < reviews.length;
@@ -15759,7 +16862,7 @@
           radius: 0,
           sight: false,
           landmark:
-            "clubhouse boundary",
+            "locked south service gate",
         };
       }
       const blocker =
@@ -15866,6 +16969,16 @@
       state.hole.blockedRadiusY =
         initialBlocker.radiusY ??
         initialBlocker.radius;
+      if (
+        newContact &&
+        initialBlocker.id ===
+          "south-course-edge"
+      ) {
+        state.hole.southGateImpactTimer =
+          0.72;
+        state.hole.southGateImpacts +=
+          1;
+      }
       if (
         newContact &&
         state.hole.blockedCueCooldown <= 0
@@ -16306,11 +17419,112 @@
       !crosswindOwnsSignalLane() &&
       !nerveHoldOwnsSignalLane() &&
       !cutTraceOwnsSignalLane() &&
+      !coverShredDirectionAndActionOwnSignal() &&
+      !falseRetreatDirectionAndCautionOwnSignal() &&
       !listeningSearchReadOwnsSignalLane() &&
       !joeDialogueOwnsSignalLane() &&
       !openingBriefingOwnsSignalLane() &&
       !hole.riskAward &&
       !hole.deliveryAward
+    );
+  }
+
+  /**
+   * The cover-shred caption already supplies direction and its bottom rail
+   * supplies the escape action, so the synonymous state banner yields.
+   */
+  function coverShredDirectionAndActionOwnSignal() {
+    const hole = state.hole;
+    return Boolean(
+      hole?.predatorTactics?.active ===
+        "cover_shred" &&
+      hole.stateBanner ===
+        "COVER SHRED // ROUGH ENTERING SCOPE" &&
+      hole.messageTimer > 0 &&
+      hole.message?.startsWith(
+        "COVER SHRED //",
+      ),
+    );
+  }
+
+  /**
+   * False Retreat's opening caption supplies direction and its bottom rail
+   * warns against committing; the later recommit banner remains independent.
+   */
+  function falseRetreatDirectionAndCautionOwnSignal() {
+    const hole = state.hole;
+    return Boolean(
+      hole?.predatorTactics?.active ===
+        "false_retreat" &&
+      hole.stateBanner ===
+        "FALSE RETREAT // MOWER THROTTLE DROPPING" &&
+      hole.messageTimer > 0 &&
+      hole.message?.startsWith(
+        "JOE IS YIELDING THE LANE",
+      ),
+    );
+  }
+
+  function falseRetreatSnapbackActive() {
+    return Boolean(
+      state.hole?.predatorTactics
+        ?.active === "false_retreat" &&
+      state.hole.predatorTactics
+        .phase === "snapback",
+    );
+  }
+
+  function falseRetreatSnapbackAttentionState() {
+    if (!falseRetreatSnapbackActive()) {
+      return null;
+    }
+    const remaining =
+      state.hole.predatorTactics.timer;
+    return {
+      label:
+        `SNAPBACK COMMITTED // ${remaining.toFixed(1)}s`,
+      color: "#f07441",
+      kind: "false_retreat_snapback",
+      remainingSeconds: Number(
+        remaining.toFixed(2),
+      ),
+      presentation:
+        "joe_attention_phase_countdown",
+    };
+  }
+
+  function coverShredCommitAttentionState() {
+    const tactics =
+      state.hole?.predatorTactics;
+    if (!coverShredCommitActive()) {
+      return null;
+    }
+    return {
+      label:
+        `CUT LINE CLOSING // ${tactics.timer.toFixed(1)}s`,
+      color: "#f07441",
+      kind: "cover_shred_commit",
+      remainingSeconds: Number(
+        tactics.timer.toFixed(2),
+      ),
+      presentation:
+        "joe_attention_phase_countdown",
+    };
+  }
+
+  function coverShredCommitActive() {
+    return Boolean(
+      state.hole?.predatorTactics
+        ?.active === "cover_shred" &&
+      state.hole.predatorTactics
+        .phase === "shred",
+    );
+  }
+
+  function activePredatorTacticAttentionState() {
+    return (
+      falseRetreatSnapbackAttentionState() ||
+      coverShredCommitAttentionState()
     );
   }
 
@@ -17530,6 +18744,10 @@
     mode,
     dialogueContext = null,
   ) {
+    const falseRetreatSnapback =
+      falseRetreatSnapbackActive();
+    const coverShredCommit =
+      coverShredCommitActive();
     const labels = {
       patrol: "STATUS: ROUTINE WALKTHROUGH",
       investigate: "STATUS: VERIFYING DISTURBANCE",
@@ -17575,16 +18793,41 @@
       dialogueContext === "trail";
     if (!trailSearch) {
       pushThreatCaption(
-        captionLabels[mode] ||
-          "JOE CHANGES COURSE",
-        state.hole.joe,
-        mode === "chase"
+        falseRetreatSnapback
+          ? "MOWER SNAPS BACK INTO YOUR ROUTE"
+          : coverShredCommit
+            ? "MOWER CUTS INTO YOUR HIDING LINE"
+            : captionLabels[mode] ||
+              "JOE CHANGES COURSE",
+        coverShredCommit
+          ? state.hole
+              .predatorTactics.target
+          : state.hole.joe,
+        mode === "chase" ||
+          falseRetreatSnapback ||
+          coverShredCommit
           ? "danger"
           : "mower",
-        mode === "chase"
-          ? 2.8
-          : 2.1,
-        `joe_${mode}`,
+        falseRetreatSnapback
+          ? Math.max(
+              0.2,
+              state.hole
+                .predatorTactics
+                .timer,
+            )
+          : coverShredCommit
+            ? Math.max(
+                0.2,
+                state.hole
+                  .predatorTactics
+                  .timer,
+              )
+          : mode === "chase"
+            ? 2.8
+            : 2.1,
+        coverShredCommit
+          ? "cover_shred"
+          : `joe_${mode}`,
       );
       playThreatCue(mode);
     }
@@ -17653,6 +18896,7 @@
       escapeRoutePoint(route);
     if (
       !routeOpen ||
+      !nightOrderActionsComplete() ||
       filing.active ||
       filing.sealing ||
       worldDistance(
@@ -18779,6 +20023,114 @@
     }
   }
 
+  function completeNightOrderAction(
+    action,
+  ) {
+    const hole = state.hole;
+    if (
+      !action ||
+      nightOrderActionCompleted(
+        action,
+      )
+    ) {
+      return false;
+    }
+    hole.nightOrderActionsCompleted.push(
+      action.id,
+    );
+    hole.nightOrderActivation = {
+      id: action.id,
+      timer: 1.45,
+      duration: 1.45,
+    };
+    const completed =
+      completedNightOrderActionCount();
+    const allComplete =
+      nightOrderActionsComplete();
+    completeFieldInteraction(true);
+    hole.joe.alert = Math.max(
+      hole.joe.alert,
+      0.5 + completed * 0.08,
+    );
+    hole.distraction = {
+      x: action.x,
+      y: action.y,
+      kind: "field_action",
+      sourceId: action.id,
+      sourceLabel: action.shortLabel,
+      signalColor: action.color,
+    };
+    hole.searchContext = null;
+    hole.distractionTimer =
+      action.noiseSeconds;
+    hole.lastSeenPlayer = {
+      x: action.x,
+      y: action.y,
+    };
+    if (hole.joe.mode !== "chase") {
+      hole.joe.mode = "investigate";
+      announceJoeState(
+        "investigate",
+        action.barkContext,
+      );
+    }
+    hole.phase = allComplete
+      ? "secure_exit_access"
+      : "field_checks";
+    hole.stateBanner = allComplete
+      ? "DEFINITION OF DONE // FIELD CHECKS COMPLETE"
+      : `${action.completionLabel} // ${completed}/${NIGHT_ORDER_ACTIONS.length}`;
+    hole.stateBannerTimer = 3.2;
+    const handoffAction =
+      objectiveActionHudSummary();
+    const completionMessage =
+      allComplete
+        ? "FIELD CHECKS COMPLETE — secure an exit and file the Night Order."
+        : `${action.completionLabel} — Joe is routing to the signal.`;
+    hole.nightOrderHandoff = {
+      timer: 3.2,
+      duration: 3.2,
+      bannerText: hole.stateBanner,
+      messageText:
+        completionMessage,
+      completed,
+      required:
+        NIGHT_ORDER_ACTIONS.length,
+      allComplete,
+      nextText:
+        `NEXT // ${handoffAction.text}`,
+      nextPhase:
+        handoffAction.phase,
+      nextTargetId:
+        handoffAction.targetId,
+      color:
+        handoffAction.color,
+    };
+    setHoleMessage(
+      completionMessage,
+      3.6,
+    );
+    addWorldEffect(
+      "sound",
+      action.x,
+      action.y,
+      action.noiseSeconds,
+    );
+    playNightOrderActionCue(action);
+    pushThreatCaption(
+      `${action.completionLabel}; JOE HEARD IT`,
+      action,
+      "danger",
+      2.8,
+      `night_order_${action.id}`,
+    );
+    triggerJoeBark(
+      hole.joe.mode,
+      action.barkContext,
+    );
+    return true;
+  }
+
   function interactWithCourse() {
     if (state.mode !== "first_hole") {
       return;
@@ -18800,6 +20152,17 @@
     const drain = DRAIN_EXIT;
     const nearestBall =
       nearestRecoverableBall();
+    const nearbyAction =
+      nearbyNightOrderAction();
+
+    if (
+      nearbyAction &&
+      completeNightOrderAction(
+        nearbyAction.action,
+      )
+    ) {
+      return;
+    }
 
     if (!state.hole.keyCollected && worldDistance(state.player, key) < key.radius) {
       state.hole.keyCollected = true;
@@ -18866,6 +20229,18 @@
       worldDistance(state.player, shed) <
         shed.radius
     ) {
+      if (!nightOrderActionsComplete()) {
+        const remaining =
+          NIGHT_ORDER_ACTIONS.length -
+          completedNightOrderActionCount();
+        presentInteractionRejection(
+          "maintenance-shed",
+          "CHECKS OPEN",
+          `SHED FILE BLOCKED — ${remaining} FIELD CHECK${remaining === 1 ? "" : "S"} REMAIN.`,
+        );
+        playDoorRattle();
+        return;
+      }
       beginEscapeFiling("shed");
       return;
     }
@@ -18875,6 +20250,18 @@
       worldDistance(state.player, drain) <
         drain.radius
     ) {
+      if (!nightOrderActionsComplete()) {
+        const remaining =
+          NIGHT_ORDER_ACTIONS.length -
+          completedNightOrderActionCount();
+        presentInteractionRejection(
+          "drain-exit",
+          "CHECKS OPEN",
+          `DRAIN FILE BLOCKED — ${remaining} FIELD CHECK${remaining === 1 ? "" : "S"} REMAIN.`,
+        );
+        playDoorRattle();
+        return;
+      }
       beginEscapeFiling("drain");
       return;
     }
@@ -20444,6 +21831,328 @@
     }
   }
 
+  function coverShredSegmentClear(
+    start,
+    end,
+  ) {
+    const distance = worldDistance(
+      start,
+      end,
+    );
+    const samples = Math.max(
+      1,
+      Math.ceil(
+        distance /
+          COVER_SHRED_ESCAPE_SAMPLE_STEP,
+      ),
+    );
+    for (
+      let sampleIndex = 1;
+      sampleIndex <= samples;
+      sampleIndex += 1
+    ) {
+      const amount =
+        sampleIndex / samples;
+      const point = {
+        x: lerp(
+          start.x,
+          end.x,
+          amount,
+        ),
+        y: lerp(
+          start.y,
+          end.y,
+          amount,
+        ),
+      };
+      if (
+        point.x <
+          -COURSE_MAX_X +
+            PLAYER_COLLISION_RADIUS ||
+        point.x >
+          COURSE_MAX_X -
+            PLAYER_COLLISION_RADIUS ||
+        point.y <
+          COURSE_MIN_Y +
+            PLAYER_COLLISION_RADIUS ||
+        point.y >
+          COURSE_LENGTH -
+            PLAYER_COLLISION_RADIUS ||
+        obstacleAtPosition(
+          point.x,
+          point.y,
+        )
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function coverShredStepDirection(
+    start,
+    end,
+  ) {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    if (
+      Math.abs(deltaX) >
+      Math.abs(deltaY)
+    ) {
+      return deltaX < 0
+        ? "LEFT"
+        : "RIGHT";
+    }
+    return deltaY < 0
+      ? "BACK"
+      : "FORWARD";
+  }
+
+  /**
+   * Finds a short axis-aligned route from the player's current rough pocket
+   * into fairway using the same inflated obstacle footprints as movement.
+   */
+  function coverShredEscapePlan(
+    origin = state.player,
+  ) {
+    if (!playerInRough(origin)) {
+      return null;
+    }
+    const side =
+      origin.x < 0 ? -1 : 1;
+    const offsetOptions = [
+      0,
+      8,
+      -8,
+      16,
+      -16,
+    ];
+    let bestPlan = null;
+    for (
+      let offsetIndex = 0;
+      offsetIndex <
+        offsetOptions.length;
+      offsetIndex += 1
+    ) {
+      const offsetY =
+        offsetOptions[offsetIndex];
+      const goalY = clamp(
+        origin.y + offsetY,
+        COURSE_MIN_Y + 6,
+        COURSE_LENGTH - 6,
+      );
+      const goalZone =
+        courseZoneAt(goalY);
+      const goal = {
+        x:
+          side *
+          Math.max(
+            0,
+            goalZone.fairwayHalfWidth -
+              4,
+          ),
+        y: goalY,
+      };
+      if (
+        playerInRough(goal) ||
+        obstacleAtPosition(
+          goal.x,
+          goal.y,
+        )
+      ) {
+        continue;
+      }
+      const waypoints =
+        Math.abs(offsetY) < 0.1
+          ? [goal]
+          : [
+              {
+                x: origin.x,
+                y: goalY,
+              },
+              goal,
+            ];
+      let segmentStart = origin;
+      let routeDistance = 0;
+      let routeClear = true;
+      const steps = [];
+      for (
+        let waypointIndex = 0;
+        waypointIndex <
+          waypoints.length;
+        waypointIndex += 1
+      ) {
+        const waypoint =
+          waypoints[waypointIndex];
+        if (
+          !coverShredSegmentClear(
+            segmentStart,
+            waypoint,
+          )
+        ) {
+          routeClear = false;
+          break;
+        }
+        routeDistance +=
+          worldDistance(
+            segmentStart,
+            waypoint,
+          );
+        const direction =
+          coverShredStepDirection(
+            segmentStart,
+            waypoint,
+          );
+        if (
+          steps[steps.length - 1] !==
+          direction
+        ) {
+          steps.push(direction);
+        }
+        segmentStart = waypoint;
+      }
+      if (
+        !routeClear ||
+        routeDistance >
+          COVER_SHRED_ESCAPE_MAX_DISTANCE
+      ) {
+        continue;
+      }
+      const plan = {
+        goal,
+        waypoints,
+        steps,
+        distance: routeDistance,
+        routeType:
+          waypoints.length === 1
+            ? "direct_fairway_crossing"
+            : "rough_edge_then_fairway",
+      };
+      if (
+        !bestPlan ||
+        plan.distance <
+          bestPlan.distance
+      ) {
+        bestPlan = plan;
+      }
+    }
+    if (!bestPlan) {
+      return null;
+    }
+    const estimatedSeconds =
+      COVER_SHRED_ESCAPE_REACTION_SECONDS +
+      bestPlan.distance /
+        COVER_SHRED_ESCAPE_PLAYER_SPEED;
+    const telegraphSeconds = Math.min(
+      estimatedSeconds,
+      COVER_SHRED_TELEGRAPH_SECONDS,
+    );
+    const commitSeconds = Math.max(
+      0,
+      estimatedSeconds -
+        COVER_SHRED_TELEGRAPH_SECONDS,
+    );
+    const environment =
+      getPlayerEnvironmentState();
+    const movingCrouchVisibilityDistance =
+      17 *
+      lerp(
+        1,
+        1.42,
+        environment.lightExposure,
+      ) *
+      lerp(
+        1,
+        0.62,
+        state.hole.concealment,
+      );
+    const requiredJoeDistance =
+      Math.max(
+        12,
+        movingCrouchVisibilityDistance,
+      ) +
+      COVER_SHRED_ESCAPE_SAFETY_DISTANCE +
+      telegraphSeconds *
+        COVER_SHRED_TELEGRAPH_SPEED +
+      commitSeconds *
+        COVER_SHRED_COMMIT_SPEED;
+    const joeDistance = worldDistance(
+      state.hole.joe,
+      origin,
+    );
+    if (
+      joeDistance <
+      requiredJoeDistance
+    ) {
+      return null;
+    }
+    bestPlan.estimatedSeconds =
+      estimatedSeconds;
+    bestPlan.joeDistanceAtStart =
+      joeDistance;
+    bestPlan.requiredJoeDistance =
+      requiredJoeDistance;
+    bestPlan.visibilityDistance =
+      movingCrouchVisibilityDistance;
+    bestPlan.separationMargin =
+      joeDistance -
+      requiredJoeDistance;
+    return bestPlan;
+  }
+
+  function coverShredEscapePlanTextState(
+    plan =
+      state.hole?.predatorTactics
+        ?.escapePlan,
+  ) {
+    if (!plan) {
+      return null;
+    }
+    return {
+      goal: {
+        x: Number(
+          plan.goal.x.toFixed(2),
+        ),
+        y: Number(
+          plan.goal.y.toFixed(2),
+        ),
+      },
+      steps: plan.steps.slice(),
+      distanceMeters: Number(
+        plan.distance.toFixed(2),
+      ),
+      estimatedSeconds: Number(
+        plan.estimatedSeconds.toFixed(
+          2,
+        ),
+      ),
+      joeDistanceAtStart: Number(
+        plan.joeDistanceAtStart.toFixed(
+          2,
+        ),
+      ),
+      requiredJoeDistance: Number(
+        plan.requiredJoeDistance.toFixed(
+          2,
+        ),
+      ),
+      movingCrouchVisibilityDistance:
+        Number(
+          plan.visibilityDistance.toFixed(
+            2,
+          ),
+        ),
+      separationMargin: Number(
+        plan.separationMargin.toFixed(
+          2,
+        ),
+      ),
+      routeType: plan.routeType,
+      validation:
+        "sampled_against_player_collision_footprints",
+    };
+  }
+
   function finishPredatorTactic(
     outcome,
   ) {
@@ -20453,7 +22162,8 @@
       return;
     }
     const completed =
-      outcome === "completed";
+      outcome === "completed" ||
+      outcome === "evaded_rough";
     if (completed) {
       tactics.completions += 1;
     } else {
@@ -20478,6 +22188,7 @@
     tactics.timer = 0;
     tactics.duration = 0;
     tactics.target = null;
+    tactics.escapePlan = null;
     tactics.cooldown =
       PREDATOR_TACTIC_COOLDOWN_SECONDS +
       hash(
@@ -20487,7 +22198,10 @@
         5.5;
   }
 
-  function startPredatorTactic(type) {
+  function startPredatorTactic(
+    type,
+    escapePlan = null,
+  ) {
     const hole = state.hole;
     const tactics =
       hole.predatorTactics;
@@ -20513,11 +22227,19 @@
         ? -1
         : 1;
     tactics.active = type;
+    tactics.escapePlan =
+      type === "cover_shred"
+        ? escapePlan
+        : null;
+    if (type === "cover_shred") {
+      tactics.lastCoverShredDeferral =
+        null;
+    }
     tactics.phase = "telegraph";
     tactics.timer =
       type === "false_retreat"
         ? 1.25
-        : 1.05;
+        : COVER_SHRED_TELEGRAPH_SECONDS;
     tactics.duration = tactics.timer;
     tactics.seed =
       tactics.starts * 47 +
@@ -20580,7 +22302,7 @@
       hole.stateBanner =
         "COVER SHRED // ROUGH ENTERING SCOPE";
       setHoleMessage(
-        "JOE IS MOWING YOUR HIDING LINE — leave the rough before the cut reaches you.",
+        coverShredEscapeActionCopy(),
         3.2,
       );
       pushThreatCaption(
@@ -20648,6 +22370,17 @@
           hole.stateBanner =
             "FALSE RETREAT // JOE RECOMMITS";
           hole.stateBannerTimer = 2;
+          setHoleMessage(
+            falseRetreatSnapbackActionCopy(),
+            tactics.duration,
+          );
+          pushThreatCaption(
+            "MOWER SNAPS BACK INTO YOUR ROUTE",
+            hole.joe,
+            "danger",
+            tactics.duration,
+            "joe_investigate",
+          );
           playThreatCue(
             "investigate",
           );
@@ -20662,6 +22395,13 @@
         tactics.phase = "shred";
         tactics.timer = 2.8;
         tactics.duration = 2.8;
+        pushThreatCaption(
+          "MOWER CUTS INTO YOUR HIDING LINE",
+          tactics.target,
+          "danger",
+          tactics.duration,
+          "cover_shred",
+        );
       } else {
         finishPredatorTactic(
           "completed",
@@ -20700,9 +22440,20 @@
       environment.effectiveRough &&
       hole.zoneIndex > 0
     ) {
-      startPredatorTactic(
-        "cover_shred",
-      );
+      const escapePlan =
+        coverShredEscapePlan();
+      if (escapePlan) {
+        startPredatorTactic(
+          "cover_shred",
+          escapePlan,
+        );
+      } else {
+        tactics.coverShredDeferrals += 1;
+        tactics.lastCoverShredDeferral =
+          "no_collision_clear_time_safe_egress";
+        tactics.cooldown =
+          COVER_SHRED_ESCAPE_RETRY_SECONDS;
+      }
     } else if (
       hole.joe.mode === "search" &&
       hole.zoneIndex > 0
@@ -20725,16 +22476,49 @@
     if (!tactics.active) {
       return false;
     }
-    if (
-      canSee ||
-      canHear ||
+    const playerDistance =
       worldDistance(
         joe,
         state.player,
-      ) < 12
+      );
+    if (
+      canSee ||
+      canHear ||
+      playerDistance < 12
     ) {
       finishPredatorTactic(
         "contact_cancelled",
+      );
+      return false;
+    }
+    if (
+      tactics.active ===
+        "cover_shred" &&
+      tactics.phase === "shred" &&
+      !getPlayerEnvironmentState()
+        .effectiveRough
+    ) {
+      finishPredatorTactic(
+        "evaded_rough",
+      );
+      hole.stateBanner =
+        "COVER SHRED EVADED // FAIRWAY CLEAR";
+      hole.stateBannerTimer = 1.9;
+      hole.stateBannerLockTimer =
+        Math.max(
+          hole.stateBannerLockTimer,
+          1.9,
+        );
+      setHoleMessage(
+        "ROUGH CLEARED — the mower missed your hiding line. Keep moving before Joe reacquires.",
+        2.6,
+      );
+      pushThreatCaption(
+        "MOWER CUT MISSES THE FAIRWAY",
+        joe,
+        "world",
+        1.8,
+        "cover_shred",
       );
       return false;
     }
@@ -20776,8 +22560,8 @@
       moveJoeToward(
         tactics.target,
         tactics.phase === "telegraph"
-          ? 9
-          : 23,
+          ? COVER_SHRED_TELEGRAPH_SPEED
+          : COVER_SHRED_COMMIT_SPEED,
         dt,
       );
       if (
@@ -21095,6 +22879,22 @@
             0.55,
       );
       joe.mode = "search";
+      hole.searchContext = {
+        kind: "trail",
+        sourceId:
+          trailEvidence.id,
+        sourceLabel:
+          "TURF EVIDENCE",
+        statusLead:
+          "FOLLOWING TURF EVIDENCE",
+        color: "#e8a55d",
+        target: {
+          x: trailEvidence.x,
+          y: trailEvidence.y,
+        },
+        presentation:
+          "latest_search_evidence_owns_status",
+      };
       joe.alert = Math.max(
         joe.alert,
         0.28 + trailEvidence.strength * 0.24,
@@ -21345,11 +23145,40 @@
               hole.ballThrowsUsed *
                 0.45,
           );
+        hole.searchContext =
+          completedDistraction.kind ===
+            "field_action"
+            ? {
+                kind: "field_action",
+                sourceId:
+                  completedDistraction
+                    .sourceId,
+                sourceLabel:
+                  completedDistraction
+                    .sourceLabel ||
+                  "FIELD CHECK",
+                color:
+                  completedDistraction
+                    .signalColor ||
+                  "#d6a74c",
+                statusLead:
+                  `SWEEPING ${completedDistraction.sourceLabel || "FIELD CHECK"} AREA`,
+                target: {
+                  x:
+                    completedDistraction.x,
+                  y:
+                    completedDistraction.y,
+                },
+                presentation:
+                  "named_station_follow_up_only",
+              }
+            : null;
       }
     } else if (canSee || canHear) {
       hole.trailTarget = null;
       hole.trailApproachTimer = 0;
       joe.mode = "chase";
+      hole.searchContext = null;
       hole.detection = Math.max(
         hole.detection,
         0.72,
@@ -21373,6 +23202,22 @@
       }
       if (hole.lostSightTimer >= 1.25) {
         joe.mode = "search";
+        hole.searchContext = {
+          kind: "lost_sightline",
+          sourceId: null,
+          sourceLabel:
+            "LAST SIGHTLINE",
+          statusLead:
+            "SWEEPING LAST SIGHTLINE",
+          color: "#e8a55d",
+          target: hole.lastSeenPlayer
+            ? {
+                ...hole.lastSeenPlayer,
+              }
+            : null,
+          presentation:
+            "latest_search_evidence_owns_status",
+        };
         hole.trailTarget = null;
         hole.trailApproachTimer = 0;
         hole.detection = Math.min(
@@ -21439,6 +23284,7 @@
       }
       if (hole.searchTimer <= 0) {
         joe.mode = "patrol";
+        hole.searchContext = null;
         hole.lastSeenPlayer = null;
         hole.lostSightTimer = 0;
         hole.trailTarget = null;
@@ -22363,13 +24209,27 @@
     const sprinkler =
       activeSprinklerPoint();
     const choices = [];
+    const requiredAction =
+      nextNightOrderAction();
     const drainRouteCommitted =
       hole.drainUnlocked &&
       !hole.keyCollected;
     const shedRouteCommitted =
       hole.keyCollected &&
       !hole.drainUnlocked;
+    if (requiredAction) {
+      choices.push({
+        id: requiredAction.id,
+        label: `${requiredAction.code} ROUTE`,
+        shortLabel:
+          requiredAction.shortLabel,
+        color:
+          requiredAction.color,
+        target: requiredAction,
+      });
+    }
     if (
+      !requiredAction &&
       !hole.keyCollected &&
       !drainRouteCommitted
     ) {
@@ -22382,6 +24242,7 @@
       });
     }
     if (
+      !requiredAction &&
       !hole.sprinklerUsed &&
       !shedRouteCommitted
     ) {
@@ -22393,7 +24254,10 @@
         target: sprinkler,
       });
     }
-    if (hole.keyCollected) {
+    if (
+      !requiredAction &&
+      hole.keyCollected
+    ) {
       choices.push({
         id: "maintenance-shed",
         label: "SHED EXIT ROUTE",
@@ -22402,7 +24266,10 @@
         target: SHED_EXIT,
       });
     }
-    if (hole.drainUnlocked) {
+    if (
+      !requiredAction &&
+      hole.drainUnlocked
+    ) {
       choices.push({
         id: "drain-exit",
         label: "DRAIN EXIT ROUTE",
@@ -23883,6 +25750,20 @@
       COVER_AUDIT_SEARCH_SECONDS,
     );
     hole.joe.mode = "search";
+    hole.searchContext = {
+      kind: "cover_audit",
+      sourceId: audit.shelterId,
+      sourceLabel: "LAST COVER",
+      statusLead:
+        "AUDITING LAST COVER",
+      color: "#e8a55d",
+      target: {
+        x: audit.x,
+        y: audit.y,
+      },
+      presentation:
+        "latest_search_evidence_owns_status",
+    };
     hole.joe.alert = Math.max(
       hole.joe.alert,
       0.34,
@@ -25716,10 +27597,11 @@
         : placement.edgeDirection === "right"
           ? " ▶"
           : "";
-    const text =
+    const text = normalizeDisplayText(
       placement.edgeDirection === "left"
         ? `${edgeDirection}${label}${distanceLabel}`
-        : `${label}${distanceLabel}${edgeDirection}`;
+        : `${label}${distanceLabel}${edgeDirection}`,
+    );
     const maximumWidth =
       placement.width - 16;
     const fontSize = fittedTextSize(
@@ -25761,6 +27643,9 @@
       "sprinkler",
       "maintenance-shed",
       "drain-exit",
+      ...NIGHT_ORDER_ACTIONS.map(
+        (action) => action.id,
+      ),
     ];
     if (
       !targetId ||
@@ -25774,6 +27659,7 @@
         frameWidthBoost: 0,
         topRail: false,
         interactionOverride: false,
+        deferredBy: null,
       };
     }
     const selected =
@@ -25781,19 +27667,31 @@
         ?.targetId === targetId;
     const interactionOverride =
       inReach && !selected;
+    const deferredByOpeningRoute =
+      openingMovementCueActive() &&
+      !selected &&
+      !interactionOverride;
     return {
       role: selected
         ? "selected_route"
-        : "alternate_route",
+        : deferredByOpeningRoute
+          ? "alternate_route_deferred"
+          : "alternate_route",
       alphaMultiplier:
         selected || interactionOverride
           ? 1
-          : 0.72,
+          : deferredByOpeningRoute
+            ? 0.24
+            : 0.72,
       frameWidthBoost:
         selected ? 1 : 0,
       topRail:
         selected || interactionOverride,
       interactionOverride,
+      deferredBy:
+        deferredByOpeningRoute
+          ? "first_steps_route"
+          : null,
     };
   }
 
@@ -26435,14 +28333,19 @@
     cellIndex,
     options = {},
   ) {
+    const sourceImage =
+      options.sourceImage ||
+      courseMechanicsArt;
+    const sourceCells =
+      options.sourceCells ||
+      COURSE_MECHANIC_CELLS;
     if (
-      !courseMechanicsArt.complete ||
-      courseMechanicsArt.naturalWidth === 0
+      !sourceImage.complete ||
+      sourceImage.naturalWidth === 0
     ) {
       return null;
     }
-    const cell =
-      COURSE_MECHANIC_CELLS[cellIndex];
+    const cell = sourceCells[cellIndex];
     const point = worldToScreen(
       target.x,
       target.y,
@@ -26504,7 +28407,7 @@
       );
     }
     drawCachedAtlasCell(
-      courseMechanicsArt,
+      sourceImage,
       cell,
       point.x - drawWidth * 0.5,
       point.y - drawHeight,
@@ -26517,6 +28420,192 @@
       width: drawWidth,
       height: drawHeight,
     };
+  }
+
+  /** Keeps each mandatory Night Order check grounded in the world with authored prop art. */
+  function drawNightOrderAction(
+    action,
+    actionIndex,
+  ) {
+    const completed =
+      nightOrderActionCompleted(
+        action,
+      );
+    const distance = worldDistance(
+      state.player,
+      action,
+    );
+    const inReach =
+      !completed &&
+      distance < action.radius;
+    const activation =
+      state.hole.nightOrderActivation?.id ===
+      action.id
+        ? state.hole.nightOrderActivation
+        : null;
+    const activationProgress = activation
+      ? clamp(
+          1 -
+            activation.timer /
+              activation.duration,
+          0,
+          1,
+        )
+      : 0;
+    if (!completed) {
+      drawInteractionGroundRing(
+        action,
+        action.color,
+        inReach,
+      );
+    }
+    const fixture = drawCourseMechanicFixture(
+      action,
+      action.cellIndex,
+      {
+        sourceImage:
+          nightOrderObjectiveArt,
+        sourceCells:
+          NIGHT_ORDER_OBJECTIVE_CELLS,
+        scale:
+          0.92 *
+          (
+            activation &&
+            !state.reducedMotion
+              ? 1 +
+                Math.sin(
+                  activationProgress *
+                    Math.PI,
+                ) *
+                  0.075
+              : 1
+          ),
+        active:
+          !completed &&
+          distance < 46,
+        accent: [
+          "217,175,82",
+          "115,199,170",
+          "223,130,80",
+        ][actionIndex],
+        maxHeight: 122,
+      },
+    );
+    if (!fixture) {
+      return;
+    }
+    const filedColor = "111,192,171";
+    if (completed) {
+      ctx.save();
+      ctx.globalAlpha = clamp(
+        0.58 + fixture.point.scale * 0.3,
+        0.52,
+        0.88,
+      );
+      ctx.strokeStyle =
+        `rgba(${filedColor},0.92)`;
+      ctx.lineWidth = Math.max(
+        1.2,
+        fixture.point.scale * 1.5,
+      );
+      ctx.shadowColor =
+        `rgba(${filedColor},0.46)`;
+      ctx.shadowBlur = 7;
+      ctx.beginPath();
+      ctx.ellipse(
+        fixture.point.x,
+        fixture.point.y + 1,
+        Math.max(8, fixture.width * 0.31),
+        Math.max(2.4, fixture.height * 0.026),
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      const sealX =
+        fixture.point.x +
+        fixture.width * 0.31;
+      const sealY =
+        fixture.point.y -
+        fixture.height * 0.12;
+      const sealRadius = clamp(
+        fixture.height * 0.055,
+        3.4,
+        7,
+      );
+      ctx.fillStyle = "rgba(7,22,18,0.9)";
+      ctx.beginPath();
+      ctx.arc(
+        sealX,
+        sealY,
+        sealRadius,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.strokeStyle =
+        `rgba(${filedColor},0.96)`;
+      ctx.beginPath();
+      ctx.moveTo(
+        sealX - sealRadius * 0.48,
+        sealY,
+      );
+      ctx.lineTo(
+        sealX - sealRadius * 0.08,
+        sealY + sealRadius * 0.42,
+      );
+      ctx.lineTo(
+        sealX + sealRadius * 0.58,
+        sealY - sealRadius * 0.5,
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (activation) {
+      const remaining =
+        1 - activationProgress;
+      ctx.save();
+      ctx.globalCompositeOperation =
+        "screen";
+      ctx.strokeStyle =
+        `rgba(${filedColor},${remaining * 0.72})`;
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor =
+        `rgba(${filedColor},0.5)`;
+      ctx.shadowBlur = 8;
+      const waveCount =
+        state.reducedMotion ? 1 : 3;
+      for (
+        let waveIndex = 0;
+        waveIndex < waveCount;
+        waveIndex += 1
+      ) {
+        const phase = state.reducedMotion
+          ? 0.45
+          : (
+              activationProgress +
+              waveIndex / waveCount
+            ) % 1;
+        ctx.globalAlpha =
+          remaining *
+          (1 - phase) *
+          0.8;
+        ctx.beginPath();
+        ctx.ellipse(
+          fixture.point.x,
+          fixture.point.y + 1,
+          fixture.width *
+            (0.28 + phase * 0.64),
+          fixture.height *
+            (0.025 + phase * 0.055),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   function drawWorldInteractable(
@@ -27134,6 +29223,22 @@
         available: true,
       },
     ];
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      candidates.push({
+        id: action.id,
+        target: action,
+        available:
+          !nightOrderActionCompleted(
+            action,
+          ),
+      });
+    }
     let owner = null;
     for (
       let index = 0;
@@ -29080,6 +31185,25 @@
         affectsCollision:
           false,
       },
+      customArt: {
+        source:
+          "rough-cut-course-boundary-kit-v1.png",
+        stakeCell:
+          "reflective_stake",
+        placardCell:
+          "course_limit_placard",
+        generated:
+          true,
+        artReady:
+          courseBoundaryKitArt.complete &&
+          courseBoundaryKitArt
+            .naturalWidth > 0,
+        runtimeOnlyLayers: [
+          "rope_connector",
+          "keep_left_or_right_copy",
+          "warning_emphasis",
+        ],
+      },
       visibleSegments,
       matchesCollisionBoundary:
         true,
@@ -29101,7 +31225,9 @@
       leftHudRight + 12;
     const safeRight =
       COURSE_MAP_X - 18;
-    const halfWidth = 70;
+    const halfWidth =
+      COURSE_BOUNDARY_PLACARD_WIDTH *
+      0.5;
     const firstMarkerY =
       Math.floor(
         state.player.y / 14,
@@ -29181,12 +31307,8 @@
     );
     const labelY =
       point.y -
-      clamp(
-        point.pixelsPerMeter *
-          0.92,
-        18,
-        48,
-      );
+      COURSE_BOUNDARY_PLACARD_HEIGHT *
+        0.56;
     const displaced =
       Math.abs(
         labelX - point.x,
@@ -29202,6 +31324,10 @@
       anchorY: point.y,
       labelX,
       labelY,
+      pixelsPerMeter:
+        point.pixelsPerMeter,
+      projectedScale:
+        point.scale,
       displaced,
       clearsHud:
         labelX - halfWidth >=
@@ -29559,9 +31685,10 @@
           points[index].point;
         const stakeHeight = clamp(
           point.pixelsPerMeter *
-            0.82,
-          8,
-          44,
+            COURSE_BOUNDARY_KIT_CELLS[0]
+              .heightMeters,
+          10,
+          58,
         );
         ctx.globalAlpha = clamp(
           emphasis *
@@ -29572,48 +31699,70 @@
           0.2,
           0.94,
         );
-        ctx.strokeStyle =
-          nearSide
-            ? "#d8974b"
-            : "#80956a";
-        ctx.lineWidth = clamp(
-          point.scale * 1.7,
-          1,
-          3,
-        );
-        ctx.beginPath();
-        ctx.moveTo(
-          point.x,
-          point.y + 1,
-        );
-        ctx.lineTo(
-          point.x,
-          point.y -
-            stakeHeight,
-        );
-        ctx.stroke();
-        ctx.fillStyle = nearSide
-          ? "#f0b45e"
-          : "#a5b680";
-        const reflectorSize =
-          Math.max(
-            2,
-            Math.round(
-              point.scale * 2.2,
-            ),
-          );
-        ctx.fillRect(
-          Math.round(
+        if (
+          courseBoundaryKitArt.complete &&
+          courseBoundaryKitArt
+            .naturalWidth > 0
+        ) {
+          const stakeCell =
+            COURSE_BOUNDARY_KIT_CELLS[0];
+          const stakeWidth =
+            stakeHeight *
+            stakeCell.width /
+            stakeCell.height;
+          drawCachedAtlasCell(
+            courseBoundaryKitArt,
+            stakeCell,
             point.x -
-              reflectorSize * 0.5,
-          ),
-          Math.round(
+              stakeWidth * 0.5,
+            point.y - stakeHeight,
+            stakeWidth,
+            stakeHeight,
+          );
+        } else {
+          ctx.strokeStyle =
+            nearSide
+              ? "#d8974b"
+              : "#80956a";
+          ctx.lineWidth = clamp(
+            point.scale * 1.7,
+            1,
+            3,
+          );
+          ctx.beginPath();
+          ctx.moveTo(
+            point.x,
+            point.y + 1,
+          );
+          ctx.lineTo(
+            point.x,
             point.y -
-              stakeHeight * 0.72,
-          ),
-          reflectorSize,
-          reflectorSize,
-        );
+              stakeHeight,
+          );
+          ctx.stroke();
+          ctx.fillStyle = nearSide
+            ? "#f0b45e"
+            : "#a5b680";
+          const reflectorSize =
+            Math.max(
+              2,
+              Math.round(
+                point.scale * 2.2,
+              ),
+            );
+          ctx.fillRect(
+            Math.round(
+              point.x -
+                reflectorSize * 0.5,
+            ),
+            Math.round(
+              point.y -
+                stakeHeight * 0.72,
+            ),
+            reflectorSize,
+            reflectorSize,
+          );
+        }
       }
 
       if (
@@ -29650,7 +31799,7 @@
           );
           ctx.lineTo(
             labelX,
-            labelY + 11,
+            placement.anchorY - 7,
           );
           ctx.stroke();
           ctx.strokeStyle =
@@ -29669,35 +31818,77 @@
           );
           ctx.fill();
         }
-        ctx.fillStyle =
-          "rgba(4,8,5,0.88)";
-        ctx.fillRect(
-          labelX - 70,
-          labelY - 13,
-          140,
-          24,
-        );
-        strokeRect(
-          labelX - 70,
-          labelY - 13,
-          140,
-          24,
-          "#d8974b",
-          1.5,
-        );
-        drawText(
-          `COURSE LIMIT // ${
+        if (
+          courseBoundaryKitArt.complete &&
+          courseBoundaryKitArt
+            .naturalWidth > 0
+        ) {
+          drawCachedAtlasCell(
+            courseBoundaryKitArt,
+            COURSE_BOUNDARY_KIT_CELLS[1],
+            labelX -
+              COURSE_BOUNDARY_PLACARD_WIDTH *
+                0.5,
+            placement.anchorY -
+              COURSE_BOUNDARY_PLACARD_HEIGHT,
+            COURSE_BOUNDARY_PLACARD_WIDTH,
+            COURSE_BOUNDARY_PLACARD_HEIGHT,
+          );
+          drawText(
+            "COURSE LIMIT",
+            labelX,
+            labelY - 4,
+            8,
+            "#e6bd73",
+            "center",
+            true,
+          );
+          drawText(
             side === "east"
               ? "KEEP LEFT"
-              : "KEEP RIGHT"
-          }`,
-          labelX,
-          labelY + 3,
-          9,
-          "#edc078",
-          "center",
-          true,
-        );
+              : "KEEP RIGHT",
+            labelX,
+            labelY + 8,
+            8,
+            "#f0d294",
+            "center",
+            true,
+          );
+        } else {
+          ctx.fillStyle =
+            "rgba(4,8,5,0.88)";
+          ctx.fillRect(
+            labelX -
+              COURSE_BOUNDARY_PLACARD_WIDTH *
+                0.5,
+            labelY - 18,
+            COURSE_BOUNDARY_PLACARD_WIDTH,
+            34,
+          );
+          strokeRect(
+            labelX -
+              COURSE_BOUNDARY_PLACARD_WIDTH *
+                0.5,
+            labelY - 18,
+            COURSE_BOUNDARY_PLACARD_WIDTH,
+            34,
+            "#d8974b",
+            1.5,
+          );
+          drawText(
+            `COURSE LIMIT // ${
+              side === "east"
+                ? "KEEP LEFT"
+                : "KEEP RIGHT"
+            }`,
+            labelX,
+            labelY + 3,
+            9,
+            "#edc078",
+            "center",
+            true,
+          );
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -30113,6 +32304,14 @@
                 line: "159,151,72",
                 marker: "211,166,72",
               };
+      const generatedCell =
+        FOOTING_HAZARD_ART_CELL_BY_KIND.get(
+          zone.kind,
+        );
+      const generatedArtReady =
+        footingHazardArt.complete &&
+        footingHazardArt.naturalWidth > 0 &&
+        Boolean(generatedCell);
       ctx.save();
       ctx.translate(
         point.x,
@@ -30261,6 +32460,37 @@
           );
           ctx.stroke();
         }
+      }
+      if (generatedArtReady) {
+        const authoredMaterialAlpha =
+          clamp(
+            0.2 +
+              smoothstep(
+                clamp(
+                  (
+                    point.forwardDistance -
+                    6
+                  ) /
+                    28,
+                  0,
+                  1,
+                ),
+              ) *
+                0.7 +
+              (active ? 0.06 : 0),
+            0.2,
+            0.94,
+          );
+        ctx.globalAlpha =
+          authoredMaterialAlpha;
+        drawCachedAtlasCell(
+          footingHazardArt,
+          generatedCell,
+          -radiusX,
+          -radiusY,
+          radiusX * 2,
+          radiusY * 2,
+        );
       }
       ctx.restore();
 
@@ -31098,6 +33328,43 @@
           0.6,
         );
       ctx.save();
+      const wetTurfCell =
+        WET_TURF_ART_CELLS[
+          index %
+            WET_TURF_ART_CELLS.length
+        ];
+      const generatedWetTurfReady =
+        wetTurfArt.complete &&
+        wetTurfArt.naturalWidth > 0 &&
+        Boolean(wetTurfCell);
+      if (generatedWetTurfReady) {
+        const nearCameraFade =
+          0.18 +
+          smoothstep(
+            clamp(
+              (
+                point.forwardDistance -
+                6
+              ) /
+                26,
+              0,
+              1,
+            ),
+          ) *
+            0.62;
+        ctx.globalAlpha =
+          endingFade *
+          nearCameraFade;
+        drawCachedAtlasCell(
+          wetTurfArt,
+          wetTurfCell,
+          point.x - drawRadius,
+          point.y - verticalRadius,
+          drawRadius * 2,
+          verticalRadius * 2,
+        );
+        ctx.globalAlpha = 1;
+      }
       const water = ctx.createRadialGradient(
         point.x,
         point.y,
@@ -31233,14 +33500,16 @@
         );
         ctx.stroke();
       }
-      ctx.fillStyle =
-        `rgba(169,222,209,${alpha})`;
-      ctx.fillRect(
-        Math.round(point.x - 2 * point.scale),
-        Math.round(point.y - 3 * point.scale),
-        Math.max(2, Math.round(4 * point.scale)),
-        Math.max(2, Math.round(4 * point.scale)),
-      );
+      if (!generatedWetTurfReady) {
+        ctx.fillStyle =
+          `rgba(169,222,209,${alpha})`;
+        ctx.fillRect(
+          Math.round(point.x - 2 * point.scale),
+          Math.round(point.y - 3 * point.scale),
+          Math.max(2, Math.round(4 * point.scale)),
+          Math.max(2, Math.round(4 * point.scale)),
+        );
+      }
       ctx.restore();
     }
   }
@@ -31942,6 +34211,26 @@
         5,
         24,
       );
+      const artCell =
+        COURSE_ECHO_ART_CELLS[
+          echo.ahead &&
+          !masterProductOwner
+            ? 0
+            : 1
+        ];
+      const artReady =
+        courseEchoArt.complete &&
+        courseEchoArt.naturalWidth > 0;
+      const drawHeight = clamp(
+        artCell.heightMeters *
+          point.pixelsPerMeter,
+        20,
+        128,
+      );
+      const drawWidth =
+        drawHeight *
+        artCell.width /
+        artCell.height;
       ctx.globalAlpha =
         state.hole.focus ? 0.94 : 0.72;
       ctx.strokeStyle =
@@ -31960,41 +34249,61 @@
       );
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.globalAlpha =
-        state.hole.focus ? 0.3 : 0.18;
-      ctx.fillStyle =
-        echo.ahead
-          ? "#77d7bd"
-          : "#d4a65f";
-      ctx.beginPath();
-      ctx.arc(
-        point.x,
-        point.y - radius * 0.25,
-        radius * 0.7,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.globalAlpha =
-        state.hole.focus ? 0.96 : 0.8;
-      polygon([
-        [
-          point.x,
-          point.y - radius * 0.9,
-        ],
-        [
-          point.x + radius * 0.42,
-          point.y - radius * 0.25,
-        ],
-        [
-          point.x,
-          point.y + radius * 0.4,
-        ],
-        [
-          point.x - radius * 0.42,
-          point.y - radius * 0.25,
-        ],
-      ]);
+      if (artReady) {
+        ctx.save();
+        ctx.globalCompositeOperation =
+          "source-over";
+        ctx.globalAlpha =
+          state.hole.focus
+            ? 0.88
+            : 0.68;
+        const strideBob =
+          state.reducedMotion
+            ? 0
+            : Math.sin(
+                state.hole.elapsed * 9.2,
+              ) *
+              Math.min(
+                2.4,
+                point.scale * 1.4,
+              );
+        drawCachedAtlasCell(
+          courseEchoArt,
+          artCell,
+          point.x - drawWidth * 0.5,
+          point.y - drawHeight + strideBob,
+          drawWidth,
+          drawHeight,
+        );
+        ctx.restore();
+      } else {
+        ctx.globalAlpha =
+          state.hole.focus
+            ? 0.96
+            : 0.8;
+        ctx.fillStyle =
+          echo.ahead
+            ? "#77d7bd"
+            : "#d4a65f";
+        polygon([
+          [
+            point.x,
+            point.y - radius * 0.9,
+          ],
+          [
+            point.x + radius * 0.42,
+            point.y - radius * 0.25,
+          ],
+          [
+            point.x,
+            point.y + radius * 0.4,
+          ],
+          [
+            point.x - radius * 0.42,
+            point.y - radius * 0.25,
+          ],
+        ]);
+      }
       const recordFinishSettled =
         echo.finished &&
         state.hole.elapsed -
@@ -32013,7 +34322,7 @@
         drawText(
           `${masterProductOwner ? "MASTER ECHO" : "COURSE ECHO"} // ${echo.record.route.toUpperCase()}`,
           point.x,
-          point.y - radius - 10,
+          point.y - drawHeight - 10,
           10,
           echo.ahead
             ? "#a5ead7"
@@ -32029,7 +34338,7 @@
             ),
           )}m`,
           point.x,
-          point.y - radius + 2,
+          point.y - drawHeight + 2,
           8,
           echo.ahead
             ? "#91d9c5"
@@ -32972,6 +35281,7 @@
         coverRadius: 35,
         blockerIds: [
           "shed-left-wall",
+          "shed-door",
           "shed-right-wall",
         ],
         sight: true,
@@ -33655,12 +35965,7 @@
       drawHeight *= ratio;
     }
     ctx.save();
-    ctx.globalAlpha = clamp(
-      0.58 +
-        point.scale * 0.46,
-      0.52,
-      1,
-    );
+    ctx.globalAlpha = 1;
     drawGroundSocket(
       shed,
       point,
@@ -33689,6 +35994,243 @@
         maxHeight: 118,
       },
     );
+  }
+
+  /** Draws the authored gate that physically owns the exact south course boundary. */
+  function drawSouthServiceGate() {
+    const rearAmount =
+      lookBackView().amount;
+    if (
+      rearAmount < 0.5 ||
+      !southServiceGateArt.complete ||
+      southServiceGateArt.naturalWidth ===
+        0
+    ) {
+      return;
+    }
+    const point = worldToScreen(
+      SOUTH_SERVICE_GATE.x,
+      SOUTH_SERVICE_GATE.y,
+    );
+    if (
+      !point.visible ||
+      point.x < -420 ||
+      point.x > WIDTH + 420
+    ) {
+      return;
+    }
+    const reveal = smoothstep(
+      clamp(
+        (rearAmount - 0.5) / 0.42,
+        0,
+        1,
+      ),
+    );
+    const drawHeight = clamp(
+      SOUTH_SERVICE_GATE_SOURCE
+        .heightMeters *
+        point.pixelsPerMeter,
+      34,
+      238,
+    );
+    const drawWidth =
+      drawHeight *
+      SOUTH_SERVICE_GATE_SOURCE.width /
+      SOUTH_SERVICE_GATE_SOURCE.height;
+    const lampPulse =
+      state.reducedMotion
+        ? 0.64
+        : 0.58 +
+          Math.sin(
+            state.hole.elapsed * 3.1,
+          ) *
+            0.08;
+    const impactTimer =
+      state.hole.southGateImpactTimer;
+    const impactProgress = clamp(
+      1 - impactTimer / 0.72,
+      0,
+      1,
+    );
+    const impactEnvelope =
+      impactTimer > 0
+        ? 1 - smoothstep(
+            impactProgress,
+          )
+        : 0;
+    const impactShake =
+      impactTimer > 0 &&
+      !state.reducedMotion
+        ? Math.sin(
+            impactProgress * 34,
+          ) *
+          impactEnvelope *
+          5.5
+        : 0;
+    const gateX =
+      point.x + impactShake;
+    ctx.save();
+    ctx.globalAlpha = reveal;
+    ctx.fillStyle =
+      "rgba(0,2,2,0.58)";
+    ctx.beginPath();
+    ctx.ellipse(
+      gateX,
+      point.y + 2,
+      drawWidth * 0.42,
+      Math.max(3, drawHeight * 0.045),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    drawCachedAtlasCell(
+      southServiceGateArt,
+      SOUTH_SERVICE_GATE_SOURCE,
+      gateX - drawWidth * 0.5,
+      point.y - drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.globalCompositeOperation =
+      "screen";
+    for (
+      let side = -1;
+      side <= 1;
+      side += 2
+    ) {
+      const lampX =
+        gateX +
+        side * drawWidth * 0.365;
+      const lampY =
+        point.y -
+        drawHeight * 0.91;
+      const glow =
+        ctx.createRadialGradient(
+          lampX,
+          lampY,
+          0,
+          lampX,
+          lampY,
+          drawHeight * 0.22,
+        );
+      glow.addColorStop(
+        0,
+        `rgba(245,173,75,${lampPulse * 0.42})`,
+      );
+      glow.addColorStop(
+        1,
+        "rgba(245,173,75,0)",
+      );
+      ctx.fillStyle = glow;
+      ctx.fillRect(
+        lampX - drawHeight * 0.22,
+        lampY - drawHeight * 0.22,
+        drawHeight * 0.44,
+        drawHeight * 0.44,
+      );
+    }
+    if (impactTimer > 0) {
+      const lockX = gateX;
+      const lockY =
+        point.y -
+        drawHeight * 0.36;
+      const lockGlow =
+        ctx.createRadialGradient(
+          lockX,
+          lockY,
+          0,
+          lockX,
+          lockY,
+          drawHeight * 0.24,
+        );
+      lockGlow.addColorStop(
+        0,
+        `rgba(255,205,116,${impactEnvelope * 0.72})`,
+      );
+      lockGlow.addColorStop(
+        1,
+        "rgba(255,205,116,0)",
+      );
+      ctx.fillStyle = lockGlow;
+      ctx.fillRect(
+        lockX - drawHeight * 0.24,
+        lockY - drawHeight * 0.24,
+        drawHeight * 0.48,
+        drawHeight * 0.48,
+      );
+      ctx.strokeStyle =
+        `rgba(240,173,79,${impactEnvelope * 0.72})`;
+      ctx.lineWidth = 1.4;
+      for (
+        let waveIndex = 0;
+        waveIndex < 2;
+        waveIndex += 1
+      ) {
+        const wave =
+          impactProgress +
+          waveIndex * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(
+          lockX,
+          lockY,
+          drawWidth *
+            (0.08 + wave * 0.16),
+          drawHeight *
+            (0.04 + wave * 0.08),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+    }
+    ctx.globalCompositeOperation =
+      "source-over";
+    const collisionOwnsIdentity =
+      state.hole.blockedObstacle ===
+        "south-course-edge" &&
+      (
+        collisionContactActivelyRefreshed() ||
+        collisionReleaseEchoActive()
+      );
+    if (!collisionOwnsIdentity) {
+      const labelWidth = clamp(
+        drawWidth * 0.62,
+        174,
+        244,
+      );
+      const labelY =
+        point.y - drawHeight - 20;
+      ctx.globalAlpha =
+        reveal * 0.78;
+      ctx.fillStyle =
+        "rgba(2,7,5,0.9)";
+      ctx.fillRect(
+        gateX - labelWidth * 0.5,
+        labelY - 14,
+        labelWidth,
+        28,
+      );
+      strokeRect(
+        gateX - labelWidth * 0.5,
+        labelY - 14,
+        labelWidth,
+        28,
+        "#7ba88c",
+        1.5,
+      );
+      drawText(
+        "SOUTH SERVICE GATE  //  LOCKED",
+        gateX,
+        labelY + 4,
+        10,
+        "#c8e2ce",
+        "center",
+        true,
+      );
+    }
+    ctx.restore();
   }
 
   function drawDeadGreenScenery(scenery) {
@@ -34963,6 +37505,26 @@
         );
       }
     }
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      const point = worldToScreen(
+        action.x,
+        action.y,
+      );
+      if (point.visible) {
+        queueLayeredCourseEntity(
+          9,
+          action,
+          index,
+          point.y,
+        );
+      }
+    }
     for (let index = 0; index < DEAD_GREEN_SCENERY.length; index += 1) {
       if (
         effectQualityScale() < 0.55 &&
@@ -35011,6 +37573,20 @@
         shedPoint.y,
       );
     }
+    if (lookBackView().amount >= 0.5) {
+      const gatePoint = worldToScreen(
+        SOUTH_SERVICE_GATE.x,
+        SOUTH_SERVICE_GATE.y,
+      );
+      if (gatePoint.visible) {
+        queueLayeredCourseEntity(
+          10,
+          SOUTH_SERVICE_GATE,
+          0,
+          gatePoint.y,
+        );
+      }
+    }
     layeredCourseEntities.length =
       layeredCourseEntityCount;
     layeredCourseEntities.sort(
@@ -35056,11 +37632,22 @@
           entity.item,
           entity.itemIndex,
         );
-      } else {
+      } else if (
+        entity.kind === 8
+      ) {
         drawNoiseHazard(
           entity.item,
           entity.itemIndex,
         );
+      } else if (
+        entity.kind === 9
+      ) {
+        drawNightOrderAction(
+          entity.item,
+          entity.itemIndex,
+        );
+      } else {
+        drawSouthServiceGate();
       }
     }
   }
@@ -36256,6 +38843,8 @@
   function joeWorldLabelState() {
     const hole = state.hole;
     const joe = hole.joe;
+    const searchContext =
+      activeJoeSearchContext();
     const point = worldToScreen(
       joe.x,
       joe.y,
@@ -36266,7 +38855,7 @@
     );
     const occludedBy =
       hole.lineBlockedBy || null;
-    const visible = Boolean(
+    const tacticalVisible = Boolean(
       point.visible &&
       point.x > -80 &&
       point.x < WIDTH + 80 &&
@@ -36276,6 +38865,15 @@
         distance < 52 ||
         joe.mode !== "patrol"
       )
+    );
+    const suppressedBy =
+      tacticalVisible &&
+      joeBarkVisible()
+        ? "joe_dialogue"
+        : null;
+    const visible = Boolean(
+      tacticalVisible &&
+      !suppressedBy
     );
     const label =
       joe.wet
@@ -36289,7 +38887,19 @@
               ? "JOE: DISTRACTED"
               : joe.mode ===
                   "search"
-                ? "JOE: SEARCHING"
+                ? searchContext?.kind ===
+                    "trail"
+                  ? "JOE: TRACKING TRAIL"
+                  : searchContext?.kind ===
+                      "lost_sightline"
+                    ? "JOE: SIGHTLINE SWEEP"
+                    : searchContext?.kind ===
+                        "cover_audit"
+                      ? "JOE: COVER AUDIT"
+                      : searchContext?.kind ===
+                          "field_action"
+                        ? `JOE: SWEEPING ${searchContext.sourceLabel}`
+                        : "JOE: SEARCHING"
                 : "JOE: PATROLLING";
     const panelWidth = 184;
     const panelHeight = 28;
@@ -36311,7 +38921,11 @@
     );
     return {
       visible,
+      tacticalVisible,
+      suppressedBy,
       label,
+      sourceKind:
+        searchContext?.kind || null,
       point,
       distance,
       occludedBy,
@@ -36326,6 +38940,9 @@
             ? "#e2b66f"
             : joe.mode === "chase"
               ? "#ff7045"
+              : joe.mode === "search" &&
+                  searchContext?.color
+                ? searchContext.color
               : "#d3bc6d",
     };
   }
@@ -36574,6 +39191,18 @@
     };
     const courseEcho =
       currentCourseEcho();
+    const fieldActionSignal =
+      activeFieldActionSignal();
+    const joeVisible =
+      state.hole.joe.mode === "chase" ||
+      worldDistance(
+        state.hole.joe,
+        state.player,
+      ) < 42;
+    const lastJoeSignalVisible =
+      !joeVisible &&
+      state.hole.lastKnownJoe &&
+      state.hole.lastKnownJoeTimer > 0;
     const guide =
       state.hole.navigationGuide;
     const mapTop = panel.y + 62;
@@ -36606,16 +39235,46 @@
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#566a45", 2);
     drawText("COURSE MAP", panel.x + 14, panel.y + 23, 13, "#dce4ce", "left", true);
-    if (courseEcho) {
+    const headerStatus =
+      fieldActionSignal
+        ? {
+            text:
+              fieldActionSignal.mapLabel,
+            color:
+              fieldActionSignal.color,
+          }
+        : lastJoeSignalVisible
+          ? {
+              text: "JOE LAST SIGNAL",
+              color: "#b98655",
+            }
+          : courseEcho
+            ? {
+                text:
+                  courseEchoPaceLabel(
+                    courseEcho,
+                  ).replace(
+                    "ECHO  ",
+                    "",
+                  ),
+                color: courseEcho.ahead
+                  ? "#91dfcc"
+                  : "#d8b875",
+              }
+            : null;
+    if (headerStatus) {
       drawText(
-        courseEchoPaceLabel(courseEcho)
-          .replace("ECHO  ", ""),
+        headerStatus.text,
         panel.x + panel.width - 14,
         panel.y + 23,
-        8,
-        courseEcho.ahead
-          ? "#91dfcc"
-          : "#d8b875",
+        fittedTextSize(
+          headerStatus.text,
+          9,
+          panel.width - 108,
+          7,
+          true,
+        ),
+        headerStatus.color,
         "right",
         true,
       );
@@ -37428,6 +40087,68 @@
       !state.hole.changeRequestCollected &&
         !state.hole.appealUsed,
     );
+    const requiredAction =
+      nextNightOrderAction();
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      const completed =
+        nightOrderActionCompleted(
+          action,
+        );
+      const actionPoint = mapPoint(
+        action.x,
+        action.y,
+      );
+      drawMapInteractionRange(
+        action,
+        action.color,
+        !completed,
+      );
+      ctx.fillStyle = completed
+        ? "#66806b"
+        : action.color;
+      const size =
+        requiredAction?.id === action.id
+          ? 5
+          : 3.8;
+      polygon([
+        [
+          actionPoint.x,
+          actionPoint.y - size,
+        ],
+        [
+          actionPoint.x + size,
+          actionPoint.y,
+        ],
+        [
+          actionPoint.x,
+          actionPoint.y + size,
+        ],
+        [
+          actionPoint.x - size,
+          actionPoint.y,
+        ],
+      ]);
+      if (requiredAction?.id === action.id) {
+        ctx.strokeStyle =
+          "#eff0d5";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(
+          actionPoint.x,
+          actionPoint.y,
+          7,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+    }
     for (
       let index = 0;
       index < reviews.length;
@@ -37699,16 +40420,22 @@
         shotTarget.kind === "status_ack" ||
         shotTarget.kind ===
           "status_escalation";
+      const fieldActionMapSignal =
+        shotTarget.kind ===
+          "field_action" &&
+        fieldActionSignal;
       ctx.strokeStyle = statusSignal
         ? shotTarget.kind ===
           "status_escalation"
           ? "#df6242"
           : "#76c1a4"
-        : aiming
-          ? "#f0cf65"
-          : inMotion
-            ? "#eee7c9"
-            : "#c9863f";
+        : fieldActionMapSignal
+          ? fieldActionSignal.color
+          : aiming
+            ? "#f0cf65"
+            : inMotion
+              ? "#eee7c9"
+              : "#c9863f";
       ctx.lineWidth = aiming ? 2 : 1.5;
       ctx.setLineDash(
         aiming ? [4, 4] : [2, 4],
@@ -37834,16 +40561,13 @@
         ctx.fill();
       }
     }
-    const joeVisible =
-      state.hole.joe.mode === "chase" ||
-      worldDistance(state.hole.joe, state.player) < 42;
     if (joeVisible) {
       const joePoint = mapPoint(state.hole.joe.x, state.hole.joe.y);
       ctx.fillStyle = state.hole.joe.mode === "chase" ? "#f25332" : "#b56d3a";
       ctx.beginPath();
       ctx.arc(joePoint.x, joePoint.y, 5, 0, Math.PI * 2);
       ctx.fill();
-    } else if (state.hole.lastKnownJoe && state.hole.lastKnownJoeTimer > 0) {
+    } else if (lastJoeSignalVisible) {
       const lastPoint = mapPoint(state.hole.lastKnownJoe.x, state.hole.lastKnownJoe.y);
       const pulse = 5 + Math.sin(state.time * 5) * 1.5;
       ctx.strokeStyle = "rgba(199,124,61,0.65)";
@@ -37851,7 +40575,6 @@
       ctx.beginPath();
       ctx.arc(lastPoint.x, lastPoint.y, pulse, 0, Math.PI * 2);
       ctx.stroke();
-      drawText("LAST SIGNAL", panel.x + panel.width - 13, panel.y + 23, 9, "#b98655", "right");
     }
     ctx.fillStyle = "#f2f0d9";
     polygon([
@@ -37876,7 +40599,7 @@
       golfBallMapStatus
         ? golfBallMapStatus
         : cadenceForecast
-        ? `CADENCE ${Math.ceil(cadenceForecast.timer)}s  â€¢  MINT = JOE'S COMMITTED ROUTE`
+        ? `CADENCE ${Math.ceil(cadenceForecast.timer)}s  //  MINT = JOE'S COMMITTED ROUTE`
         : state.hole.crosswind.phase ===
         "active"
         ? `WIND ${crosswindDirectionLabel()}  •  ${Math.round(state.hole.crosswind.currentDistance)}/${CROSSWIND_RUN_DISTANCE}m  •  STEPS 42%`
@@ -39851,6 +42574,60 @@
     }
   }
 
+  function movingGolfBallVariantForSurface(
+    surfaceId,
+  ) {
+    if (
+      surfaceId === "wet" ||
+      surfaceId === "soaked_bunker"
+    ) {
+      return "wet_grass_roll";
+    }
+    if (
+      surfaceId === "bunker" ||
+      surfaceId === "rough"
+    ) {
+      return "scuffed_ground_roll";
+    }
+    return "pristine_flight";
+  }
+
+  function drawMovingGolfBallSprite(
+    x,
+    y,
+    diameter,
+    variantId,
+    rotation = 0,
+  ) {
+    if (
+      !movingGolfBallArt.complete ||
+      movingGolfBallArt.naturalWidth === 0
+    ) {
+      return false;
+    }
+    const cell =
+      MOVING_GOLF_BALL_ART_CELLS.find(
+        (candidate) =>
+          candidate.id === variantId,
+      );
+    if (!cell) {
+      return false;
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    drawCachedAtlasCell(
+      movingGolfBallArt,
+      cell,
+      -diameter * 0.5,
+      -diameter * 0.5,
+      diameter,
+      diameter,
+    );
+    ctx.restore();
+    return true;
+  }
+
   function drawGolfBallTactics() {
     const hole = state.hole;
     const flight = hole.ballFlight;
@@ -39920,10 +42697,32 @@
       ctx.fill();
       ctx.shadowColor = "rgba(247,231,172,0.9)";
       ctx.shadowBlur = 12;
-      ctx.fillStyle = "#f0e8c9";
-      ctx.beginPath();
-      ctx.arc(ballX, ballY, 5, 0, Math.PI * 2);
-      ctx.fill();
+      const flightDiameter =
+        14 +
+        Math.sin(progress * Math.PI) *
+          4;
+      if (
+        !drawMovingGolfBallSprite(
+          ballX,
+          ballY,
+          flightDiameter,
+          "pristine_flight",
+          state.reducedMotion
+            ? 0
+            : progress * Math.PI * 3,
+        )
+      ) {
+        ctx.fillStyle = "#f0e8c9";
+        ctx.beginPath();
+        ctx.arc(
+          ballX,
+          ballY,
+          flightDiameter * 0.34,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
       drawText(
         "BALL IN FLIGHT",
@@ -40048,16 +42847,37 @@
       ctx.shadowColor =
         "rgba(247,231,172,0.9)";
       ctx.shadowBlur = 9;
-      ctx.fillStyle = "#f0e8c9";
-      ctx.beginPath();
-      ctx.arc(
-        ballX,
-        ballY,
-        4.5,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
+      const rollVariant =
+        movingGolfBallVariantForSurface(
+          roll.finalSurface.id,
+        );
+      if (
+        !drawMovingGolfBallSprite(
+          ballX,
+          ballY,
+          14,
+          rollVariant,
+          state.reducedMotion
+            ? 0
+            : travelProgress *
+                Math.PI *
+                (
+                  2 +
+                  roll.distance / 8
+                ),
+        )
+      ) {
+        ctx.fillStyle = "#f0e8c9";
+        ctx.beginPath();
+        ctx.arc(
+          ballX,
+          ballY,
+          4.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
       drawText(
         `${roll.outcomeLabel} // ${Math.round(roll.distance * travelProgress)}/${Math.round(roll.distance)}m`,
@@ -41412,8 +44232,8 @@
         x: 220,
         icon: 0,
         number: "1",
-        title: "CHOOSE + FILE EXIT",
-        detail: "KEY → SHED  •  DRAIN VALVE → CULVERT",
+        title: "COMPLETE CHECKS + FILE",
+        detail: "3 CHECKS  •  KEY → SHED  •  VALVE → DRAIN",
         subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS} / CHASE APPEAL`,
       },
       {
@@ -44245,6 +47065,10 @@
   function drawFirstHoleOverlay() {
     const hole = state.hole;
     const variant = activeRunVariant();
+    const exitRouteSummary =
+      exitRouteHudSummary();
+    const objectiveActionSummary =
+      objectiveActionHudSummary();
     const playerDistance = worldDistance(hole.joe, state.player);
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.effectiveRough;
@@ -44336,13 +47160,20 @@
 
       drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
       drawText(
-        `${hole.keyCollected ? "✓" : "1"}  ${hole.keyCollected ? "KEY ACQUIRED" : variant.keyHint}`,
+        exitRouteSummary.text,
         106,
         151,
-        13,
-        hole.keyCollected ? "#9db57c" : "#e5d9b8",
+        fittedTextSize(
+          exitRouteSummary.text,
+          13,
+          338,
+          10,
+          true,
+        ),
+        exitRouteSummary.color,
         "left",
-        !hole.keyCollected,
+        exitRouteSummary.phase !==
+          "choose_route",
       );
       drawFieldIcon(1, 79, 184, 38);
       drawText(
@@ -44355,27 +47186,17 @@
       );
       drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
       drawText(
-        hole.escapeFiling.sealing
-          ? "✓  RELEASE AUTHORIZED"
-          : hole.escapeFiling.active
-          ? `▣  FINAL FILING ${Math.round(
-              hole.escapeFiling.progress /
-                hole.escapeFiling.duration *
-                100,
-            )}%`
-          : hole.drainUnlocked
-          ? `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  DRAIN READY TO FILE`
-          : `${inputCopy(keyboardBindingLabel("interact"), "A", "USE")}  INTERACT / UNLOCK`,
+        objectiveActionSummary.text,
         106,
         227,
-        13,
-        hole.escapeFiling.sealing
-          ? "#92d5ae"
-          : hole.escapeFiling.active
-          ? "#e2cf9c"
-          : hole.drainUnlocked
-            ? "#87cba9"
-            : "#e5d9b8",
+        fittedTextSize(
+          objectiveActionSummary.text,
+          13,
+          338,
+          10,
+          true,
+        ),
+        objectiveActionSummary.color,
         "left",
       );
       drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
@@ -44556,11 +47377,22 @@
       listeningSearchRead();
     const cadence =
       hole.cadenceRead;
+    const fieldActionInvestigation =
+      hole.joe.mode ===
+        "investigate"
+        ? activeFieldActionSignal()
+        : null;
+    const predatorTacticAttention =
+      activePredatorTacticAttentionState();
+    const joeSearchContext =
+      activeJoeSearchContext();
     const attentionStatus =
       hole.joe.mode === "chase"
         ? "PURSUIT LOCK"
-        : directorWarning
-          ? `SERVICE GATE // ${directorWarning.seconds.toFixed(1)}s`
+        : predatorTacticAttention
+          ? predatorTacticAttention.label
+          : directorWarning
+            ? `SERVICE GATE // ${directorWarning.seconds.toFixed(1)}s`
         : hole.nerveHold?.active
           ? `NERVE CHECK // ${Math.round(hole.nerveHold.progress / NERVE_HOLD_SECONDS * 100)}%`
         : hole.nerveHold?.armed
@@ -44576,10 +47408,16 @@
               "search"
           ? searchRead.active
             ? `SEARCH ${searchRead.trend.toUpperCase()} // ${Math.ceil(searchRead.secondsRemaining)}s`
-            : "SEARCHING LAST SIGNAL"
+            : joeSearchContext
+              ? joeSearchContext
+                  .attentionLabel
+              : "SEARCHING LAST SIGNAL"
         : hole.joe.mode ===
               "investigate"
-          ? "VERIFYING DISTURBANCE"
+          ? fieldActionInvestigation
+            ? fieldActionInvestigation
+                .attentionLabel
+            : "VERIFYING DISTURBANCE"
         : cadence.active
           ? `CADENCE READ // ${Math.round(cadence.progress / CADENCE_READ_SECONDS * 100)}%`
         : cadence.forecast
@@ -44626,19 +47464,39 @@
                     .pressure > 0.52
                 ? "MOWER ROUTE SHIFTING"
                 : "UNAWARE";
+    const fieldActionStatusColor =
+      predatorTacticAttention?.color ||
+      fieldActionInvestigation?.color ||
+      (
+        joeSearchContext &&
+        !searchRead.active
+          ? joeSearchContext.color
+          : null
+      );
+    const attentionStatusColor =
+      fieldActionStatusColor ||
+      (
+        attention > 0.68
+          ? "#ff7045"
+          : crosswindVisible
+            ? "#9ed8b8"
+            : attention > 0.2 ||
+                directorWarning
+              ? "#e8a55d"
+              : "#9db293"
+      );
     drawText(
       attentionStatus,
       meterX + 18,
       119,
-      11,
-      attention > 0.68
-        ? "#ff7045"
-        : crosswindVisible
-          ? "#9ed8b8"
-        : attention > 0.2 ||
-            directorWarning
-          ? "#e8a55d"
-          : "#9db293",
+      fittedTextSize(
+        attentionStatus,
+        11,
+        228,
+        8,
+        true,
+      ),
+      attentionStatusColor,
       "left",
       true,
     );
@@ -44921,15 +47779,35 @@
     ) {
       const presentedMessage =
         holeMessageForPresentation();
+      const fieldCheckHandoff =
+        activeNightOrderHandoff();
       const alpha = clamp(hole.messageTimer, 0, 1);
       const messageWidth = 720;
+      const messageHeight =
+        fieldCheckHandoff ? 62 : 46;
+      const messageY =
+        HEIGHT - 66 - messageHeight;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = "rgba(2,8,4,0.9)";
-      ctx.fillRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46);
-      strokeRect(WIDTH * 0.5 - messageWidth * 0.5, HEIGHT - 112, messageWidth, 46, "#d87532", 2);
+      ctx.fillRect(
+        WIDTH * 0.5 -
+          messageWidth * 0.5,
+        messageY,
+        messageWidth,
+        messageHeight,
+      );
+      strokeRect(
+        WIDTH * 0.5 -
+          messageWidth * 0.5,
+        messageY,
+        messageWidth,
+        messageHeight,
+        "#d87532",
+        2,
+      );
       const messageSize = fittedTextSize(
         presentedMessage,
-        15,
+        fieldCheckHandoff ? 13 : 15,
         messageWidth - 30,
         10,
         true,
@@ -44937,12 +47815,30 @@
       drawText(
         presentedMessage,
         WIDTH * 0.5,
-        HEIGHT - 82,
+        messageY +
+          (fieldCheckHandoff ? 23 : 30),
         messageSize,
         "#f1e7c9",
         "center",
         true,
       );
+      if (fieldCheckHandoff) {
+        drawText(
+          fieldCheckHandoff.nextText,
+          WIDTH * 0.5,
+          messageY + 47,
+          fittedTextSize(
+            fieldCheckHandoff.nextText,
+            11,
+            messageWidth - 30,
+            9,
+            true,
+          ),
+          fieldCheckHandoff.color,
+          "center",
+          true,
+        );
+      }
       ctx.globalAlpha = 1;
     } else if (
       !hole.escapeFiling.active &&
@@ -47522,6 +50418,8 @@
     if (state.hole.distraction && state.hole.distractionTimer > 0) {
       const distraction =
         state.hole.distraction;
+      const fieldActionSignal =
+        activeFieldActionSignal();
       const statusAck =
         distraction.kind ===
         "status_ack";
@@ -47547,7 +50445,9 @@
                 ? `ESCALATED SECTOR // ${state.hole.distractionTimer.toFixed(1)}s`
                 : noiseHazardSignal
                   ? `NOISE SOURCE // ${state.hole.distractionTimer.toFixed(1)}s`
-                  : "DISTRACTION",
+                  : fieldActionSignal
+                    ? fieldActionSignal.worldLabel
+                    : "DISTRACTION",
           distraction.kind === "appeal"
             ? "#ef9653"
             : statusAck
@@ -47556,14 +50456,18 @@
                 ? "#df6242"
                 : noiseHazardSignal
                   ? "#e0ad52"
-                  : "#d6a74c",
+                  : fieldActionSignal
+                    ? fieldActionSignal.color
+                    : "#d6a74c",
           distraction.kind === "appeal"
             ? "CR"
             : statusAck
               ? "SR"
               : statusEscalation
                 ? "!!"
-                : "!",
+                : fieldActionSignal
+                  ? "!!"
+                  : "!",
         );
       }
     }
@@ -47585,6 +50489,46 @@
         "#e26f38",
         "◇",
       );
+    }
+    const requiredAction =
+      nextNightOrderAction();
+    for (
+      let index = 0;
+      index < NIGHT_ORDER_ACTIONS.length;
+      index += 1
+    ) {
+      const action =
+        NIGHT_ORDER_ACTIONS[index];
+      if (
+        nightOrderActionCompleted(
+          action,
+        )
+      ) {
+        continue;
+      }
+      const distance = worldDistance(
+        state.player,
+        action,
+      );
+      if (
+        distance >= action.radius &&
+        (
+        action.id ===
+          requiredAction?.id ||
+        state.hole.focus ||
+        distance < 82
+        )
+      ) {
+        drawWorldMarker(
+          action.x,
+          action.y,
+          `${action.code} // ${action.shortLabel}`,
+          action.color,
+          `${index + 1}`,
+          action.radius,
+          action.id,
+        );
+      }
     }
     const drainExitDistance =
       worldDistance(
@@ -49455,7 +52399,113 @@
     ctx.restore();
   }
 
+  const DISPLAY_TEXT_REPLACEMENTS = [
+    ["\u00e2\u20ac\u201d", "\u2014"],
+    ["\u00e2\u0080\u0094", "\u2014"],
+    ["\u00e2\u20ac\u201c", "\u2013"],
+    ["\u00e2\u0080\u0093", "\u2013"],
+    ["\u00e2\u20ac\u00a2", "\u2022"],
+    ["\u00e2\u0080\u00a2", "\u2022"],
+    ["\u00e2\u2020\u2019", "\u2192"],
+    ["\u00e2\u0086\u0092", "\u2192"],
+    ["\u00e2\u2020\u0090", "\u2190"],
+    ["\u00e2\u0086\u0090", "\u2190"],
+    ["\u00e2\u2020\u2018", "\u2191"],
+    ["\u00e2\u0086\u0091", "\u2191"],
+    ["\u00e2\u2020\u201c", "\u2193"],
+    ["\u00e2\u0086\u0093", "\u2193"],
+    ["\u00e2\u20ac\u2122", "\u2019"],
+    ["\u00e2\u0080\u0099", "\u2019"],
+    ["\u00e2\u20ac\u00a6", "\u2026"],
+    ["\u00e2\u0080\u00a6", "\u2026"],
+    ["\u00e2\u2014\u20ac", "\u25c0"],
+    ["\u00e2\u0097\u0080", "\u25c0"],
+    ["\u00e2\u2013\u00b6", "\u25b6"],
+    ["\u00e2\u0096\u00b6", "\u25b6"],
+    ["\u00e2\u2014\u02c6", "\u25c8"],
+    ["\u00e2\u0097\u0088", "\u25c8"],
+    ["\u00e2\u2014\u2021", "\u25c7"],
+    ["\u00e2\u0097\u0087", "\u25c7"],
+    ["\u00e2\u0153\u201c", "\u2713"],
+    ["\u00e2\u009c\u0093", "\u2713"],
+    ["\u00e2\u2014\u2039", "\u25cb"],
+    ["\u00e2\u0097\u008b", "\u25cb"],
+    ["\u00e2\u2014\u008f", "\u25cf"],
+    ["\u00e2\u0097\u008f", "\u25cf"],
+    ["\u00e2\u2013\u00a3", "\u25a3"],
+    ["\u00e2\u0096\u00a3", "\u25a3"],
+    ["\u00e2\u2013\u00bc", "\u25bc"],
+    ["\u00e2\u0096\u00bc", "\u25bc"],
+    ["\u00e2\u2013\u00b2", "\u25b2"],
+    ["\u00e2\u0096\u00b2", "\u25b2"],
+    ["\u00e2\u2026\u00a1", "\u2161"],
+    ["\u00e2\u0085\u00a1", "\u2161"],
+    ["\u00e2\u20ac\u0153", "\u201c"],
+    ["\u00e2\u0080\u009c", "\u201c"],
+    ["\u00e2\u20ac\u009d", "\u201d"],
+    ["\u00e2\u0080\u009d", "\u201d"],
+    ["\u00e2\u2021\u00a9", "\u21e9"],
+    ["\u00e2\u0087\u00a9", "\u21e9"],
+    ["\u00e2\u0152\u201a", "\u2302"],
+    ["\u00e2\u008c\u0082", "\u2302"],
+    ["\u00e2\u2030\u00a5", "\u2265"],
+    ["\u00e2\u0089\u00a5", "\u2265"],
+    ["\u00e2\u2030\u00a4", "\u2264"],
+    ["\u00e2\u0089\u00a4", "\u2264"],
+    ["\u00c3\u2014", "\u00d7"],
+    ["\u00c3\u0097", "\u00d7"],
+    ["\u00c2\u00a0", " "],
+  ];
+
+  /**
+   * Repairs common UTF-8 punctuation interpreted through Windows-1252.
+   * Escaped code points keep this repair reliable under either decoding path.
+   */
+  function normalizeDisplayText(text) {
+    if (
+      typeof text !== "string" ||
+      text.length === 0
+    ) {
+      return text;
+    }
+    let normalized = text;
+    for (
+      let pass = 0;
+      pass < 2;
+      pass += 1
+    ) {
+      const previous = normalized;
+      for (
+        let index = 0;
+        index <
+          DISPLAY_TEXT_REPLACEMENTS.length;
+        index += 1
+      ) {
+        const replacement =
+          DISPLAY_TEXT_REPLACEMENTS[index];
+        normalized = normalized
+          .split(replacement[0])
+          .join(replacement[1]);
+      }
+      if (normalized === previous) {
+        break;
+      }
+    }
+    return normalized;
+  }
+
+  function displayTextJsonReplacer(
+    key,
+    value,
+  ) {
+    return typeof value === "string"
+      ? normalizeDisplayText(value)
+      : value;
+  }
+
   function drawText(text, x, y, size, color, align = "left", heavy = false) {
+    const displayText =
+      normalizeDisplayText(text);
     ctx.save();
     ctx.font = `${heavy ? "bold " : ""}${size}px "Courier New", monospace`;
     ctx.textAlign = align;
@@ -49464,10 +52514,18 @@
     if (heavy) {
       ctx.strokeStyle = "rgba(0,0,0,0.88)";
       ctx.lineWidth = Math.max(3, Math.floor(size / 10));
-      ctx.strokeText(text, x, y);
+      ctx.strokeText(
+        displayText,
+        x,
+        y,
+      );
     }
     ctx.fillStyle = color;
-    ctx.fillText(text, x, y);
+    ctx.fillText(
+      displayText,
+      x,
+      y,
+    );
     ctx.restore();
   }
 
@@ -49478,10 +52536,12 @@
     minimumSize = 10,
     heavy = false,
   ) {
+    const displayText =
+      normalizeDisplayText(text);
     ctx.save();
     ctx.font = `${heavy ? "bold " : ""}${desiredSize}px "Courier New", monospace`;
     const measuredWidth =
-      ctx.measureText(text).width;
+      ctx.measureText(displayText).width;
     ctx.restore();
     if (measuredWidth <= maxWidth) {
       return desiredSize;
@@ -49740,6 +52800,11 @@
         );
       }
       hole.blockedTimer = Math.max(0, hole.blockedTimer - dt);
+      hole.southGateImpactTimer =
+        Math.max(
+          0,
+          hole.southGateImpactTimer - dt,
+        );
       if (
         hole.joeBarkDeferredByCollision
       ) {
@@ -49779,6 +52844,41 @@
         hole.blockedTransferFrom = null;
       }
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
+      if (hole.nightOrderHandoff) {
+        hole.nightOrderHandoff.timer =
+          Math.max(
+            0,
+            hole.nightOrderHandoff
+              .timer - dt,
+          );
+        if (
+          hole.nightOrderHandoff.timer <=
+            0 ||
+          hole.nightOrderHandoff
+              .bannerText !==
+            hole.stateBanner ||
+          hole.nightOrderHandoff
+              .messageText !==
+            hole.message
+        ) {
+          hole.nightOrderHandoff =
+            null;
+        }
+      }
+      if (hole.nightOrderActivation) {
+        hole.nightOrderActivation.timer =
+          Math.max(
+            0,
+            hole.nightOrderActivation.timer -
+              dt,
+          );
+        if (
+          hole.nightOrderActivation.timer <=
+          0
+        ) {
+          hole.nightOrderActivation = null;
+        }
+      }
       hole.stateBannerLockTimer = Math.max(
         0,
         hole.stateBannerLockTimer - dt,
@@ -50459,6 +53559,8 @@
       const drain = DRAIN_EXIT;
       const nearestBall =
         nearestRecoverableBall();
+      const nearbyAction =
+        nearbyNightOrderAction();
       const appeal =
         emergencyAppealState();
       if (hole.ballAim.active) {
@@ -50508,6 +53610,14 @@
               `A — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
               `TAP USE — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
             );
+      } else if (nearbyAction) {
+        const action =
+          nearbyAction.action;
+        hole.prompt = inputCopy(
+          `${keyboardBindingLabel("interact")} — ${action.label}`,
+          `A — ${action.label}`,
+          `TAP USE — ${action.label}`,
+        );
       } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
         hole.prompt = inputCopy(
           `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
@@ -50525,21 +53635,31 @@
         worldDistance(state.player, shed) <
           shed.radius
       ) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — FILE SHED RELEASE`,
-          "A — FILE SHED RELEASE",
-          "TAP USE — FILE SHED RELEASE",
-        );
+        const remaining =
+          NIGHT_ORDER_ACTIONS.length -
+          completedNightOrderActionCount();
+        hole.prompt = nightOrderActionsComplete()
+          ? inputCopy(
+              `${keyboardBindingLabel("interact")} — FILE SHED RELEASE`,
+              "A — FILE SHED RELEASE",
+              "TAP USE — FILE SHED RELEASE",
+            )
+          : `SHED FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`;
       } else if (
         hole.drainUnlocked &&
         worldDistance(state.player, drain) <
           drain.radius
       ) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — FILE DRAIN RELEASE`,
-          "A — FILE DRAIN RELEASE",
-          "TAP USE — FILE DRAIN RELEASE",
-        );
+        const remaining =
+          NIGHT_ORDER_ACTIONS.length -
+          completedNightOrderActionCount();
+        hole.prompt = nightOrderActionsComplete()
+          ? inputCopy(
+              `${keyboardBindingLabel("interact")} — FILE DRAIN RELEASE`,
+              "A — FILE DRAIN RELEASE",
+              "TAP USE — FILE DRAIN RELEASE",
+            )
+          : `DRAIN FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`;
       } else if (
         !hole.changeRequestCollected &&
         !hole.appealUsed &&
@@ -50857,7 +53977,7 @@
         state.time = 0;
         resetFirstHole();
         state.transitionAlpha = 1;
-        state.status = "South gate locked. Reach an exit across the course.";
+        state.status = "South gate locked. Complete the field checks and file an exit.";
         break;
       case 1:
         state.settingsReturnMode = "menu";
@@ -52465,6 +55585,78 @@
     );
   }
 
+  /** Gives each mandatory station a distinct mechanical acoustic signature. */
+  function playNightOrderActionCue(action) {
+    if (
+      !action ||
+      action.soundCue === "brass_bell"
+    ) {
+      playPracticeBellCue();
+      return;
+    }
+    if (action.soundCue === "ledger_stamp") {
+      playNoiseBurst(
+        0.07,
+        0.032,
+        2100,
+        "highpass",
+      );
+      playTransientTone(
+        138,
+        74,
+        0.12,
+        0.052,
+        "square",
+      );
+      playTransientTone(
+        420,
+        260,
+        0.08,
+        0.022,
+        "triangle",
+        0.055,
+      );
+      playNoiseBurst(
+        0.1,
+        0.018,
+        1350,
+        "bandpass",
+        0,
+        0.08,
+      );
+      return;
+    }
+    playNoiseBurst(
+      0.055,
+      0.026,
+      980,
+      "bandpass",
+    );
+    playTransientTone(
+      196,
+      174,
+      1.05,
+      0.062,
+      "sine",
+    );
+    playTransientTone(
+      294,
+      261,
+      0.86,
+      0.032,
+      "triangle",
+      0.035,
+    );
+    playTransientTone(
+      392,
+      349,
+      0.7,
+      0.018,
+      "sine",
+      0.07,
+    );
+  }
+
   function playBallRecoveryCue(dangerous) {
     playTransientTone(
       dangerous ? 330 : 440,
@@ -53233,9 +56425,9 @@
       state.hole.overtime
         ? "OVERTIME ACTIVE — two balls, faster Joe, stronger evidence, 1.30× score."
         : inputCopy(
-            `MOVE ${keyboardMovementCopy()} — follow the mint route to the valve or key.`,
-            "MOVE LEFT STICK / D-PAD — follow the mint route to the valve or key.",
-            "DRAG LEFT PAD — follow the mint route to the valve or key.",
+            `MOVE ${keyboardMovementCopy()} — follow the mint route to each required field check.`,
+            "MOVE LEFT STICK / D-PAD — follow the mint route to each required field check.",
+            "DRAG LEFT PAD — follow the mint route to each required field check.",
           ),
       4.4,
     );
@@ -54117,6 +57309,8 @@
             frozen: true,
             objective:
               currentHoleObjective(),
+            nextAction:
+              objectiveActionHudSummary(),
             zone:
               courseZoneAt(
                 state.player.y,
@@ -54229,7 +57423,7 @@
       optionalEvidence:
         PLAYER_STORY.evidence,
       immediateObjective:
-        "Cross the course and escape through the maintenance shed or drainage culvert.",
+        "Complete three loud field checks across the course, secure exit access, and file the Night Order through the maintenance shed or drainage culvert.",
     },
     challenge: {
       id: "overtime_audit",
@@ -54408,6 +57602,19 @@
       threatCaptions: state.threatCaptions,
       reducedMotion: state.reducedMotion,
       returnTarget: state.settingsReturnMode,
+      pausedRunContext:
+        state.mode === "settings" &&
+        state.settingsReturnMode ===
+          "paused"
+          ? {
+              objective:
+                currentHoleObjective(),
+              nextAction:
+                objectiveActionHudSummary(),
+              presentation:
+                "single_context_strip_above_global_help",
+            }
+          : null,
       persisted: preferencesStorageAvailable,
       page: state.settingsPage,
       captionPreviewPresentation:
@@ -55468,6 +58675,30 @@
                     currentCourseEcho().ahead
                       ? "ahead"
                       : "behind",
+                  worldArt: {
+                    source:
+                      "rough-cut-course-echo-atlas-v1.png",
+                    generated: true,
+                    artReady:
+                      courseEchoArt.complete &&
+                      courseEchoArt.naturalWidth > 0,
+                    variants:
+                      COURSE_ECHO_ART_CELLS.map(
+                        (cell) => cell.id,
+                      ),
+                    activeVariant:
+                      currentCourseEcho().ahead &&
+                      !masterProductOwnerUnlocked()
+                        ? "mint_ahead"
+                        : "amber_behind",
+                    runtimeLayers: [
+                      "recorded_route_trail",
+                      "pace_ring",
+                      "focus_label",
+                    ],
+                    gameplay:
+                      "presentation_only_recorded_path_timing_and_scoring_unchanged",
+                  },
                   finished:
                     currentCourseEcho().finished,
                   comparison:
@@ -55771,6 +59002,102 @@
                 }
               : null,
           keyCollected: state.hole.keyCollected,
+          fieldChecks: {
+            completed:
+              completedNightOrderActionCount(),
+            required:
+              NIGHT_ORDER_ACTIONS.length,
+            complete:
+              nightOrderActionsComplete(),
+            next:
+              nextNightOrderAction()
+                ? {
+                    id:
+                      nextNightOrderAction().id,
+                    code:
+                      nextNightOrderAction().code,
+                    label:
+                      nextNightOrderAction().shortLabel,
+                    distance: Number(
+                      worldDistance(
+                        state.player,
+                        nextNightOrderAction(),
+                      ).toFixed(2),
+                    ),
+                  }
+                : null,
+            activeSignal:
+              activeFieldActionSignal(),
+            searchHandoff:
+              activeFieldActionSearch(),
+            actions:
+              NIGHT_ORDER_ACTIONS.map(
+                (action) => ({
+                  id: action.id,
+                  code: action.code,
+                  label:
+                    action.shortLabel,
+                  x: action.x,
+                  y: action.y,
+                  radius:
+                    action.radius,
+                  completed:
+                    nightOrderActionCompleted(
+                      action,
+                    ),
+                  distance: Number(
+                    worldDistance(
+                      state.player,
+                      action,
+                    ).toFixed(2),
+                  ),
+                  customArt:
+                    "rough-cut-night-order-objectives-v1.png",
+                  artCell:
+                    NIGHT_ORDER_OBJECTIVE_CELLS[
+                      action.cellIndex
+                    ].id,
+                  artReady:
+                    nightOrderObjectiveArt.complete &&
+                    nightOrderObjectiveArt.naturalWidth >
+                      0,
+                  noiseSeconds:
+                    action.noiseSeconds,
+                  soundCue:
+                    action.soundCue,
+                  barkContext:
+                    action.barkContext,
+                }),
+              ),
+            activation:
+              state.hole.nightOrderActivation
+                ? {
+                    ...state.hole
+                      .nightOrderActivation,
+                    reducedMotion:
+                      state.reducedMotion,
+                  }
+                : null,
+            completionPresentation:
+              "persistent_mint_ground_seal_and_check_with_short_station_activation_wave",
+            completionRule:
+              "complete_all_three_loud_field_checks_then_file_at_an_unlocked_exit",
+            routeShape:
+              "east_west_east_zigzag_across_the_course",
+          },
+          maintenanceShed: {
+            art:
+              "rough-cut-maintenance-shed-v2.png",
+            opacity: 1,
+            solidDoorway: true,
+            collisionBlockers: [
+              "shed-left-wall",
+              "shed-door",
+              "shed-right-wall",
+            ],
+            behavior:
+              "shed_art_remains_fully_opaque_during_collision_contact",
+          },
           changeRequest: {
             collected:
               state.hole.changeRequestCollected,
@@ -56368,6 +59695,42 @@
                       : null,
                 }
               : null,
+            movingObjectArt: {
+              source:
+                "rough-cut-moving-golf-ball-atlas-v1.png",
+              generated: true,
+              artReady:
+                movingGolfBallArt.complete &&
+                movingGolfBallArt.naturalWidth > 0,
+              variants:
+                MOVING_GOLF_BALL_ART_CELLS.map(
+                  (cell) => cell.id,
+                ),
+              activeVariant:
+                state.hole.ballRoll
+                  ? movingGolfBallVariantForSurface(
+                      state.hole.ballRoll
+                        .finalSurface.id,
+                    )
+                  : state.hole.ballFlight
+                    ? "pristine_flight"
+                    : null,
+              lifecycle: [
+                "flight",
+                "bounce_and_roll",
+                "generated_landed_recovery_prop",
+              ],
+              runtimeLayers: [
+                "trajectory",
+                "target_shadow",
+                "rest_ring",
+                "surface_tint",
+              ],
+              reducedMotion:
+                state.reducedMotion
+                  ? "static_sprite_orientation_without_spin"
+                  : "distance_driven_sprite_rotation",
+            },
             distractionTarget:
               state.hole.distraction
                 ? {
@@ -57698,6 +61061,8 @@
                       ),
                     }
                   : null,
+              coverShredEscapePlan:
+                coverShredEscapePlanTextState(),
               counts: {
                 courseIntercepts:
                   state.hole
@@ -57711,6 +61076,10 @@
                   state.hole
                     .predatorTactics
                     .coverShreds,
+                coverShredDeferrals:
+                  state.hole
+                    .predatorTactics
+                    .coverShredDeferrals,
                 completions:
                   state.hole
                     .predatorTactics
@@ -57724,8 +61093,12 @@
                 state.hole
                   .predatorTactics
                   .history.slice(),
+              lastCoverShredDeferral:
+                state.hole
+                  .predatorTactics
+                  .lastCoverShredDeferral,
               fairness:
-                "Intercepts receive a service-gate warning; false retreats telegraph with a falling mower throttle; cover shredding announces the threatened rough and physically publishes Joe's normal persistent cut lane. Direct sight, sound, or point-blank contact cancels the special motion and restores ordinary pursuit.",
+                "Intercepts receive a service-gate warning; false retreats telegraph with a falling mower throttle; Cover Shred starts only with a collision-sampled route no longer than 28 meters and publishes that live input path before Joe's persistent cut. Direct sight, sound, or point-blank contact cancels the special motion and restores ordinary pursuit.",
             },
             composure: {
               value: Number(
@@ -57977,6 +61350,23 @@
             !openingMovementMessageDeferredByPanel()
               ? holeMessageForPresentation()
               : null,
+          messageHandoff:
+            activeNightOrderHandoff()
+              ? {
+                  ...activeNightOrderHandoff(),
+                  visible:
+                    !state.hole.statusRequest.active &&
+                    !emergencyAppealOwnsSignalLane() &&
+                    !golfAimOwnsSignalLane() &&
+                    !state.hole.nerveHold.active &&
+                    !cutTraceScanOwnsSignalLane() &&
+                    !listeningSearchReadOwnsSignalLane() &&
+                    !fieldInteractionPromptOwnsBottomRail() &&
+                    !openingMovementMessageDeferredByPanel(),
+                  presentation:
+                    "shared_consequence_rail_result_first_bound_next_action_second",
+                }
+              : null,
           messageSource:
             state.hole.messageTimer > 0 &&
             (
@@ -58209,6 +61599,16 @@
                 }
               : null,
           hudPresentation: {
+            objectiveHierarchy: {
+              primary:
+                currentHoleObjective(),
+              exitRoute:
+                exitRouteHudSummary(),
+              nextAction:
+                objectiveActionHudSummary(),
+              relationship:
+                "complete_field_checks_and_prepare_one_exit_route",
+            },
             focus:
               activeHudPresentationFocus(),
             contactBreakVisible:
@@ -58391,6 +61791,12 @@
               ? {
                   visible:
                     joeStateBannerVisible(),
+                  deferredBy:
+                    coverShredDirectionAndActionOwnSignal()
+                      ? "cover_shred_direction_and_action_pair"
+                      : falseRetreatDirectionAndCautionOwnSignal()
+                        ? "false_retreat_direction_and_caution_pair"
+                        : null,
                   text:
                     state.hole.stateBanner,
                   direction:
@@ -58422,6 +61828,89 @@
                       : "state_banner",
                 }
               : null,
+          predatorTactic:
+            state.hole.predatorTactics
+              .active
+              ? {
+                  type:
+                    state.hole
+                      .predatorTactics
+                      .active,
+                  phase:
+                    state.hole
+                      .predatorTactics
+                      .phase,
+                  remainingSeconds:
+                    state.hole
+                      .predatorTactics
+                      .timer,
+                  durationSeconds:
+                    state.hole
+                      .predatorTactics
+                      .duration,
+                  target:
+                    state.hole
+                      .predatorTactics
+                      .target,
+                  escapePlan:
+                    coverShredEscapePlanTextState(),
+                  presentation:
+                    "state_banner_and_action_rail",
+                  actionRail:
+                    falseRetreatSnapbackActive()
+                      ? {
+                          text:
+                            holeMessageForPresentation(),
+                          inputMethod:
+                            state.inputMethod,
+                          liveInputCopy: true,
+                          longBindingFallback:
+                            "retain_controls_and_immediate_action_drop_secondary_explanation",
+                        }
+                      : state.hole
+                            .predatorTactics
+                            .active ===
+                          "cover_shred"
+                        ? {
+                            text:
+                              holeMessageForPresentation(),
+                            inputMethod:
+                              state.inputMethod,
+                            liveInputCopy: true,
+                            steps:
+                              state.hole
+                                .predatorTactics
+                                .escapePlan
+                                ?.steps.slice() ||
+                              [],
+                            routePolicy:
+                              "shortest_collision_sampled_axis_route_to_fairway",
+                          }
+                        : null,
+                  attentionPanel:
+                    activePredatorTacticAttentionState(),
+                }
+              : null,
+          predatorTacticResult: {
+            lastTactic:
+              state.hole
+                .predatorTactics
+                .lastTactic,
+            lastOutcome:
+              state.hole
+                .predatorTactics
+                .lastOutcome,
+            completions:
+              state.hole
+                .predatorTactics
+                .completions,
+            cancellations:
+              state.hole
+                .predatorTactics
+                .cancellations,
+            outcomeRule:
+              "completed_and_evaded_rough_count_as_resolved;_sight_sound_and_point_blank_count_as_cancelled",
+          },
           activeEffects: [
             ...state.hole
               .worldEffects
@@ -58458,6 +61947,8 @@
               true,
             mapRole:
               "persistent_with_field_bearing",
+            shedApproach:
+              shedApproachReadabilityState(),
             courseBoundary: (() => {
               const boundary =
                 courseBoundaryPresentation();
@@ -58493,6 +61984,8 @@
                   boundary.westWorldX,
                 verge:
                   boundary.verge,
+                customArt:
+                  boundary.customArt,
                 visibleSegments:
                   boundary.visibleSegments,
                 matchesCollisionBoundary:
@@ -58502,6 +61995,7 @@
               };
             })(),
             dedicatedLandmarks: {
+              southServiceGate: true,
               shed: true,
               hedgeHides: true,
               stoneCover: true,
@@ -58510,6 +62004,71 @@
                 true,
               transparentSourceMarginsRemoved:
                 true,
+            },
+            southServiceGate: {
+              source:
+                "rough-cut-south-service-gate-v1.png",
+              generated: true,
+              artReady:
+                southServiceGateArt.complete &&
+                southServiceGateArt.naturalWidth >
+                  0,
+              worldPosition:
+                SOUTH_SERVICE_GATE,
+              collisionBoundaryY:
+                COURSE_MIN_Y,
+              matchesCollisionBoundary:
+                SOUTH_SERVICE_GATE.y ===
+                COURSE_MIN_Y,
+              rearViewAmount: Number(
+                lookBackView()
+                  .amount.toFixed(2),
+              ),
+              visible:
+                lookBackView().amount >=
+                  0.5,
+              presentation:
+                "rear_view_authored_locked_gate_with_planted_base_and_dynamic_lamp_glow",
+              collisionIdentity:
+                "locked south service gate",
+              impact: {
+                active:
+                  state.hole
+                    .southGateImpactTimer > 0,
+                timer: Number(
+                  state.hole
+                    .southGateImpactTimer.toFixed(
+                      2,
+                    ),
+                ),
+                impacts:
+                  state.hole
+                    .southGateImpacts,
+                reducedMotion:
+                  state.reducedMotion,
+                presentation:
+                  "chain_lock_flash_gate_shake_and_grounded_locked_identity",
+                identityLabelVisible:
+                  !(
+                    state.hole
+                      .blockedObstacle ===
+                      "south-course-edge" &&
+                    (
+                      collisionContactActivelyRefreshed() ||
+                      collisionReleaseEchoActive()
+                    )
+                  ),
+                identityDeferredBy:
+                  state.hole
+                      .blockedObstacle ===
+                      "south-course-edge" &&
+                    (
+                      collisionContactActivelyRefreshed() ||
+                      collisionReleaseEchoActive()
+                    )
+                    ? "collision_card"
+                    : null,
+              },
             },
             twoWayCover: {
               minimumVisualHeightMeters:
@@ -58977,6 +62536,8 @@
                 "all_planes_retain_depth_offsets_without_ambient_drift",
             },
             groundedFeatureArt: {
+              customObjectArtAudit:
+                customGameObjectArtAudit(),
               courseSigns:
                 "dedicated_six_cell_pixel_art_atlas_with_runtime_labels",
               sandTraps: {
@@ -59038,12 +62599,88 @@
                   "player_and_mower_proximity_response",
                 ],
               },
+              courseBoundaryHardware: {
+                source:
+                  "rough-cut-course-boundary-kit-v1.png",
+                generated:
+                  true,
+                variants: [
+                  "reflective_stake",
+                  "course_limit_placard",
+                ],
+                placements:
+                  "exact_east_and_west_collision_coordinates",
+                grounding:
+                  "perspective_projected_base_contact_with_hud_safe_placard_tether",
+                runtimeLayers: [
+                  "rope_connector",
+                  "keep_left_or_right_copy",
+                  "warning_emphasis",
+                ],
+                collision:
+                  "presentation_only_matches_existing_course_boundary",
+              },
+              footingHazards: {
+                source:
+                  "rough-cut-footing-hazards-v1.png",
+                generated:
+                  true,
+                artReady:
+                  footingHazardArt.complete &&
+                  footingHazardArt
+                    .naturalWidth > 0,
+                variants:
+                  FOOTING_HAZARD_ART_CELLS.map(
+                    (cell) => cell.id,
+                  ),
+                placements:
+                  FOOTING_HAZARD_ZONES.length,
+                projection:
+                  "generated_material_clipped_inside_authoritative_slowdown_ellipse",
+                collision:
+                  "existing_rotated_ellipse_remains_authoritative",
+                runtimeLayers: [
+                  "approach_outline",
+                  "active_warning_pulse",
+                  "bypass_guidance",
+                  "surface_response_particles",
+                ],
+              },
+              wetTurf: {
+                source:
+                  "rough-cut-wet-turf-atlas-v1.png",
+                generated:
+                  true,
+                artReady:
+                  wetTurfArt.complete &&
+                  wetTurfArt.naturalWidth > 0,
+                variants:
+                  WET_TURF_ART_CELLS.map(
+                    (cell) => cell.id,
+                  ),
+                placements:
+                  SPRINKLER_SOAK_ZONES.length,
+                activation:
+                  "appears_only_while_sprinkler_soak_timer_is_active",
+                projection:
+                  "generated_wet_turf_and_embedded_head_fit_existing_soak_ellipse",
+                runtimeLayers: [
+                  "spray_arcs",
+                  "water_shimmer",
+                  "ending_fade",
+                  "map_zone_rings",
+                ],
+                gameplay:
+                  "existing_wet_turf_noise_tracks_and_mower_slowdown_unchanged",
+              },
               proceduralStandInsReplaced: [
                 "fairway_edge_stakes",
                 "change_request_clipboard",
                 "floating_key_icon",
                 "floating_sprinkler_icon",
                 "procedural_recoverable_golf_ball",
+                "procedural_ball_in_flight_circle",
+                "procedural_ball_roll_circle",
                 "practice_field_test_bell",
                 "sprint_review_checkpoint_chime",
                 "shed_final_filing_terminal",
@@ -59053,6 +62690,8 @@
                 "wet_shoe_tracks",
                 "bunker_shoe_tracks",
                 "golf_divots",
+                "course_boundary_stakes",
+                "course_limit_placard_frame",
               ],
               functionalMechanicsArt: {
                 source:
@@ -59061,6 +62700,18 @@
                   COURSE_MECHANIC_CELLS.length,
                 grounding:
                   "world_projected_base_contact_with_interaction_overlay",
+              },
+              nightOrderObjectiveArt: {
+                source:
+                  "rough-cut-night-order-objectives-v1.png",
+                variants:
+                  NIGHT_ORDER_OBJECTIVE_CELLS.length,
+                ready:
+                  nightOrderObjectiveArt.complete &&
+                  nightOrderObjectiveArt.naturalWidth >
+                    0,
+                grounding:
+                  "dedicated_generated_station_art_with_exact_alpha_cell_bounds_and_world_projected_base_contact",
               },
               terrainEvidenceArt: {
                 source:
@@ -59607,8 +63258,14 @@
               return {
                 visible:
                   presentation.visible,
+                tacticalVisible:
+                  presentation.tacticalVisible,
+                suppressedBy:
+                  presentation.suppressedBy,
                 text:
                   presentation.label,
+                sourceKind:
+                  presentation.sourceKind,
                 occludedBy:
                   presentation.occludedBy,
                 screenX:
@@ -59630,13 +63287,15 @@
                 presentation:
                   "post_entity_grounded_panel",
                 visibilityRule:
-                  "hidden_when_physical_cover_blocks_joe",
+                  "hidden_when_physical_cover_blocks_joe_or_visible_joe_dialogue_owns_identity",
               };
             })(),
             hasLineOfSight: state.hole.hasLineOfSight,
             lineBlockedBy: state.hole.lineBlockedBy,
             lostSightSeconds: Number(state.hole.lostSightTimer.toFixed(2)),
             searchSecondsRemaining: Number(state.hole.searchTimer.toFixed(2)),
+            searchContext:
+              activeJoeSearchContext(),
             listeningSearchRead: (() => {
               const read =
                 listeningSearchRead();
@@ -59891,7 +63550,7 @@
         result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
     },
-  });
+  }, displayTextJsonReplacer);
 
   window.advanceTime = (milliseconds) => {
     state.manualTime = true;
@@ -59948,6 +63607,10 @@
   distantVillasArt.addEventListener("load", render);
   estatePerimeterArt.addEventListener("load", render);
   rearServiceBoundaryArt.addEventListener("load", render);
+  southServiceGateArt.addEventListener(
+    "load",
+    render,
+  );
   signageAtlasArt.addEventListener("load", render);
   bunkerAtlasArt.addEventListener("load", render);
   joeMowerArt.addEventListener("load", render);
@@ -59974,11 +63637,39 @@
     "load",
     render,
   );
+  courseMechanicsArt.addEventListener(
+    "load",
+    render,
+  );
+  nightOrderObjectiveArt.addEventListener(
+    "load",
+    render,
+  );
   courseClutterArt.addEventListener(
     "load",
     render,
   );
   courseVergeArt.addEventListener(
+    "load",
+    render,
+  );
+  courseBoundaryKitArt.addEventListener(
+    "load",
+    render,
+  );
+  footingHazardArt.addEventListener(
+    "load",
+    render,
+  );
+  wetTurfArt.addEventListener(
+    "load",
+    render,
+  );
+  movingGolfBallArt.addEventListener(
+    "load",
+    render,
+  );
+  courseEchoArt.addEventListener(
     "load",
     render,
   );
@@ -60098,6 +63789,26 @@
     COURSE_VERGE_CELLS,
   );
   scheduleAtlasCachePriming(
+    courseBoundaryKitArt,
+    COURSE_BOUNDARY_KIT_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    footingHazardArt,
+    FOOTING_HAZARD_ART_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    wetTurfArt,
+    WET_TURF_ART_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    movingGolfBallArt,
+    MOVING_GOLF_BALL_ART_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    courseEchoArt,
+    COURSE_ECHO_ART_CELLS,
+  );
+  scheduleAtlasCachePriming(
     bunkerAtlasArt,
     BUNKER_ATLAS_SOURCES,
   );
@@ -60112,6 +63823,14 @@
   scheduleAtlasCachePriming(
     courseMechanicsArt,
     COURSE_MECHANIC_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    nightOrderObjectiveArt,
+    NIGHT_ORDER_OBJECTIVE_CELLS,
+  );
+  scheduleAtlasCachePriming(
+    southServiceGateArt,
+    [SOUTH_SERVICE_GATE_SOURCE],
   );
   scheduleAtlasCachePriming(
     turfEvidenceArt,

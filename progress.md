@@ -1522,3 +1522,415 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Direct inspection confirmed the safe side reads more clearly at 2560x1600 and 844x390 while the rope, stakes, placard, and persistent map retain priority.
 - The required official input traversal completed 467 rendered frames without a browser-error artifact. Canvas rendering averaged 2.99ms with a 3.40ms final sample.
 - Evidence is recorded in `qa/course-boundary-dead-verge-polish-2026-08-04.md`. Suggested next refinement: human-playtest the verge during close pursuit and late-course fog, preserving its outside-only non-collision contract.
+
+## Custom game-object art completion
+
+- Audited every drawable course obstacle and each authored object family after the recent boundary/navigation polish. Existing obstacles, cover, interactables, mechanics, clutter, verge flora, lanterns, signage, bunkers, and turf evidence already resolve to dedicated generated art.
+- Closed the remaining visible object-art gap with `rough-cut-course-boundary-kit-v1.png`, a new high-resolution pixel-art atlas containing an authored reflective stake and weathered course-limit placard.
+- Preserved the original chroma generation and recorded the complete prompt, cell map, and transparency process beside the runtime asset.
+- Replaced the procedural stake and placard frame without changing the exact `x = ±112` collision contract, world projection, HUD-safe displacement, or contact ownership. The connector rope and live directional copy remain deliberate runtime layers because they depend on perspective and state.
+- Added a text-state `customObjectArtAudit` that dynamically verifies all 44 drawable course obstacles have mapped art and inventories every generated object atlas. The current audit reports `complete` with no missing IDs.
+- Focused movement/pursuit validation passed 18/18. High-resolution validation passed 96/96, and the full responsive/Reduced Camera Motion matrix passed 384/384 with no browser errors.
+- Direct inspection confirmed clean transparent edges, grounded authored bases, readable east/west cards, compact HUD clearance, and static Reduced Camera Motion parity.
+- The official uninstrumented traversal completed 463 rendered frames without a browser-error artifact. Canvas rendering averaged 3.31 ms with a 5.10 ms final sample.
+- Evidence is recorded in `qa/custom-game-object-art-completion-2026-08-04.md`. Any future physical course object should enter through a generated-art cell and be registered in the audit; procedural rendering remains appropriate for stateful geometry, accessibility copy, fog, light, particles, and terrain masks.
+
+## Generated footing-hazard art polish
+
+- Continued the custom-art audit beyond standalone props and found the three high-impact footing materials still relied on procedural terrain fills.
+- Generated and integrated `rough-cut-footing-hazards-v1.png`, a dedicated transparent atlas for dead thatch, glossy irrigation mud, and exposed root mats across all seven slow-footing placements.
+- Clipped each authored material inside the existing rotated gameplay ellipse, preserving exact collision, slowdown, noise, bypass, and map truth.
+- High-resolution inspection caught an overly dominant occupied thatch texture in the first integration. Added a forward-distance fade so distant hazards remain richly legible while near-camera material yields to escape guidance and the course ahead.
+- Expanded `customObjectArtAudit` to validate all three unique footing kinds and inventory the new atlas alongside the 44/44 mapped drawable obstacles.
+- High-resolution visual/state validation passed 96/96 with no browser errors after the opacity correction. Direct inspection confirmed revised thatch and mud presentation remains grounded and readable.
+- The full responsive/Reduced Camera Motion matrix passed 384/384, and focused movement/pursuit validation passed 18/18 with no browser errors.
+- The official uninstrumented traversal completed 466 rendered frames without a browser-error artifact. Canvas rendering averaged 3.23 ms with a 2.50 ms final sample; text state reported 44/44 obstacles, 3/3 footing materials, seven art-backed placements, and no missing custom-art IDs.
+- Evidence is recorded in `qa/generated-footing-hazard-art-polish-2026-08-04.md`. Suggested next refinement: human-playtest the three materials in late-course fog and tune only the distance-aware authored-material alpha if necessary; preserve the authoritative ellipse and generated material identity.
+
+## Generated wet-turf hardware polish
+
+- Continued the physical-object audit into the activated sprinkler system. The eight wet zones still depended on gradients, spray lines, and a tiny procedural sprinkler dot despite their persistent map and gameplay presence.
+- Generated and integrated `rough-cut-wet-turf-atlas-v1.png`, containing two authored wet-course variants with embedded brass/iron sprinkler heads, puddled turf, restrained mud, and maintenance ruts.
+- Alternated the variants across all eight existing soak zones without changing activation, positions, radii, wet-track behavior, quiet-route logic, or Joe's mower slowdown.
+- Kept spray arcs, shimmer, ending fade, and map rings dynamic; the procedural sprinkler dot now appears only as an asset-loading fallback.
+- Added near-camera restraint and registered the source, two variants, eight placements, readiness, and runtime-layer contract in text state and the custom-object audit.
+- High-resolution validation passed 97/97. The complete responsive/Reduced Camera Motion matrix passed 388/388 with no browser errors.
+- Direct inspection confirmed the generated beds remain grounded and readable at high resolution, compact landscape, and Reduced Camera Motion while live water effects retain ownership.
+- Focused movement/pursuit validation passed 18/18. The official uninstrumented traversal completed 475 rendered frames without a browser-error artifact; canvas rendering averaged 4.11 ms with a 3.60 ms final sample.
+- Official text state reported both wet-turf variants ready across eight placements, a complete custom-art audit, 44/44 drawable obstacles, 3/3 footing kinds, and no missing art IDs.
+- Evidence is recorded in `qa/generated-wet-turf-art-polish-2026-08-04.md`. Suggested next refinement: human-playtest activated sprinklers in the Night Range and Release Corridor; preserve the generated hardware bed and tune only the runtime cyan grade if late-course lighting needs more separation.
+
+## Generated moving golf-ball lifecycle polish
+
+- Audited golf-ball distraction rendering and found that the inventory and landed recovery states used authored generated art, but the ball reverted to a procedural white circle during flight and rolling.
+- Generated and integrated `rough-cut-moving-golf-ball-atlas-v1.png`, containing pristine airborne, wet-ground, and scuffed-ground variants with transparent pixel-art silhouettes.
+- Selects the rolling material from the authoritative shot surface while keeping trajectory, target shadow, surface tint, rest ring, shot timing, noise, Joe reaction, and reclaim mechanics dynamic and unchanged.
+- Drives ordinary ball rotation from actual shot progress and traveled distance. Reduced Camera Motion retains a static generated sprite orientation.
+- Expanded `customObjectArtAudit` with the atlas and all three variants, and exposed active material, readiness, lifecycle continuity, runtime layers, and motion preference in text state.
+- High-resolution deterministic visual/state validation passed 99/99 with no browser errors. Direct inspection confirmed both flight and wet-roll frames remain crisp, grounded, and proportionate.
+- The complete responsive/Reduced Camera Motion matrix passed 396/396, and focused movement/pursuit validation passed 18/18 with no browser errors.
+- The required official uninstrumented traversal completed 473 rendered frames without a browser-error artifact; canvas rendering averaged 2.66 ms with a 2.40 ms final sample.
+- Official text state reported all three moving-ball variants ready, a complete custom-art audit, 44/44 mapped drawable obstacles, 3/3 footing materials, two wet-turf variants, and no missing custom-art IDs.
+- Evidence is recorded in `qa/generated-moving-golf-ball-art-polish-2026-08-04.md`. Suggested next refinement: human-playtest repeated bank and lie-switch shots across fog-heavy late-course surfaces; preserve lifecycle art continuity and tune only sprite diameter if a specific device makes the ball difficult to track.
+
+## Generated Course Echo entity polish
+
+- Tightened the custom-art audit beyond static obstacles and found the replayed Course Echo still used a procedural diamond for its physical world presence.
+- Generated and integrated `rough-cut-course-echo-atlas-v1.png`, containing matching mint-ahead and amber-behind spectral office-worker runners with transparent pixel-art silhouettes.
+- Preserved recorded route samples, pace delta, map trail, score comparison, finish state, challenge behavior, and the Echo's presentation-only contract.
+- Standard presentation adds restrained stride bob to the authored runner; Reduced Camera Motion keeps its orientation and pose static while recorded world motion continues.
+- Expanded `customObjectArtAudit` into twelve explicitly counted object families covering interactables, mechanics, clutter/noise hazards, verge dressing, lanterns, signage, bunkers, turf evidence, boundary hardware, wet hardware, moving golf balls, and the Course Echo.
+- High-resolution deterministic visual/state validation passed 101/101 with no browser errors. Direct inspection confirmed both variants remain grounded, human-scaled, readable, and distinct from Joe.
+- The complete responsive/Reduced Camera Motion matrix passed 404/404, and focused movement/pursuit validation passed 18/18 with no browser errors.
+- The required official uninstrumented traversal completed 475 rendered frames without a browser-error artifact; canvas rendering averaged 3.09 ms with a 2.70 ms final sample.
+- Official text state reported all 12 object families mapped, two Course Echo variants, 44/44 drawable obstacles, 3/3 footing materials, and no missing custom-art IDs or families.
+- Evidence is recorded in `qa/generated-course-echo-art-polish-2026-08-04.md`. Suggested next refinement: human-playtest a real saved-record rematch to judge Echo visibility through the Night Range fog; preserve the recorded-route contract and tune only the existing sprite alpha if a specific zone makes it too faint.
+
+## Solid shed and mandatory field-check route
+
+- Fixed the maintenance shed's apparent transparency/disappearance at close contact. The art now renders at full opacity, and a new overlapping center-door collision footprint closes the gap between the existing side walls so the player cannot cross the visible structure and push it behind the camera.
+- Preserved an accessible Final Filing position in front of the solid doorway. Direct contact reports `SHED DOOR` and a viable retreat direction while the complete generated shed image remains visible.
+- Added three mandatory generated-art Night Order objectives to the existing course: Audit Bell at the east side of Audit Row, Field Log at the west side of Service Maze, and Release Review at the east side of Night Range.
+- The east-west-east route forces meaningful lateral navigation instead of a center-line sprint. Each check creates a loud world signal, pushes Joe into investigation, updates the objective ledger immediately, and advances the obstacle-aware mint route to the next station.
+- Added the three checks to world state, contextual interaction ownership, grounded physical rendering, use rings, world markers, the persistent map, onboarding copy, help cards, objective text, and narrative state. Every physical station uses `rough-cut-course-mechanics-atlas-v1.png`; no procedural stand-in or new art family was introduced.
+- Final Filing at both shed and drain now requires all three checks in addition to the existing key or valve access. Early attempts receive a clear `CHECKS OPEN` rejection and the HUD reports exactly how many checks remain.
+- Focused shed/objective validation passed 9/9, focused movement/pursuit validation passed 18/18, and existing two-route objective-access validation passed 5/5. High-resolution validation passed 101/101; standard, compact, and Reduced Camera Motion passes each passed 101/101 for 404/404 total responsive coverage, all without browser errors.
+- The official uninstrumented client reached Hole 1 with `FIELD CHECKS 0/3`, a generated-art Audit Bell target, all three map objectives, and the solid/opaque shed contract reported in text state. Evidence is recorded in `qa/shed-solidity-and-field-objectives-2026-08-04.md`.
+
+## Dedicated Night Order objective-art polish
+
+- Re-audited the three mandatory field checks after their gameplay integration. Although functional and art-backed, they still reused unrelated cells from the older general course-mechanics atlas and therefore lacked a distinct physical identity.
+- Used OpenAI image generation with the established course-mechanics art direction as a style reference to create `rough-cut-night-order-objectives-v1.png`: a dedicated brass Audit Bell, illuminated mechanical Field Log kiosk, and blackened-brass Release Review gong.
+- Preserved the original chroma source and recorded the complete generation prompt, transparency settings, measured alpha bounds, and runtime roles in `web/assets/rough-cut-night-order-objectives-v1.md`.
+- Integrated exact non-overlapping cell bounds through the existing cached world-fixture renderer. All three stations keep authored turf bases, world contact shadows, proximity glow, interaction rings, route guidance, map markers, completion state, and loud Joe-investigation consequences.
+- Added idle-time atlas priming and load-triggered rendering so the new high-resolution art does not introduce a first-appearance hitch.
+- Expanded `customObjectArtAudit` from 12 to 13 explicitly counted object families. Live text state reports 13/13 mapped families, all three Night Order variants ready, and no missing custom-art IDs or families.
+- `node --check web/game.js` and `git diff --check` passed. The official uninstrumented client reached live Hole 1 without a browser-error artifact and completed 144 rendered frames at 4.58 ms average canvas render with a 1.90 ms final sample.
+- Direct asset inspection confirmed transparent corners, clean silhouettes, planted bases, separated cells, and no neighboring-atlas fragments. Evidence is recorded in `qa/dedicated-night-order-objective-art-polish-2026-08-04.md`.
+
+## Night Order station feedback polish
+
+- Audited the dedicated Night Order stations in motion and found that their visual identities diverged but all three still played the same practice-bell cue; completed stations also lost most of their world-state emphasis after the interaction ring disappeared.
+- Added three distinct effects-bus acoustic signatures: layered brass ring for Audit Bell, mechanical impact/lever/paper snap for Field Log, and low sustained gong with restrained harmonics for Release Review.
+- Added a 1.45-second station activation response with a modest scale punch and receding ground waves. Reduced Camera Motion removes the animated punch and presents one static restrained halo.
+- Completed stations now keep a subtle mint ground seal and check marker, preserving authored object visibility while making revisited state legible without opening the map.
+- Preserved every interaction radius, location, route, noise duration, Joe response, collision footprint, exit rule, scoring rule, and generated asset. The new elements are stateful feedback layers only.
+- Added text-state truth for each station's acoustic signature, the current activation timer, motion preference, and the persistent completion presentation.
+- The official client followed the real obstacle-aware route around stone cover and completed the Audit Bell end to end. Live state confirmed `FIELD CHECKS 1/3`, immediate Field Log navigation ownership, Joe in `investigate`, `brass_bell` cue identity, and the active station-response timer.
+- Direct inspection confirmed the authored bell remains readable under the activation wave, the next route is clear, and the persistent HUD/map retain priority. The successful run completed 615 frames at 3.90 ms average and 3.90 ms final canvas render without browser errors.
+- Evidence is recorded in `qa/night-order-station-feedback-polish-2026-08-05.md`. Suggested next refinement: human-playtest the stamp and gong at ordinary listening volume; preserve their distinct profiles and adjust only effect-bus gain if necessary.
+
+## Generated south service gate polish
+
+- Extended the custom-object audit beyond registered playfield props and found one story-critical gap: the south service gate that traps the player existed only inside the distant rear panorama while collision used an abstract `y = 0` course edge.
+- Used built-in OpenAI image generation to create `rough-cut-south-service-gate-v1.png`, a dedicated connected world sprite with wrought-iron leaves, wet stone pillars, taut chain, brass padlock, access reader, caged lamps, ivy, dead fescue, and a muddy planted threshold.
+- Preserved the chroma source and documented the complete prompt, exact runtime rectangle, transparency settings, and ownership contract in `web/assets/rough-cut-south-service-gate-v1.md`.
+- Anchored the generated gate at `x = 0, y = 0`, exactly matching the existing south collision boundary. It enters the ordinary layered-entity depth pass only after rear-camera commitment crosses 50%, preventing leakage into forward play.
+- Retained transparency between the iron bars so the live rear environment remains visible. Existing foreground vegetation honestly obscures the planted base, while restrained amber lamp glow responds to the current motion preference.
+- Expanded `customObjectArtAudit` from 13 to 14 generated object families and added live text truth for asset readiness, world position, collision-coordinate parity, rear-view amount, visibility, and presentation.
+- The official forward smoke reported the gate ready but hidden at rear amount 0 with no browser errors. Exact-key rear validation reported rear amount 1, gate visible, `y = 0` parity, and a complete 14/14 art audit with no missing IDs or families.
+- Direct inspection confirmed a grounded, imposing gate, clean transparent ironwork, live environmental depth, foreground occlusion, readable chain and padlock, and no forward-view regression. Final render samples were 1.80 ms forward and 3.60 ms rear.
+- Evidence is recorded in `qa/generated-south-service-gate-polish-2026-08-05.md`. Preserve the exact boundary/rear-view contract; future changes should tune only authored scale or lamp intensity if a human playtest identifies a device-specific issue.
+
+## South gate contact-integration polish
+
+- Followed the new generated gate into actual movement contact and found a semantic and tactile disconnect: collision still called it `clubhouse boundary`, while the authored chain, padlock, and iron leaves did not react when tested.
+- Renamed the authoritative south-edge landmark to `locked south service gate`, so the existing collision card, text state, and accessibility copy now identify the physical object the player sees.
+- Added a bounded 0.72-second impact response on fresh south-edge contact. Standard motion receives a rapidly settling gate shake; Reduced Camera Motion keeps the object fixed. Both retain a centered chain-and-padlock flash with two restrained response waves.
+- Added a grounded rear-view gate identity outside contact. During active contact and its release echo, that local label yields to the established orange collision card, preserving one owner for the blocker name and `MOVE FORWARD ONTO COURSE` instruction.
+- Preserved the exact `y = 0` course boundary, collision resolution, movement application, rear-camera behavior, objective navigation, map, Joe AI, scoring, audio, and generated asset.
+- Added text-state truth for impact activity, timer, count, motion preference, local-label visibility, and collision-card deferral.
+- The official backward-input scenario displayed `BLOCKED BY // LOCKED SOUTH SERVICE GATE` with the correct recovery direction and no browser errors. Final rear-impact inspection confirmed the generated gate remains grounded, the lock flash centers correctly, the collision footprint aligns, and duplicated copy is absent.
+- Live rear state reported amount 1, one active 0.62-second impact, one contact, and `identityDeferredBy = collision_card`. Final render samples were 3.10 ms in the official collision capture and 1.00 ms in the rear-impact capture.
+- Evidence is recorded in `qa/south-gate-contact-integration-polish-2026-08-05.md`. Suggested next refinement: human-playtest repeated taps and sustained contact, preserving one-card ownership and exact boundary parity.
+
+## Onboarding route-hierarchy polish
+
+- Audited the first live gameplay frame and found a nearer `DRAIN VALVE 86m` world plaque competing with the mandatory `AUDIT BELL` route while `FIRST STEPS` was explicitly teaching movement and mint-route following.
+- Kept the mandatory navigation target at full strength while giving non-selected key and valve markers a temporary 24% peripheral presentation during the ten-meter movement lesson. The persistent map and physical world remain unchanged.
+- Alternate markers automatically return to their established 72% secondary emphasis when First Steps retires. An alternate inside its authoritative interaction radius still overrides the deferral and presents at full strength.
+- Added text-state truth through `alternate_route_deferred`, `alphaMultiplier`, and `deferredBy = first_steps_route` without changing navigation selection, marker positions, interaction radii, routes, objectives, or Joe AI.
+- Added `web/test-actions/onboarding-route-hierarchy.json` for a deterministic lesson-to-course handoff check.
+- The official first-frame capture confirmed the Audit Bell route now owns the lesson while the Drain Valve remains subdued peripheral context. At 28 meters, state confirmed the deferral had retired and alternatives restored to 72%.
+- Re-ran the full obstacle-aware Audit Bell scenario. The station filed, Joe investigated, the ledger advanced to 1/3, and Field Log became the next full-strength selected route without browser errors. The 618-frame interaction capture averaged 4.32 ms canvas render with a 5.80 ms final sample.
+- Evidence is recorded in `qa/onboarding-route-hierarchy-polish-2026-08-05.md`. Suggested next refinement: human-playtest the first ten meters without consulting the map and tune only the 24% peripheral alpha if necessary.
+
+## Objective-dossier hierarchy polish
+
+- Re-audited the first live frame after cleaning up world-marker priority and found a remaining semantic conflict inside the expanded top-left dossier: `FIELD CHECKS 0/3 // AUDIT BELL` was immediately followed by a numbered `1 FIND KEY...` row, making the optional key route look like another primary check and omitting the valve choice.
+- Replaced that numbered row with an explicit exit-route summary. Before commitment it reads `EXIT ROUTE // <VARIANT KEY LOCATION> OR VALVE`; key, valve, and dual-route states become `SHED ROUTE // KEY ACQUIRED`, `DRAIN ROUTE // VALVE OPEN`, and `EXIT ROUTES // SHED + DRAIN READY`.
+- Kept incomplete field checks authoritative even after an exit route is prepared. The route row reports `deferredBy = field_checks` until the Night Order checks are complete, while the established primary objective function and every gameplay rule remain untouched.
+- Added bounded font fitting across all three authored key-location variants and text-state truth for the primary objective, exit-route phase/copy, deferral owner, and their relationship.
+- Added `web/test-actions/objective-hierarchy-drain.json` to validate an actual route-choice transition through live player input.
+- Direct inspection of the official opening capture confirmed a clean mandatory-versus-route hierarchy. A second official run opened the Drain Valve, activated the 24-second soaked-course state, retained Audit Bell as the primary check, and reported `drain_committed` with `DRAIN ROUTE // VALVE OPEN` without browser errors.
+- The 439-frame valve capture averaged 2.86 ms canvas render with a 6.10 ms final sample. Evidence is recorded in `qa/objective-dossier-hierarchy-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest the expanded dossier after collecting the shed key and after preparing both routes; preserve the hierarchy and tune only bounded copy sizing if necessary.
+
+## Objective action-row polish
+
+- Continued the expanded-dossier audit and found its third row still used generic `INTERACT / UNLOCK` copy even though the two rows above now clearly distinguished mandatory field checks from optional exit preparation.
+- Added one authoritative action summary that follows the current state: ring Audit Bell, stamp Field Log, sign Release Review, prepare key/valve, file shed/drain, choose a prepared exit, Final Filing progress, or release authorization.
+- The summary uses the active keyboard binding, controller `A`, or touch `USE`, inherits the current field station's authored accent, and uses bounded font fitting for long/remapped labels.
+- Exposed action phase, copy, color, and target ID inside the existing text-state objective hierarchy. Gameplay prompts, objective order, interactions, navigation, scoring, and compact HUD remain untouched.
+- Direct inspection of the opening frame confirmed `FIELD CHECKS 0/3 // AUDIT BELL`, the separate exit branch, and `ENTER RING AUDIT BELL` read as one plan.
+- Re-ran the full Audit Bell interaction. The ledger advanced to 1/3 and the action summary became `ENTER STAMP FIELD LOG` with the Field Log target and mint accent.
+- Re-ran the Drain Valve route. The branch became `DRAIN ROUTE // VALVE OPEN`, sprinklers activated, and the action row correctly remained `ENTER RING AUDIT BELL` because mandatory checks were still incomplete.
+- Both official runs completed without browser errors. Evidence is recorded in `qa/objective-action-row-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest a remapped Interact binding and the post-3/3 filing handoff; preserve authoritative ownership and tune only bounded copy sizing if needed.
+
+## Pause objective-continuity polish
+
+- Audited the paused gameplay frame after improving the live objective dossier. The modal preserved the primary file and Joe threat state but omitted the newly authoritative next-action summary, forcing players returning after a break to reconstruct the control/verb from the dimmed world beneath it.
+- Added a centered `NEXT // <BOUND ACTION>` planning line between Active File and Joe state using the same `objectiveActionHudSummary()` consumed by live gameplay.
+- Inherited the active station/route/filing accent and bounded copy sizing, so keyboard remaps, controller, touch, field-check progression, prepared exits, and filing states cannot drift between gameplay and pause.
+- Shifted all four unchanged pause-menu rows down 14 pixels to provide a measured planning band while preserving their size, order, selection behavior, modal bounds, descriptions, and input footer.
+- Added the full next-action object to the frozen text-state pause snapshot.
+- Direct inspection confirmed the active objective, `NEXT // ENTER RING AUDIT BELL`, and Joe threat read remain clearly separated above the menu. A deterministic Enter-to-resume scenario returned to live play and accepted six meters of movement with no browser errors.
+- Added `web/test-actions/pause-action-continuity.json`; evidence is recorded in `qa/pause-objective-continuity-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest pause during pursuit and Final Filing, preserving the three-line hierarchy and tuning only the menu offset or action font minimum if needed.
+
+## Paused Help context polish
+
+- Followed the improved Pause dossier into How to Survive / Settings. The global help content and displayed controls were already current and input-aware, but entering it from a suspended round discarded the active file and newly authoritative next-action context.
+- Added one slim paused-only header strip: `PAUSED FILE // <OBJECTIVE> • NEXT // <BOUND ACTION>`. It reuses the live objective/action helpers, active input method, remapped labels, station/route/filing accent, and bounded font fitting.
+- Kept the clubhouse settings path intentionally context-free, preserving How to Survive as a clean global guide when no round is suspended.
+- Exposed the path-specific objective, next-action object, and `single_context_strip_above_global_help` contract in text state only while paused settings are active.
+- Direct inspection confirmed the strip fits above both assignment/settings columns without collision. A separate clubhouse capture confirmed the strip is absent and `pausedRunContext = null`.
+- Re-ran the complete Help→Pause→Resume path; it returned to live play, retired the pause snapshot, and produced no browser errors.
+- Added `web/test-actions/pause-how-to-survive.json`; evidence is recorded in `qa/paused-help-context-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest paused Help during Final Filing and with a long remapped Interact label, preserving path-specific visibility and tuning only the fitted-size floor if needed.
+
+## Shed approach clearance polish
+
+- Audited every authoritative solid footprint from Night Range through the maintenance shed after the final exit began feeling blocked. The shed door remained usable from outside its collision ellipse, but the release cart, stone cover, hidden hedge-gate wings, and shed wall ellipses formed two unnecessarily tight handoffs immediately before the filing apron.
+- Moved the visible release cart and stone cover outward while preserving their authored art, grounding, cover value, sight blocking, map footprints, and alternating chicane role.
+- Narrowed the two collision-only hedge-gate wings to match the visible opening and aligned the shed wall/door ellipses with the physical entrance. The shed stays fully opaque and solid during contact.
+- Added a deterministic five-waypoint shed-approach audit to live text state. It samples the path at no more than two-meter intervals using the real 2.4-meter player radius and reports blockers, minimum edge clearance, and filing-radius reachability.
+- The official client reported the route clear across 37 samples, no blocking obstacle IDs, 4.6 meters of minimum edge clearance, and a final point 11 meters from the shed inside its 16-meter interaction radius.
+- `node --check web/game.js` and `git diff --check` passed. The official live Hole 1 capture completed without a browser-error artifact; the opening presentation and existing course navigation remained intact.
+- Evidence is recorded in `qa/shed-approach-clearance-polish-2026-08-05.md`. Future obstacle edits in Release Corridor should preserve `shedApproach.clear = true`, a positive minimum clearance, and filing reachability.
+
+## Night Order next-action handoff polish
+
+- Audited a real Audit Bell completion and found the route and compact dossier updated correctly, but the loud-event consequence rail only explained that Joe was routing to the signal. The actionable next step remained separated in the upper-left HUD during the busiest part of the interaction.
+- Added a bounded 3.2-second Night Order handoff bound to the same completion banner and message that created it. The existing orange consequence remains the first line; a second line names the exact current input binding and next action in the next station or exit accent.
+- Kept one presentation owner. The first attempt placed the handoff in the state banner, but official capture showed that the station's distraction consequence correctly suppresses that banner. The implementation was moved into the already-visible bottom consequence rail instead of weakening the hierarchy or adding another panel.
+- A newer message or state banner invalidates the handoff immediately, and its timer retires independently before the ordinary consequence message. Objectives, station order, interaction radii, Joe alert/investigation behavior, noise durations, route geometry, scoring, and generated art remain unchanged.
+- The official obstacle-aware Audit Bell run completed 618 rendered frames with no browser-error artifact. Direct inspection confirmed `AUDIT BELL FILED — Joe is routing to the signal.` above `NEXT // ENTER STAMP FIELD LOG`, while the HUD, mint Field Log ribbon, distraction marker, persistent map, and Joe investigation state remained readable.
+- Live text state reported `visible: true`, `nextPhase: field_check`, `nextTargetId: field-log`, and `result_first_bound_next_action_second`. The final render sample was 3.0 ms with a 3.11 ms canvas average.
+- Added and ran `web/test-actions/night-order-handoff-settle.json` across the full interaction-to-expiry path. After 220 settled frames, the message, banner, and handoff were all null while the Field Log objective, route, Joe investigation, map, and live play remained intact. The 829-frame run ended without a browser-error artifact at a 3.2 ms canvas average and 3.5 ms final sample.
+- Evidence is recorded in `qa/night-order-next-action-handoff-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest the 3/3 handoff with both a prepared and unprepared exit route; preserve the single bottom-rail owner and tune only the 3.2-second duration if ordinary reading speed requires it.
+
+## Joe dialogue/world-label hierarchy polish
+
+- Followed the Night Order handoff through its settled close-investigation state and found Joe's grounded `JOE: DISTRACTED` panel rendering directly behind the centered `JOE // "..."` subtitle. The attention panel already reported `VERIFYING DISTURBANCE`, so the overlap duplicated identity and obscured both pieces of copy.
+- Split grounded-label state into authoritative `tacticalVisible` and presentation-only `visible`. While a Joe bark is actually visible, the redundant grounded panel reports `suppressedBy: joe_dialogue`; Joe's sprite, state glow, map rules, distance, AI, and attention panel remain unchanged.
+- Preserved slow-footing threat pressure by explicitly consuming `tacticalVisible`, so hiding the label cannot weaken a nearby Joe warning or affect route decisions.
+- Subtitle-disabled play retains the grounded label because suppression depends on `joeBarkVisible()`, not merely on a bark timer. Collision, Final Filing, settings, and other established dialogue arbitration continue to own their existing paths.
+- Re-ran the full obstacle-aware Audit Bell and settle scenario. At 18 meters Joe remained tactically visible and investigating while the dialogue card rendered alone; direct inspection confirmed the overlapping grounded panel was absent and Joe's sprite, route ribbon, HUD, map, and environmental cues remained readable.
+- Live state reported `worldLabel.visible: false`, `tacticalVisible: true`, `suppressedBy: joe_dialogue`, `joeBarkVisible: true`, and `joeMode: investigate`. The 836-frame run ended without a browser-error artifact at a 3.09 ms canvas average and 2.6 ms final sample.
+- Evidence is recorded in `qa/joe-dialogue-world-label-hierarchy-polish-2026-08-05.md`. Suggested next refinement: human-playtest the same handoff at 100%, 120%, and 140% subtitle scale; preserve the single Joe-identity owner and tune only subtitle baseline if a specific scale crowds a nearby objective card.
+
+## Dedicated Night Order Joe-dialogue polish
+
+- Audited the close Audit Bell investigation as gameplay rather than presentation. Joe had an open sightline at 18 meters, rising sight detection, no hard cover, unconditional 8.2-meter capture, and a nearly expired loud-source commitment, so the objective remained dangerous rather than creating a safe AI exploit.
+- Found the actual character gap in that state: all three mandatory Night Order stations still requested the optional `sprint_review` bark context, giving their distinct art, acoustics, and interactions a shared generic 14-line reaction pool.
+- Added three dedicated 18-line software Product Owner / governance response pools: `night_order_audit_bell`, `night_order_field_log`, and `night_order_release_review`. Each station now declares and invokes its own context through the authoritative action definition.
+- Added all three contexts to the established award-presentation queue so their dialogue retains the same delayed handoff behavior as Sprint Review and cannot talk over a higher-priority score beat.
+- Preserved the rolling 12-bark freshness window, subtitle-only voice policy, Joe state/AI, station noise, investigation timing, route progression, objective handoff, and every generated asset.
+- Expanded text-state truth so all three station records expose their bark context. The dynamic library inventory increased from 368 to 422 contextual reactions and from 2,962 to 3,016 total dialogue variants.
+- The official obstacle-aware Audit Bell settle run selected `You just opened a governance finding.` from `night_order_audit_bell`. Direct inspection confirmed the line fits cleanly, retains the single Joe-identity hierarchy, and leaves the Field Log route, HUD, map, and physical scene readable.
+- The 822-frame run ended without a browser-error artifact at a 3.25 ms canvas average and 3.4 ms final sample. Evidence is recorded in `qa/dedicated-night-order-joe-dialogue-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest Field Log and Release Review to judge tone at ordinary reading speed; preserve their dedicated contexts and adjust individual lines rather than returning to a shared pool.
+
+## Named Night Order investigation-signal polish
+
+- Followed the dedicated station dialogue into the immediate Audit Bell consequence and found one remaining identity break: Joe was correctly investigating the bell, but the grounded source marker still fell through to the generic `DISTRACTION` label.
+- Carried the station ID, short label, and authored accent into the existing field-action lure. The shared signal helper now renders `AUDIT BELL SIGNAL`, `FIELD LOG SIGNAL`, or `RELEASE REVIEW SIGNAL` with the authoritative remaining investigation time.
+- Kept the existing lure coordinates, Joe mode, alert, noise duration, search handoff, objective order, score, interaction radius, map behavior, generated station art, and sound cues unchanged.
+- Exposed the active source ID, label, accent, target, countdown, and exact world label under `hole.fieldChecks.activeSignal` in `render_game_to_text` so visual feedback and Joe's true target can be audited together.
+- The official 614-frame Audit Bell route reported `AUDIT BELL SIGNAL // 4.2s` at `{ x: 86, y: 148 }`, Joe in `investigate`, the next Field Log objective, and the established two-line handoff. Direct inspection confirmed the named ring sits on the physical bell signal without obscuring the player, station art, route thread, HUD, or persistent map.
+- The run produced no browser-error artifact and averaged 3.52 ms of canvas rendering. `node --check web/game.js` and `git diff --check` passed.
+- Evidence is recorded in `qa/named-night-order-investigation-signal-polish-2026-08-05.md`. Suggested next refinement: human-playtest the Field Log and Release Review countdowns at ordinary play speed; preserve station identity and tune only marker width if either longer name crowds a nearby prop.
+
+## Course-map station-signal continuity polish
+
+- Followed the newly named field signal into the persistent map and found that its source ring still used the generic lure color while the map header was claimed by unrelated `LAST SIGNAL` copy for Joe's last known position.
+- Added one explicit map-header priority: a live mandatory station signal owns the short-lived header, then Joe's last known signal, then the optional Course Echo pace read. This also prevents the pre-existing last-known-Joe and Course Echo strings from drawing into the same top-right slot.
+- The active map header now reports the station and authoritative countdown (`AUDIT BELL 4.3s`, `FIELD LOG 3.8s`, or `RELEASE REVIEW 4.8s`) in the station's authored accent. Its course-map source ring inherits the same accent.
+- Preserved the last-known-Joe positional pulse, Course Echo line and marker, map refresh cadence, shot preview precedence, Joe AI, distraction target/timer, objective progression, map geometry, and all route guidance.
+- Extended `hole.fieldChecks.activeSignal` with the exact map label and `active_field_signal` header priority so `render_game_to_text` reports the same presentation decision as the canvas.
+- The official 634-frame Audit Bell route reported an active `audit-bell` signal at `{ x: 86, y: 148 }`, Joe investigating at 99 meters, Field Log next, a 3.55 ms average render, and no browser-error artifact. Direct inspection confirmed the gold `AUDIT BELL 4.3s` header fits beside `COURSE MAP`, while the gold source ring, last-known-Joe pulse, player marker, objective markers, and route remain distinct.
+- `node --check web/game.js` and `git diff --check` passed. Evidence is recorded in `qa/course-map-station-signal-continuity-polish-2026-08-05.md`.
+- Suggested next refinement: validate the longer Release Review header in a full late-course run; preserve the bounded fitting and priority order, tuning only the 7-pixel minimum if the authored name becomes difficult to read at compact display scale.
+
+## Joe Attention station-investigation polish
+
+- Followed the named world and course-map signal into the top-right threat panel and found its investigation line still hard-coded to `VERIFYING DISTURBANCE`, breaking station identity at the most important Joe-status read.
+- Added an authored-color `attentionLabel` to the shared field-action signal state. Mandatory investigations now read `VERIFYING AUDIT BELL`, `VERIFYING FIELD LOG`, or `VERIFYING RELEASE REVIEW` with the same authoritative countdown used by the world and map.
+- Added bounded 11-to-8-pixel fitting inside the existing 228-pixel status lane so the longer Release Review label remains contained without moving or enlarging the Joe Attention panel.
+- Kept `VERIFYING DISTURBANCE` for golf-ball, noise-hazard, Status Request, and every other generic investigation. Attention priority, detection, Joe AI, alert, timers, color rules for unrelated states, panel geometry, and gameplay remain unchanged.
+- The official 622-frame Audit Bell route exposed `VERIFYING AUDIT BELL // 4.2s` in text state and rendered it cleanly in the bell's gold. Direct inspection confirmed alignment with the matching world and map countdowns, next Field Log route, objective dossier, and two-line consequence rail.
+- The run averaged 3.08 ms of canvas rendering, ended on a 2.9 ms sample, and produced no browser-error artifact. `node --check web/game.js` and `git diff --check` passed.
+- Evidence is recorded in `qa/joe-attention-station-investigation-polish-2026-08-05.md`.
+- Suggested next refinement: validate the full Release Review string at compact canvas scale; preserve the one-line threat lane and only abbreviate `RELEASE REVIEW` if the fitted 8-pixel floor proves difficult to read on a real small display.
+
+## Evidence-attributed Joe search polish
+
+- Followed a completed Audit Bell investigation into Joe's search phase and found `SEARCHING LAST SIGNAL` remained generic even after the player left a discoverable turf trail and the world correctly warned that Joe was following it.
+- Added lightweight search-source presentation state for mandatory station sweeps, discovered turf evidence, broken sightlines, and remembered-cover audits. The latest real evidence owns the existing Joe Attention status and countdown; it does not add or extend any search.
+- Station follow-up reads `SWEEPING <STATION> AREA`, trail pursuit reads `FOLLOWING TURF EVIDENCE`, contact loss reads `SWEEPING LAST SIGHTLINE`, and cover memory reads `AUDITING LAST COVER`. Listening Focus's live movement read retains higher priority.
+- New chase contact clears stale context, unrelated evidence replaces it, and patrol resumption retires it. Distraction targeting, search centers, search timers, trail discovery, cover memory, Joe speeds, detection, pathing, capture distance, scoring, and map behavior remain unchanged.
+- Added `web/test-actions/night-order-station-search-handoff.json`. Its first stationary version correctly ended in capture, proving the change did not create safety beside the bell. The revised route retreated after filing and allowed Joe to discover the new turf trail, validating source replacement.
+- The official final capture showed `FOLLOWING TURF EVIDENCE // 6.4s` in the Joe Attention panel alongside the existing cover-shred banner, mower-lane warning, grounded Joe search label, persistent Field Log route, and map. Text state agreed on `kind: trail`, target mark 20, 6.38 seconds remaining, Joe searching at 21 meters, and no active station signal.
+- The 970-frame final run averaged 3.21 ms of canvas rendering, ended on a 2.3 ms sample, and produced no browser-error artifact. `node --check web/game.js` and `git diff --check` passed.
+- Evidence is recorded in `qa/evidence-attributed-joe-search-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest the lost-sightline and remembered-cover labels during an organic chase break; preserve latest-evidence ownership and adjust only wording if either read is too technical under pressure.
+
+## Grounded Joe search-label polish
+
+- Followed evidence attribution back into the first-person world and found Joe's nearby grounded label still used the generic `JOE: SEARCHING`, even while the screen-fixed threat panel correctly reported `FOLLOWING TURF EVIDENCE`.
+- Reused the authoritative active search context to provide concise spatial labels: `JOE: TRACKING TRAIL`, `JOE: SIGHTLINE SWEEP`, `JOE: COVER AUDIT`, or `JOE: SWEEPING <STATION>`.
+- Inherited the evidence accent for active searches and preserved the existing 184-pixel panel, 11-to-9-pixel bounded fitting, tether line, distance/occlusion rules, subtitle suppression, wet/sand overrides, and tactical visibility used by footing-hazard pressure.
+- Added `sourceKind` to the established world-label text state so the grounded label and Joe Attention source can be compared directly.
+- The official 963-frame retreat scenario rendered `JOE: TRACKING TRAIL` beside Joe while the attention panel showed `FOLLOWING TURF EVIDENCE // 6.4s`. Both reported `sourceKind: trail`; Joe remained searching at 21 meters with Field Log next.
+- Direct inspection confirmed the label fits cleanly between Joe and the route ribbon without colliding with the mower-lane warning, Field Log caption, map, or bottom hiding-line consequence.
+- The run averaged 2.71 ms of canvas rendering, ended on a 2.3 ms sample, and produced no browser-error artifact. `node --check web/game.js` and `git diff --check` passed.
+- Evidence is recorded in `qa/grounded-joe-search-label-polish-2026-08-05.md`.
+- Suggested next refinement: exercise the longer named Release Review sweep in world space; preserve bounded fitting and use an authored abbreviation only if it reaches the 9-pixel floor at ordinary canvas scale.
+
+## Cover Shred signal-hierarchy polish
+
+- Re-audited the evidence-search capture after grounding Joe's label and found Cover Shred simultaneously presented a top state banner, centered directional threat caption, and bottom actionable consequence—all describing the same mower move.
+- Added a narrow presentation rule for the authored Cover Shred combination. While its direction caption and `leave the rough` instruction are both active, the synonymous `COVER SHRED // ROUGH ENTERING SCOPE` banner yields instead of creating a third card.
+- Preserved the state-banner text, timer, lock, search source, directional caption, actionable message, threat audio, mower effects, tactic phases, target, movement, Joe AI, capture rules, and every other banner path.
+- Added `cover_shred_direction_and_action_pair` as the explicit text-state deferral reason, so accessibility and automated inspection can distinguish intentional hierarchy from missing content.
+- The official 962-frame retreat scenario retained one visible threat-caption card, `JOE: TRACKING TRAIL`, `FOLLOWING TURF EVIDENCE // 6.4s`, and the full bottom escape instruction while leaving the top-center course view open.
+- Text state retained `COVER SHRED // ROUGH ENTERING SCOPE` with `visible: false`, the expected deferral reason, zero duplicate caption cards, Joe searching at 21 meters, and `trail` as the evidence source.
+- The run averaged 4.52 ms of canvas rendering, ended on a 4.1 ms sample, and produced no browser-error artifact. `node --check web/game.js` and `git diff --check` passed.
+- Evidence is recorded in `qa/cover-shred-signal-hierarchy-polish-2026-08-05.md`.
+- Suggested next refinement: inspect False Retreat's simultaneous banner, caption, and message; preserve its deceptive two-stage timing and only collapse copy if the three surfaces are similarly synonymous.
+
+## False Retreat signal-hierarchy polish
+
+- Replayed the mandatory Audit Bell route into Joe's evidence search and confirmed False Retreat repeated its opening warning across three simultaneous surfaces: a top throttle banner, a centered directional return cue, and a bottom caution rail.
+- Added a narrow opening-phase presentation rule. While `MOWER FALLS BACK // WATCH FOR THE RETURN` and the `JOE IS YIELDING THE LANE` caution are active, the synonymous `FALSE RETREAT // MOWER THROTTLE DROPPING` banner yields.
+- Preserved the stored banner, timers, caption direction, caution copy, mower-headlight lane, search source, Joe AI, tactic movement, and capture behavior. The later `FALSE RETREAT // JOE RECOMMITS` reversal remains outside the rule and retains its top banner.
+- Added `false_retreat_direction_and_caution_pair` as the explicit text-state deferral reason and a deterministic `web/test-actions/false-retreat-signal-hierarchy.json` route for replaying the state.
+- The official 942-frame run showed one centered `WATCH FOR THE RETURN — RIGHT` cue, the full bottom caution, an open top-center course view, persistent Field Log route guidance, and no browser-error artifact.
+- Text state retained the opening banner with `visible: false` and the expected deferral reason while Joe searched 72 meters to the right and followed turf evidence for 6.4 seconds.
+- The run averaged 3.44 ms of canvas rendering and ended on a 4.8 ms sample. Evidence is recorded in `qa/false-retreat-signal-hierarchy-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest the retreat-to-snapback beat at ordinary input speed; preserve the single opening hierarchy and adjust only phase timing if players cannot exploit the deceptive gap before the recommit cue.
+
+## False Retreat snapback-handoff polish
+
+- Followed False Retreat through its complete phase sequence and found the 3.1-second withdrawal caution outlived the 2.9-second telegraph-plus-retreat, briefly telling the player Joe was still yielding after the AI had entered snapback.
+- Replaced that stale copy at the exact retreat-to-snapback transition with `JOE RECOMMITS — break sideways now; the mower is snapping back to your last route.` The rail lasts exactly the established 1.45-second snapback duration.
+- Preserved the retreat, snapback target, phase durations, Joe speed, investigation/search state, capture rules, top reversal banner, threat bearing, audio, and all environmental presentation.
+- Added concise active predator-tactic state to `render_game_to_text`: type, phase, remaining time, duration, target, and presentation contract. Inactive tactics remain `null`.
+- Added `web/test-actions/false-retreat-snapback-handoff.json` and replayed the full Audit Bell route into the reversal. The official 1,106-frame capture landed in `false_retreat / snapback` with 0.98 seconds remaining.
+- The live frame showed `FALSE RETREAT // JOE RECOMMITS`, the right-side threat bearing, and the new lateral action without obscuring the hedge opening, Field Log route, Joe Attention panel, or course map. The old withdrawal message was absent.
+- The run averaged 2.41 ms of canvas rendering, ended on a 2.4 ms sample, and produced no browser-error artifact. Evidence is recorded in `qa/false-retreat-snapback-handoff-polish-2026-08-05.md`.
+- Suggested next refinement: playtest whether `break sideways` is sufficiently actionable on gamepad and touch; preserve the phase-aligned lifetime and use binding-specific copy only if players hesitate during the one-second response window.
+
+## False Retreat snapback-direction polish
+
+- Re-audited the verified snapback frame and found its center bearing still used the generic `JOE TURNS TOWARD A SOUND`, which described Joe's investigation mode but weakened the authored mower reversal.
+- Reused the stable `joe_investigate` caption slot for `MOWER SNAPS BACK INTO YOUR ROUTE` during the exact False Retreat snapback. This replaces generic copy instead of stacking a second center card.
+- Protected the authored text in both update orders: the phase transition refreshes the slot immediately, and the central Joe-state announcer retains the snapback wording, danger category, live Joe bearing, and remaining tactic lifetime if investigation is announced again.
+- Preserved the caption queue cap, ordinary investigation copy, opening retreat caption, top recommit banner, lower lateral action, Joe Attention panel, tactic timing and target, AI, audio, route guidance, map, and all other tactic paths.
+- The first replay correctly exposed an ordering regression: a later investigation announcement overwrote the transition cue. That rejected capture and an empty browser-start artifact were removed before the central ownership fix was replayed.
+- The successful official 1,122-frame run landed in `false_retreat / snapback` with 0.98 seconds remaining. Its only visible center card was `MOWER SNAPS BACK INTO YOUR ROUTE — RIGHT` with category `danger`; `JOE TURNS TOWARD A SOUND` was absent from the full queued caption state.
+- Direct inspection confirmed the state–direction–action hierarchy remains clear and leaves the hedge gap, Field Log route, reticle, Joe Attention panel, and course map unobstructed. The run averaged 2.48 ms of canvas rendering, ended on a 2.2 ms sample, and produced no browser-error artifact.
+- Evidence is recorded in `qa/false-retreat-snapback-direction-polish-2026-08-05.md`. Suggested next refinement: validate the same authored bearing when Joe is left or behind the player; preserve live `directionFromPlayer` ownership and change only positioning if a rear bearing competes with the course-map edge.
+
+## False Retreat cross-input action polish
+
+- Refined the snapback's one-second survival instruction so it names the player's active control instead of asking them to translate `break sideways` under pressure.
+- Keyboard copy resolves the current remapped `move_left` and `move_right` bindings; gamepad copy names `LEFT STICK`; touch copy names `LEFT PAD`. All three retain the same `cross the mower's returning line` counterplay.
+- Kept the instruction on the existing protected bottom rail for exactly the established 1.45-second snapback. No new overlay, input behavior, phase timing, AI change, or movement advantage was added.
+- Replayed the official snapback route with keyboard input. The 1,128-frame capture landed in `false_retreat / snapback` with 0.98 seconds remaining, exported `move_left: A` and `move_right: D`, and rendered `JOE RECOMMITS — A / D SIDEWAYS NOW; cross the mower's returning line.`
+- Direct inspection confirmed the 71-character rail fits comfortably without touching the pause control, while the top reversal banner, dedicated right-bearing danger cue, hedge gap, Field Log route, Joe Attention panel, and course map remain readable.
+- The run averaged 2.29 ms of canvas rendering, ended on a 2.6 ms sample, and produced no browser-error artifact. Evidence is recorded in `qa/false-retreat-cross-input-action-polish-2026-08-05.md`.
+- Suggested next refinement: validate a deliberately long remapped-key pair such as `LEFT ARROW / RIGHT ARROW`; preserve dynamic binding truth and shorten only the trailing counterplay clause if that extreme case approaches the rail boundary.
+
+## False Retreat live-input rail polish
+
+- Audited the cross-input snapback prompt beyond its default keyboard frame. The shared rail already has bounded 15-to-10-pixel fitting, but its selected input copy was stored only once when snapback began.
+- Added a single `falseRetreatSnapbackActionCopy()` source and made the rail resolve it from the current input method on every presentation frame. Switching to controller or touch during the response window now updates the visible instruction immediately.
+- Added a long-binding safeguard: when the remapped left/right label pair exceeds 18 characters, the rail preserves Joe's recommit, the exact controls, and `SIDEWAYS NOW`, dropping only the secondary `cross the mower's returning line` explanation before heavy font shrink would be needed.
+- Reused the same helper at the phase transition so stored message state, visible presentation, and active input begin aligned. Added an inspectable active-tactic `actionRail` contract with text, input method, live-copy flag, and fallback policy.
+- Preserved the 1.45-second lifetime, default full explanation, gamepad/touch wording, bottom-rail geometry, text fitter, threat bearing, banners, input handling, AI, target, movement, and capture behavior.
+- The official 1,122-frame replay landed in `false_retreat / snapback` with 0.98 seconds remaining. Active input, action-rail input, and exported binding-aware text all agreed on keyboard and `A / D`; `liveInputCopy` was `true`.
+- Direct inspection confirmed the ordinary path remains visually identical: the full 71-character rail, authored right danger cue, top recommit banner, hedge opening, Field Log route, Joe Attention panel, and course map all remained clear.
+- The run averaged 2.27 ms of canvas rendering, ended on a 1.8 ms sample, and produced no browser-error artifact. Evidence is recorded in `qa/false-retreat-live-input-rail-polish-2026-08-05.md`.
+- Suggested next refinement: exercise an actual keyboard-to-gamepad handoff during the 1.45-second window on hardware; preserve live input ownership and only add a short debounce if incidental device noise causes prompt flicker.
+
+## False Retreat Joe Attention polish
+
+- Re-audited the complete snapback frame after fixing its world-space hierarchy and found the top-right Joe Attention status still said `VERIFYING DISTURBANCE`, which described a generic investigate mode rather than the active committed mower reversal.
+- Added a compact `SNAPBACK COMMITTED // <time>s` phase status with the authoritative predator-tactic timer and a restrained danger-orange accent. The panel contributes timing only; the top banner, center bearing, and bottom rail continue to own state, direction, and player action.
+- Gave the phase status priority below pursuit lock but above service-gate and generic investigation reads. Ordinary investigations, named field-station signals, search evidence, cadence, crosswind, and all other attention states retain their existing copy and colors.
+- Added the same label, color, exact remaining seconds, and `joe_attention_phase_countdown` presentation contract to active predator-tactic text state.
+- Preserved the attention meter, score projection, composure, Delivery chain, Joe mode, tactic phase duration, target, AI, audio, movement, collision, capture, map, and all other UI geometry.
+- The official 1,107-frame replay landed in `false_retreat / snapback` with 0.98 seconds remaining. The panel rendered `SNAPBACK COMMITTED // 1.0s` at its full 11-pixel target size and exported the same 0.98-second timer with color `#f07441`.
+- Direct inspection confirmed the compact status stays inside the panel and leaves the full state–direction–action hierarchy, hedge opening, route guidance, projection, composure, Delivery, and map readable.
+- The run averaged 2.57 ms of canvas rendering, ended on a 1.9 ms sample, and produced no browser-error artifact. Evidence is recorded in `qa/false-retreat-joe-attention-polish-2026-08-05.md`.
+- Suggested next refinement: inspect the opening False Retreat phase in the Joe Attention panel; preserve the deceptive `FOLLOWING TURF EVIDENCE` source read unless a short retreat countdown materially improves the player's ability to time the opening.
+
+## Cover Shred committed-phase polish
+
+- Applied the predator-tactic attention treatment to Cover Shred without erasing its evidence context. The 1.05-second telegraph retains `FOLLOWING TURF EVIDENCE`; only the physical 2.8-second `shred` phase switches the panel to `CUT LINE CLOSING // <time>s`.
+- The committed status uses the authoritative tactic timer, restrained danger-orange accent, and the same bounded Joe Attention lane as False Retreat. Pursuit lock and unrelated panel priorities remain unchanged.
+- Phase-boundary testing exposed an update-order issue: entering investigate replaced Cover Shred's directional card with generic `JOE TURNS TOWARD A SOUND`. The shared announcer now updates the existing `cover_shred` caption slot to `MOWER CUTS INTO YOUR HIDING LINE` with the cut target's live bearing and remaining duration, so no extra card is added.
+- Added reusable active predator-tactic attention arbitration and exported the active status kind, label, color, exact seconds, and presentation contract under `predatorTactic.attentionPanel`.
+- Preserved telegraph copy, banner suppression, `leave the rough` rail, tactic target and duration, search evidence, Joe AI, detection/capture precedence, mower movement, audio, map, route, and all non-Cover-Shred states.
+- Added `web/test-actions/cover-shred-commit-attention.json`. A telegraph capture confirmed evidence-source preservation; phase-boundary tuning then isolated the first committed frame without allowing Joe's open sightline to cancel the tactic.
+- The successful official 969-frame run landed in `cover_shred / shred` with 2.78 seconds remaining, Joe 19 meters away, and the player still in effective rough. The panel showed `CUT LINE CLOSING // 2.8s`; tactic and panel both exported 2.78 seconds.
+- The only visible center card was `MOWER CUTS INTO YOUR HIDING LINE — RIGHT` with category `danger`; generic investigate copy was absent from the complete queue. The full bottom rail still said to leave the rough, and the top banner remained intentionally deferred.
+- The run averaged 3.10 ms of canvas rendering, ended on a 2.5 ms sample, and produced no browser-error artifact. Evidence is recorded in `qa/cover-shred-committed-phase-polish-2026-08-05.md`.
+- Suggested next refinement: human-playtest the full 2.8-second moving escape rather than the phase boundary; preserve pursuit's higher priority and judge whether the cut-line countdown remains useful once the player starts crossing toward fairway.
+
+## Cover Shred rough-exit resolution polish
+
+- Closed the committed-phase loop with explicit counterplay: once physical shredding begins, quietly leaving effective rough resolves the tactic immediately as `evaded_rough` instead of making the player wait through an obsolete mower path.
+- Added a compact success handoff through the existing channels: `COVER SHRED EVADED // FAIRWAY CLEAR`, `MOWER CUT MISSES THE FAIRWAY`, and a short keep-moving instruction. No additional overlay or persistent HUD element was introduced.
+- Preserved threat priority by evaluating line of sight, audible movement, and point-blank proximity before the rough-exit success. Those states record `contact_cancelled` and return Joe to normal pursuit.
+- Exported the latest predator tactic, outcome, completion/cancellation counters, and outcome rule in `render_game_to_text` so success and failure can be distinguished without reading animation alone.
+- Added a deterministic crouched contact regression that uses the game's own keyboard rebinding flow. It confirmed the solid hedge's live right-lane escape cue, then confirmed that Joe's sightline at 8 meters correctly overrides the attempted rough exit and records `contact_cancelled`.
+- The completed capture averaged 0.33 ms of canvas rendering, ended on a 0.3 ms sample, and produced no browser-error artifact. The defeat presentation remained centered and legible at 1280×720. Evidence is recorded in `qa/cover-shred-rough-exit-resolution-polish-2026-08-05.md`.
+
+## Cover Shred egress-routing fairness polish
+
+- Replayed the previously failed Audit Row escape and traced the conflict to the right hedge wing: the direct left crossing is solid, while the shortest valid fairway path is forward around the wing and then left.
+- Added a bounded axis-route planner that samples every 1.4 meters against the same inflated collision footprints used by player movement. Routes must reach non-rough ground within 28 meters.
+- Turned the stored route into a live action rail. Keyboard instructions resolve current remapped bindings (`W FORWARD, THEN A LEFT` in the audited route); controller and touch use the same path through left-stick and left-pad wording.
+- Shortened the rail to `COVER SHRED // ...` after direct screenshot inspection exposed both redundant state copy and a legacy dash-encoding blemish. Existing banner suppression, threat direction, and Joe Attention countdown retain their lanes.
+- A full crouched replay followed the 13.85-meter route and reached fairway at `(49, 127)`, proving the geometry plan. Joe nevertheless closed from the tactic's 28.54-meter start into actionable visibility before completion, so pursuit correctly recorded `contact_cancelled`.
+- Extended eligibility from physical reachability to time safety. Estimated crouched travel plus a 0.22-second reaction allowance is compared with Joe's real telegraph/commit speeds and the current concealment/light-adjusted moving-crouch visibility envelope. Unsafe cases defer for 0.8 seconds and retry without presenting tactic UI.
+- Final official replay at the old trigger point remained in ordinary search at 27 meters with no active tactic, `coverShreds: 0`, `coverShredDeferrals: 1`, and `lastCoverShredDeferral: no_collision_clear_time_safe_egress`.
+- The final screenshot preserved the evidence banner, Joe Attention source, grounded Joe label, Field Log route, world art, and course map. Rendering averaged 2.9 ms, ended at 3.3 ms, and produced no browser-error artifact. Evidence is recorded in `qa/cover-shred-egress-routing-fairness-polish-2026-08-05.md`.
+- Suggested next refinement: capture a naturally time-safe Cover Shred at more than the planner's required Joe distance and verify the shortened live rail across keyboard plus one alternate input device; do not lower the new eligibility threshold merely to force a nearby test fixture.
+
+## Shared text-encoding presentation polish
+
+- Direct gameplay screenshot review exposed visible mojibake in otherwise finished messages, including a three-character `â€”` sequence where one em dash belonged. The project source is predominantly valid UTF-8, while the local Python static server serves `application/javascript` without a charset.
+- Added an ASCII-escaped repair table for the common punctuation used throughout the game: em/en dashes, bullets, directional arrows and triangles, curly apostrophes, ellipses, comparison signs, multiplication signs, and non-breaking spaces.
+- Applied normalization before shared canvas drawing, fitted-text measurement, subtitle-card measurement, and world-marker measurement so repaired strings do not drift outside frames or leave oversized cards.
+- Applied the same normalization through the `render_game_to_text` JSON replacer, keeping screenshots and inspectable state aligned without mutating saved career/settings data or authored gameplay state.
+- Replaced the one genuinely double-encoded Cadence legend separator with an ASCII `//` divider rather than depending on runtime repair.
+- Official settings capture confirmed the Key Bindings footer renders single, evenly spaced bullet glyphs and remains inside the modal. The full gameplay replay confirmed both the trail bearing and bottom instruction render a single clean em dash.
+- Node inspection of the exported gameplay message found exactly one non-ASCII code point, `U+2014`; no mojibake code points remained. Rendering averaged 3.25 ms, ended at 3.1 ms, and produced no browser-error artifact.
+- Evidence is recorded in `qa/shared-text-encoding-presentation-polish-2026-08-05.md`.
+- Suggested next refinement: audit an unlocked portfolio/result screen containing arrows and multiplication signs; keep normalization at the shared boundary and extend the escaped table only for a glyph proven broken in a real capture.
+
+## Compact HUD glyph normalization polish
+
+- Follow-up screenshot review found one remaining replacement glyph in the main gameplay HUD: the unfiled Change Request token rendered as `CR � +650` instead of `CR ◇ +650`.
+- Enumerated the complete non-ASCII glyph set authored in `web/game.js` rather than adding only one fix. Extended the ASCII-escaped normalization table for `◇`, `✓`, `○`, `●`, `▣`, `▼`, `▲`, `Ⅱ`, curly double quotes, `⇩`, and `⌂`, including Windows-1252 and control-code variants.
+- Preserved all earlier punctuation repair, pre-measurement sizing, subtitle frames, world-marker geometry, JSON normalization, gameplay logic, and saved data.
+- Official onboarding gameplay capture at 28 meters showed a clean `CR ◇ +650` reward token, a clean `◀ DRAIN VALVE // 76m` off-screen marker, intact objective hierarchy, and no text overflow.
+- Recursive inspection of every exported string found zero `U+FFFD` replacement characters and zero remaining `â` or `Ã` mojibake markers. The normalized state retained the single-glyph `◀` marker text.
+- Rendering averaged 4.9 ms, ended at 2.4 ms, and produced no browser-error artifact. Evidence is recorded in `qa/compact-hud-glyph-normalization-polish-2026-08-05.md`.
+- Suggested next refinement: capture the secured Change Request state to confirm `CR ✓ +650` visually; preserve the shared table and avoid substituting ASCII if the checked icon renders correctly.
