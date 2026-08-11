@@ -432,7 +432,7 @@
     {
       id: "release",
       expression: 4,
-      tone: "RELEASE MANAGER",
+      tone: "GO-LIVE CERTAIN",
       first: [
         "You tried to deploy through the rough.",
         "Your escape missed the release window.",

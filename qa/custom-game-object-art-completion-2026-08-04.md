@@ -16,8 +16,8 @@ The visible course-object audit is complete. Every drawable authored obstacle re
 ## Generated assets
 
 - Runtime alpha: `web/assets/rough-cut-course-boundary-kit-v1.png`
-- Preserved chroma source: `web/assets/rough-cut-course-boundary-kit-v1-chroma.png`
-- Prompt and cell metadata: `web/assets/rough-cut-course-boundary-kit-v1.md`
+- Preserved chroma source: `assets/source-atlases/rough-cut-course-boundary-kit-v1-chroma.png`
+- Prompt and cell metadata: `assets/source-atlases/rough-cut-course-boundary-kit-v1.md`
 
 The final generation prompt is recorded verbatim in the metadata file. The runtime image was inspected after transparency conversion; both objects remain isolated, their authored ground bases are intact, and no magenta fringe is visible.
 

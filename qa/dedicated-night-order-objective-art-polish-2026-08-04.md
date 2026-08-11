@@ -8,7 +8,7 @@ The three newly mandatory field checks now use their own high-resolution ImageGe
 - Field Log: lit iron ledger kiosk, open field log, and mechanical stamp lever.
 - Release Review: blackened-brass review gong, signature clipboard, acceptance lever, and amber task lamp.
 
-The generated chroma source and transparent runtime atlas are preserved beside a full prompt and cell manifest in `web/assets/rough-cut-night-order-objectives-v1.md`.
+The generated chroma source and prompt/cell manifest are preserved in `assets/source-atlases/rough-cut-night-order-objectives-v1.md`; the transparent runtime atlas remains in `web/assets`.
 
 ## Integration truth
 

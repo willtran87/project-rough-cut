@@ -8,6 +8,19 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body {
   width: 100%;
@@ -73,7 +86,7 @@ body {
 
 @media (orientation: portrait) and (pointer: coarse) {
   #game-shell::after {
-    content: "↻  ROTATE DEVICE FOR FULL-SIZE TOUCH CONTROLS";
+    content: "\21BB  ROTATE DEVICE FOR FULL-SIZE TOUCH CONTROLS";
     display: block;
     position: absolute;
     left: 50%;

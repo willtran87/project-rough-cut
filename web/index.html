@@ -4,23 +4,43 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#071109">
+  <meta name="color-scheme" content="dark">
   <meta
     name="description"
     content="Rough Cut is a high-detail pixel-art golf-course horror game starring Joe and his relentless mower."
   >
-  <title>Rough Cut — A Joe Horror Game</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Rough Cut — A Joe Horror Game">
+  <meta
+    property="og:description"
+    content="Cross a haunted executive golf course, complete the Night Order, and survive Joe's final acceptance review."
+  >
+  <meta property="og:url" content="https://willtran87.github.io/project-rough-cut/">
+  <meta property="og:image" content="https://willtran87.github.io/project-rough-cut/assets/rough-cut-opening.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://willtran87.github.io/project-rough-cut/">
+  <title>Rough Cut &mdash; A Joe Horror Game</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050b07'/%3E%3Cpath d='M4 4h24v24H4z' fill='%23142618' stroke='%23d87532' stroke-width='2'/%3E%3Cpath d='M8 22L23 7l2 3L10 25z' fill='%23e9dfb7'/%3E%3C/svg%3E">
+  <link rel="preload" as="image" href="./assets/rough-cut-opening.png" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/rough-cut-grass-curtain.png" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main id="game-shell">
+    <p id="game-instructions" class="visually-hidden">
+      Rough Cut is controlled from the keyboard, a standard gamepad, or the on-screen touch controls. Press F to toggle fullscreen. The opening screen explains the active controls before play begins.
+    </p>
     <canvas
       id="game"
       width="1280"
       height="720"
       tabindex="0"
       aria-label="Rough Cut horror game: opening cutscene, menus, and playable Hole 1"
+      aria-describedby="game-instructions game-status"
     ></canvas>
+    <p id="game-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+      Rough Cut is preparing the opening incident.
+    </p>
   </main>
   <noscript>Rough Cut requires JavaScript to run.</noscript>
   <script src="./joe-dialogue.js"></script>

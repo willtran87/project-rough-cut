@@ -7,7 +7,7 @@ Replace the visibly repeated and stretched hedge-wing crops with one coherent hi
 ## Image generation
 
 - Mode: built-in ImageGen, using `rough-cut-expanded-course-kit-v1.png` as the strict style reference.
-- Chroma source: `web/assets/rough-cut-hedge-tunnel-v1-chroma.png`.
+- Chroma source: `assets/source-atlases/rough-cut-hedge-tunnel-v1-chroma.png`.
 - Production alpha asset: `web/assets/rough-cut-hedge-tunnel-v1.png`.
 - Generated size: 2172×724.
 - Alpha crop: x 63, y 119, width 2054, height 473.

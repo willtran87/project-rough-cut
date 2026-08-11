@@ -2,6 +2,9 @@
 
 (() => {
   const canvas = document.querySelector("#game");
+  const accessibleStatus =
+    document.querySelector("#game-status");
+  let lastAccessibleStatus = "";
   let ctx = canvas.getContext("2d", { alpha: false });
   const mainCtx = ctx;
   const WIDTH = canvas.width;
@@ -28,6 +31,12 @@
       0.5;
   const NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS =
     8;
+  const NAVIGATION_COLLISION_RECOVERY_HOLD_SECONDS =
+    2.4;
+  const NAVIGATION_COLLISION_RECOVERY_REACHED_DISTANCE =
+    0.75;
+  const NAVIGATION_COLLISION_RECOVERY_BOUNDARY_GUTTER =
+    0.5;
   const screenTextureBuffer =
     document.createElement("canvas");
   screenTextureBuffer.width = WIDTH;
@@ -46,6 +55,8 @@
     false;
   let miniMapRenderedAt =
     -Infinity;
+  let miniMapCriticalStateKey =
+    "";
   const courseBackdropBuffer =
     document.createElement("canvas");
   courseBackdropBuffer.width = WIDTH;
@@ -75,6 +86,24 @@
     lastPresentationMs:
       TARGET_FRAME_MS,
     presentationSlowFrames: 0,
+    maxRenderMs: 0,
+    maxPresentationMs:
+      TARGET_FRAME_MS,
+    renderLongFrames: 0,
+    presentationLongFrames: 0,
+    renderSamples: [],
+    presentationSamples: [],
+    tierChanges: 0,
+    lastTierChangeFrame: 0,
+    window: "startup",
+    startupSnapshot: null,
+    zonePerformance: {},
+    resourceHighWater: {},
+    lifecycle: {
+      visibilityAutoPauses: 0,
+      audioSuspends: 0,
+      explicitResumes: 0,
+    },
   };
   const renderFrameCache = {
     cameraFrame: null,
@@ -280,6 +309,8 @@
     { id: "caption_background", group: "presentation", label: "CAPTION BACKDROP", key: "captionBackground", type: "slider", min: 0, max: 1, step: 0.1 },
     { id: "threat_captions", group: "presentation", label: "THREAT CAPTIONS", key: "threatCaptions", type: "toggle" },
     { id: "reduced_motion", group: "presentation", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
+    { id: "effects_density", group: "presentation", label: "ATMOSPHERE DENSITY", key: "effectsDensity", type: "slider", min: 0.5, max: 1, step: 0.25 },
+    { id: "navigation_contrast", group: "presentation", label: "HIGH-CONTRAST ROUTES", key: "highContrastNavigation", type: "toggle" },
   ];
   const KEYBOARD_BINDING_ROWS = [
     { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
@@ -319,137 +350,272 @@
   let preferencesStorageAvailable = true;
   let careerStorageAvailable = true;
 
-  const art = new Image();
-  art.src = "./assets/rough-cut-opening.png";
-  const grassArt = new Image();
-  grassArt.src = "./assets/rough-cut-grass-curtain.png";
-  const nightSkyArt = new Image();
-  nightSkyArt.src = "./assets/rough-cut-night-sky-v2.png";
-  const moonArt = new Image();
-  moonArt.src = "./assets/rough-cut-moon-v1.png";
-  const holeArt = new Image();
-  holeArt.src = "./assets/rough-cut-course-ground-v4.png";
-  const cloudAtlasArt = new Image();
-  cloudAtlasArt.src = "./assets/rough-cut-cloud-atlas-v2.png";
-  const distantTreeLineArt = new Image();
-  distantTreeLineArt.src = "./assets/rough-cut-distant-treeline-v1.png";
-  const distantClubhouseArt = new Image();
-  distantClubhouseArt.src = "./assets/rough-cut-distant-clubhouse-v1.png";
-  const farRidgeArt = new Image();
-  farRidgeArt.src = "./assets/rough-cut-far-ridge-v1.png";
-  const distantVillasArt = new Image();
-  distantVillasArt.src = "./assets/rough-cut-distant-villas-v1.png";
-  const estatePerimeterArt =
-    new Image();
-  estatePerimeterArt.src =
-    "./assets/rough-cut-estate-perimeter-v2.png";
-  const rearServiceBoundaryArt =
-    new Image();
-  rearServiceBoundaryArt.src =
-    "./assets/rough-cut-rear-service-boundary-v1.png";
-  const southServiceGateArt =
-    new Image();
-  southServiceGateArt.src =
-    "./assets/rough-cut-south-service-gate-v1.png";
-  const signageAtlasArt = new Image();
-  signageAtlasArt.src = "./assets/rough-cut-signage-atlas-v1.png";
-  const bunkerAtlasArt = new Image();
-  bunkerAtlasArt.src = "./assets/rough-cut-bunker-atlas-v2.png";
-  const joeMowerArt = new Image();
-  joeMowerArt.src = "./assets/joe-mower-v1.png";
-  const joeMowerAnimatedArt = new Image();
-  joeMowerAnimatedArt.src = "./assets/joe-mower-animated-v1.png";
-  const joeMowerErraticHeadArt = new Image();
-  joeMowerErraticHeadArt.src = "./assets/joe-mower-erratic-head-v1.png";
-  const shadowJoeArt = new Image();
-  shadowJoeArt.src = "./assets/rough-cut-shadow-joe-v1.png";
-  const horrorFlashJoeArt = new Image();
-  horrorFlashJoeArt.src =
-    "./assets/rough-cut-horror-flash-joe-v2.png";
-  const screenTearCourseArt = new Image();
-  screenTearCourseArt.src =
-    "./assets/rough-cut-screen-tear-course-v2.png";
-  const fieldKitArt = new Image();
-  fieldKitArt.src = "./assets/rough-cut-field-kit-v1.png";
-  const courseObstacleArt = new Image();
-  courseObstacleArt.src = "./assets/rough-cut-course-obstacle-kit-v1.png";
-  const expandedCourseArt = new Image();
-  expandedCourseArt.src = "./assets/rough-cut-expanded-course-kit-v1.png";
-  const hedgeTunnelArt = new Image();
-  hedgeTunnelArt.src = "./assets/rough-cut-hedge-tunnel-v1.png";
-  const maintenanceShedArt = new Image();
-  maintenanceShedArt.src = "./assets/rough-cut-maintenance-shed-v2.png";
-  const hedgeHideArt = new Image();
-  hedgeHideArt.src = "./assets/rough-cut-hedge-hide-v2.png";
-  const stoneCoverArt = new Image();
-  stoneCoverArt.src = "./assets/rough-cut-stone-cover-v2.png";
-  const serviceCartArt = new Image();
-  serviceCartArt.src = "./assets/rough-cut-service-cart-v2.png";
-  const deadGreenSceneryArt = new Image();
-  deadGreenSceneryArt.src = "./assets/rough-cut-dead-green-kit-v1.png";
-  const foregroundFringeArt = new Image();
-  foregroundFringeArt.src = "./assets/rough-cut-foreground-fringe-v1.png";
-  const defeatArt = new Image();
-  defeatArt.src = "./assets/rough-cut-joe-capture-v1.png";
-  const shedEscapeTableauArt =
-    new Image();
-  shedEscapeTableauArt.src =
-    "./assets/rough-cut-shed-escape-tableau-v1.png";
-  const drainEscapeTableauArt =
-    new Image();
-  drainEscapeTableauArt.src =
-    "./assets/rough-cut-drain-escape-tableau-v1.png";
-  const joeExpressionArt = new Image();
-  joeExpressionArt.src = "./assets/rough-cut-joe-expressions-v1.png";
-  const drainArt = new Image();
-  drainArt.src = "./assets/rough-cut-drain-culvert-v1.png";
-  const pathLanternArt = new Image();
-  pathLanternArt.src =
-    "./assets/rough-cut-path-lantern-atlas-v1.png";
-  const interactablePropArt =
-    new Image();
-  interactablePropArt.src =
-    "./assets/rough-cut-interactable-props-v1.png";
-  const courseMechanicsArt =
-    new Image();
-  courseMechanicsArt.src =
-    "./assets/rough-cut-course-mechanics-atlas-v1.png";
-  const nightOrderObjectiveArt =
-    new Image();
-  nightOrderObjectiveArt.src =
-    "./assets/rough-cut-night-order-objectives-v1.png";
-  const turfEvidenceArt =
-    new Image();
-  turfEvidenceArt.src =
-    "./assets/rough-cut-turf-evidence-atlas-v1.png";
-  const courseClutterArt =
-    new Image();
-  courseClutterArt.src =
-    "./assets/rough-cut-course-clutter-v1.png";
-  const courseVergeArt =
-    new Image();
-  courseVergeArt.src =
-    "./assets/rough-cut-verge-atlas-v1.png";
-  const courseBoundaryKitArt =
-    new Image();
-  courseBoundaryKitArt.src =
-    "./assets/rough-cut-course-boundary-kit-v1.png";
-  const footingHazardArt =
-    new Image();
-  footingHazardArt.src =
-    "./assets/rough-cut-footing-hazards-v1.png";
-  const wetTurfArt =
-    new Image();
-  wetTurfArt.src =
-    "./assets/rough-cut-wet-turf-atlas-v1.png";
-  const movingGolfBallArt =
-    new Image();
-  movingGolfBallArt.src =
-    "./assets/rough-cut-moving-golf-ball-atlas-v1.png";
-  const courseEchoArt =
-    new Image();
-  courseEchoArt.src =
-    "./assets/rough-cut-course-echo-atlas-v1.png";
+  const assetLoading = {
+    entries: [],
+    requestedPhases: new Set(),
+    errors: [],
+    queue: [],
+    activeLoads: 0,
+    maxConcurrentLoads: 4,
+    startedAt: performance.now(),
+  };
+
+  function startManagedImage(entry) {
+    if (
+      entry.status !== "pending" &&
+      entry.status !== "queued"
+    ) {
+      return;
+    }
+    entry.status = "loading";
+    entry.startedAt = performance.now();
+    assetLoading.activeLoads += 1;
+    entry.image.src = entry.src;
+  }
+
+  function pumpAssetQueue() {
+    while (
+      assetLoading.activeLoads <
+        assetLoading.maxConcurrentLoads &&
+      assetLoading.queue.length > 0
+    ) {
+      const entry =
+        assetLoading.queue.shift();
+      startManagedImage(entry);
+    }
+  }
+
+  function settleManagedImage(
+    entry,
+    status,
+  ) {
+    if (entry.status !== "loading") {
+      return;
+    }
+    entry.status = status;
+    entry.settledAt = performance.now();
+    assetLoading.activeLoads =
+      Math.max(
+        0,
+        assetLoading.activeLoads - 1,
+      );
+    pumpAssetQueue();
+    if (
+      (
+        entry.phase === "course" ||
+        entry.phase === "results"
+      ) &&
+      gameplayAssetSummary().ready
+    ) {
+      window.setTimeout(() => {
+        if (
+          state.mode === "menu" &&
+          state.pendingCourseStart
+        ) {
+          beginFirstHoleFromMenu();
+        }
+      }, 0);
+    }
+  }
+
+  function managedImage(label, src, phase = "course") {
+    const image = new Image();
+    image.decoding = "async";
+    image.fetchPriority = phase === "boot" ? "high" : "low";
+    const entry = {
+      label,
+      src,
+      phase,
+      image,
+      status: "pending",
+      startedAt: null,
+      settledAt: null,
+    };
+    image.addEventListener(
+      "load",
+      () => {
+        if (
+          typeof image.decode ===
+          "function"
+        ) {
+          image.decode().then(
+            () =>
+              settleManagedImage(
+                entry,
+                "loaded",
+              ),
+            () =>
+              settleManagedImage(
+                entry,
+                "loaded",
+              ),
+          );
+        } else {
+          settleManagedImage(
+            entry,
+            "loaded",
+          );
+        }
+      },
+      { once: true },
+    );
+    image.addEventListener(
+      "error",
+      () => {
+        assetLoading.errors.push({
+          label,
+          src,
+          phase,
+        });
+        settleManagedImage(
+          entry,
+          "failed",
+        );
+      },
+      { once: true },
+    );
+    assetLoading.entries.push(entry);
+    return image;
+  }
+
+  function loadAssetPhase(phase) {
+    assetLoading.requestedPhases.add(
+      phase,
+    );
+    for (
+      let index = 0;
+      index < assetLoading.entries.length;
+      index += 1
+    ) {
+      const entry =
+        assetLoading.entries[index];
+      if (
+        entry.phase === phase &&
+        entry.status === "pending"
+      ) {
+        entry.status = "queued";
+        assetLoading.queue.push(entry);
+      }
+    }
+    pumpAssetQueue();
+  }
+
+  function assetPhaseSummary(phase) {
+    const entries =
+      assetLoading.entries.filter(
+        (entry) => entry.phase === phase,
+      );
+    const loaded = entries.filter(
+      (entry) => entry.status === "loaded",
+    ).length;
+    const failed = entries.filter(
+      (entry) => entry.status === "failed",
+    ).length;
+    const settled = loaded + failed;
+    const total = entries.length;
+    return {
+      phase,
+      requested:
+        assetLoading.requestedPhases.has(
+          phase,
+        ),
+      total,
+      loaded,
+      failed,
+      settled,
+      percent:
+        total > 0
+          ? Math.round(
+              settled / total * 100,
+            )
+          : 100,
+      ready:
+        total === 0 ||
+        (
+          assetLoading.requestedPhases.has(
+            phase,
+          ) &&
+          settled === total
+        ),
+    };
+  }
+
+  function gameplayAssetSummary() {
+    const course =
+      assetPhaseSummary("course");
+    const results =
+      assetPhaseSummary("results");
+    const total =
+      course.total + results.total;
+    const settled =
+      course.settled + results.settled;
+    return {
+      total,
+      settled,
+      loaded:
+        course.loaded + results.loaded,
+      failed:
+        course.failed + results.failed,
+      percent:
+        total > 0
+          ? Math.round(
+              settled / total * 100,
+            )
+          : 100,
+      ready:
+        course.ready && results.ready,
+    };
+  }
+
+  const art = managedImage("opening", "./assets/rough-cut-opening.png", "boot");
+  const grassArt = managedImage("grass curtain", "./assets/rough-cut-grass-curtain.png", "boot");
+  const nightSkyArt = managedImage("night sky", "./assets/rough-cut-night-sky-v2.png");
+  const moonArt = managedImage("moon", "./assets/rough-cut-moon-v1.png");
+  const holeArt = managedImage("course ground", "./assets/rough-cut-course-ground-v4.png");
+  const cloudAtlasArt = managedImage("cloud atlas", "./assets/rough-cut-cloud-atlas-v2.png");
+  const distantTreeLineArt = managedImage("distant tree line", "./assets/rough-cut-distant-treeline-v1.png");
+  const distantClubhouseArt = managedImage("distant clubhouse", "./assets/rough-cut-distant-clubhouse-v1.png");
+  const farRidgeArt = managedImage("far ridge", "./assets/rough-cut-far-ridge-v1.png");
+  const distantVillasArt = managedImage("distant villas", "./assets/rough-cut-distant-villas-v1.png");
+  const estatePerimeterArt = managedImage("estate perimeter", "./assets/rough-cut-estate-perimeter-v2.png");
+  const rearServiceBoundaryArt = managedImage("rear service boundary", "./assets/rough-cut-rear-service-boundary-v1.png");
+  const southServiceGateArt = managedImage("south service gate", "./assets/rough-cut-south-service-gate-v1.png");
+  const signageAtlasArt = managedImage("signage", "./assets/rough-cut-signage-atlas-v1.png");
+  const bunkerAtlasArt = managedImage("bunkers", "./assets/rough-cut-bunker-atlas-v2.png");
+  const joeMowerArt = managedImage("Joe mower base", "./assets/joe-mower-v1.png");
+  const joeMowerAnimatedArt = managedImage("Joe mower animation", "./assets/joe-mower-animated-v1.png");
+  const joeMowerErraticHeadArt = managedImage("Joe search animation", "./assets/joe-mower-erratic-head-v1.png");
+  const shadowJoeArt = managedImage("Shadow Joe", "./assets/rough-cut-shadow-joe-v1.png");
+  const horrorFlashJoeArt = managedImage("horror flash", "./assets/rough-cut-horror-flash-joe-v2.png");
+  const screenTearCourseArt = managedImage("screen tear", "./assets/rough-cut-screen-tear-course-v2.png");
+  const fieldKitArt = managedImage("field kit", "./assets/rough-cut-field-kit-v1.png");
+  const courseObstacleArt = managedImage("course obstacles", "./assets/rough-cut-course-obstacle-kit-v1.png");
+  const expandedCourseArt = managedImage("expanded course", "./assets/rough-cut-expanded-course-kit-v1.png");
+  const hedgeTunnelArt = managedImage("hedge tunnel", "./assets/rough-cut-hedge-tunnel-v1.png");
+  const maintenanceShedArt = managedImage("maintenance shed", "./assets/rough-cut-maintenance-shed-v2.png");
+  const hedgeHideArt = managedImage("hedge hide", "./assets/rough-cut-hedge-hide-v2.png");
+  const stoneCoverArt = managedImage("stone cover", "./assets/rough-cut-stone-cover-v2.png");
+  const serviceCartArt = managedImage("service cart", "./assets/rough-cut-service-cart-v2.png");
+  const deadGreenSceneryArt = managedImage("dead green scenery", "./assets/rough-cut-dead-green-kit-v1.png");
+  const foregroundFringeArt = managedImage("foreground fringe", "./assets/rough-cut-foreground-fringe-v1.png");
+  const defeatArt = managedImage("defeat tableau", "./assets/rough-cut-joe-capture-v1.png", "results");
+  const shedEscapeTableauArt = managedImage("shed escape tableau", "./assets/rough-cut-shed-escape-tableau-v1.png", "results");
+  const drainEscapeTableauArt = managedImage("drain escape tableau", "./assets/rough-cut-drain-escape-tableau-v1.png", "results");
+  const joeExpressionArt = managedImage("Joe expressions", "./assets/rough-cut-joe-expressions-v1.png", "results");
+  const drainArt = managedImage("drain culvert", "./assets/rough-cut-drain-culvert-v1.png");
+  const pathLanternArt = managedImage("path lanterns", "./assets/rough-cut-path-lantern-atlas-v1.png");
+  const interactablePropArt = managedImage("interactable props", "./assets/rough-cut-interactable-props-v1.png");
+  const courseMechanicsArt = managedImage("course mechanics", "./assets/rough-cut-course-mechanics-atlas-v1.png");
+  const nightOrderObjectiveArt = managedImage("Night Order objectives", "./assets/rough-cut-night-order-objectives-v1.png");
+  const turfEvidenceArt = managedImage("turf evidence", "./assets/rough-cut-turf-evidence-atlas-v1.png");
+  const courseClutterArt = managedImage("course clutter", "./assets/rough-cut-course-clutter-v1.png");
+  const courseVergeArt = managedImage("course verge", "./assets/rough-cut-verge-atlas-v1.png");
+  const courseBoundaryKitArt = managedImage("course boundary", "./assets/rough-cut-course-boundary-kit-v1.png");
+  const footingHazardArt = managedImage("footing hazards", "./assets/rough-cut-footing-hazards-v1.png");
+  const wetTurfArt = managedImage("wet turf", "./assets/rough-cut-wet-turf-atlas-v1.png");
+  const movingGolfBallArt = managedImage("moving golf ball", "./assets/rough-cut-moving-golf-ball-atlas-v1.png");
+  const courseEchoArt = managedImage("Course Echo", "./assets/rough-cut-course-echo-atlas-v1.png");
+  loadAssetPhase("boot");
   const grassBuffer = document.createElement("canvas");
   grassBuffer.width = WIDTH;
   grassBuffer.height = HEIGHT;
@@ -504,22 +670,28 @@
   }
 
   function effectQualityScale() {
+    const preferenceScale =
+      Number.isFinite(
+        state.effectsDensity,
+      )
+        ? state.effectsDensity
+        : 1;
     if (state.reducedMotion) {
-      return 0.48;
+      return 0.48 * preferenceScale;
     }
     if (
       runtimePerformance.tier ===
       "low"
     ) {
-      return 0.46;
+      return 0.46 * preferenceScale;
     }
     if (
       runtimePerformance.tier ===
       "balanced"
     ) {
-      return 0.72;
+      return 0.72 * preferenceScale;
     }
-    return 1;
+    return preferenceScale;
   }
 
   function recordRenderPerformance(
@@ -527,8 +699,29 @@
   ) {
     const performanceState =
       runtimePerformance;
+    const previousTier =
+      performanceState.tier;
     performanceState.lastRenderMs =
       renderMs;
+    performanceState.maxRenderMs =
+      Math.max(
+        performanceState.maxRenderMs,
+        renderMs,
+      );
+    performanceState.renderSamples.push(
+      renderMs,
+    );
+    if (
+      performanceState.renderSamples
+        .length > 240
+    ) {
+      performanceState.renderSamples
+        .shift();
+    }
+    if (renderMs > 24) {
+      performanceState.renderLongFrames +=
+        1;
+    }
     performanceState.renderAverageMs =
       lerp(
         performanceState
@@ -589,6 +782,18 @@
       performanceState.recoveryFrames =
         0;
     }
+    if (
+      previousTier !==
+      performanceState.tier
+    ) {
+      performanceState.tierChanges +=
+        1;
+      performanceState.lastTierChangeFrame =
+        performanceState.renderedFrames;
+    }
+    recordGameplayRuntimeHealth(
+      renderMs,
+    );
   }
 
   function recordPresentationPerformance(
@@ -599,6 +804,30 @@
       intervalMs > 100
     ) {
       return;
+    }
+    const previousTier =
+      runtimePerformance.tier;
+    runtimePerformance.maxPresentationMs =
+      Math.max(
+        runtimePerformance
+          .maxPresentationMs,
+        intervalMs,
+      );
+    runtimePerformance
+      .presentationSamples.push(
+        intervalMs,
+      );
+    if (
+      runtimePerformance
+        .presentationSamples.length >
+      240
+    ) {
+      runtimePerformance
+        .presentationSamples.shift();
+    }
+    if (intervalMs > 34) {
+      runtimePerformance
+        .presentationLongFrames += 1;
     }
     runtimePerformance
       .lastPresentationMs =
@@ -641,6 +870,211 @@
       runtimePerformance
         .recoveryFrames = 0;
     }
+    if (
+      previousTier !==
+      runtimePerformance.tier
+    ) {
+      runtimePerformance.tierChanges +=
+        1;
+      runtimePerformance.lastTierChangeFrame =
+        runtimePerformance.renderedFrames;
+    }
+  }
+
+  function performancePercentile(
+    samples,
+    percentile,
+  ) {
+    if (samples.length === 0) {
+      return 0;
+    }
+    const sorted = samples
+      .slice()
+      .sort((a, b) => a - b);
+    const index = Math.min(
+      sorted.length - 1,
+      Math.max(
+        0,
+        Math.ceil(
+          sorted.length * percentile,
+        ) - 1,
+      ),
+    );
+    return sorted[index];
+  }
+
+  /**
+   * Records bounded per-zone timing and transient-resource high-water marks.
+   * This keeps long-course regressions attributable without adding work to
+   * gameplay systems or retaining unbounded histories.
+   */
+  function recordGameplayRuntimeHealth(
+    renderMs,
+  ) {
+    if (
+      runtimePerformance.window !==
+        "gameplay" ||
+      state.mode !== "first_hole" ||
+      !state.hole
+    ) {
+      return;
+    }
+    const zoneId = courseZoneAt(
+      state.player.y,
+    ).id;
+    let zone =
+      runtimePerformance
+        .zonePerformance[zoneId];
+    if (!zone) {
+      zone = {
+        frames: 0,
+        totalRenderMs: 0,
+        maxRenderMs: 0,
+        longFrames: 0,
+        samples: [],
+      };
+      runtimePerformance
+        .zonePerformance[zoneId] =
+        zone;
+    }
+    zone.frames += 1;
+    zone.totalRenderMs += renderMs;
+    zone.maxRenderMs = Math.max(
+      zone.maxRenderMs,
+      renderMs,
+    );
+    zone.longFrames +=
+      renderMs > 24 ? 1 : 0;
+    zone.samples.push(renderMs);
+    if (zone.samples.length > 120) {
+      zone.samples.shift();
+    }
+
+    const counts = {
+      worldEffects:
+        state.hole.worldEffects.length,
+      worldParticles:
+        state.hole.worldParticles.length,
+      screenParticles:
+        state.hole.screenParticles.length,
+      groundResponses:
+        state.hole.groundResponses.length,
+      turfMarks:
+        state.hole.turfMarks.length,
+      captions:
+        state.hole.captions.length,
+      recoverableBalls:
+        state.hole.recoverableBalls.length,
+      layeredEntities:
+        layeredCourseEntityCount,
+      atlasCells:
+        atlasCellCache.size,
+    };
+    const names = Object.keys(counts);
+    for (
+      let index = 0;
+      index < names.length;
+      index += 1
+    ) {
+      const name = names[index];
+      runtimePerformance
+        .resourceHighWater[name] =
+        Math.max(
+          runtimePerformance
+            .resourceHighWater[name] ||
+            0,
+          counts[name],
+        );
+    }
+  }
+
+  /**
+   * Produces compact, bounded timing summaries for release diagnostics.
+   */
+  function zonePerformanceSummary() {
+    return COURSE_ZONES.map((zone) => {
+      const sample =
+        runtimePerformance
+          .zonePerformance[zone.id];
+      if (!sample) {
+        return {
+          id: zone.id,
+          frames: 0,
+          averageRenderMs: 0,
+          p95RenderMs: 0,
+          maxRenderMs: 0,
+          longFrames: 0,
+        };
+      }
+      return {
+        id: zone.id,
+        frames: sample.frames,
+        averageRenderMs: Number(
+          (
+            sample.totalRenderMs /
+            Math.max(1, sample.frames)
+          ).toFixed(2),
+        ),
+        p95RenderMs: Number(
+          performancePercentile(
+            sample.samples,
+            0.95,
+          ).toFixed(2),
+        ),
+        maxRenderMs: Number(
+          sample.maxRenderMs.toFixed(2),
+        ),
+        longFrames: sample.longFrames,
+      };
+    });
+  }
+
+  function beginGameplayPerformanceWindow() {
+    runtimePerformance.startupSnapshot = {
+      renderedFrames:
+        runtimePerformance.renderedFrames,
+      maxRenderMs: Number(
+        runtimePerformance.maxRenderMs.toFixed(
+          2,
+        ),
+      ),
+      p95RenderMs: Number(
+        performancePercentile(
+          runtimePerformance.renderSamples,
+          0.95,
+        ).toFixed(2),
+      ),
+      maxPresentationMs: Number(
+        runtimePerformance.maxPresentationMs.toFixed(
+          2,
+        ),
+      ),
+      assetFailures:
+        assetLoading.errors.length,
+    };
+    runtimePerformance.window =
+      "gameplay";
+    runtimePerformance.renderAverageMs =
+      4;
+    runtimePerformance.lastRenderMs = 0;
+    runtimePerformance.presentationAverageMs =
+      TARGET_FRAME_MS;
+    runtimePerformance.maxRenderMs = 0;
+    runtimePerformance.maxPresentationMs =
+      TARGET_FRAME_MS;
+    runtimePerformance.renderLongFrames = 0;
+    runtimePerformance.presentationLongFrames = 0;
+    runtimePerformance.renderSamples.length = 0;
+    runtimePerformance.presentationSamples.length = 0;
+    runtimePerformance.slowFrames = 0;
+    runtimePerformance.recoveryFrames = 0;
+    runtimePerformance.presentationSlowFrames = 0;
+    runtimePerformance.tierChanges = 0;
+    runtimePerformance.lastTierChangeFrame =
+      runtimePerformance.renderedFrames;
+    runtimePerformance.tier = "balanced";
+    runtimePerformance.zonePerformance = {};
+    runtimePerformance.resourceHighWater = {};
   }
   const JOE_SOURCE = { x: 265, y: 70, width: 478, height: 1420, heightMeters: 1.95 };
   const JOE_ANIMATION_FRAME_SIZE = 192;
@@ -994,6 +1428,74 @@
     "trail_chain",
     "blind_corner",
   ]);
+  const REPEAT_CAPTURE_COACHING = {
+    unsafe_filing: {
+      adjustment:
+        "Do not file under pressure. Divert Joe, confirm his attention is falling, then return to the exit.",
+      drill:
+        "Abandon the exit when Joe turns in. Break contact through two solids, then file after the mower fades.",
+    },
+    floodlight_exposure: {
+      adjustment:
+        "Leave the light cone sideways, crouch in rough, and keep a solid between you and Joe.",
+      drill:
+        "Treat floodlights as walls: route around the beam or cut its power before crossing.",
+    },
+    open_lane_sprint: {
+      adjustment:
+        "Sprint only between nearby solids. Stop at the next cover before Joe's attention locks.",
+      drill:
+        "Choose two cover points before moving; cross one gap, listen, then choose the next.",
+    },
+    upright_rough: {
+      adjustment:
+        "Crouch before entering rough and wait for Joe's mower to turn away before moving.",
+      drill:
+        "Use rough only while crouched; freeze when attention rises and leave by the quietest edge.",
+    },
+    held_sightline: {
+      adjustment:
+        "Stop crossing open turf. Reach solid cover, wait for Joe to turn away, then move one gap at a time.",
+      drill:
+        "Use Listening Focus from solid cover; move only after Joe turns, and cross one short gap at a time.",
+    },
+    bunker_noise: {
+      adjustment:
+        "Wait for a lure, cross the shortest sand edge, then crouch as soon as you reach firm turf.",
+      drill:
+        "Avoid the bunker unless it is your trap; if forced in, stop moving the instant Joe reacts.",
+    },
+    sprint_noise: {
+      adjustment:
+        "Release sprint when Joe turns toward the sound, then crouch until his attention falls.",
+      drill:
+        "Use short sprint bursts between cover, never one continuous run inside mower range.",
+    },
+    rough_rustle: {
+      adjustment:
+        "Crouch before moving through rough, or step onto Joe's cut strip to silence the trail.",
+      drill:
+        "Freeze at Joe's first reaction; wait for him to turn, then move one rough patch at a time.",
+    },
+    audible_movement: {
+      adjustment:
+        "Stop when Joe reacts, use Listening Focus, and resume only after his mower turns away.",
+      drill:
+        "Break movement into quiet checks: move, listen from cover, then move again.",
+    },
+    trail_chain: {
+      adjustment:
+        "Cross fairway or Joe's cut line before hiding so the print chain ends in the open.",
+      drill:
+        "Do not hide on fresh tracks; change turf twice, let the trail cool, then take cover.",
+    },
+    blind_corner: {
+      adjustment:
+        "Use Listening Focus before leaving cover and keep a second hiding spot in view.",
+      drill:
+        "At every blind corner: listen, locate Joe, then cross toward a preselected solid.",
+    },
+  };
   const OVERTIME_SCORE_MULTIPLIER = 1.3;
   const OVERTIME_JOE_SPEED_MULTIPLIER = 1.16;
   const OVERTIME_DETECTION_MULTIPLIER = 1.22;
@@ -1010,6 +1512,9 @@
   const STATUS_ACK_PING_SECONDS = 1.7;
   const STATUS_ESCALATION_PING_SECONDS =
     4.4;
+  const STATUS_ACK_GRID_RADIUS = 14;
+  const STATUS_ESCALATION_SECTOR_RADIUS =
+    8;
   const CROSSWIND_WARNING_SECONDS = 1.35;
   const CROSSWIND_ACTIVE_SECONDS = 4.4;
   const CROSSWIND_ACTIVE_BRIEF_SECONDS = 1.7;
@@ -1076,6 +1581,8 @@
   const TRAIL_BREAK_MIN_CHAIN = 3;
   const TRAIL_BREAK_BONUS = 125;
   const TRAIL_COLD_SECONDS = 3.2;
+  const FIELD_SIGNAL_QUIET_SECONDS = 0.9;
+  const FIELD_SIGNAL_BREAKAWAY_BONUS = 130;
   const DELIVERY_FAMILY_CAPS = {
     zone: 7,
     recovery: 3,
@@ -1089,6 +1596,7 @@
     nerve: 2,
     cadence: 3,
     status: 1,
+    field: 3,
     weather: 3,
     shotcraft: 3,
   };
@@ -1168,6 +1676,8 @@
   const HORROR_DIRECTOR_MIN_EVENT_SECONDS = 7.5;
   const MAX_MOWER_WORLD_PARTICLES = 190;
   const MAX_PLAYER_GROUND_RESPONSES = 18;
+  const MAX_WORLD_EFFECTS = 72;
+  const MAX_SCREEN_PARTICLES = 128;
   const COURSE_ECHO_SAMPLE_SECONDS = 0.4;
   const MAX_COURSE_ECHO_SAMPLES = 360;
   const COURSE_ECHO_NEAR_TIE_SECONDS = 0.35;
@@ -1206,7 +1716,17 @@
       soundCue: "brass_bell",
       barkContext:
         "night_order_audit_bell",
-      noiseSeconds: 4.4,
+      noiseSeconds: 6.4,
+      breakaway: {
+        x: 20,
+        y: 100,
+        radius: 8,
+        coverId:
+          "audit-arch-right",
+        coverLabel: "HEDGE TUNNEL",
+        instruction:
+          "BREAK SOUTHWEST BEHIND THE HEDGE TUNNEL",
+      },
     },
     {
       id: "field-log",
@@ -1222,7 +1742,16 @@
       soundCue: "ledger_stamp",
       barkContext:
         "night_order_field_log",
-      noiseSeconds: 3.8,
+      noiseSeconds: 5.6,
+      breakaway: {
+        x: -25,
+        y: 400,
+        radius: 8,
+        coverId: "maze-cart",
+        coverLabel: "SERVICE CART",
+        instruction:
+          "BREAK SOUTHEAST BEHIND THE SERVICE CART",
+      },
     },
     {
       id: "release-review",
@@ -1238,7 +1767,16 @@
       soundCue: "review_gong",
       barkContext:
         "night_order_release_review",
-      noiseSeconds: 4.8,
+      noiseSeconds: 5,
+      breakaway: {
+        x: 40,
+        y: 596,
+        radius: 8,
+        coverId: "range-cart-east",
+        coverLabel: "RANGE CART",
+        instruction:
+          "BREAK SOUTHWEST BEHIND THE RANGE CART",
+      },
     },
   ];
   const DRAIN_RELEASE_CONTROL = {
@@ -1574,9 +2112,271 @@
     },
   ];
 
+  /**
+   * Keeps optional Clean Break coaching out of immediate survival lanes, but
+   * names why it is waiting so the lesson can resume instead of expiring.
+   */
+  function fieldSignalBreakawayMissFocusDefers(
+    focus,
+  ) {
+    return [
+      "final_filing",
+      "emergency_appeal",
+      "status_request",
+      "golf_aim",
+      "pursuit",
+      "nerve_hold",
+      "practice_correction",
+      "active_distraction",
+      "cut_trace",
+      "listening_search",
+      "cadence_read",
+      "counter_route",
+      "crosswind",
+      "risk_premium",
+      "delivery_award",
+      "opening_briefing",
+      "blindside_transfer",
+      "trail_evidence",
+    ].includes(focus);
+  }
+
+  function fieldSignalBreakawayMissDeferredBy() {
+    const hole = state.hole;
+    const feedback =
+      hole?.fieldSignalBreakaway;
+    if (
+      !feedback?.lastFeedback ||
+      feedback.feedbackTimer <= 0
+    ) {
+      return null;
+    }
+    const focus =
+      activeHudPresentationFocus();
+    if (
+      fieldSignalBreakawayMissFocusDefers(
+        focus,
+      )
+    ) {
+      return focus;
+    }
+    if (
+      activeFootingNavigationOverride()
+    ) {
+      return "slow_footing";
+    }
+    if (
+      collisionStateBannerRelationship()
+        .ownsImmediateSignalLane
+    ) {
+      return "collision_contact";
+    }
+    if (
+      hole.predatorTactics?.active
+    ) {
+      return `predator_${hole.predatorTactics.active}`;
+    }
+    if (
+      fieldInteractionPromptOwnsBottomRail()
+    ) {
+      return "interaction_prompt";
+    }
+    return null;
+  }
+
+  function fieldSignalBreakawayMissCanPresent() {
+    return Boolean(
+      state.hole
+        ?.fieldSignalBreakaway
+        ?.feedbackTimer > 0 &&
+      state.hole.fieldSignalBreakaway
+        .lastFeedback &&
+      !fieldSignalBreakawayMissDeferredBy(),
+    );
+  }
+
+  /**
+   * Keeps an earned Clean Break payoff beneath immediate survival/action
+   * owners. Unlike the general Delivery card, the reward lesson returns to the
+   * bottom rail after danger yields instead of spending its timer offscreen.
+   */
+  function fieldSignalBreakawayRewardDeferredBy() {
+    const hole = state.hole;
+    const reward =
+      hole?.fieldSignalBreakaway;
+    if (
+      !reward?.rewardMessage ||
+      reward.rewardTimer <= 0
+    ) {
+      return null;
+    }
+    const focus =
+      activeHudPresentationFocus();
+    if (
+      [
+        "final_filing",
+        "emergency_appeal",
+        "status_request",
+        "golf_aim",
+        "pursuit",
+        "nerve_hold",
+        "practice_correction",
+        "active_distraction",
+        "cut_trace",
+        "listening_search",
+        "cadence_read",
+        "counter_route",
+        "crosswind",
+        "risk_premium",
+        "opening_briefing",
+        "blindside_transfer",
+        "trail_evidence",
+      ].includes(focus)
+    ) {
+      return focus;
+    }
+    if (
+      activeFootingNavigationOverride()
+    ) {
+      return "slow_footing";
+    }
+    if (
+      collisionStateBannerRelationship()
+        .ownsImmediateSignalLane
+    ) {
+      return "collision_contact";
+    }
+    if (
+      hole.predatorTactics?.active
+    ) {
+      return `predator_${hole.predatorTactics.active}`;
+    }
+    if (
+      fieldInteractionPromptOwnsBottomRail()
+    ) {
+      return "interaction_prompt";
+    }
+    return null;
+  }
+
+  /** Describes whether the queued Clean Break success lesson can render. */
+  function fieldSignalBreakawayRewardPresentation(
+    reward,
+    deferredBy = null,
+  ) {
+    const active = Boolean(
+      reward?.rewardMessage &&
+        reward.rewardTimer > 0,
+    );
+    return {
+      active,
+      visible:
+        active && !deferredBy,
+      deferredBy:
+        active
+          ? deferredBy
+          : null,
+      timingPaused:
+        active &&
+        Boolean(deferredBy),
+      message:
+        active
+          ? reward.rewardMessage
+          : "",
+      remainingSeconds:
+        active
+          ? Number(
+              reward.rewardTimer.toFixed(
+                2,
+              ),
+            )
+          : 0,
+      gameplayEffect: "none",
+      presentation:
+        "earned_clean_break_lesson_queues_beneath_urgent_survival_then_resumes_for_its_full_remaining_duration",
+      rule:
+        "danger_keeps_priority_without_erasing_the_mastery_payoff",
+    };
+  }
+
+  /** Gives an earned Clean Break a calm success frame instead of danger trim. */
+  function fieldSignalBreakawayRailPresentation(
+    rewardVisible,
+    missVisible,
+  ) {
+    const tone = rewardVisible
+      ? "clean_break_success"
+      : missVisible
+        ? "clean_break_miss"
+        : "ordinary_consequence";
+    return {
+      tone,
+      backgroundColor:
+        rewardVisible
+          ? "rgba(2,14,9,0.94)"
+          : "rgba(2,8,4,0.9)",
+      borderColor:
+        rewardVisible
+          ? "#78cfa5"
+          : "#d87532",
+      innerBorderColor:
+        rewardVisible
+          ? "rgba(120,207,165,0.34)"
+          : null,
+      textColor:
+        rewardVisible
+          ? "#d8f3df"
+          : "#f1e7c9",
+      gameplayEffect: "none",
+      rule:
+        "earned_clean_break_uses_mint_success_hierarchy_while_misses_and_ordinary_consequences_keep_danger_trim",
+    };
+  }
+
+  function fieldSignalBreakawayRewardCanPresent() {
+    return fieldSignalBreakawayRewardPresentation(
+      state.hole
+        ?.fieldSignalBreakaway,
+      fieldSignalBreakawayRewardDeferredBy(),
+    ).visible;
+  }
+
+  function activeFieldSignalBreakawayRewardPresentation() {
+    const presentation =
+      fieldSignalBreakawayRewardPresentation(
+        state.hole
+          ?.fieldSignalBreakaway,
+        fieldSignalBreakawayRewardDeferredBy(),
+      );
+    return presentation.active
+      ? presentation
+      : null;
+  }
+
   function holeMessageForPresentation() {
     const hole = state.hole;
+    if (
+      fieldSignalBreakawayRewardCanPresent()
+    ) {
+      return hole.fieldSignalBreakaway
+        .rewardMessage;
+    }
+    if (
+      fieldSignalBreakawayMissCanPresent()
+    ) {
+      return hole.fieldSignalBreakaway
+        .lastFeedback.message;
+    }
     if (!hole || hole.messageTimer <= 0) {
+      return "";
+    }
+    const breakaway =
+      activeFieldActionBreakaway();
+    if (
+      fieldBreakawayHoldOwnsBottomRail(
+        breakaway,
+      )
+    ) {
       return "";
     }
     if (
@@ -2548,6 +3348,15 @@
     ) {
       return null;
     }
+    const breakaway =
+      activeFieldActionBreakaway();
+    if (
+      fieldBreakawayHoldOwnsBottomRail(
+        breakaway,
+      )
+    ) {
+      return null;
+    }
     return handoff;
   }
 
@@ -2606,6 +3415,770 @@
   }
 
   /**
+   * Keeps the Status Request consequence named while Joe travels to the
+   * shared location. This is presentation-only and does not extend or alter
+   * the existing investigation timer.
+   */
+  function activeStatusRequestSignal() {
+    const hole = state.hole;
+    const distraction =
+      hole?.distraction;
+    const acknowledged =
+      distraction?.kind ===
+      "status_ack";
+    const escalated =
+      distraction?.kind ===
+      "status_escalation";
+    if (
+      (!acknowledged && !escalated) ||
+      hole.distractionTimer <= 0
+    ) {
+      return null;
+    }
+    const sourceLabel = acknowledged
+      ? "ROUGH STATUS GRID"
+      : "ESCALATED SECTOR";
+    return {
+      sourceId:
+        distraction.code ||
+        hole.statusRequest.code,
+      sourceLabel,
+      kind: distraction.kind,
+      outcome: acknowledged
+        ? "acknowledged"
+        : "escalated",
+      color: acknowledged
+        ? "#76c1a4"
+        : "#df6242",
+      remainingSeconds: Number(
+        hole.distractionTimer.toFixed(2),
+      ),
+      worldLabel:
+        `${sourceLabel} // ${hole.distractionTimer.toFixed(1)}s`,
+      attentionLabel:
+        `VERIFYING ${sourceLabel} // ${hole.distractionTimer.toFixed(1)}s`,
+      nextAction: acknowledged
+        ? "leave the shared rough grid"
+        : "break laterally out of the precise sector",
+      target: {
+        x: distraction.x,
+        y: distraction.y,
+      },
+      presentation:
+        "status_choice_remains_named_through_investigation",
+    };
+  }
+
+  /**
+   * Carries the authored evidence identity into Joe's existing follow-up
+   * search. Returning null preserves the generic behavior for other signals.
+   */
+  function distractionSearchContext(
+    distraction,
+  ) {
+    if (!distraction) {
+      return null;
+    }
+    if (
+      distraction.kind ===
+      "field_action"
+    ) {
+      return {
+        kind: "field_action",
+        sourceId:
+          distraction.sourceId,
+        sourceLabel:
+          distraction.sourceLabel ||
+          "FIELD CHECK",
+        color:
+          distraction.signalColor ||
+          "#d6a74c",
+        statusLead:
+          `SWEEPING ${distraction.sourceLabel || "FIELD CHECK"} AREA`,
+        target: {
+          x: distraction.x,
+          y: distraction.y,
+        },
+        presentation:
+          "named_station_follow_up_only",
+      };
+    }
+    const acknowledged =
+      distraction.kind ===
+      "status_ack";
+    const escalated =
+      distraction.kind ===
+      "status_escalation";
+    if (!acknowledged && !escalated) {
+      return null;
+    }
+    const sourceLabel = acknowledged
+      ? "ROUGH STATUS GRID"
+      : "ESCALATED SECTOR";
+    return {
+      kind: distraction.kind,
+      sourceId:
+        distraction.code ||
+        state.hole.statusRequest.code,
+      sourceLabel,
+      color: acknowledged
+        ? "#76c1a4"
+        : "#df6242",
+      statusLead:
+        `SWEEPING ${sourceLabel}`,
+      target: {
+        x: distraction.x,
+        y: distraction.y,
+      },
+      counterplay: acknowledged
+        ? "vacate the shared rough grid"
+        : "break laterally beyond the precise sector",
+      presentation:
+        "status_choice_remains_named_through_follow_up_search",
+    };
+  }
+
+  /**
+   * Preserves the physical destination promised before a loud station is
+   * activated. BREAK SIGNAL remains the tactical reason; navigation channels
+   * name the actual authored cover the player must find under pressure.
+   */
+  function fieldBreakawayRouteLabels(
+    target,
+    reached = false,
+  ) {
+    const destinationLabel =
+      target?.coverLabel ||
+      "NAMED COVER";
+    return {
+      label:
+        reached
+          ? "HOLD QUIET"
+          : "BREAK SIGNAL",
+      reasonLabel:
+        reached
+          ? "MASK SIGNAL"
+          : "BREAK SIGNAL",
+      shortLabel:
+        reached
+          ? "HOLD QUIET"
+          : destinationLabel,
+      destinationLabel,
+      previewHandoff:
+        `BREAK TO ${destinationLabel}`,
+      routeHandoff:
+        `${destinationLabel} // NAMED COVER`,
+      gameplayEffect: "none",
+      rule:
+        "commitment_preview_and_every_breakaway_navigation_channel_share_the_same_physical_cover_name",
+    };
+  }
+
+  /**
+   * Temporarily routes the player away from a loud mandatory station and
+   * behind authored solid cover. This turns each field check into a readable
+   * action-and-escape beat before the next long objective resumes.
+   */
+  function activeFieldActionBreakaway() {
+    const signal =
+      activeFieldActionSignal();
+    if (!signal) {
+      return null;
+    }
+    const action =
+      NIGHT_ORDER_ACTIONS.find(
+        (candidate) =>
+          candidate.id ===
+          signal.sourceId,
+      );
+    const target =
+      action?.breakaway;
+    if (!target) {
+      return null;
+    }
+    const distance = worldDistance(
+      state.player,
+      target,
+    );
+    const sightBlocker =
+      lineBlockerBetween(
+        signal.target,
+        state.player,
+      );
+    const coverConfirmed =
+      sightBlocker === target.coverId;
+    const atTarget =
+      distance < target.radius;
+    const reached =
+      atTarget && coverConfirmed;
+    const routeLabels =
+      fieldBreakawayRouteLabels(
+        target,
+        reached,
+      );
+    const progress =
+      state.hole
+        .fieldSignalBreakaway;
+    const quietSeconds =
+      progress?.sourceId === action.id
+        ? progress.quietSeconds
+        : 0;
+    const quietReady =
+      reached &&
+      progress?.sourceId === action.id &&
+      progress.quietReady;
+    return {
+      id:
+        `field-signal-break-${action.id}`,
+      sourceId: action.id,
+      sourceLabel:
+        action.shortLabel,
+      label: routeLabels.label,
+      reasonLabel:
+        routeLabels.reasonLabel,
+      shortLabel:
+        routeLabels.shortLabel,
+      destinationLabel:
+        routeLabels.destinationLabel,
+      previewHandoff:
+        routeLabels.previewHandoff,
+      routeHandoff:
+        routeLabels.routeHandoff,
+      labelContinuityRule:
+        routeLabels.rule,
+      labelGameplayEffect:
+        routeLabels.gameplayEffect,
+      color: "#e1ad59",
+      target: {
+        x: target.x,
+        y: target.y,
+        radius: target.radius,
+      },
+      coverId: target.coverId,
+      coverLabel:
+        target.coverLabel,
+      instruction:
+        target.instruction,
+      distance,
+      atTarget,
+      sightBlocker,
+      coverConfirmed,
+      reached,
+      quietSeconds: Number(
+        quietSeconds.toFixed(2),
+      ),
+      quietRequiredSeconds:
+        FIELD_SIGNAL_QUIET_SECONDS,
+      quietReady,
+      quietStatus: !reached
+        ? "reach_named_cover"
+        : quietReady
+          ? "signal_masked"
+          : "hold_still_and_quiet",
+      remainingSeconds:
+        signal.remainingSeconds,
+      routeOwner:
+        "mandatory_noise_breakaway",
+      handoff:
+        "resume_next_objective_after_signal_expires",
+    };
+  }
+
+  /**
+   * Converts the reached-cover quiet check into one cohesive screen-stable
+   * tactical panel. The panel replaces the generic world-marker glyph only;
+   * sight blocking, noise, timing, scoring, and Joe behavior remain live.
+   */
+  function fieldBreakawayHoldPanelPresentation(
+    breakaway,
+    options = {},
+  ) {
+    if (!breakaway?.reached) {
+      return {
+        visible: false,
+        rule:
+          "quiet_hold_panel_appears_only_after_exact_named_cover_is_reached",
+      };
+    }
+    const moving =
+      options.moving ??
+      playerIsMoving();
+    const noise =
+      options.noise ??
+      state.hole.noise;
+    const progress = clamp(
+      breakaway.quietSeconds /
+        breakaway.quietRequiredSeconds,
+      0,
+      1,
+    );
+    const masked =
+      breakaway.quietReady;
+    const instruction = masked
+      ? `STAY BEHIND ${breakaway.coverLabel} UNTIL JOE'S CHECK ENDS`
+      : moving
+        ? "RELEASE MOVE // LET YOUR FOOTSTEPS SETTLE"
+        : noise > 0.18
+          ? "STAY STILL // LET YOUR FOOTSTEPS SETTLE"
+          : `HOLD STILL + QUIET BEHIND ${breakaway.coverLabel}`;
+    return {
+      visible: true,
+      title: masked
+        ? "SIGNAL MASKED"
+        : "MASK YOUR ROUTE",
+      instruction,
+      progress: Number(
+        progress.toFixed(3),
+      ),
+      progressLabel: masked
+        ? "MASK COMPLETE"
+        : `${breakaway.quietSeconds.toFixed(1)} / ${breakaway.quietRequiredSeconds.toFixed(1)}s`,
+      remainingLabel:
+        `JOE CHECK ${breakaway.remainingSeconds.toFixed(1)}s`,
+      coverLabel:
+        breakaway.coverLabel,
+      masked,
+      moving,
+      noise: Number(
+        noise.toFixed(2),
+      ),
+      color: masked
+        ? "#78cfa5"
+        : "#e1ad59",
+      panel: {
+        x: 410,
+        y: 500,
+        width: 460,
+        height: 82,
+      },
+      presentation:
+        "screen_stable_named_cover_progress_panel_without_detached_debug_glyphs",
+      gameplayEffect:
+        "none",
+      rule:
+        "one_grounded_hold_panel_carries_stillness_progress_signal_time_and_success_state",
+    };
+  }
+
+  /**
+   * Gives the reached-cover hold panel exclusive ownership of its instruction
+   * lane without consuming the underlying result message or handoff timers.
+   * Leaving cover therefore restores any still-relevant consequence copy.
+   */
+  function fieldBreakawayHoldOwnsBottomRail(
+    breakaway =
+      activeFieldActionBreakaway(),
+  ) {
+    return Boolean(breakaway?.reached);
+  }
+
+  /**
+   * Converts a reached Clean Break cover from a map destination into the same
+   * hold/masked state shown in the world. This is presentation-only: the
+   * navigation target remains available for the route and map geometry.
+   */
+  function fieldBreakawayMapHoldPresentation(
+    breakaway,
+  ) {
+    if (!breakaway?.reached) {
+      return {
+        visible: false,
+        rule:
+          "map_retains_safe_break_navigation_until_the_exact_named_cover_is_reached",
+      };
+    }
+    const masked =
+      breakaway.quietReady;
+    return {
+      visible: true,
+      leftText: masked
+        ? "MASKED"
+        : "HOLD STILL",
+      rightText: masked
+        ? "STAY HIDDEN"
+        : `${breakaway.quietSeconds.toFixed(1)}/${breakaway.quietRequiredSeconds.toFixed(1)}s`,
+      color: masked
+        ? "#78cfa5"
+        : "#e1ad59",
+      masked,
+      progress: Number(
+        clamp(
+          breakaway.quietSeconds /
+            breakaway.quietRequiredSeconds,
+          0,
+          1,
+        ).toFixed(3),
+      ),
+      coverLabel:
+        breakaway.coverLabel,
+      destinationDistanceHidden: true,
+      gameplayEffect: "none",
+      presentation:
+        "persistent_map_hands_off_from_cover_distance_to_hold_progress_then_masked_state",
+      rule:
+        "world_hold_panel_map_header_and_clean_break_state_share_one_reached_cover_truth",
+    };
+  }
+
+  /** Returns the critical Clean Break phase that must invalidate map caching. */
+  function fieldBreakawayMapRefreshKey(
+    breakaway,
+  ) {
+    if (!breakaway) {
+      return "field_breakaway:none";
+    }
+    const phase = !breakaway.reached
+      ? "route"
+      : breakaway.quietReady
+        ? "masked"
+        : "hold";
+    return `field_breakaway:${breakaway.sourceId || "unknown"}:${phase}`;
+  }
+
+  /**
+   * Turns the breakaway's HOLD QUIET instruction into a short, observable
+   * stealth check. Progress only builds while the player is motionless behind
+   * the exact authored sight blocker and decays quickly after leaving safety.
+   */
+  function updateFieldSignalBreakaway(
+    dt,
+    moving,
+  ) {
+    const hole = state.hole;
+    const signal =
+      activeFieldActionSignal();
+    const progress =
+      hole.fieldSignalBreakaway;
+    if (!signal || !progress) {
+      return;
+    }
+    if (
+      progress.sourceId !==
+      signal.sourceId
+    ) {
+      progress.sourceId =
+        signal.sourceId;
+      progress.quietSeconds = 0;
+      progress.quietReady = false;
+    }
+    const breakaway =
+      activeFieldActionBreakaway();
+    const quietNow = Boolean(
+      breakaway?.reached &&
+        !moving &&
+        hole.noise <= 0.18 &&
+        hole.joe.mode !== "chase",
+    );
+    if (quietNow) {
+      progress.quietSeconds =
+        Math.min(
+          FIELD_SIGNAL_QUIET_SECONDS,
+          progress.quietSeconds + dt,
+        );
+    } else if (!progress.quietReady) {
+      progress.quietSeconds =
+        Math.max(
+          0,
+          progress.quietSeconds -
+            dt * 1.8,
+        );
+    }
+    progress.quietReady =
+      progress.quietReady ||
+      progress.quietSeconds >=
+        FIELD_SIGNAL_QUIET_SECONDS;
+  }
+
+  /**
+   * Converts an optional Clean Break miss into concise, actionable feedback.
+   * The lesson is presentation-only: station completion, Joe's search, score,
+   * and the next objective continue through their existing paths.
+   */
+  function fieldSignalBreakawayMissPresentation(
+    outcome,
+    action,
+    nextAction,
+  ) {
+    const coverLabel =
+      action?.breakaway
+        ?.coverLabel ||
+      "NAMED COVER";
+    const reason =
+      outcome?.reason ||
+      "quiet_hold_incomplete";
+    const nextLabel =
+      nextAction?.shortLabel ||
+      "NEXT STATION";
+    if (
+      reason ===
+      "left_named_cover_before_expiry"
+    ) {
+      return {
+        kind: "missed",
+        reason,
+        banner:
+          "CLEAN BREAK MISSED // LEFT COVER EARLY",
+        message:
+          `SIGNAL TRACKED — LEFT ${coverLabel} BEFORE JOE'S FINAL CHECK. HOLD COVER NEXT TIME; ${nextLabel} CAN STILL SCORE.`,
+        lesson:
+          "reach named cover and remain there through signal expiry",
+      };
+    }
+    if (
+      reason ===
+      "noise_or_movement_at_expiry"
+    ) {
+      return {
+        kind: "missed",
+        reason,
+        banner:
+          "CLEAN BREAK MISSED // MOVED TOO SOON",
+        message:
+          `SIGNAL TRACKED — MOVED BEFORE JOE'S FINAL CHECK. HOLD STILL NEXT TIME; ${nextLabel} CAN STILL SCORE.`,
+        lesson:
+          "stop moving and keep noise below the hold threshold through signal expiry",
+      };
+    }
+    return {
+      kind: "missed",
+      reason,
+      banner:
+        "CLEAN BREAK MISSED // HOLD INCOMPLETE",
+      message:
+        `SIGNAL TRACKED — HOLD NEVER SET. SETTLE ${FIELD_SIGNAL_QUIET_SECONDS.toFixed(1)}s BEHIND ${coverLabel}, THEN STAY HIDDEN; ${nextLabel} CAN STILL SCORE.`,
+      lesson:
+        "complete the visible quiet hold before signal expiry",
+    };
+  }
+
+  /** Describes the same-frame route handoff when a station signal resolves. */
+  function fieldSignalResolutionNavigationHandoff(
+    distraction,
+    nextTarget,
+  ) {
+    const active =
+      distraction?.kind ===
+      "field_action";
+    return {
+      active,
+      sourceId:
+        active
+          ? distraction.sourceId || null
+          : null,
+      nextTargetId:
+        active
+          ? nextTarget?.id || null
+          : null,
+      nextTargetLabel:
+        active
+          ? nextTarget?.shortLabel ||
+            nextTarget?.label ||
+            null
+          : null,
+      refreshNavigation: active,
+      invalidateMiniMap: active,
+      gameplayEffect: "none",
+      rule:
+        "signal_resolution_reward_map_and_first_person_route_share_the_same_frame",
+    };
+  }
+
+  /** Applies the resolution handoff after the old signal owner is retired. */
+  function applyFieldSignalResolutionNavigationHandoff(
+    distraction,
+  ) {
+    const nextTarget =
+      activePlayerGuidanceTarget({
+        includeTacticalOverride: false,
+      });
+    const handoff =
+      fieldSignalResolutionNavigationHandoff(
+        distraction,
+        nextTarget,
+      );
+    if (!handoff.active) {
+      return handoff;
+    }
+    updatePlayerNavigationGuide(0);
+    miniMapRenderedAt = -Infinity;
+    state.hole.fieldSignalBreakaway
+      .lastNavigationHandoff = {
+        ...handoff,
+        resolvedAt: Number(
+          state.hole.elapsed.toFixed(2),
+        ),
+      };
+    return handoff;
+  }
+
+  /**
+   * Resolves the station escape at signal expiry. Survival is never gated by
+   * the reward; the Delivery beat recognizes only a completed quiet hold that
+   * remains behind the named cover when Joe finishes checking the station.
+   */
+  function resolveFieldSignalBreakaway(
+    distraction,
+  ) {
+    if (
+      distraction?.kind !==
+      "field_action"
+    ) {
+      return null;
+    }
+    const hole = state.hole;
+    const progress =
+      hole.fieldSignalBreakaway;
+    const action =
+      NIGHT_ORDER_ACTIONS.find(
+        (candidate) =>
+          candidate.id ===
+          distraction.sourceId,
+      );
+    const target = action?.breakaway;
+    if (!progress || !action || !target) {
+      return null;
+    }
+    const distance = worldDistance(
+      state.player,
+      target,
+    );
+    const sightBlocker =
+      lineBlockerBetween(
+        distraction,
+        state.player,
+      );
+    const safeAtExpiry =
+      distance < target.radius &&
+      sightBlocker === target.coverId;
+    const quietAtExpiry =
+      !playerIsMoving() &&
+      hole.noise <= 0.18;
+    const completed = Boolean(
+      progress.sourceId === action.id &&
+        progress.quietReady &&
+        safeAtExpiry &&
+        quietAtExpiry,
+    );
+    const outcome = {
+      sourceId: action.id,
+      coverId: target.coverId,
+      completed,
+      quietSeconds: Number(
+        progress.quietSeconds.toFixed(2),
+      ),
+      requiredQuietSeconds:
+        FIELD_SIGNAL_QUIET_SECONDS,
+      distanceAtExpiry: Number(
+        distance.toFixed(2),
+      ),
+      sightBlocker,
+      quietAtExpiry,
+      reason: completed
+        ? "signal_masked_under_named_cover"
+        : !safeAtExpiry
+          ? "left_named_cover_before_expiry"
+          : !quietAtExpiry
+            ? "noise_or_movement_at_expiry"
+            : "quiet_hold_incomplete",
+    };
+    progress.attempts += 1;
+    progress.lastOutcome = outcome;
+    if (!completed) {
+      const feedback =
+        fieldSignalBreakawayMissPresentation(
+          outcome,
+          action,
+          nextNightOrderAction(),
+        );
+      progress.lastFeedback = {
+        ...feedback,
+        sourceId: action.id,
+        coverId: target.coverId,
+      };
+      progress.feedbackTimer = 2.65;
+      hole.stateBanner =
+        feedback.banner;
+      hole.stateBannerTimer = 2.65;
+      hole.stateBannerLockTimer =
+        2.65;
+      setHoleMessage(
+        feedback.message,
+        3.35,
+      );
+      pushThreatCaption(
+        "JOE KEEPS THE STATION TRAIL",
+        distraction,
+        "world",
+        2.35,
+        `field_breakaway_miss_${action.id}`,
+      );
+      playUiTone(
+        247,
+        0.11,
+        0.019,
+      );
+      playUiTone(
+        185,
+        0.15,
+        0.015,
+      );
+      return outcome;
+    }
+    if (
+      !progress.completed.includes(
+        action.id,
+      )
+    ) {
+      progress.completed.push(
+        action.id,
+      );
+    }
+    const deliveryAward =
+      awardDeliveryBeat(
+        "SIGNAL BREAKAWAY",
+        FIELD_SIGNAL_BREAKAWAY_BONUS,
+      );
+    hole.stateBanner =
+      deliveryAward
+        ? `SIGNAL MASKED // +${deliveryAward.amount} DELIVERY`
+        : "SIGNAL MASKED // CLEAN BREAKAWAY";
+    hole.stateBannerTimer = 2.65;
+    hole.stateBannerLockTimer =
+      2.65;
+    progress.rewardTimer = 2.65;
+    progress.rewardMessage =
+      "CLEAN BREAK — Joe verified the station, not your route.";
+    setHoleMessage(
+      "CLEAN BREAK — Joe verified the station, not your route.",
+      3.2,
+    );
+    addWorldEffect(
+      "field_signal_breakaway",
+      state.player.x,
+      state.player.y,
+      2.2,
+    );
+    pushThreatCaption(
+      "JOE VERIFIES AN EMPTY STATION",
+      distraction,
+      "world",
+      2.5,
+      `field_breakaway_${action.id}`,
+    );
+    playUiTone(
+      330,
+      0.1,
+      0.022,
+    );
+    playUiTone(
+      494,
+      0.12,
+      0.018,
+    );
+    return outcome;
+  }
+
+  /**
    * Keeps a completed Night Order station named only during Joe's existing
    * follow-up sweep; this is presentation state and does not extend the search.
    */
@@ -2656,6 +4229,184 @@
     };
   }
 
+  /**
+   * Narrows Joe's current search context to the two Status Request outcomes.
+   */
+  function activeStatusRequestSearch() {
+    const context =
+      activeJoeSearchContext();
+    if (
+      context?.kind !==
+        "status_ack" &&
+      context?.kind !==
+        "status_escalation"
+    ) {
+      return null;
+    }
+    return context;
+  }
+
+  /**
+   * Converts a live Status Request consequence into one spatial contract for
+   * the world, map, HUD diagnostics, and responsive presentation.
+   */
+  function statusRequestSpatialPresentation(
+    source,
+    player = state.player,
+  ) {
+    if (!source?.target || !player) {
+      return null;
+    }
+    const escalated =
+      source.kind ===
+      "status_escalation";
+    const radiusMeters = escalated
+      ? STATUS_ESCALATION_SECTOR_RADIUS
+      : STATUS_ACK_GRID_RADIUS;
+    const distanceFromCenter =
+      worldDistance(
+        player,
+        source.target,
+      );
+    const inside =
+      distanceFromCenter <
+      radiusMeters;
+    const edgeDistance = Math.abs(
+      distanceFromCenter -
+        radiusMeters,
+    );
+    const roundedEdgeDistance =
+      Math.max(
+        1,
+        Math.ceil(edgeDistance),
+      );
+    const locationLabel = escalated
+      ? "ESCALATED SECTOR"
+      : "ROUGH STATUS GRID";
+    const actionLabel = inside
+      ? escalated
+        ? "BREAK SECTOR"
+        : "VACATE ROUGH GRID"
+      : escalated
+        ? "OUTSIDE SECTOR"
+        : "OUTSIDE ROUGH GRID";
+    return {
+      kind: source.kind,
+      outcome: escalated
+        ? "escalated"
+        : "acknowledged",
+      phase:
+        source.presentation ===
+        "status_choice_remains_named_through_investigation"
+          ? "investigation"
+          : "follow_up_search",
+      sourceId: source.sourceId,
+      sourceLabel:
+        source.sourceLabel ||
+        locationLabel,
+      locationLabel,
+      target: {
+        ...source.target,
+      },
+      color: source.color,
+      remainingSeconds:
+        source.remainingSeconds,
+      radiusMeters,
+      distanceFromCenter: Number(
+        distanceFromCenter.toFixed(2),
+      ),
+      inside,
+      edgeDistance: Number(
+        edgeDistance.toFixed(2),
+      ),
+      actionLabel,
+      worldLabel:
+        `${actionLabel} // ${roundedEdgeDistance}m`,
+      mapLabel:
+        `${inside ? actionLabel : locationLabel} ${roundedEdgeDistance}m`,
+      glyph: escalated
+        ? "!!"
+        : "SR",
+      visualShape: escalated
+        ? "tight_solid_sector_crosshair"
+        : "coarse_dashed_grid",
+      gameplayEffect:
+        "none_presentation_matches_existing_search_target_and_precision",
+      persistence:
+        "visible_for_existing_investigation_and_follow_up_search_only",
+    };
+  }
+
+  /**
+   * Returns the active Status Request location through both of Joe's existing
+   * consequence phases without extending either timer.
+   */
+  function activeStatusRequestSpatialConsequence() {
+    const investigation =
+      activeStatusRequestSignal();
+    if (investigation) {
+      return statusRequestSpatialPresentation(
+        investigation,
+      );
+    }
+    return statusRequestSpatialPresentation(
+      activeStatusRequestSearch(),
+    );
+  }
+
+  /**
+   * Describes the fixed-camera fallback used when the active consequence
+   * center is behind the player or outside the forward projection.
+   */
+  function statusRequestRearEdgeCuePresentation(
+    consequence =
+      activeStatusRequestSpatialConsequence(),
+  ) {
+    if (!consequence) {
+      return null;
+    }
+    const footprint =
+      projectedGroundRadius(
+        consequence.target,
+        consequence.radiusMeters,
+      );
+    const visible = Boolean(
+      !footprint.point.visible ||
+      footprint.point.x < -180 ||
+      footprint.point.x >
+        WIDTH + 180,
+    );
+    const centerX = clamp(
+      WIDTH * 0.5 +
+        clamp(
+          (
+            consequence.target.x -
+            state.player.x
+          ) * 5.5,
+          -WIDTH * 0.22,
+          WIDTH * 0.22,
+        ),
+      180,
+      COURSE_MAP_X - 170,
+    );
+    const label = consequence.inside
+      ? `${consequence.locationLabel} BEHIND // KEEP MOVING ${Math.max(1, Math.ceil(consequence.edgeDistance))}m`
+      : `${consequence.locationLabel} BEHIND // ${Math.max(1, Math.ceil(consequence.edgeDistance))}m OUTSIDE`;
+    return {
+      visible,
+      label,
+      centerX: Math.round(centerX),
+      panelY: HEIGHT - 184,
+      arcCenterY: HEIGHT - 112,
+      placement:
+        "near_field_above_existing_action_rail",
+      hierarchy:
+        "spatial_status_only; collision and objective instructions retain their established lanes",
+      reducedMotion:
+        "static_rear_edge_arc",
+    };
+  }
+
   function nearbyNightOrderAction() {
     let nearby = null;
     for (
@@ -2690,6 +4441,935 @@
       }
     }
     return nearby;
+  }
+
+  function interactionPromptResult(
+    text,
+    targetId,
+    label,
+    binding = "interact",
+    availability = "ready",
+    localStatus = "IN REACH",
+    consequence = null,
+  ) {
+    return {
+      text,
+      owner: text
+        ? {
+            targetId,
+            label,
+            binding,
+            availability,
+            localStatus,
+            prompt: text,
+            consequence,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * Previews the authored risk and escape answer before a loud mandatory
+   * field check is committed. This is presentation-only and does not alter
+   * signal duration, Joe routing, scoring, or the post-action breakaway.
+   */
+  function fieldActionCommitmentPreview(
+    action,
+    joeState = state.hole?.joe,
+    pressureContext = null,
+  ) {
+    if (
+      !action ||
+      !action.breakaway
+    ) {
+      return null;
+    }
+    const pressureMemory =
+      pressureContext === null &&
+      joeState === state.hole?.joe &&
+      state.hole
+        ?.fieldCommitmentPressure
+        ?.targetId === action.id
+        ? state.hole
+            .fieldCommitmentPressure
+        : null;
+    const risk =
+      fieldActionCommitmentRiskPresentation(
+        joeState,
+        pressureContext,
+        pressureMemory?.tier || null,
+      );
+    return {
+      kind:
+        "loud_field_check_commitment",
+      text:
+        `LOUD SIGNAL ${action.noiseSeconds.toFixed(1)}s // JOE WILL VERIFY // BREAK TO ${action.breakaway.coverLabel}`,
+      noiseSeconds:
+        action.noiseSeconds,
+      coverId:
+        action.breakaway.coverId,
+      coverLabel:
+        action.breakaway.coverLabel,
+      instruction:
+        action.breakaway.instruction,
+      risk,
+      gameplayTimingChanged: false,
+      rule:
+        "commitment_warning_precedes_activation_and_names_the_existing_counterplay",
+    };
+  }
+
+  /**
+   * Describes Joe's current pressure at a loud field-check decision without
+   * blocking the authored action or changing the signal that follows it.
+   */
+  function fieldActionCommitmentRiskPresentation(
+    joeState = state.hole?.joe,
+    pressureContext = null,
+    presentationTier = null,
+  ) {
+    const distance = Number.isFinite(
+      pressureContext?.distance,
+    )
+      ? pressureContext.distance
+      : joeState && state.player
+        ? worldDistance(
+            state.player,
+            joeState,
+          )
+        : 999;
+    const mode =
+      pressureContext?.mode ||
+      joeState?.mode ||
+      "patrol";
+    const hasLineOfSight = Boolean(
+      pressureContext?.hasLineOfSight ??
+        state.hole?.hasLineOfSight,
+    );
+    const alert = Number.isFinite(
+      pressureContext?.alert,
+    )
+      ? pressureContext.alert
+      : joeState?.alert || 0;
+    const roundedDistance = Math.max(
+      0,
+      Math.round(distance),
+    );
+    const critical =
+      mode === "chase" ||
+      hasLineOfSight ||
+      distance <= 24;
+    const activeSweep =
+      mode === "search" ||
+      mode === "investigate";
+    const high =
+      !critical &&
+      (
+        distance <= 54 ||
+        (
+          activeSweep &&
+          distance <= 78
+        ) ||
+        (
+          alert >= 0.75 &&
+          distance <= 90
+        )
+      );
+    const watch =
+      !critical &&
+      !high &&
+      (
+        distance <= 84 ||
+        activeSweep ||
+        alert >= 0.45
+      );
+    const rawTier = critical
+      ? "critical"
+      : high
+        ? "high"
+        : watch
+          ? "watch"
+          : "low";
+    const tier = rawTier === "critical"
+      ? "critical"
+      : presentationTier || rawTier;
+    const labels = {
+      critical: "CRITICAL",
+      high: "HIGH RISK",
+      watch: "WATCH JOE",
+      low: "LOW PRESSURE",
+    };
+    const colors = {
+      critical: "#f07441",
+      high: "#e8a55d",
+      watch: "#d8bd68",
+      low: "#78cfa5",
+    };
+    const groundRings = {
+      critical: {
+        fillColor:
+          "rgba(240,116,65,0.13)",
+        pulseHz: 7.4,
+        pulseAmount: 0.08,
+        strokeAlpha: 0.96,
+        lineWidth: 3.4,
+        motion: "rapid",
+      },
+      high: {
+        fillColor:
+          "rgba(232,165,93,0.10)",
+        pulseHz: 6.1,
+        pulseAmount: 0.065,
+        strokeAlpha: 0.9,
+        lineWidth: 3,
+        motion: "urgent",
+      },
+      watch: {
+        fillColor:
+          "rgba(216,189,104,0.085)",
+        pulseHz: 4.8,
+        pulseAmount: 0.05,
+        strokeAlpha: 0.84,
+        lineWidth: 2.6,
+        motion: "watchful",
+      },
+      low: {
+        fillColor:
+          "rgba(120,207,165,0.075)",
+        pulseHz: 3.2,
+        pulseAmount: 0.035,
+        strokeAlpha: 0.78,
+        lineWidth: 2.4,
+        motion: "steady",
+      },
+    };
+    const recommendations = {
+      critical:
+        "break_contact_before_committing",
+      high:
+        "wait_for_joe_to_pass_or_commit_with_escape_ready",
+      watch:
+        "watch_joe_then_choose",
+      low:
+        "current_commitment_pressure_is_low",
+    };
+    return {
+      tier,
+      rawTier,
+      transitionPending:
+        tier !== rawTier,
+      label: labels[tier],
+      localText:
+        `${labels[tier]} // JOE ${roundedDistance}m`,
+      accentColor: colors[tier],
+      groundRing:
+        groundRings[tier],
+      joeDistance: Number(
+        distance.toFixed(2),
+      ),
+      joeMode: mode,
+      hasLineOfSight,
+      recommendation:
+        recommendations[tier],
+      blocksInteraction: false,
+      gameplayEffect: "none",
+      visualChannels: [
+        "generated_station_ground_ring",
+        "generated_station_pressure_label",
+        "bottom_action_frame",
+      ],
+      meaning:
+        "current_joe_pressure_before_the_authored_loud_signal",
+      rule:
+        "pressure_informs_the_wait_or_commit_decision_rewards_long_range_diversion_and_never_removes_player_agency",
+    };
+  }
+
+  /** Returns an empty live pressure transition record for a new run. */
+  function freshFieldCommitmentPressure() {
+    return {
+      targetId: null,
+      tier: null,
+      rawTier: null,
+      pendingTier: null,
+      pendingSeconds: 0,
+      changes: 0,
+      lastDirection: null,
+      minimumEscalationSeconds: 0.18,
+      minimumRecoverySeconds: 0.38,
+      criticalImmediate: true,
+      rule:
+        "brief_boundary_motion_cannot_chatter_the_station_surface_while_critical_danger_escalates_immediately",
+    };
+  }
+
+  /**
+   * Stabilizes non-critical pressure transitions. Escalation confirms quickly,
+   * recovery confirms more slowly, and a new target snapshots current truth.
+   */
+  function fieldCommitmentPressureTransition(
+    memory,
+    rawTier,
+    targetId,
+    deltaSeconds,
+  ) {
+    const tierOrder = {
+      low: 0,
+      watch: 1,
+      high: 2,
+      critical: 3,
+    };
+    const current = memory ||
+      freshFieldCommitmentPressure();
+    if (
+      !targetId ||
+      !(rawTier in tierOrder)
+    ) {
+      return freshFieldCommitmentPressure();
+    }
+    if (
+      current.targetId !== targetId ||
+      !(current.tier in tierOrder)
+    ) {
+      return {
+        ...freshFieldCommitmentPressure(),
+        targetId,
+        tier: rawTier,
+        rawTier,
+      };
+    }
+    if (rawTier === current.tier) {
+      return {
+        ...current,
+        rawTier,
+        pendingTier: null,
+        pendingSeconds: 0,
+        lastDirection: null,
+      };
+    }
+    const escalating =
+      tierOrder[rawTier] >
+      tierOrder[current.tier];
+    const direction = escalating
+      ? "escalating"
+      : "recovering";
+    const requiredSeconds =
+      rawTier === "critical"
+        ? 0
+        : escalating
+          ? current
+              .minimumEscalationSeconds
+          : current
+              .minimumRecoverySeconds;
+    const pendingSeconds =
+      current.pendingTier === rawTier
+        ? current.pendingSeconds +
+          Math.max(0, deltaSeconds)
+        : Math.max(0, deltaSeconds);
+    if (pendingSeconds < requiredSeconds) {
+      return {
+        ...current,
+        rawTier,
+        pendingTier: rawTier,
+        pendingSeconds,
+        lastDirection: direction,
+      };
+    }
+    return {
+      ...current,
+      targetId,
+      tier: rawTier,
+      rawTier,
+      pendingTier: null,
+      pendingSeconds: 0,
+      changes: current.changes + 1,
+      lastDirection: direction,
+    };
+  }
+
+  /** Updates live station-pressure memory after interaction ownership settles. */
+  function updateFieldCommitmentPressure(
+    deltaSeconds,
+    interactionOwner,
+  ) {
+    const hole = state.hole;
+    const ownsLoudStation = Boolean(
+      interactionOwner?.targetId &&
+        interactionOwner?.consequence
+          ?.kind ===
+          "loud_field_check_commitment",
+    );
+    if (!ownsLoudStation) {
+      if (
+        hole.fieldCommitmentPressure
+          .targetId !== null
+      ) {
+        hole.fieldCommitmentPressure =
+          freshFieldCommitmentPressure();
+      }
+      return;
+    }
+    const rawRisk =
+      fieldActionCommitmentRiskPresentation(
+        hole.joe,
+      );
+    hole.fieldCommitmentPressure =
+      fieldCommitmentPressureTransition(
+        hole.fieldCommitmentPressure,
+        rawRisk.rawTier,
+        interactionOwner.targetId,
+        deltaSeconds,
+      );
+  }
+
+  /** Returns the live pressure read only for the station that owns Interact. */
+  function activeFieldActionCommitmentRisk(
+    action,
+  ) {
+    const owner =
+      activeInteractionPromptOwner();
+    if (
+      !action ||
+      owner?.targetId !== action.id ||
+      owner?.consequence?.kind !==
+        "loud_field_check_commitment"
+    ) {
+      return null;
+    }
+    return owner.consequence.risk || null;
+  }
+
+  /**
+   * Selects the one prompt that owns the bottom action rail. This mirrors the
+   * interaction handler's priority so simultaneous usable footprints cannot
+   * each imply that the same Interact press belongs to them.
+   */
+  function courseInteractionPromptPresentation() {
+    const hole = state.hole;
+    const key = activeKeyPoint();
+    const sprinkler =
+      activeSprinklerPoint();
+    const changeRequest =
+      activeChangeRequest();
+    const shed = SHED_EXIT;
+    const drain = DRAIN_EXIT;
+    const nearestBall =
+      nearestRecoverableBall();
+    const nearbyAction =
+      nearbyNightOrderAction();
+    const appeal =
+      emergencyAppealState();
+    if (hole.ballAim.active) {
+      return interactionPromptResult(
+        inputCopy(
+          `RELEASE ${keyboardBindingLabel("chip")} TO CHIP`,
+          "RELEASE X TO CHIP",
+          "RELEASE CHIP TO SHOOT",
+        ),
+        "chip-aim",
+        "CHIP SHOT",
+        "chip",
+        "active",
+        "AIMING",
+      );
+    }
+    if (hole.ballFlight) {
+      return interactionPromptResult(
+        "BALL IN FLIGHT",
+        "ball-flight",
+        "BALL FLIGHT",
+        null,
+        "active",
+        "WAIT",
+      );
+    }
+    if (hole.ballRoll) {
+      return interactionPromptResult(
+        `${hole.ballRoll.outcomeLabel} // ${Math.max(0, Math.ceil(hole.ballRoll.duration - hole.ballRoll.elapsed))}s TO REST`,
+        "ball-roll",
+        "BALL ROLL",
+        null,
+        "active",
+        "WAIT",
+      );
+    }
+    if (hole.escapeFiling.sealing) {
+      return interactionPromptResult(
+        "RELEASE AUTHORIZED",
+        hole.escapeFiling.route,
+        "RELEASE",
+        null,
+        "authorized",
+        "AUTHORIZED",
+      );
+    }
+    if (hole.escapeFiling.active) {
+      return interactionPromptResult(
+        `FINAL FILING ${Math.round(
+          hole.escapeFiling.progress /
+            hole.escapeFiling.duration *
+            100,
+        )}% // STAY STILL`,
+        hole.escapeFiling.route ===
+          "shed"
+          ? "maintenance-shed"
+          : "drain-exit",
+        "FINAL FILING",
+        null,
+        "active",
+        "FILING",
+      );
+    }
+    if (appeal.eligible) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+          `A — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+          `TAP USE — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
+        ),
+        "emergency-appeal",
+        "EMERGENCY APPEAL",
+      );
+    }
+    if (hole.statusRequest.active) {
+      const request =
+        hole.statusRequest;
+      return interactionPromptResult(
+        request.responding
+          ? `SUBMITTING STATUS ${Math.round(
+              request.responseProgress /
+                request.responseDuration *
+                100,
+            )}% // STAY STILL`
+          : inputCopy(
+              `${keyboardBindingLabel("interact")} — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `A — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+              `TAP USE — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
+            ),
+        "status-request",
+        request.code,
+        request.responding
+          ? null
+          : "interact",
+        request.responding
+          ? "active"
+          : "ready",
+        request.responding
+          ? "SUBMITTING"
+          : "READY",
+      );
+    }
+    if (nearbyAction) {
+      const action =
+        nearbyAction.action;
+      const commitment =
+        fieldActionCommitmentPreview(
+          action,
+        );
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — ${action.label}`,
+          `A — ${action.label}`,
+          `TAP USE — ${action.label}`,
+        ),
+        action.id,
+        action.shortLabel,
+        "interact",
+        "ready",
+        commitment.risk.localText,
+        commitment,
+      );
+    }
+    if (
+      !hole.keyCollected &&
+      worldDistance(
+        state.player,
+        key,
+      ) < key.radius
+    ) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
+          "A — TAKE SHED KEY",
+          "TAP USE — TAKE SHED KEY",
+        ),
+        "shed-key",
+        "SHED KEY",
+      );
+    }
+    if (
+      !hole.sprinklerUsed &&
+      worldDistance(
+        state.player,
+        sprinkler,
+      ) < sprinkler.radius
+    ) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — OPEN DRAIN VALVE`,
+          "A — OPEN DRAIN VALVE",
+          "TAP USE — OPEN DRAIN VALVE",
+        ),
+        "sprinkler",
+        "DRAIN VALVE",
+      );
+    }
+    if (
+      hole.keyCollected &&
+      worldDistance(
+        state.player,
+        shed,
+      ) < shed.radius
+    ) {
+      const remaining =
+        NIGHT_ORDER_ACTIONS.length -
+        completedNightOrderActionCount();
+      return nightOrderActionsComplete()
+        ? interactionPromptResult(
+            inputCopy(
+              `${keyboardBindingLabel("interact")} — FILE SHED RELEASE`,
+              "A — FILE SHED RELEASE",
+              "TAP USE — FILE SHED RELEASE",
+            ),
+            "maintenance-shed",
+            "SHED EXIT",
+          )
+        : interactionPromptResult(
+            `SHED FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`,
+            "maintenance-shed",
+            "SHED EXIT",
+            null,
+            "blocked",
+            "CHECKS OPEN",
+          );
+    }
+    if (
+      hole.drainUnlocked &&
+      worldDistance(
+        state.player,
+        drain,
+      ) < drain.radius
+    ) {
+      const remaining =
+        NIGHT_ORDER_ACTIONS.length -
+        completedNightOrderActionCount();
+      return nightOrderActionsComplete()
+        ? interactionPromptResult(
+            inputCopy(
+              `${keyboardBindingLabel("interact")} — FILE DRAIN RELEASE`,
+              "A — FILE DRAIN RELEASE",
+              "TAP USE — FILE DRAIN RELEASE",
+            ),
+            "drain-exit",
+            "DRAIN EXIT",
+          )
+        : interactionPromptResult(
+            `DRAIN FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`,
+            "drain-exit",
+            "DRAIN EXIT",
+            null,
+            "blocked",
+            "CHECKS OPEN",
+          );
+    }
+    if (
+      !hole.changeRequestCollected &&
+      !hole.appealUsed &&
+      worldDistance(
+        state.player,
+        changeRequest,
+      ) < changeRequest.radius
+    ) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+          `A — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+          `TAP USE — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
+        ),
+        changeRequest.id,
+        changeRequest.code,
+      );
+    }
+    if (
+      nearestBall.ball &&
+      nearestBall.distance <
+        BALL_RECOVERY_RADIUS
+    ) {
+      const recoveryDanger =
+        golfBallDangerState(
+          nearestBall.ball,
+        );
+      return interactionPromptResult(
+        inputCopy(
+          recoveryDanger.dangerous
+            ? `${keyboardBindingLabel("interact")} — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : `${keyboardBindingLabel("interact")} — RECLAIM GOLF BALL`,
+          recoveryDanger.dangerous
+            ? `A — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : "A — RECLAIM GOLF BALL",
+          recoveryDanger.dangerous
+            ? `TAP USE — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
+            : "TAP USE — RECLAIM GOLF BALL",
+        ),
+        `recoverable-ball-${nearestBall.ball.id}`,
+        "GOLF BALL",
+      );
+    }
+    if (
+      practiceDrillActive() &&
+      !hole.blindsideTransfer &&
+      (
+        (
+          hole.practiceDrill
+            .lastCorrection &&
+          hole.messageTimer <= 0.01
+        ) ||
+        worldDistance(
+          state.player,
+          hole.practiceDrill.target,
+        ) < 58
+      )
+    ) {
+      const practiceRetry =
+        hole.practiceDrill
+          .lastCorrection;
+      return interactionPromptResult(
+        inputCopy(
+          practiceRetry
+            ? `HOLD ${keyboardBindingLabel("chip")} — RETRY BELL // ${practiceRetry}`
+            : `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
+          practiceRetry
+            ? `HOLD X — RETRY BELL // ${practiceRetry}`
+            : "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
+          practiceRetry
+            ? `HOLD CHIP — RETRY BELL // ${practiceRetry}`
+            : "HOLD CHIP — AIM AT AMBER BELL (OPTIONAL)",
+        ),
+        "practice-bell",
+        "FIELD TEST",
+        "chip",
+        "ready",
+        "CHIP READY",
+      );
+    }
+    if (
+      worldDistance(
+        state.player,
+        shed,
+      ) < shed.radius
+    ) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — TRY SHED DOOR`,
+          "A — TRY SHED DOOR",
+          "TAP USE — TRY SHED DOOR",
+        ),
+        "maintenance-shed",
+        "SHED EXIT",
+      );
+    }
+    if (
+      worldDistance(
+        state.player,
+        drain,
+      ) < drain.radius
+    ) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — INSPECT SEALED DRAIN`,
+          "A — INSPECT SEALED DRAIN",
+          "TAP USE — INSPECT SEALED DRAIN",
+        ),
+        "drain-exit",
+        "DRAIN EXIT",
+      );
+    }
+    return interactionPromptResult(
+      "",
+      null,
+      null,
+      null,
+      "inactive",
+      null,
+    );
+  }
+
+  function activeInteractionPromptOwner() {
+    const owner =
+      state.hole
+        ?.interactionPromptOwner;
+    if (
+      !owner ||
+      !state.hole.prompt ||
+      owner.prompt !==
+        state.hole.prompt
+    ) {
+      return null;
+    }
+    return owner;
+  }
+
+  function interactionPromptRelationship(
+    targetId,
+    promptOwner =
+      activeInteractionPromptOwner(),
+    bottomRailActive =
+      fieldInteractionPromptOwnsBottomRail(),
+  ) {
+    const ownerMatches = Boolean(
+      promptOwner &&
+      promptOwner.targetId ===
+        targetId,
+    );
+    return {
+      targetId,
+      bottomRailActive,
+      ownerTargetId:
+        promptOwner?.targetId || null,
+      ownerLabel:
+        promptOwner?.label || null,
+      ownerBinding:
+        promptOwner?.binding || null,
+      ownerMatches,
+      ownsInteractBinding:
+        bottomRailActive &&
+        ownerMatches &&
+        promptOwner?.binding ===
+          "interact",
+      conflictsWithOwner:
+        Boolean(
+          bottomRailActive &&
+          promptOwner &&
+          !ownerMatches,
+        ),
+      rule:
+        "one_interact_binding_one_authoritative_target",
+    };
+  }
+
+  /**
+   * Gives one ready Interact owner a quiet visual decision lane without
+   * removing other physical props, collision truth, or map information.
+   * An overlapping usable object remains visible so simultaneous actions do
+   * not become hidden; only distant advisory marker cards yield.
+   */
+  function readyInteractionFocusPresentation(
+    targetId = null,
+    inReach = false,
+    promptOwner =
+      activeInteractionPromptOwner(),
+  ) {
+    const active = Boolean(
+      promptOwner?.targetId &&
+        promptOwner.binding ===
+          "interact" &&
+        promptOwner.availability ===
+          "ready",
+    );
+    const ownerMatches = Boolean(
+      active &&
+        targetId ===
+          promptOwner.targetId,
+    );
+    const deferred = Boolean(
+      active &&
+        !ownerMatches &&
+        !inReach,
+    );
+    return {
+      active,
+      deferred,
+      ownerTargetId:
+        active
+          ? promptOwner.targetId
+          : null,
+      ownerLabel:
+        active
+          ? promptOwner.label
+          : null,
+      ownerMatches,
+      overlappingActionRetained:
+        Boolean(
+          active &&
+            !ownerMatches &&
+            inReach,
+        ),
+      markerAlpha:
+        deferred ? 0 : 1,
+      physicalArtRetained: true,
+      collisionTruthRetained: true,
+      courseMapRetained: true,
+      gameplayEffect: "none",
+      presentation:
+        deferred
+          ? "ready_interaction_defers_distant_advisory_cards_while_world_art_and_map_truth_remain"
+          : "ordinary_world_marker_visibility",
+      rule:
+        "one_ready_action_owns_the_decision_lane_without_hiding_overlapping_actions_or_changing_the_world",
+    };
+  }
+
+  /**
+   * Applies the same focus rule to advisory overlays such as a nearby footing
+   * bypass. A hazard the player is actually standing in stays authoritative;
+   * only optional approach advice yields to the ready action.
+   */
+  function footingHazardAdvisoryFocusPresentation(
+    localHazardActive = false,
+    promptOwner =
+      activeInteractionPromptOwner(),
+    immediateRouteOwner = null,
+  ) {
+    const interactionFocus =
+      readyInteractionFocusPresentation(
+        null,
+        false,
+        promptOwner,
+      );
+    const urgentRouteFocus = Boolean(
+      immediateRouteOwner &&
+        !localHazardActive,
+    );
+    const readyActionFocus = Boolean(
+      interactionFocus.active &&
+        !localHazardActive,
+    );
+    const deferred = Boolean(
+      urgentRouteFocus ||
+        readyActionFocus,
+    );
+    return {
+      deferred,
+      deferredBy:
+        urgentRouteFocus
+          ? `${immediateRouteOwner.owner}:${immediateRouteOwner.id}`
+          : readyActionFocus
+          ? `ready_interaction:${interactionFocus.ownerTargetId}`
+          : null,
+      urgentLocalHazardRetained:
+        Boolean(
+          localHazardActive &&
+            (
+              interactionFocus.active ||
+              immediateRouteOwner
+            ),
+        ),
+      immediateRouteOwner:
+        immediateRouteOwner
+          ? {
+              id:
+                immediateRouteOwner.id,
+              owner:
+                immediateRouteOwner.owner,
+              label:
+                immediateRouteOwner.label,
+            }
+          : null,
+      interactionFocus,
+      gameplayEffect: "none",
+      rule:
+        "ready_action_or_immediate_route_defers_optional_advice_but_never_silences_an_active_escape_hazard",
+    };
   }
 
   function activeChangeRequest() {
@@ -2830,6 +5510,9 @@
       challengerAdvantageMeters: 0,
       switchThresholdMeters:
         NAVIGATION_TARGET_SWITCH_ADVANTAGE_METERS,
+      collisionRecovery: null,
+      collisionRecoveryExpiresAt: 0,
+      collisionRecoveries: 0,
     };
   }
 
@@ -3140,6 +5823,19 @@
           typeof parsed.reducedMotion === "boolean"
             ? parsed.reducedMotion
             : systemReducedMotion,
+        effectsDensity:
+          Number.isFinite(
+            parsed.effectsDensity,
+          )
+            ? clamp(
+                parsed.effectsDensity,
+                0.5,
+                1,
+              )
+            : 1,
+        highContrastNavigation:
+          parsed.highContrastNavigation ===
+          true,
         keyboardBindings:
           validKeyboardBindings(
             parsed.keyboardBindings,
@@ -3159,6 +5855,8 @@
         threatCaptions: true,
         reducedMotion:
           systemReducedMotion,
+        effectsDensity: 1,
+        highContrastNavigation: false,
         keyboardBindings:
           defaultKeyboardBindings(),
       };
@@ -3464,6 +6162,11 @@
     captionBackground: savedPreferences.captionBackground,
     threatCaptions: savedPreferences.threatCaptions,
     reducedMotion: savedPreferences.reducedMotion,
+    effectsDensity:
+      savedPreferences.effectsDensity,
+    highContrastNavigation:
+      savedPreferences
+        .highContrastNavigation,
     volume: savedPreferences.volume,
     ambienceVolume: savedPreferences.ambienceVolume,
     mowerVolume: savedPreferences.mowerVolume,
@@ -3490,6 +6193,7 @@
       savedCareer.completedVariants.length ===
         RUN_VARIANTS.length,
     status: "One last action item. One locked gate.",
+    pendingCourseStart: false,
     lastJoeCaptureLineId: null,
     lastJoeCaptureLineIds: [],
     manualTime: false,
@@ -3576,6 +6280,19 @@
       },
       distraction: null,
       distractionTimer: 0,
+      fieldSignalBreakaway: {
+        sourceId: null,
+        quietSeconds: 0,
+        quietReady: false,
+        rewardTimer: 0,
+        rewardMessage: "",
+        feedbackTimer: 0,
+        lastFeedback: null,
+        attempts: 0,
+        completed: [],
+        lastOutcome: null,
+        lastNavigationHandoff: null,
+      },
       searchContext: null,
       noiseHazards:
         freshNoiseHazardState(),
@@ -3598,6 +6315,7 @@
       footingHazardSeconds: 0,
       footingHazardEntries: 0,
       activeFootingHazardId: null,
+      footingNavigationOverride: null,
       footingRecoveryTimer: 0,
       footingRecoveryZoneId: null,
       footingRecoveryKind: null,
@@ -3635,6 +6353,9 @@
           !savedCareer.golfLessonCompleted,
         ),
       prompt: "",
+      interactionPromptOwner: null,
+      fieldCommitmentPressure:
+        freshFieldCommitmentPressure(),
       interactionRejection: {
         targetId: null,
         localStatus: null,
@@ -3720,11 +6441,14 @@
       lastKnownJoeTimer: 0,
       captions: [],
       worldEffects: [],
+      peakWorldEffects: 0,
       worldParticles: [],
       nextWorldParticleId: 1,
       peakWorldParticles: 0,
       screenParticles: [],
+      peakScreenParticles: 0,
       groundResponses: [],
+      peakGroundResponses: 0,
       playerStepSerial: 0,
       turfMarks: [],
       livingRoadmap:
@@ -3907,6 +6631,13 @@
           captionBackground: Number(state.captionBackground.toFixed(2)),
           threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
+          effectsDensity: Number(
+            state.effectsDensity.toFixed(
+              2,
+            ),
+          ),
+          highContrastNavigation:
+            state.highContrastNavigation,
           keyboardBindings: {
             ...state.keyboardBindings,
           },
@@ -5087,6 +7818,8 @@
           ? "review"
         : label.includes("STATUS ACKNOWLEDGED")
           ? "status"
+        : label.includes("SIGNAL BREAKAWAY")
+          ? "field"
         : label.includes("PRESSURE CHIP") ||
             label.includes("DELIVERABLE BANK") ||
             label.includes("LIE SWITCH")
@@ -5428,6 +8161,115 @@
     return event;
   }
 
+  function cleanBreakRunLedger(
+    hole = state.hole,
+  ) {
+    const completed = (
+      hole?.fieldSignalBreakaway
+        ?.completed || []
+    ).filter(
+      (id, index, entries) =>
+        NIGHT_ORDER_ACTIONS.some(
+          (action) =>
+            action.id === id,
+        ) &&
+        entries.indexOf(id) ===
+          index,
+    );
+    const deliveryBonus = (
+      hole?.deliveryEvents || []
+    ).reduce(
+      (total, event) =>
+        total +
+        (
+          event.family === "field"
+            ? event.amount
+            : 0
+        ),
+      0,
+    );
+    return {
+      completed,
+      count: completed.length,
+      required:
+        NIGHT_ORDER_ACTIONS.length,
+      deliveryBonus,
+      perfect:
+        completed.length ===
+        NIGHT_ORDER_ACTIONS.length,
+    };
+  }
+
+  function cleanBreakDefeatPresentation(
+    ledger = cleanBreakRunLedger(),
+  ) {
+    const visible = ledger.count > 0;
+    return {
+      ...ledger,
+      visible,
+      text: visible
+        ? `DELIVERY BLOCKED // CLEAN SIGNALS ${ledger.count}/${ledger.required}`
+        : "DELIVERY BLOCKED: FAILED JOE'S ACCEPTANCE REVIEW",
+      presentation:
+        "integrated_into_defeat_status_line_without_replacing_incident_coaching",
+      persistence:
+        "recognizes_this_run_only; retry starts a fresh station ledger",
+    };
+  }
+
+  function cleanBreakHudPresentation(
+    ledger = cleanBreakRunLedger(),
+    attempts =
+      state.hole
+        ?.fieldSignalBreakaway
+        ?.attempts || 0,
+  ) {
+    const visible =
+      ledger.count > 0 ||
+      attempts > 0;
+    const tone = ledger.perfect
+      ? "perfect"
+      : ledger.count > 0
+        ? "earned"
+        : attempts > 0
+          ? "missed"
+          : "inactive";
+    return {
+      ...ledger,
+      attempts,
+      misses: Math.max(
+        0,
+        attempts - ledger.count,
+      ),
+      visible,
+      text:
+        `CLEAN ${ledger.count}/${ledger.required}`,
+      tone,
+      backgroundColor:
+        tone === "perfect"
+          ? "rgba(93,73,20,0.76)"
+          : tone === "missed"
+            ? "rgba(70,38,22,0.78)"
+            : "rgba(20,55,38,0.78)",
+      borderColor:
+        tone === "perfect"
+          ? "#efc95e"
+          : tone === "missed"
+            ? "#c9834c"
+            : "#78bd93",
+      textColor:
+        tone === "perfect"
+          ? "#f4d66d"
+          : tone === "missed"
+            ? "#e6a86e"
+            : "#a5dfb7",
+      placement:
+        "right_side_of_existing_objective_row",
+      hierarchy:
+        "first attempt reveals the mastery badge; current objective retains instruction priority",
+    };
+  }
+
   function calculateRunResult(route) {
     const hole = state.hole;
     const variant = activeRunVariant();
@@ -5469,6 +8311,8 @@
       )
         ? hole.deliveryBonus
         : 0;
+    const cleanBreakLedger =
+      cleanBreakRunLedger(hole);
     const baseScore =
       3000 +
       timeBonus +
@@ -5570,6 +8414,16 @@
         hole.deliveryPeak || 0,
       deliveryEvents:
         hole.deliveryEvents?.slice() || [],
+      signalBreakawaysCompleted:
+        cleanBreakLedger.completed,
+      signalBreakawayCount:
+        cleanBreakLedger.count,
+      signalBreakawayRequired:
+        cleanBreakLedger.required,
+      signalBreakawayBonus:
+        cleanBreakLedger.deliveryBonus,
+      perfectSignalMask:
+        cleanBreakLedger.perfect,
       shotCraftCount:
         hole.shotCraftEvents?.length || 0,
       shotCraftCounts: {
@@ -5988,7 +8842,7 @@
         "BREAK SIGHT",
         "sight",
         `Joe maintained visual contact through ${zoneName}.`,
-        "Cut behind solid cover and remain quiet until the contact-break meter clears.",
+        "Break sight behind solid cover, then stay quiet until Joe loses the trail.",
       );
     }
     if (
@@ -6081,6 +8935,26 @@
         review.id;
       review.repeatCount =
         state.career.captureCauseStreak;
+      const coaching =
+        REPEAT_CAPTURE_COACHING[
+          review.id
+        ];
+      if (
+        coaching &&
+        review.repeatCount >= 2
+      ) {
+        review.coachingMode =
+          review.repeatCount >= 3
+            ? "recovery_drill"
+            : "guided_adjustment";
+        review.counterplay =
+          review.repeatCount >= 3
+            ? coaching.drill
+            : coaching.adjustment;
+      } else {
+        review.coachingMode =
+          "counterplan";
+      }
     }
     saveCareer();
   }
@@ -8369,6 +11243,19 @@
       "center",
     );
     drawText("NIGHT SHIFT BUILD 01", WIDTH - 28, 32, 12, "#70816b", "right");
+    const bootAssets =
+      assetPhaseSummary("boot");
+    if (!bootAssets.ready) {
+      drawText(
+        `PREPARING INCIDENT // ${bootAssets.percent}%`,
+        WIDTH * 0.5,
+        HEIGHT * 0.67,
+        13,
+        "#aeba96",
+        "center",
+        true,
+      );
+    }
   }
 
   function drawSubtitleCard(
@@ -8479,6 +11366,24 @@
       "#b7c0aa",
       "right",
     );
+    const courseAssets =
+      assetPhaseSummary("course");
+    if (
+      courseAssets.requested &&
+      !courseAssets.ready
+    ) {
+      drawText(
+        `PREPARING COURSE // ${courseAssets.percent}%`,
+        32,
+        HEIGHT - 25,
+        13,
+        courseAssets.failed > 0
+          ? "#e08a54"
+          : "#93a88a",
+        "left",
+        true,
+      );
+    }
   }
 
   function bestRecordForVariant(
@@ -9149,7 +12054,9 @@
     } else {
       drawText(MENU_DESCRIPTIONS[state.menuIndex], 91, 621, 13, "#d0d8bf", "left");
       drawText(
-        state.career.roundsStarted > 0
+        state.pendingCourseStart
+          ? state.status
+          : state.career.roundsStarted > 0
           ? `FILE: ${state.career.roundsStarted} ROUND${state.career.roundsStarted === 1 ? "" : "S"}  •  ${state.career.escapes} ESCAPED  •  ${state.career.captures} DENIED`
           : state.status,
         91,
@@ -9191,9 +12098,21 @@
       .length;
     return {
       x: setting.group === "audio" ? 676 : 892,
-      y: 230 + groupIndex * 49,
+      y:
+        230 +
+        groupIndex *
+          (
+            setting.group ===
+            "presentation"
+              ? 37
+              : 49
+          ),
       width: 204,
-      height: 43,
+      height:
+        setting.group ===
+        "presentation"
+          ? 35
+          : 43,
     };
   }
 
@@ -9201,9 +12120,12 @@
     const row = settingsRowGeometry(index);
     return {
       x: row.x + 10,
-      y: row.y + 27,
+      y:
+        row.y +
+        (row.height < 40 ? 24 : 27),
       width: 144,
-      height: 8,
+      height:
+        row.height < 40 ? 7 : 8,
     };
   }
 
@@ -9217,25 +12139,42 @@
     checked,
     selected,
   ) {
+    const compact = row.height < 40;
+    const boxSize = compact ? 17 : 19;
     const boxX = row.x + 10;
-    const boxY = row.y + 12;
+    const boxY =
+      row.y + (compact ? 8 : 12);
     ctx.fillStyle = checked ? "#d96a24" : "#152219";
-    ctx.fillRect(boxX, boxY, 19, 19);
+    ctx.fillRect(
+      boxX,
+      boxY,
+      boxSize,
+      boxSize,
+    );
     strokeRect(
       boxX,
       boxY,
-      19,
-      19,
+      boxSize,
+      boxSize,
       selected ? "#e4ad6d" : "#80906c",
       selected ? 2 : 1,
     );
     if (checked) {
-      drawText("✓", boxX + 10, boxY + 16, 16, "#fff1cc", "center", true);
+      drawText(
+        "✓",
+        boxX + boxSize * 0.5,
+        boxY + boxSize - 3,
+        compact ? 14 : 16,
+        "#fff1cc",
+        "center",
+        true,
+      );
     }
     drawText(
       label,
-      boxX + 29,
-      row.y + 27,
+      boxX + boxSize + 10,
+      row.y +
+        (compact ? 23 : 27),
       10,
       selected ? "#f2e7bd" : "#dce4cd",
       "left",
@@ -9675,6 +12614,8 @@
     for (let index = 0; index < SETTINGS_ROWS.length; index += 1) {
       const setting = SETTINGS_ROWS[index];
       const row = settingsRowGeometry(index);
+      const compactRow =
+        row.height < 40;
       if (setting.type === "slider") {
         const value = state[setting.key];
         const slider = settingsSliderGeometry(index);
@@ -9684,7 +12625,8 @@
         drawText(
           setting.label,
           row.x + 10,
-          row.y + 18,
+          row.y +
+            (compactRow ? 14 : 18),
           10,
           index === state.settingsIndex ? "#f2e7bd" : "#c6d0ba",
           "left",
@@ -9715,7 +12657,8 @@
         drawText(
           settingDisplayValue(setting),
           row.x + row.width - 8,
-          row.y + 36,
+          row.y +
+            (compactRow ? 32 : 36),
           10,
           "#dfe5d3",
           "right",
@@ -9730,15 +12673,15 @@
       }
     }
     ctx.fillStyle = "rgba(15,30,17,0.86)";
-    ctx.fillRect(676, 480, 420, 60);
-    strokeRect(676, 480, 420, 60, "#4e6442", 1);
-    drawText("CAPTION PREVIEW", 688, 494, 9, "#819277", "left", true);
+    ctx.fillRect(676, 492, 420, 50);
+    strokeRect(676, 492, 420, 50, "#4e6442", 1);
+    drawText("CAPTION PREVIEW", 688, 503, 9, "#819277", "left", true);
     drawText(
       state.threatCaptions
         ? "MOWER // AMBER"
         : "DISABLED",
       1084,
-      494,
+      503,
       9,
       state.threatCaptions
         ? threatCaptionTheme("mower")
@@ -9751,7 +12694,7 @@
       drawSubtitleCard(
         "[ JOE APPROACHING — RIGHT ]",
         886,
-        526,
+        532,
         12,
         threatCaptionTheme("mower")
           .textColor,
@@ -9764,7 +12707,7 @@
       drawText(
         "THREAT CAPTIONS OFF",
         886,
-        525,
+        531,
         12,
         "#788274",
         "center",
@@ -9915,22 +12858,224 @@
   }
 
   /**
-   * Converts the authoritative objective state into the next useful Interact
-   * action shown by the expanded field dossier.
+   * Converts an objective target and its authoritative interaction radius
+   * into range-truthful dossier copy. The binding appears only when the same
+   * distance check used by interaction handling says the target is usable.
    */
-  function objectiveActionHudSummary() {
-    const hole = state.hole;
+  function objectiveActionRangePresentation(
+    target,
+    targetId,
+    targetLabel,
+    actionLabel,
+    phase,
+    color,
+    distance = null,
+  ) {
+    const interactionRadius =
+      target?.radius || 0;
+    const resolvedDistance =
+      distance === null
+        ? worldDistance(
+            state.player,
+            target,
+          )
+        : distance;
+    const roundedDistance = Math.max(
+      0,
+      Math.ceil(resolvedDistance),
+    );
+    const inReach =
+      interactionRadius > 0 &&
+      resolvedDistance <
+        interactionRadius;
+    const approachReadiness =
+      interactionApproachReadiness(
+        target,
+        resolvedDistance,
+      );
+    const availability = inReach
+      ? "ready"
+      : approachReadiness > 0
+        ? "approaching"
+        : "distant";
     const interactLabel = inputCopy(
       keyboardBindingLabel("interact"),
       "A",
       "USE",
     );
+    const text = inReach
+      ? `${interactLabel}  ${actionLabel}`
+      : approachReadiness > 0
+        ? `CLOSE IN // ${targetLabel} ${roundedDistance}m`
+        : `FOLLOW LANTERNS // ${targetLabel} ${roundedDistance}m`;
+    return {
+      phase,
+      text,
+      color,
+      targetId,
+      targetLabel,
+      actionLabel,
+      availability,
+      bindingVisible: inReach,
+      distance: Number(
+        resolvedDistance.toFixed(2),
+      ),
+      interactionRadius,
+      approachReadiness: Number(
+        approachReadiness.toFixed(3),
+      ),
+      rangeRule:
+        "binding_visible_only_inside_authoritative_interaction_radius",
+    };
+  }
+
+  function objectiveActionTargetDetails(
+    guidance,
+  ) {
+    const fieldAction =
+      NIGHT_ORDER_ACTIONS.find(
+        (action) =>
+          action.id === guidance.id,
+      );
+    if (fieldAction) {
+      return {
+        phase: "field_check",
+        actionLabel:
+          fieldAction.label,
+      };
+    }
+    if (guidance.id === "shed-key") {
+      return {
+        phase: "prepare_exit",
+        actionLabel: "TAKE SHED KEY",
+      };
+    }
+    if (guidance.id === "sprinkler") {
+      return {
+        phase: "prepare_exit",
+        actionLabel: "OPEN DRAIN VALVE",
+      };
+    }
+    if (
+      guidance.id ===
+      "maintenance-shed"
+    ) {
+      return {
+        phase: "file_shed",
+        actionLabel: "FILE SHED EXIT",
+      };
+    }
+    if (guidance.id === "drain-exit") {
+      return {
+        phase: "file_drain",
+        actionLabel: "FILE DRAIN EXIT",
+      };
+    }
+    return {
+      phase: "review_route",
+      actionLabel: "REVIEW FIELD ROUTE",
+    };
+  }
+
+  /**
+   * Converts the currently visible short-horizon route into the exact next
+   * action used by the live dossier, pause modal, paused settings context,
+   * and diagnostics. This is presentation-only and does not advance timers,
+   * move the player, or replace the preserved long-horizon objective.
+   */
+  function immediateRouteActionPresentation(
+    collisionRoute =
+      collisionRecoveryWorldRoutePresentation(),
+    footingOverride =
+      activeFootingNavigationOverride(),
+  ) {
+    if (collisionRoute?.active) {
+      const distance = Math.max(
+        0,
+        collisionRoute
+          .remainingDistance || 0,
+      );
+      return {
+        phase:
+          "collision_recovery",
+        text:
+          `${collisionRoute.instruction} // ${collisionRoute.targetLabel} ${Math.ceil(distance)}m`,
+        color:
+          collisionRoute.color,
+        targetId:
+          `collision-clear:${collisionRoute.obstacleId || "obstacle"}`,
+        targetLabel:
+          collisionRoute.targetLabel,
+        availability:
+          "clear_route",
+        bindingVisible: false,
+        distance: Number(
+          distance.toFixed(2),
+        ),
+        routeOwner:
+          "collision_recovery",
+        preservedObjective:
+          state.hole
+            ?.navigationGuide
+            ?.targetLabel || null,
+        rangeRule:
+          "collision_clearance_owns_live_pause_and_settings_next_action_until_the_local_route_clears",
+      };
+    }
+    if (footingOverride) {
+      const distance = Math.max(
+        0,
+        footingOverride
+          .distanceToClear || 0,
+      );
+      return {
+        phase:
+          "footing_escape",
+        text:
+          `${footingOverride.instruction} // ${footingOverride.targetLabel} ${Math.ceil(distance)}m`,
+        color:
+          footingOverride.color,
+        targetId:
+          footingOverride.id,
+        targetLabel:
+          footingOverride.targetLabel,
+        availability:
+          "escape_route",
+        bindingVisible: false,
+        distance: Number(
+          distance.toFixed(2),
+        ),
+        routeOwner:
+          footingOverride.owner,
+        preservedObjective:
+          footingOverride
+            .objectiveTargetLabel,
+        rangeRule:
+          "slow_footing_escape_owns_live_pause_and_settings_next_action_until_full_speed_ground_returns",
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Converts the authoritative objective state into the next useful action
+   * shown by the expanded field dossier, pause card, and diagnostics.
+   */
+  function objectiveActionHudSummary(
+    options = {},
+  ) {
+    const hole = state.hole;
+    const includeTacticalOverride =
+      options.includeTacticalOverride !==
+      false;
     if (hole.escapeFiling.sealing) {
       return {
         phase: "authorized",
         text: "✓  RELEASE AUTHORIZED",
         color: "#92d5ae",
         targetId: null,
+        availability: "complete",
+        bindingVisible: false,
       };
     }
     if (hole.escapeFiling.active) {
@@ -9944,58 +13089,121 @@
         color: "#e2cf9c",
         targetId:
           hole.escapeFiling.route,
+        availability: "active",
+        bindingVisible: false,
       };
     }
-    if (!nightOrderActionsComplete()) {
-      const nextAction =
-        nextNightOrderAction();
+    const rejection =
+      activeInteractionRejection();
+    if (rejection) {
+      const rejectedLabel =
+        rejection.targetId ===
+        "maintenance-shed"
+          ? "SHED EXIT"
+          : rejection.targetId ===
+              "drain-exit"
+            ? "DRAIN EXIT"
+            : "OBJECTIVE";
+      const rejectionTarget =
+        interactionRejectionTarget(
+          rejection.targetId,
+        );
       return {
-        phase: "field_check",
-        text: nextAction
-          ? `${interactLabel}  ${nextAction.label}`
-          : `${interactLabel}  REVIEW FIELD ROUTE`,
-        color:
-          nextAction?.color || "#e5d9b8",
+        phase: "blocked",
+        text:
+          `BLOCKED // ${rejectedLabel} ${rejection.localStatus}`,
+        color: "#df8250",
         targetId:
-          nextAction?.id || null,
+          rejection.targetId,
+        targetLabel: rejectedLabel,
+        availability: "blocked",
+        bindingVisible: false,
+        distance: rejectionTarget
+          ? Number(
+              worldDistance(
+                state.player,
+                rejectionTarget,
+              ).toFixed(2),
+            )
+          : null,
+        rangeRule:
+          "blocked_interaction_owns_feedback_until_retreat",
       };
     }
-    if (
-      hole.keyCollected &&
-      hole.drainUnlocked
-    ) {
+    const immediateRouteAction =
+      immediateRouteActionPresentation();
+    if (immediateRouteAction) {
+      return immediateRouteAction;
+    }
+    const breakaway =
+      includeTacticalOverride
+        ? activeFieldActionBreakaway()
+        : null;
+    if (breakaway) {
+      const holdProgress =
+        `${breakaway.quietSeconds.toFixed(1)}/${breakaway.quietRequiredSeconds.toFixed(1)}s`;
       return {
-        phase: "choose_exit",
-        text:
-          `${interactLabel}  FILE SHED OR DRAIN EXIT`,
-        color: "#92d5ae",
-        targetId: "shed_or_drain",
+        phase: "field_signal_breakaway",
+        text: breakaway.reached
+          ? breakaway.quietReady
+            ? "SIGNAL MASKED // STAY HIDDEN"
+            : `HOLD QUIET // ${holdProgress}`
+          : `BREAK SIGNAL // ${breakaway.coverLabel} ${Math.ceil(breakaway.distance)}m`,
+        color: breakaway.color,
+        targetId: breakaway.id,
+        targetLabel:
+          breakaway.coverLabel,
+        availability:
+          breakaway.reached
+            ? breakaway.quietReady
+              ? "masked"
+              : "hold"
+            : "tactical_route",
+        bindingVisible: false,
+        distance: Number(
+          breakaway.distance.toFixed(2),
+        ),
+        interactionRadius:
+          breakaway.target.radius,
+        approachReadiness: Number(
+          interactionApproachReadiness(
+            breakaway.target,
+            breakaway.distance,
+          ).toFixed(3),
+        ),
+        rangeRule:
+          "mandatory_signal_breakaway_has_no_interact_binding",
       };
     }
-    if (hole.drainUnlocked) {
-      return {
-        phase: "file_drain",
-        text:
-          `${interactLabel}  FILE DRAIN EXIT`,
-        color: "#87cba9",
-        targetId: "drain-exit",
-      };
-    }
-    if (hole.keyCollected) {
-      return {
-        phase: "file_shed",
-        text:
-          `${interactLabel}  FILE SHED EXIT`,
-        color: "#9db57c",
-        targetId: "maintenance-shed",
-      };
+    const guidance =
+      activePlayerGuidanceTarget({
+        includeTacticalOverride,
+      });
+    if (guidance) {
+      const details =
+        objectiveActionTargetDetails(
+          guidance,
+        );
+      return objectiveActionRangePresentation(
+        guidance.target,
+        guidance.id,
+        guidance.shortLabel,
+        details.actionLabel,
+        details.phase,
+        guidance.color,
+      );
     }
     return {
-      phase: "prepare_exit",
-      text:
-        `${interactLabel}  TAKE KEY OR OPEN VALVE`,
-      color: "#c7bea5",
-      targetId: "key_or_valve",
+      phase: nightOrderActionsComplete()
+        ? "choose_route"
+        : "field_check",
+      text: "REVIEW FIELD ROUTE",
+      color: nightOrderActionsComplete()
+        ? "#c7bea5"
+        : "#e5d9b8",
+      targetId: null,
+      availability: "unresolved",
+      bindingVisible: false,
     };
   }
 
@@ -10263,6 +13471,19 @@
       },
       distraction: null,
       distractionTimer: 0,
+      fieldSignalBreakaway: {
+        sourceId: null,
+        quietSeconds: 0,
+        quietReady: false,
+        rewardTimer: 0,
+        rewardMessage: "",
+        feedbackTimer: 0,
+        lastFeedback: null,
+        attempts: 0,
+        completed: [],
+        lastOutcome: null,
+        lastNavigationHandoff: null,
+      },
       searchContext: null,
       noiseHazards:
         freshNoiseHazardState(),
@@ -10285,6 +13506,7 @@
       footingHazardSeconds: 0,
       footingHazardEntries: 0,
       activeFootingHazardId: null,
+      footingNavigationOverride: null,
       footingRecoveryTimer: 0,
       footingRecoveryZoneId: null,
       footingRecoveryKind: null,
@@ -10324,6 +13546,9 @@
             !overtime,
         ),
       prompt: "",
+      interactionPromptOwner: null,
+      fieldCommitmentPressure:
+        freshFieldCommitmentPressure(),
       interactionRejection: {
         targetId: null,
         localStatus: null,
@@ -10411,11 +13636,14 @@
       lastKnownJoeTimer: 0,
       captions: [],
       worldEffects: [],
+      peakWorldEffects: 0,
       worldParticles: [],
       nextWorldParticleId: 1,
       peakWorldParticles: 0,
       screenParticles: [],
+      peakScreenParticles: 0,
       groundResponses: [],
+      peakGroundResponses: 0,
       playerStepSerial: 0,
       turfMarks: [],
       livingRoadmap:
@@ -12755,6 +15983,24 @@
    * Candidate lanes must clear both the hazard edge and authored collision
    * geometry, so first-person guidance never promises a blocked route.
    */
+  function footingHazardRouteSuppressedAfterClear(
+    zone,
+    active,
+    player = state.player,
+    hole = state.hole,
+  ) {
+    return Boolean(
+      zone &&
+        !active &&
+        hole
+          ?.footingRecoveryZoneId ===
+          zone.id &&
+        player.y >=
+          zone.y -
+            zone.radiusY * 0.75,
+    );
+  }
+
   function footingHazardBypassGuidance(
     footing = footingHazardStateAt(
       state.player,
@@ -12764,11 +16010,19 @@
     if (!zone) {
       return null;
     }
+    const clearedRouteSuppressed =
+      footingHazardRouteSuppressedAfterClear(
+        zone,
+        footing.active,
+      );
     const visible =
-      footing.active ||
+      !clearedRouteSuppressed &&
       (
-        footing.edgeDistance >= 0 &&
-        footing.edgeDistance <= 34
+        footing.active ||
+        (
+          footing.edgeDistance >= 0 &&
+          footing.edgeDistance <= 34
+        )
       );
     if (!visible) {
       return {
@@ -12783,7 +16037,10 @@
           state.hole.joe,
         ),
         waitRecommended: false,
-        decision: "outside_guidance_range",
+        decision:
+          clearedRouteSuppressed
+            ? "recently_cleared_patch_yields_to_resumed_objective"
+            : "outside_guidance_range",
       };
     }
     const candidates = [];
@@ -12909,7 +16166,21 @@
     candidates.sort(
       (a, b) => b.score - a.score,
     );
-    const selected = candidates[0];
+    const latchedSide =
+      footing.active &&
+      state.hole
+        ?.footingNavigationOverride
+        ?.zoneId === zone.id
+        ? state.hole
+            .footingNavigationOverride
+            .side
+        : null;
+    const selected =
+      candidates.find(
+        (candidate) =>
+          candidate.side ===
+          latchedSide,
+      ) || candidates[0];
     const distanceToClear =
       footing.active
         ? Math.max(
@@ -12953,6 +16224,93 @@
     };
   }
 
+  /**
+   * Converts one valid slow-footing lane into a latched immediate-navigation
+   * owner. The long-horizon objective remains intact and resumes on clearance.
+   */
+  function footingNavigationOverrideFromGuidance(
+    guidance,
+    objectiveGuide =
+      state.hole?.navigationGuide ||
+      null,
+  ) {
+    if (
+      !guidance?.active ||
+      !guidance.selected?.valid
+    ) {
+      return null;
+    }
+    const selected = guidance.selected;
+    const kindLabel =
+      guidance.zone.kind === "roots"
+        ? "ROOTS"
+        : guidance.zone.kind.toUpperCase();
+    return {
+      id:
+        `footing-exit:${guidance.zone.id}`,
+      zoneId: guidance.zone.id,
+      zoneLabel: guidance.zone.name,
+      side: selected.side,
+      sideLabel: selected.sideLabel,
+      instruction:
+        `CLEAR ${selected.sideLabel}`,
+      direction:
+        selected.side < 0
+          ? "BEAR LEFT"
+          : "BEAR RIGHT",
+      targetLabel: `${kindLabel} EXIT`,
+      color: "#ec7d48",
+      route: [
+        { ...selected.entry },
+        { ...selected.middle },
+        { ...selected.exit },
+      ],
+      target: {
+        ...selected.middle,
+      },
+      minimumClearance:
+        selected.minimumClearance,
+      objectiveTargetId:
+        objectiveGuide?.targetId ||
+        null,
+      objectiveTargetLabel:
+        objectiveGuide?.targetLabel ||
+        null,
+      owner:
+        "footing_hazard_escape",
+      handoff:
+        "suppress_objective_bearing_and_reflectors_until_footing_clears_then_resume_same_objective",
+      rule:
+        "one_immediate_route_owner_short_horizon_before_long_horizon",
+    };
+  }
+
+  function activeFootingNavigationOverride() {
+    const override =
+      state.hole
+        ?.footingNavigationOverride;
+    const environment =
+      state.hole?.environment;
+    if (
+      !override ||
+      !environment?.footingHazard ||
+      environment.footingHazardZone
+        ?.id !== override.zoneId
+    ) {
+      return null;
+    }
+    return {
+      ...override,
+      distanceToClear: Math.max(
+        0,
+        worldDistance(
+          state.player,
+          override.target,
+        ) - 3,
+      ),
+    };
+  }
+
   function footingHazardGuidanceForText() {
     const footing =
       footingHazardStateAt(
@@ -12985,6 +16343,10 @@
       );
     const plaqueThreat =
       footingHazardPlaqueThreatState(
+        guidance,
+      );
+    const routePresentation =
+      footingHazardRoutePresentation(
         guidance,
       );
     return {
@@ -13063,6 +16425,29 @@
       waitRecommended:
         guidance.waitRecommended,
       decision: guidance.decision,
+      worldRoute: {
+        visible:
+          routePresentation.visible,
+        startsAtPlayer:
+          routePresentation
+            .startsAtPlayer,
+        ingressVisible:
+          routePresentation
+            .ingressVisible,
+        visibleSegments:
+          routePresentation
+            .visibleSegments,
+        offscreenContinuation:
+          routePresentation
+            .offscreenContinuation,
+        edgeBridgeVisible:
+          routePresentation
+            .edgeBridgeVisible,
+        exitMarkerVisible:
+          routePresentation
+            .exitMarkerVisible,
+        rule: routePresentation.rule,
+      },
       alternatives:
         guidance.alternatives.map(
           (candidate) => ({
@@ -13212,6 +16597,18 @@
       noise.distance <= 8
     ) {
       return "imminent_noise_hazard";
+    }
+    const advisoryFocus =
+      footingHazardAdvisoryFocusPresentation(
+        Boolean(
+          state.hole?.environment
+            ?.footingHazard,
+        ),
+        activeInteractionPromptOwner(),
+        immediateNavigationMarkerOwner(),
+      );
+    if (advisoryFocus.deferred) {
+      return advisoryFocus.deferredBy;
     }
     return null;
   }
@@ -17136,16 +20533,85 @@
     }
   }
 
-  function directionFromPlayer(source) {
+  function directionFromPlayer(
+    source,
+    player = state.player,
+  ) {
     if (!source) {
       return null;
     }
-    const deltaX = source.x - state.player.x;
-    const deltaY = source.y - state.player.y;
+    const deltaX = source.x - player.x;
+    const deltaY = source.y - player.y;
     if (Math.abs(deltaX) > Math.abs(deltaY) * 0.55) {
       return deltaX < 0 ? "LEFT" : "RIGHT";
     }
     return deltaY >= 0 ? "AHEAD" : "BEHIND";
+  }
+
+  /**
+   * Keeps slow-footing consequence and navigation complementary: the bottom
+   * rail owns the safe escape route, while the caption points toward Joe.
+   */
+  function footingHazardThreatCaptionSpec(
+    hole = state.hole,
+  ) {
+    return {
+      text: "JOE KEEPS MOVING",
+      source: hole?.joe || null,
+      category: "mower",
+      duration: 2.55,
+      key: "footing_hazard",
+      role: "joe_bearing",
+    };
+  }
+
+  /**
+   * Exposes the two distinct decisions in a footing entry without changing
+   * slowdown, noise, Joe movement, or the authored escape route.
+   */
+  function footingHazardEntrySignalState(
+    hole = state.hole,
+  ) {
+    const caption =
+      hole?.captions?.find(
+        (candidate) =>
+          candidate.key ===
+          "footing_hazard",
+      ) || null;
+    const escape =
+      hole?.footingNavigationOverride ||
+      null;
+    return {
+      active: Boolean(
+        hole?.environment
+          ?.footingHazard &&
+        caption,
+      ),
+      threat: caption
+        ? {
+            text: caption.text,
+            direction:
+              caption.direction,
+            category:
+              caption.category,
+            role: "joe_bearing",
+          }
+        : null,
+      escape: escape
+        ? {
+            instruction:
+              escape.instruction,
+            direction:
+              escape.direction,
+            targetLabel:
+              escape.targetLabel,
+            role: "safe_route",
+          }
+        : null,
+      gameplayEffect: "none",
+      rule:
+        "footing_entry_caption_tracks_joe_while_the_bottom_rail_and_world_route_track_the_safe_exit",
+    };
   }
 
   function pushThreatCaption(
@@ -17409,6 +20875,8 @@
     return Boolean(
       hole.stateBannerTimer > 0 &&
       hole.stateBanner &&
+      !collisionStateBannerRelationship()
+        .ownsImmediateSignalLane &&
       activeHudPresentationFocus() !==
         "final_filing" &&
       !hole.statusRequest.active &&
@@ -17537,11 +21005,8 @@
     );
   }
 
-  function stateBannerThreatCaption() {
-    if (
-      !state.threatCaptions ||
-      !joeStateBannerVisible()
-    ) {
+  function stateBannerMatchingThreatCaption() {
+    if (!state.threatCaptions) {
       return null;
     }
     const captions =
@@ -17560,6 +21025,13 @@
       }
     }
     return null;
+  }
+
+  function stateBannerThreatCaption() {
+    if (!joeStateBannerVisible()) {
+      return null;
+    }
+    return stateBannerMatchingThreatCaption();
   }
 
   /**
@@ -17651,6 +21123,98 @@
   }
 
   /**
+   * Identifies the short Tension Director warning that already owns the
+   * bottom rail while the mower echo supplies its spatial direction.
+   */
+  function quietWindowWarningActive(
+    hole = state.hole,
+  ) {
+    return Boolean(
+      hole?.messageTimer > 0 &&
+      hole.message?.startsWith(
+        "THE DISTANT MOWER CHANGES PITCH",
+      ),
+    );
+  }
+
+  /**
+   * Converges the omen and mower echo created by one Tension Director beat
+   * into its strongest directional read. Unrelated danger captions remain
+   * eligible for the second field slot, and standalone omens remain intact.
+   */
+  function convergedThreatCaptions(
+    captions,
+  ) {
+    const directorSignals =
+      captions.filter(
+        (caption) =>
+          caption.key === "tension_omen" ||
+          caption.key === "director_echo",
+      );
+    if (directorSignals.length < 2) {
+      return captions;
+    }
+    const strongestSignal =
+      mostUrgentThreatCaption(
+        directorSignals,
+      );
+    return captions.filter(
+      (caption) =>
+        !directorSignals.includes(caption) ||
+        caption === strongestSignal,
+    );
+  }
+
+  function tensionDirectorCaptionConvergenceState() {
+    const captions =
+      state.hole?.captions || [];
+    const directorSignals =
+      captions.filter(
+        (caption) =>
+          caption.key === "tension_omen" ||
+          caption.key === "director_echo",
+      );
+    const visibleSignals =
+      convergedThreatCaptions(captions)
+        .filter(
+          (caption) =>
+            directorSignals.includes(
+              caption,
+            ),
+        );
+    return {
+      active:
+        directorSignals.length > 1,
+      bottomWarning:
+        quietWindowWarningActive()
+          ? holeMessageForPresentation()
+          : null,
+      candidateKeys:
+        directorSignals.map(
+          (caption) => caption.key,
+        ),
+      visibleKeys:
+        visibleSignals.map(
+          (caption) => caption.key,
+        ),
+      suppressedKeys:
+        directorSignals
+          .filter(
+            (caption) =>
+              !visibleSignals.includes(
+                caption,
+              ),
+          )
+          .map(
+            (caption) => caption.key,
+          ),
+      gameplayEffect: "none",
+      rule:
+        "one_tension_director_beat_one_strongest_directional_caption_without_redundant_ambient_omen",
+    };
+  }
+
+  /**
    * Keeps caption text and framing on the same semantic threat palette.
    */
   function threatCaptionTheme(category) {
@@ -17695,13 +21259,23 @@
       return [];
     }
     const merged =
-      stateBannerThreatCaption();
-    const captions = merged
+      stateBannerThreatCaption() ||
+      (
+        collisionStateBannerRelationship()
+          .ownsImmediateSignalLane
+          ? stateBannerMatchingThreatCaption()
+          : null
+      );
+    const candidates = merged
       ? state.hole.captions.filter(
           (caption) =>
             caption !== merged,
         )
       : state.hole.captions;
+    const captions =
+      convergedThreatCaptions(
+        candidates,
+      );
     if (
       presentation.layout ===
       "single_card_above_collision_release"
@@ -17793,10 +21367,12 @@
     ctx.save();
     ctx.globalAlpha =
       fade * resumeFade;
+    const presentation =
+      joeBarkSubtitlePresentation();
     drawSubtitleCard(
       `JOE // "${hole.joeBark}"`,
-      WIDTH * 0.5,
-      454,
+      presentation.centerX,
+      presentation.baselineY,
       14 *
         state.subtitleSize,
       hole.joe.mode === "chase"
@@ -17804,6 +21380,43 @@
         : "#d9cf9b",
     );
     ctx.restore();
+  }
+
+  /**
+   * Keeps optional Joe flavor readable without covering the generated prop,
+   * footprint, and consequence owned by a ready world interaction.
+   */
+  function joeBarkSubtitlePresentation(
+    interactionOwner =
+      state.hole?.interactionPromptOwner,
+  ) {
+    const protectsInteraction = Boolean(
+      interactionOwner?.targetId &&
+        interactionOwner.availability ===
+          "ready",
+    );
+    return {
+      centerX: WIDTH * 0.5,
+      baselineY:
+        protectsInteraction ? 224 : 454,
+      relocatedForInteraction:
+        protectsInteraction,
+      protectedTargetId:
+        protectsInteraction
+          ? interactionOwner.targetId
+          : null,
+      protectedTargetLabel:
+        protectsInteraction
+          ? interactionOwner.label
+          : null,
+      gameplayEffect: "none",
+      presentation:
+        protectsInteraction
+          ? "joe_bark_moves_to_the_open_top_center_lane_while_an_in_reach_world_object_owns_interaction"
+          : "joe_bark_uses_the_grounded_center_lane_when_no_world_interaction_needs_it",
+      rule:
+        "joe_flavor_remains_visible_without_covering_the_object_or_action_the_player_can_commit",
+    };
   }
 
   function addWorldEffect(
@@ -17822,6 +21435,21 @@
       seed: hash(state.hole.elapsed * 97 + x * 3 + y),
       ...details,
     });
+    if (
+      state.hole.worldEffects.length >
+      MAX_WORLD_EFFECTS
+    ) {
+      state.hole.worldEffects.splice(
+        0,
+        state.hole.worldEffects.length -
+          MAX_WORLD_EFFECTS,
+      );
+    }
+    state.hole.peakWorldEffects =
+      Math.max(
+        state.hole.peakWorldEffects,
+        state.hole.worldEffects.length,
+      );
   }
 
   function addMowerWorldParticle(
@@ -18266,6 +21894,21 @@
             : "#a9a56b",
       });
     }
+    if (
+      state.hole.screenParticles.length >
+      MAX_SCREEN_PARTICLES
+    ) {
+      state.hole.screenParticles.splice(
+        0,
+        state.hole.screenParticles.length -
+          MAX_SCREEN_PARTICLES,
+      );
+    }
+    state.hole.peakScreenParticles =
+      Math.max(
+        state.hole.peakScreenParticles,
+        state.hole.screenParticles.length,
+      );
   }
 
   function addPlayerGroundResponse(
@@ -18364,6 +22007,11 @@
           MAX_PLAYER_GROUND_RESPONSES,
       );
     }
+    hole.peakGroundResponses =
+      Math.max(
+        hole.peakGroundResponses,
+        hole.groundResponses.length,
+      );
   }
 
   function addBallImpactParticles(
@@ -18440,6 +22088,21 @@
                   : "#84934f",
       });
     }
+    if (
+      state.hole.screenParticles.length >
+      MAX_SCREEN_PARTICLES
+    ) {
+      state.hole.screenParticles.splice(
+        0,
+        state.hole.screenParticles.length -
+          MAX_SCREEN_PARTICLES,
+      );
+    }
+    state.hole.peakScreenParticles =
+      Math.max(
+        state.hole.peakScreenParticles,
+        state.hole.screenParticles.length,
+      );
   }
 
   function updateCourseEffects(dt) {
@@ -20063,6 +23726,12 @@
     hole.searchContext = null;
     hole.distractionTimer =
       action.noiseSeconds;
+    hole.fieldSignalBreakaway.sourceId =
+      action.id;
+    hole.fieldSignalBreakaway.quietSeconds =
+      0;
+    hole.fieldSignalBreakaway.quietReady =
+      false;
     hole.lastSeenPlayer = {
       x: action.x,
       y: action.y,
@@ -20082,32 +23751,44 @@
       : `${action.completionLabel} // ${completed}/${NIGHT_ORDER_ACTIONS.length}`;
     hole.stateBannerTimer = 3.2;
     const handoffAction =
-      objectiveActionHudSummary();
+      objectiveActionHudSummary({
+        includeTacticalOverride: false,
+      });
     const completionMessage =
       allComplete
         ? "FIELD CHECKS COMPLETE — secure an exit and file the Night Order."
         : `${action.completionLabel} — Joe is routing to the signal.`;
+    const breakaway =
+      action.breakaway;
+    const routedCompletionMessage =
+      `${completionMessage} ${breakaway.instruction}.`;
     hole.nightOrderHandoff = {
       timer: 3.2,
       duration: 3.2,
       bannerText: hole.stateBanner,
       messageText:
-        completionMessage,
+        routedCompletionMessage,
       completed,
+      sourceId: action.id,
       required:
         NIGHT_ORDER_ACTIONS.length,
       allComplete,
       nextText:
-        `NEXT // ${handoffAction.text}`,
+        `BREAK SIGNAL // ${breakaway.coverLabel}`,
       nextPhase:
-        handoffAction.phase,
+        "field_signal_breakaway",
       nextTargetId:
+        `field-signal-break-${action.id}`,
+      resumeText:
+        `THEN // ${handoffAction.text}`,
+      resumePhase:
+        handoffAction.phase,
+      resumeTargetId:
         handoffAction.targetId,
-      color:
-        handoffAction.color,
+      color: "#e1ad59",
     };
     setHoleMessage(
-      completionMessage,
+      routedCompletionMessage,
       3.6,
     );
     addWorldEffect(
@@ -22911,9 +26592,12 @@
         1.8,
       );
       const announceTrail =
-        hole.trailChain === 1 ||
-        hole.trailChain === 3 ||
-        hole.trailChain === 5;
+        hole.stateBannerLockTimer <= 0 &&
+        (
+          hole.trailChain === 1 ||
+          hole.trailChain === 3 ||
+          hole.trailChain === 5
+        );
       if (announceTrail) {
         hole.stateBanner =
           hole.trailChain === 1
@@ -23130,11 +26814,17 @@
       if (hole.distractionTimer === 0) {
         const completedDistraction =
           hole.distraction;
+        resolveFieldSignalBreakaway(
+          completedDistraction,
+        );
         hole.lastSeenPlayer = {
           x: completedDistraction.x,
           y: completedDistraction.y,
         };
         hole.distraction = null;
+        applyFieldSignalResolutionNavigationHandoff(
+          completedDistraction,
+        );
         joe.mode = "search";
         hole.searchTimer =
           completedDistraction
@@ -23146,33 +26836,9 @@
                 0.45,
           );
         hole.searchContext =
-          completedDistraction.kind ===
-            "field_action"
-            ? {
-                kind: "field_action",
-                sourceId:
-                  completedDistraction
-                    .sourceId,
-                sourceLabel:
-                  completedDistraction
-                    .sourceLabel ||
-                  "FIELD CHECK",
-                color:
-                  completedDistraction
-                    .signalColor ||
-                  "#d6a74c",
-                statusLead:
-                  `SWEEPING ${completedDistraction.sourceLabel || "FIELD CHECK"} AREA`,
-                target: {
-                  x:
-                    completedDistraction.x,
-                  y:
-                    completedDistraction.y,
-                },
-                presentation:
-                  "named_station_follow_up_only",
-              }
-            : null;
+          distractionSearchContext(
+            completedDistraction,
+          );
       }
     } else if (canSee || canHear) {
       hole.trailTarget = null;
@@ -24203,8 +27869,44 @@
     return simplified;
   }
 
-  function activePlayerGuidanceTarget() {
+  function activePlayerGuidanceTarget(
+    options = {},
+  ) {
     const hole = state.hole;
+    const breakaway =
+      options.includeTacticalOverride ===
+      false
+        ? null
+        : activeFieldActionBreakaway();
+    if (breakaway) {
+      return {
+        id: breakaway.id,
+        label:
+          `${breakaway.label} ROUTE`,
+        shortLabel:
+          breakaway.shortLabel,
+        color: breakaway.color,
+        target:
+          breakaway.target,
+        selectionReason:
+          breakaway.reached
+            ? "field_signal_hold_override"
+            : "field_signal_breakaway_override",
+        nearestCandidateId:
+          breakaway.id,
+        nearestCandidateDistance:
+          breakaway.distance,
+        incumbentId:
+          hole.navigationGuide
+            .targetId,
+        incumbentDistance:
+          breakaway.distance,
+        challengerAdvantageMeters:
+          0,
+        switchThresholdMeters:
+          0,
+      };
+    }
     const key = activeKeyPoint();
     const sprinkler =
       activeSprinklerPoint();
@@ -24549,11 +28251,116 @@
       }
       return "STRAIGHT AHEAD";
     }
+    const footingOverride =
+      activeFootingNavigationOverride();
+    if (footingOverride) {
+      return footingOverride.direction;
+    }
     return (
       state.hole.navigationGuide
         .direction ||
       "STRAIGHT AHEAD"
     );
+  }
+
+  /**
+   * Converts the authoritative collision correction into a temporary route
+   * node. This keeps the world ribbon, ground reflectors, and bearing panel
+   * aligned with the contact card instead of continuing to point through the
+   * obstacle the player is actively touching.
+   */
+  function collisionRecoveryWaypoint() {
+    if (
+      !collisionContactActivelyRefreshed() ||
+      !state.hole.blockedEscape
+    ) {
+      return null;
+    }
+    const instruction =
+      state.hole.blockedEscape;
+    const directions = [];
+    if (instruction.includes("LEFT")) {
+      directions.push({
+        direction: "LEFT",
+        x: -1,
+        y: 0,
+      });
+    }
+    if (instruction.includes("RIGHT")) {
+      directions.push({
+        direction: "RIGHT",
+        x: 1,
+        y: 0,
+      });
+    }
+    if (instruction.includes("BACK")) {
+      directions.push({
+        direction: "BACK",
+        x: 0,
+        y: -1,
+      });
+    }
+    if (instruction.includes("FORWARD")) {
+      directions.push({
+        direction: "FORWARD",
+        x: 0,
+        y: 1,
+      });
+    }
+    const distances = [9, 13, 17];
+    for (
+      let directionIndex = 0;
+      directionIndex <
+        directions.length;
+      directionIndex += 1
+    ) {
+      const direction =
+        directions[directionIndex];
+      for (
+        let distanceIndex = 0;
+        distanceIndex <
+          distances.length;
+        distanceIndex += 1
+      ) {
+        const distance =
+          distances[distanceIndex];
+        const point = {
+          x: clamp(
+            state.player.x +
+              direction.x * distance,
+            -COURSE_MAX_X +
+              NAVIGATION_COLLISION_RECOVERY_BOUNDARY_GUTTER,
+            COURSE_MAX_X -
+              NAVIGATION_COLLISION_RECOVERY_BOUNDARY_GUTTER,
+          ),
+          y: clamp(
+            state.player.y +
+              direction.y * distance,
+            COURSE_MIN_Y +
+              NAVIGATION_COLLISION_RECOVERY_BOUNDARY_GUTTER,
+            COURSE_LENGTH -
+              NAVIGATION_COLLISION_RECOVERY_BOUNDARY_GUTTER,
+          ),
+        };
+        if (
+          !obstacleAtPosition(
+            point.x,
+            point.y,
+          )
+        ) {
+          return {
+            ...point,
+            direction:
+              direction.direction,
+            distance,
+            obstacleId:
+              state.hole
+                .blockedObstacle,
+          };
+        }
+      }
+    }
+    return null;
   }
 
   function rearNavigationCueState() {
@@ -24621,6 +28428,9 @@
       guide.incumbentId = null;
       guide.challengerAdvantageMeters =
         0;
+      guide.collisionRecovery = null;
+      guide.collisionRecoveryExpiresAt =
+        0;
       return;
     }
     guide.selectionReason =
@@ -24669,6 +28479,9 @@
       guide.path = [];
       guide.distance = targetDistance;
       guide.direction = "STRAIGHT";
+      guide.collisionRecovery = null;
+      guide.collisionRecoveryExpiresAt =
+        0;
       return;
     }
     guide.refreshTimer = Math.max(
@@ -24737,12 +28550,110 @@
     ) {
       guide.path.shift();
     }
+    const contactRecovery =
+      collisionRecoveryWaypoint();
+    let collisionRecovery =
+      contactRecovery;
+    if (contactRecovery) {
+      const recoveryChanged =
+        !guide.collisionRecovery ||
+        guide.collisionRecovery
+          .obstacleId !==
+          contactRecovery.obstacleId ||
+        guide.collisionRecovery
+          .direction !==
+          contactRecovery.direction;
+      if (recoveryChanged) {
+        guide.collisionRecoveries += 1;
+      }
+      const retainedRecovery =
+        !recoveryChanged &&
+        guide.collisionRecovery &&
+        worldDistance(
+          state.player,
+          guide.collisionRecovery,
+        ) >
+          NAVIGATION_COLLISION_RECOVERY_REACHED_DISTANCE &&
+        !obstacleAtPosition(
+          guide.collisionRecovery.x,
+          guide.collisionRecovery.y,
+        )
+          ? guide.collisionRecovery
+          : contactRecovery;
+      collisionRecovery = {
+        ...retainedRecovery,
+        phase: "contact",
+        remainingDistance:
+          worldDistance(
+            state.player,
+            retainedRecovery,
+          ),
+      };
+      guide.collisionRecovery =
+        collisionRecovery;
+      guide.collisionRecoveryExpiresAt =
+        state.time +
+        NAVIGATION_COLLISION_RECOVERY_HOLD_SECONDS;
+    }
+    else if (guide.collisionRecovery) {
+      const remainingDistance =
+        worldDistance(
+          state.player,
+          guide.collisionRecovery,
+        );
+      const recoveryTargetBlocked =
+        obstacleAtPosition(
+          guide.collisionRecovery.x,
+          guide.collisionRecovery.y,
+        );
+      const followThroughActive =
+        remainingDistance >
+          NAVIGATION_COLLISION_RECOVERY_REACHED_DISTANCE &&
+        state.time <
+          guide.collisionRecoveryExpiresAt &&
+        !recoveryTargetBlocked;
+      if (followThroughActive) {
+        collisionRecovery = {
+          ...guide.collisionRecovery,
+          phase:
+            "clearance_followthrough",
+          remainingDistance,
+        };
+        guide.collisionRecovery =
+          collisionRecovery;
+      }
+      else {
+        guide.collisionRecovery = null;
+        guide.collisionRecoveryExpiresAt =
+          0;
+        guide.refreshTimer = 0;
+        guide.lastPlayerX = Infinity;
+        guide.lastPlayerY = Infinity;
+      }
+    }
+    if (collisionRecovery) {
+      guide.path = [
+        {
+          x: collisionRecovery.x,
+          y: collisionRecovery.y,
+        },
+      ];
+      guide.direction =
+        guidanceDirection(
+          collisionRecovery,
+        );
+      guide.selectionReason =
+        "collision_escape_override";
+      guide.refreshTimer = 0;
+    }
     guide.distance = targetDistance;
-    guide.direction =
-      guidanceDirection(
-        guide.path[0] ||
-          definition.target,
-      );
+    if (!collisionRecovery) {
+      guide.direction =
+        guidanceDirection(
+          guide.path[0] ||
+            definition.target,
+        );
+    }
   }
 
   function joeVisibleInCourseView() {
@@ -27631,6 +31542,117 @@
   }
 
   /**
+   * Returns the single short-horizon route that currently owns immediate
+   * movement guidance. This is presentation-only; every underlying route,
+   * target, interaction radius, and gameplay timer remains unchanged.
+   */
+  function immediateNavigationMarkerOwner() {
+    const collisionRecovery =
+      state.hole?.navigationGuide
+        ?.collisionRecovery || null;
+    if (collisionRecovery) {
+      return {
+        id:
+          `collision-clear:${collisionRecovery.obstacleId || "obstacle"}`,
+        owner:
+          "collision_recovery",
+        label:
+          collisionRecovery.obstacleId ||
+          "OBSTACLE CLEARANCE",
+        rule:
+          "short_collision_recovery_before_long_horizon_markers",
+      };
+    }
+    const footingOverride =
+      activeFootingNavigationOverride();
+    if (footingOverride) {
+      return {
+        id: footingOverride.id,
+        owner:
+          footingOverride.owner,
+        label:
+          footingOverride.targetLabel,
+        rule:
+          footingOverride.rule,
+      };
+    }
+    const breakaway =
+      activeFieldActionBreakaway();
+    if (breakaway) {
+      return {
+        id: breakaway.id,
+        owner:
+          breakaway.routeOwner,
+        label:
+          breakaway.shortLabel,
+        rule:
+          "mandatory_signal_breakaway_before_long_horizon_markers",
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Lets one urgent local route suppress distant navigation plaques while
+   * retaining physical art and exact interaction footprints. An interactable
+   * inside its authoritative radius always remains available and readable.
+   */
+  function immediateRouteMarkerHierarchyPresentation(
+    targetId = null,
+    inReach = false,
+    immediateOwner =
+      immediateNavigationMarkerOwner(),
+  ) {
+    const navigationTargetIds = [
+      "shed-key",
+      "sprinkler",
+      "maintenance-shed",
+      "drain-exit",
+      ...NIGHT_ORDER_ACTIONS.map(
+        (action) => action.id,
+      ),
+    ];
+    const eligible =
+      Boolean(targetId) &&
+      navigationTargetIds.includes(
+        targetId,
+      );
+    const deferred = Boolean(
+      eligible &&
+        immediateOwner &&
+        !inReach &&
+        targetId !== immediateOwner.id,
+    );
+    return {
+      deferred,
+      targetId,
+      shortHorizonOwner:
+        deferred
+          ? immediateOwner.owner
+          : null,
+      shortHorizonOwnerId:
+        deferred
+          ? immediateOwner.id
+          : null,
+      markerAlpha:
+        deferred ? 0 : 1,
+      physicalArtRetained: true,
+      interactionFootprintRetained:
+        true,
+      inReachOverride:
+        Boolean(
+          eligible &&
+            immediateOwner &&
+            inReach,
+        ),
+      presentation:
+        deferred
+          ? "distant_navigation_plaque_yields_while_physical_art_and_exact_use_footprint_remain"
+          : "ordinary_navigation_marker_hierarchy",
+    };
+  }
+
+  /**
    * Gives the selected navigation target a stable visual lead while keeping
    * every alternate objective readable and immediately usable.
    */
@@ -27665,33 +31687,93 @@
     const selected =
       state.hole?.navigationGuide
         ?.targetId === targetId;
+    const promptOwner =
+      activeInteractionPromptOwner();
+    const promptRelationship =
+      interactionPromptRelationship(
+        targetId,
+        promptOwner,
+      );
+    const ownsInteraction =
+      inReach &&
+      promptRelationship
+        .ownerMatches;
+    const interactionConflict =
+      inReach &&
+      promptRelationship
+        .conflictsWithOwner;
     const interactionOverride =
-      inReach && !selected;
+      ownsInteraction && !selected;
+    const immediateHierarchy =
+      immediateRouteMarkerHierarchyPresentation(
+        targetId,
+        inReach,
+      );
+    const interactionFocus =
+      readyInteractionFocusPresentation(
+        targetId,
+        inReach,
+        promptOwner,
+      );
     const deferredByOpeningRoute =
       openingMovementCueActive() &&
       !selected &&
-      !interactionOverride;
+      !interactionOverride &&
+      !immediateHierarchy.deferred &&
+      !interactionFocus.deferred;
     return {
-      role: selected
+      role:
+        immediateHierarchy.deferred
+          ? "long_horizon_marker_deferred"
+          : interactionFocus.deferred
+            ? "ready_interaction_focus_deferred"
+          : selected
         ? "selected_route"
-        : deferredByOpeningRoute
-          ? "alternate_route_deferred"
-          : "alternate_route",
-      alphaMultiplier:
-        selected || interactionOverride
-          ? 1
+        : interactionConflict
+          ? "alternate_interaction_yields"
           : deferredByOpeningRoute
-            ? 0.24
-            : 0.72,
+            ? "alternate_route_deferred"
+            : "alternate_route",
+      alphaMultiplier:
+        immediateHierarchy.deferred
+          ? immediateHierarchy.markerAlpha
+          : interactionFocus.deferred
+            ? interactionFocus.markerAlpha
+          : selected || interactionOverride
+          ? 1
+          : interactionConflict
+            ? 0.48
+            : deferredByOpeningRoute
+              ? 0.24
+              : 0.72,
       frameWidthBoost:
-        selected ? 1 : 0,
+        selected &&
+        !immediateHierarchy.deferred
+          ? 1
+          : 0,
       topRail:
-        selected || interactionOverride,
+        !immediateHierarchy.deferred &&
+        !interactionFocus.deferred &&
+        (selected ||
+          interactionOverride),
       interactionOverride,
+      ownsInteraction,
+      interactionConflict,
+      interactionOwnerTargetId:
+        promptRelationship
+          .ownerTargetId,
       deferredBy:
-        deferredByOpeningRoute
-          ? "first_steps_route"
-          : null,
+        immediateHierarchy.deferred
+          ? `${immediateHierarchy.shortHorizonOwner}:${immediateHierarchy.shortHorizonOwnerId}`
+          : interactionFocus.deferred
+            ? `ready_interaction:${interactionFocus.ownerTargetId}`
+          : interactionConflict
+          ? `interaction_priority:${promptOwner.targetId}`
+          : deferredByOpeningRoute
+            ? "first_steps_route"
+            : null,
+      immediateHierarchy,
+      interactionFocus,
     };
   }
 
@@ -27749,12 +31831,104 @@
         actionText: null,
       };
     }
+    const otherRejection =
+      activeInteractionRejection();
+    if (otherRejection) {
+      const rejectionLabel =
+        otherRejection.targetId ===
+        "maintenance-shed"
+          ? "SHED EXIT"
+          : otherRejection.targetId ===
+              "drain-exit"
+            ? "DRAIN EXIT"
+            : "BLOCKED ACTION";
+      return {
+        localText:
+          `${rejectionLabel} FIRST`,
+        localRole:
+          "other_rejection_priority",
+        localAlign: "left",
+        localInset: 12,
+        bindingOwner:
+          "bottom_other_rejection_rail",
+        actionText:
+          otherRejection.message,
+        actionTargetId:
+          otherRejection.targetId,
+      };
+    }
+    const promptOwner =
+      activeInteractionPromptOwner();
+    const promptRelationship =
+      interactionPromptRelationship(
+        targetId,
+        promptOwner,
+      );
+    const bottomRailActive =
+      promptRelationship
+        .bottomRailActive;
+    const ownerMatches =
+      promptRelationship
+        .ownerMatches;
+    if (
+      bottomRailActive &&
+      promptOwner &&
+      !ownerMatches
+    ) {
+      return {
+        localText:
+          `${promptOwner.label} FIRST`,
+        localRole:
+          "other_interaction_priority",
+        localAlign: "left",
+        localInset: 12,
+        bindingOwner:
+          "bottom_other_action_rail",
+        actionText:
+          state.hole.prompt,
+        actionTargetId:
+          promptOwner.targetId,
+      };
+    }
+    if (
+      bottomRailActive &&
+      ownerMatches &&
+      promptOwner.binding !==
+        "interact"
+    ) {
+      return {
+        localText:
+          promptOwner.localStatus ||
+          "WAIT",
+        localRole:
+          promptOwner.availability ===
+          "blocked"
+            ? "blocked_preflight"
+            : "active_interaction_state",
+        localAlign: "left",
+        localInset: 12,
+        bindingOwner:
+          "bottom_action_state_rail",
+        actionText:
+          state.hole.prompt,
+        actionTargetId:
+          promptOwner.targetId,
+      };
+    }
     const bottomRailOwnsBinding =
-      fieldInteractionPromptOwnsBottomRail();
+      promptRelationship
+        .ownsInteractBinding;
+    const commitmentRisk =
+      ownerMatches &&
+      promptOwner?.consequence?.kind ===
+        "loud_field_check_commitment"
+        ? promptOwner.consequence.risk
+        : null;
     return {
       localText:
         bottomRailOwnsBinding
-          ? "IN REACH"
+          ? commitmentRisk?.localText ||
+            "IN REACH"
           : inputCopy(
               `${keyboardBindingLabel(
                 "interact",
@@ -27764,8 +31938,14 @@
             ),
       localRole:
         bottomRailOwnsBinding
-          ? "spatial_readiness"
+          ? commitmentRisk
+            ? "commitment_pressure"
+            : "spatial_readiness"
           : "binding_fallback",
+      accentColor:
+        commitmentRisk?.accentColor ||
+        null,
+      commitmentRisk,
       localAlign:
         bottomRailOwnsBinding
           ? "left"
@@ -27782,6 +31962,10 @@
         bottomRailOwnsBinding
           ? state.hole.prompt
           : null,
+      actionTargetId:
+        bottomRailOwnsBinding
+          ? promptOwner.targetId
+          : targetId,
     };
   }
 
@@ -27817,10 +32001,8 @@
       ? 40 * markerScale + 8
       : 34;
     const bottomRailOwner =
-      reachPresentation?.bindingOwner ===
-        "bottom_action_rail" ||
-      reachPresentation?.bindingOwner ===
-        "bottom_rejection_rail"
+      reachPresentation?.bindingOwner
+        ?.startsWith("bottom_")
         ? reachPresentation.bindingOwner
         : null;
     const approachLiftProgress =
@@ -27966,13 +32148,16 @@
       interactionRadius !== null &&
       includeGroundRing
     ) {
+      const interactionColor =
+        placement.reachPresentation
+          ?.accentColor || color;
       drawInteractionGroundRing(
         {
           x: worldX,
           y: worldY,
           radius: interactionRadius,
         },
-        color,
+        interactionColor,
         inReach,
       );
     }
@@ -28073,7 +32258,8 @@
         markerY -
           10 * markerScale,
         10,
-        color,
+        reachPresentation
+          .accentColor || color,
         reachPresentation.localAlign,
         true,
       );
@@ -28081,10 +32267,117 @@
     ctx.restore();
   }
 
+  /** Draws the reached-cover quiet check as one readable tactical unit. */
+  function drawFieldBreakawayHoldPanel(
+    breakaway,
+  ) {
+    const presentation =
+      fieldBreakawayHoldPanelPresentation(
+        breakaway,
+      );
+    if (!presentation.visible) {
+      return;
+    }
+    const panel = presentation.panel;
+    const barX = panel.x + 18;
+    const barY = panel.y + 38;
+    const barWidth = panel.width - 36;
+    ctx.save();
+    ctx.fillStyle =
+      "rgba(2,10,6,0.94)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      presentation.color,
+      2,
+    );
+    drawText(
+      presentation.title,
+      panel.x + 18,
+      panel.y + 25,
+      14,
+      presentation.color,
+      "left",
+      true,
+    );
+    drawText(
+      presentation.remainingLabel,
+      panel.x +
+        panel.width -
+        18,
+      panel.y + 25,
+      11,
+      "#d8d2b9",
+      "right",
+      true,
+    );
+    ctx.fillStyle =
+      "rgba(14,35,22,0.9)";
+    ctx.fillRect(
+      barX,
+      barY,
+      barWidth,
+      10,
+    );
+    ctx.fillStyle =
+      presentation.color;
+    ctx.fillRect(
+      barX,
+      barY,
+      barWidth *
+        presentation.progress,
+      10,
+    );
+    strokeRect(
+      barX,
+      barY,
+      barWidth,
+      10,
+      presentation.color,
+      1,
+    );
+    drawText(
+      presentation.progressLabel,
+      panel.x +
+        panel.width -
+        18,
+      panel.y + 67,
+      10,
+      presentation.color,
+      "right",
+      true,
+    );
+    drawText(
+      presentation.instruction,
+      panel.x + 18,
+      panel.y + 67,
+      fittedTextSize(
+        presentation.instruction,
+        11,
+        panel.width - 160,
+        9,
+        true,
+      ),
+      "#e9e4cd",
+      "left",
+      true,
+    );
+    ctx.restore();
+  }
+
   function drawInteractionGroundRing(
     target,
     color,
     inReach,
+    activePresentation = null,
   ) {
     const distance =
       state.mode === "first_hole"
@@ -28106,22 +32399,33 @@
     if (!footprint.point.visible) {
       return;
     }
+    const pulseHz =
+      inReach && activePresentation
+        ? activePresentation.pulseHz
+        : 5.2;
+    const pulseAmount =
+      inReach && activePresentation
+        ? activePresentation.pulseAmount
+        : lerp(
+            0.035,
+            0.08,
+            inReach ? 1 : approach,
+          );
     const pulse = state.reducedMotion
       ? 0
-      : Math.sin(state.time * 5.2) *
-        lerp(
-          0.035,
-          0.08,
-          inReach ? 1 : approach,
-        );
+      : Math.sin(
+          state.time * pulseHz,
+        ) * pulseAmount;
     ctx.save();
     ctx.globalAlpha =
       inReach
-        ? 0.92
+        ? activePresentation
+          ?.strokeAlpha ?? 0.92
         : lerp(0.5, 0.82, approach);
     ctx.strokeStyle = color;
     ctx.lineWidth = inReach
-      ? 3
+      ? activePresentation
+        ?.lineWidth ?? 3
       : lerp(1.5, 2.4, approach);
     if (!inReach) {
       ctx.setLineDash([
@@ -28144,7 +32448,9 @@
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = inReach
-      ? "rgba(231,189,88,0.09)"
+      ? activePresentation
+        ?.fillColor ||
+        "rgba(231,189,88,0.09)"
       : `rgba(4,12,7,${lerp(
           0.08,
           0.16,
@@ -28438,6 +32744,11 @@
     const inReach =
       !completed &&
       distance < action.radius;
+    const commitmentRisk = inReach
+      ? activeFieldActionCommitmentRisk(
+          action,
+        )
+      : null;
     const activation =
       state.hole.nightOrderActivation?.id ===
       action.id
@@ -28455,8 +32766,11 @@
     if (!completed) {
       drawInteractionGroundRing(
         action,
-        action.color,
+        commitmentRisk?.accentColor ||
+          action.color,
         inReach,
+        commitmentRisk?.groundRing ||
+          null,
       );
     }
     const fixture = drawCourseMechanicFixture(
@@ -28493,6 +32807,58 @@
     );
     if (!fixture) {
       return;
+    }
+    if (commitmentRisk) {
+      const labelWidth = 208;
+      const labelHeight = 28;
+      const labelX = clamp(
+        fixture.point.x,
+        labelWidth * 0.5 + 18,
+        WIDTH -
+          COURSE_MAP_WIDTH -
+          labelWidth * 0.5 -
+          28,
+      );
+      const labelY = clamp(
+        fixture.point.y -
+          fixture.height -
+          34,
+        164,
+        HEIGHT - 190,
+      );
+      ctx.save();
+      ctx.fillStyle =
+        "rgba(2,10,6,0.92)";
+      ctx.fillRect(
+        labelX - labelWidth * 0.5,
+        labelY - labelHeight * 0.5,
+        labelWidth,
+        labelHeight,
+      );
+      strokeRect(
+        labelX - labelWidth * 0.5,
+        labelY - labelHeight * 0.5,
+        labelWidth,
+        labelHeight,
+        commitmentRisk.accentColor,
+        2,
+      );
+      drawText(
+        commitmentRisk.localText,
+        labelX,
+        labelY + 4,
+        fittedTextSize(
+          commitmentRisk.localText,
+          11,
+          labelWidth - 18,
+          9,
+          true,
+        ),
+        commitmentRisk.accentColor,
+        "center",
+        true,
+      );
+      ctx.restore();
     }
     const filedColor = "111,192,171";
     if (completed) {
@@ -29925,6 +34291,58 @@
     );
   }
 
+  /**
+   * Gives one physical collision sole ownership of immediate contact identity.
+   * Ambient or tactical state banners keep their timers, but yield while the
+   * grounded collision card is active or completing its short release echo.
+   */
+  function collisionStateBannerRelationship(
+    collisionTargetId =
+      state.hole?.blockedObstacle || null,
+    contactActive =
+      collisionContactActivelyRefreshed(),
+    releaseEchoActive =
+      collisionReleaseEchoActive(),
+    stateBannerText =
+      state.hole?.stateBanner || null,
+  ) {
+    const ownsImmediateSignalLane =
+      Boolean(
+        collisionTargetId &&
+          (
+            contactActive ||
+            releaseEchoActive
+          ),
+      );
+    return {
+      collisionTargetId:
+        ownsImmediateSignalLane
+          ? collisionTargetId
+          : null,
+      phase: contactActive
+        ? "contact"
+        : releaseEchoActive
+          ? "release_echo"
+          : "clear",
+      ownsImmediateSignalLane,
+      stateBannerText,
+      stateBannerVisible:
+        Boolean(stateBannerText) &&
+        !ownsImmediateSignalLane,
+      matchingThreatCaptionVisible:
+        Boolean(stateBannerText) &&
+        !ownsImmediateSignalLane,
+      deferredBy:
+        ownsImmediateSignalLane
+          ? contactActive
+            ? "collision_contact"
+            : "collision_release_echo"
+          : null,
+      rule:
+        "one_physical_contact_one_visible_identity",
+    };
+  }
+
   function pendingCollisionDialogueHandoff() {
     return Boolean(
       state.hole?.joeBarkDeferredByCollision &&
@@ -30302,50 +34720,79 @@
         ),
       ),
     ];
+    const forcedContrast =
+      state.highContrastNavigation ===
+      true;
     const lateCourseContrast =
+      forcedContrast ||
       sampledZones.some((zoneId) =>
         contrastZones.includes(zoneId),
       );
     return {
-      mode: lateCourseContrast
+      mode: forcedContrast
+        ? "accessibility_high_contrast"
+        : lateCourseContrast
         ? "late_course_ground_contrast"
         : "restrained_ground_thread",
       lateCourseContrast,
+      forcedContrast,
       sampledZones,
-      dash: lateCourseContrast
+      dash: forcedContrast
+        ? [4, 4]
+        : lateCourseContrast
         ? [3, 5]
         : [2, 7],
-      underlayWidth: lateCourseContrast
+      underlayWidth: forcedContrast
+        ? 7
+        : lateCourseContrast
         ? 5.5
         : 4,
-      underlayAlpha: lateCourseContrast
+      underlayAlpha: forcedContrast
+        ? 0.9
+        : lateCourseContrast
         ? 0.78
         : 0.68,
-      threadWidth: lateCourseContrast
+      threadWidth: forcedContrast
+        ? 3
+        : lateCourseContrast
         ? 2
         : 1.5,
-      threadAlphaBase: lateCourseContrast
+      threadAlphaBase: forcedContrast
+        ? 0.78
+        : lateCourseContrast
         ? 0.5
         : 0.28,
-      threadAlphaPulse: lateCourseContrast
+      threadAlphaPulse: forcedContrast
+        ? 0.06
+        : lateCourseContrast
         ? 0.08
         : 0.05,
       reflectorAlphaMinimum:
-        lateCourseContrast ? 0.42 : 0.26,
+        forcedContrast
+          ? 0.72
+          : lateCourseContrast
+            ? 0.42
+            : 0.26,
       reflectorAlphaMaximum:
-        lateCourseContrast ? 0.9 : 0.82,
+        forcedContrast
+          ? 1
+          : lateCourseContrast
+            ? 0.9
+            : 0.82,
     };
   }
 
   /**
-   * Lets an urgent footing consequence own the central reading lane while
-   * preserving the objective route geometry underneath it.
+   * Gives an active slow-footing escape the short-horizon route. Approach
+   * advice keeps the objective geometry; actual drag temporarily yields it.
    */
   function navigationRibbonCaptionPresentation(
     visibleReflectors =
       visibleNavigationRibbonEntries()
         .length,
   ) {
+    const footingEscapeOwner =
+      activeFootingNavigationOverride();
     const footingSignalOwner =
       footingHazardSignalOwner();
     const placement =
@@ -30353,11 +34800,14 @@
     return {
       visible:
         visibleReflectors > 0 &&
+        !footingEscapeOwner &&
         !footingSignalOwner,
       deferredBy:
+        footingEscapeOwner?.owner ||
         footingSignalOwner,
       routeGeometryVisible:
-        visibleReflectors > 0,
+        visibleReflectors > 0 &&
+        !footingEscapeOwner,
       placement,
     };
   }
@@ -30415,9 +34865,246 @@
     };
   }
 
-  function drawWorldNavigationRibbon() {
+  /**
+   * Hands body-relative forward route art off before the rear camera completes
+   * its turn. This prevents a forward clearance lane from being reprojected as
+   * a plausible but mirrored route across the ground behind the player.
+   */
+  function forwardImmediateRouteCameraPresentation(
+    viewAmount = lookBackView().amount,
+  ) {
+    const normalized = clamp(
+      (viewAmount - 0.12) / 0.28,
+      0,
+      1,
+    );
+    const routeAlpha =
+      1 - smoothstep(normalized);
+    const cueAlpha = smoothstep(
+      clamp(
+        (viewAmount - 0.42) /
+          0.34,
+        0,
+        1,
+      ),
+    );
+    return {
+      viewAmount,
+      routeAlpha,
+      routeVisible: routeAlpha > 0.02,
+      cueAlpha,
+      rearCueVisible: cueAlpha > 0.02,
+      rule:
+        "body_relative_forward_route_fades_before_rear_projection_then_returns_after_the_camera_faces_forward",
+    };
+  }
+
+  function rearImmediateRouteHandoffPresentation(
+    viewAmount = lookBackView().amount,
+    action =
+      immediateRouteActionPresentation(),
+  ) {
+    const camera =
+      forwardImmediateRouteCameraPresentation(
+        viewAmount,
+      );
+    if (
+      !action ||
+      ![
+        "collision_recovery",
+        "footing_escape",
+      ].includes(action.phase)
+    ) {
+      return {
+        active: false,
+        visible: false,
+        camera,
+        rule:
+          "rear_handoff_exists_only_for_an_active_body_relative_immediate_route",
+      };
+    }
+    const instruction =
+      action.text.split(" // ")[0];
+    const bodyInstruction =
+      instruction === "CLEAR AHEAD"
+        ? "BODY FORWARD"
+        : instruction === "STEP BACK"
+          ? "BODY BACK"
+          : instruction.startsWith(
+                "CLEAR ",
+              )
+            ? instruction.replace(
+                "CLEAR ",
+                "BODY ",
+              )
+            : instruction;
+    return {
+      active: true,
+      visible:
+        camera.rearCueVisible,
+      phase: action.phase,
+      routeOwner:
+        action.routeOwner,
+      bodyInstruction,
+      targetId: action.targetId,
+      targetLabel:
+        action.targetLabel,
+      distance: action.distance,
+      color: action.color,
+      cueAlpha: camera.cueAlpha,
+      worldRouteDeferred:
+        !camera.routeVisible,
+      mapRetained: true,
+      movementBodyRelative: true,
+      camera,
+      rule:
+        "rear_view_retires_mirrored_world_geometry_keeps_the_body_relative_route_on_the_map_and_names_the_release_handoff",
+    };
+  }
+
+  /**
+   * Projects a short collision-clearance waypoint into a near-field route.
+   * Recovery nodes are often closer than the ordinary nine-meter ribbon
+   * sampling interval, so they need a dedicated player-origin presentation.
+   */
+  function collisionRecoveryWorldRoutePresentation(
+    recovery =
+      state.hole?.navigationGuide
+        ?.collisionRecovery || null,
+    viewAmount = lookBackView().amount,
+  ) {
+    const cameraHandoff =
+      forwardImmediateRouteCameraPresentation(
+        viewAmount,
+      );
+    if (!recovery) {
+      return {
+        active: false,
+        visible: false,
+        startsAtPlayer: false,
+        visibleSegments: 0,
+        markerVisible: false,
+        cameraVisibility:
+          cameraHandoff.routeAlpha,
+        deferredBy: null,
+        origin: null,
+        target: null,
+        rule:
+          "short_collision_recovery_owns_one_near_field_route_until_clearance_then_objective_navigation_resumes",
+      };
+    }
+    const obstacle =
+      COURSE_OBSTACLES.find(
+        (candidate) =>
+          candidate.id ===
+          recovery.obstacleId,
+      ) || null;
+    const landmark =
+      obstacle?.landmark ||
+      "obstacle";
+    const compactLandmark = landmark
+      .split(" ")
+      .slice(-2)
+      .join(" ")
+      .toUpperCase();
+    const playerPoint = worldToScreen(
+      state.player.x,
+      state.player.y,
+    );
+    const projectedTarget =
+      worldToScreen(
+        recovery.x,
+        recovery.y,
+      );
+    const lateral =
+      recovery.direction === "LEFT" ||
+      recovery.direction === "RIGHT";
+    const origin = {
+      x: clamp(
+        playerPoint.x,
+        64,
+        COURSE_MAP_X - 64,
+      ),
+      y: HEIGHT - 180,
+    };
+    const target = {
+      x: clamp(
+        projectedTarget.x,
+        64,
+        COURSE_MAP_X - 64,
+      ),
+      y: lateral
+        ? HEIGHT - 154
+        : clamp(
+            projectedTarget.y,
+            COURSE_CAMERA.horizonY +
+              68,
+            HEIGHT - 154,
+          ),
+    };
+    const instruction =
+      recovery.direction === "BACK"
+        ? "STEP BACK"
+        : recovery.direction ===
+            "FORWARD"
+          ? "CLEAR AHEAD"
+          : `CLEAR ${recovery.direction}`;
+    return {
+      active: true,
+      visible:
+        cameraHandoff.routeVisible,
+      startsAtPlayer: true,
+      visibleSegments:
+        cameraHandoff.routeVisible
+          ? 1
+          : 0,
+      markerVisible:
+        cameraHandoff.routeVisible,
+      cameraVisibility:
+        cameraHandoff.routeAlpha,
+      deferredBy:
+        cameraHandoff.routeVisible
+          ? null
+          : "rear_view",
+      obstacleId:
+        recovery.obstacleId,
+      obstacleLabel:
+        landmark.toUpperCase(),
+      targetLabel:
+        `${compactLandmark} CLEAR`,
+      instruction,
+      direction: recovery.direction,
+      phase: recovery.phase,
+      remainingDistance:
+        recovery.remainingDistance,
+      color:
+        recovery.phase === "contact"
+          ? "#ef8b54"
+          : "#d9a55d",
+      origin,
+      target,
+      worldTarget: {
+        x: recovery.x,
+        y: recovery.y,
+      },
+      rule:
+        "short_collision_recovery_owns_one_near_field_route_until_clearance_then_objective_navigation_resumes",
+    };
+  }
+
+  function drawWorldNavigationRibbon(
+    footingGuidance = null,
+  ) {
     const guide =
       state.hole.navigationGuide;
+    const footingOverride =
+      activeFootingNavigationOverride();
+    if (
+      footingOverride &&
+      footingGuidance?.active
+    ) {
+      return;
+    }
     const samples =
       navigationRibbonSamples();
     if (
@@ -30595,125 +35282,734 @@
     ctx.restore();
   }
 
+  function drawCollisionRecoveryWorldRoute(
+    presentation =
+      collisionRecoveryWorldRoutePresentation(),
+  ) {
+    if (
+      !presentation.active ||
+      !presentation.visible
+    ) {
+      return;
+    }
+    const direction = Math.atan2(
+      presentation.target.y -
+        presentation.origin.y,
+      presentation.target.x -
+        presentation.origin.x,
+    );
+    const length = Math.hypot(
+      presentation.target.x -
+        presentation.origin.x,
+      presentation.target.y -
+        presentation.origin.y,
+    );
+    const pulse =
+      (
+        state.reducedMotion
+          ? 0.86
+          : 0.78 +
+            (
+              Math.sin(
+                state.time * 4.2,
+              ) + 1
+            ) *
+              0.08
+      ) *
+      presentation.cameraVisibility;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.setLineDash([8, 6]);
+    ctx.lineDashOffset =
+      state.reducedMotion
+        ? 0
+        : -state.time * 11;
+    ctx.beginPath();
+    ctx.moveTo(
+      presentation.origin.x,
+      presentation.origin.y,
+    );
+    ctx.lineTo(
+      presentation.target.x,
+      presentation.target.y,
+    );
+    ctx.strokeStyle =
+      "rgba(2,8,5,0.9)";
+    ctx.lineWidth =
+      state.highContrastNavigation
+        ? 11
+        : 8;
+    ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle =
+      presentation.color;
+    ctx.lineWidth =
+      state.highContrastNavigation
+        ? 4.5
+        : 3.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
+    const chevronCount = clamp(
+      Math.floor(length / 76),
+      2,
+      4,
+    );
+    for (
+      let index = 0;
+      index < chevronCount;
+      index += 1
+    ) {
+      const amount =
+        (index + 1) /
+        (chevronCount + 1);
+      const size = 9;
+      ctx.save();
+      ctx.translate(
+        lerp(
+          presentation.origin.x,
+          presentation.target.x,
+          amount,
+        ),
+        lerp(
+          presentation.origin.y,
+          presentation.target.y,
+          amount,
+        ),
+      );
+      ctx.rotate(direction);
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle =
+        presentation.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(
+        -size * 0.7,
+        -size * 0.58,
+      );
+      ctx.lineTo(size * 0.34, 0);
+      ctx.lineTo(
+        -size * 0.7,
+        size * 0.58,
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(
+      presentation.target.x,
+      presentation.target.y,
+    );
+    ctx.globalAlpha = pulse;
+    ctx.scale(1, 0.42);
+    ctx.strokeStyle =
+      "rgba(2,8,5,0.9)";
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.arc(
+      0,
+      0,
+      16,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.strokeStyle =
+      presentation.color;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.translate(
+      presentation.target.x,
+      presentation.target.y - 8,
+    );
+    ctx.rotate(Math.PI * 0.25);
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle =
+      presentation.color;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(-7, -7, 14, 14);
+    ctx.restore();
+    drawText(
+      presentation.targetLabel,
+      presentation.target.x,
+      presentation.target.y - 29,
+      8,
+      presentation.color,
+      "center",
+      true,
+    );
+    ctx.restore();
+  }
+
   /**
    * Draws the selected footing bypass as a short world-space route. It is
    * rendered beneath physical entities so cover still occludes the lane.
    */
-  function drawFootingHazardBypassRoute(
+  function footingHazardRouteWorldSamples(
     guidance,
+    player = state.player,
   ) {
     if (
       !guidance?.visible ||
-      !guidance.selected.valid
+      !guidance.selected?.valid
     ) {
+      return [];
+    }
+    const samples = [];
+    if (guidance.active) {
+      samples.push({
+        x: player.x,
+        y: player.y,
+        role: "player",
+      });
+    }
+    samples.push(
+      {
+        ...guidance.selected.entry,
+        role: "entry",
+      },
+      {
+        ...guidance.selected.middle,
+        role: "lane",
+      },
+      {
+        ...guidance.selected.exit,
+        role: "exit",
+      },
+    );
+    return samples;
+  }
+
+  /**
+   * Clips one projected ground segment to the playable first-person view.
+   * Keeping intersecting segments matters when a wide bypass temporarily
+   * leaves the camera before returning to the visible course ahead.
+   */
+  function clipFootingRouteSegment(
+    start,
+    end,
+  ) {
+    const bounds = {
+      left: 38,
+      right: WIDTH - 38,
+      top:
+        COURSE_CAMERA.horizonY + 10,
+      bottom: HEIGHT - 106,
+    };
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const p = [
+      -deltaX,
+      deltaX,
+      -deltaY,
+      deltaY,
+    ];
+    const q = [
+      start.x - bounds.left,
+      bounds.right - start.x,
+      start.y - bounds.top,
+      bounds.bottom - start.y,
+    ];
+    let startAmount = 0;
+    let endAmount = 1;
+    for (
+      let index = 0;
+      index < p.length;
+      index += 1
+    ) {
+      if (Math.abs(p[index]) < 0.0001) {
+        if (q[index] < 0) {
+          return null;
+        }
+        continue;
+      }
+      const amount =
+        q[index] / p[index];
+      if (p[index] < 0) {
+        if (amount > endAmount) {
+          return null;
+        }
+        startAmount = Math.max(
+          startAmount,
+          amount,
+        );
+      } else {
+        if (amount < startAmount) {
+          return null;
+        }
+        endAmount = Math.min(
+          endAmount,
+          amount,
+        );
+      }
+    }
+    return {
+      start: {
+        x: lerp(
+          start.x,
+          end.x,
+          startAmount,
+        ),
+        y: lerp(
+          start.y,
+          end.y,
+          startAmount,
+        ),
+      },
+      end: {
+        x: lerp(
+          start.x,
+          end.x,
+          endAmount,
+        ),
+        y: lerp(
+          start.y,
+          end.y,
+          endAmount,
+        ),
+      },
+      clipped:
+        startAmount > 0 ||
+        endAmount < 1,
+    };
+  }
+
+  function footingHazardRoutePresentation(
+    guidance,
+  ) {
+    const cameraHandoff =
+      forwardImmediateRouteCameraPresentation();
+    const hierarchyDeferredBy =
+      guidance?.active
+        ? null
+        : footingHazardPlaqueDeferralOwner();
+    if (hierarchyDeferredBy) {
+      return {
+        visible: false,
+        startsAtPlayer: false,
+        ingressVisible: false,
+        visibleSegments: 0,
+        offscreenContinuation: false,
+        edgeBridgeVisible: false,
+        exitMarkerVisible: false,
+        cameraVisibility:
+          cameraHandoff.routeAlpha,
+        deferredBy:
+          hierarchyDeferredBy,
+        segments: [],
+        exitPoint: null,
+        physicalHazardArtRetained:
+          true,
+        gameplayEffect: "none",
+        rule:
+          "optional_bypass_card_and_ground_route_yield_together_while_active_footing_escape_remains_authoritative",
+      };
+    }
+    const samples =
+      footingHazardRouteWorldSamples(
+        guidance,
+      );
+    if (samples.length < 2) {
+      return {
+        visible: false,
+        startsAtPlayer: false,
+        ingressVisible: false,
+        visibleSegments: 0,
+        offscreenContinuation: false,
+        edgeBridgeVisible: false,
+        exitMarkerVisible: false,
+        cameraVisibility:
+          cameraHandoff.routeAlpha,
+        deferredBy: null,
+        segments: [],
+        exitPoint: null,
+      };
+    }
+    const projected = samples.map(
+      (sample) => {
+        const point = worldToScreen(
+          sample.x,
+          sample.y,
+        );
+        return {
+          ...sample,
+          point:
+            guidance.active &&
+            sample.role === "player"
+              ? {
+                  ...point,
+                  y: HEIGHT - 180,
+                  visible: true,
+                  firstPersonOrigin:
+                    true,
+                }
+              : point,
+        };
+      },
+    );
+    const segments = [];
+    for (
+      let index = 0;
+      index < projected.length - 1;
+      index += 1
+    ) {
+      const clipped =
+        clipFootingRouteSegment(
+          projected[index].point,
+          projected[index + 1]
+            .point,
+        );
+      if (!clipped) {
+        continue;
+      }
+      segments.push({
+        ...clipped,
+        fromRole:
+          projected[index].role,
+        toRole:
+          projected[index + 1]
+            .role,
+      });
+    }
+    const exitPoint =
+      projected[projected.length - 1]
+        .point;
+    const edgeX =
+      guidance.selected.side < 0
+        ? 38
+        : WIDTH - 38;
+    const edgePoints = [];
+    for (
+      let index = 0;
+      index < segments.length;
+      index += 1
+    ) {
+      for (const point of [
+        segments[index].start,
+        segments[index].end,
+      ]) {
+        if (
+          Math.abs(point.x - edgeX) <=
+          1
+        ) {
+          edgePoints.push(point);
+        }
+      }
+    }
+    let edgeBridgeVisible = false;
+    if (
+      guidance.active &&
+      edgePoints.length >= 2
+    ) {
+      const edgeYs = edgePoints.map(
+        (point) => point.y,
+      );
+      const upperY = Math.min(...edgeYs);
+      const lowerY = Math.max(...edgeYs);
+      if (lowerY - upperY > 18) {
+        segments.push({
+          start: {
+            x: edgeX,
+            y: lowerY,
+          },
+          end: {
+            x: edgeX,
+            y: upperY,
+          },
+          clipped: true,
+          fromRole:
+            "offscreen_turn",
+          toRole:
+            "offscreen_return",
+          edgeBridge: true,
+        });
+        edgeBridgeVisible = true;
+      }
+    }
+    const exitMarkerVisible = Boolean(
+      cameraHandoff.routeVisible &&
+      exitPoint.visible &&
+        exitPoint.x >= 38 &&
+        exitPoint.x <= WIDTH - 38 &&
+        exitPoint.y >=
+          COURSE_CAMERA.horizonY + 10 &&
+        exitPoint.y <= HEIGHT - 106,
+    );
+    return {
+      visible:
+        cameraHandoff.routeVisible &&
+        segments.length > 0,
+      startsAtPlayer:
+        samples[0].role === "player",
+      ingressVisible:
+        guidance.active &&
+        segments.some(
+          (segment) =>
+            segment.fromRole ===
+            "player",
+        ),
+      visibleSegments:
+        cameraHandoff.routeVisible
+          ? segments.length
+          : 0,
+      offscreenContinuation:
+        segments.some(
+          (segment) => segment.clipped,
+        ),
+      edgeBridgeVisible,
+      exitMarkerVisible,
+      cameraVisibility:
+        cameraHandoff.routeAlpha,
+      deferredBy:
+        cameraHandoff.routeVisible
+          ? null
+          : "rear_view",
+      segments:
+        cameraHandoff.routeVisible
+          ? segments
+          : [],
+      exitPoint,
+      rule:
+        "active_escape_starts_at_player_clips_wide_offscreen_segments_and_bridges_the_edge_turn_instead_of_dropping_the_route",
+    };
+  }
+
+  function drawFootingHazardBypassRoute(
+    guidance,
+    collisionRecoveryActive = false,
+  ) {
+    if (collisionRecoveryActive) {
       return;
     }
-    const route = [
-      guidance.selected.entry,
-      guidance.selected.middle,
-      guidance.selected.exit,
-    ].map((sample) => ({
-      sample,
-      point: worldToScreen(
-        sample.x,
-        sample.y,
-      ),
-    }));
-    const visibleRoute =
-      route.filter(
-        (entry) =>
-          entry.point.visible &&
-          entry.point.x > -80 &&
-          entry.point.x < WIDTH + 80,
+    const routePresentation =
+      footingHazardRoutePresentation(
+        guidance,
       );
-    if (visibleRoute.length < 2) {
+    if (!routePresentation.visible) {
       return;
     }
     const color = guidance.active
       ? "rgba(236,125,72,0.9)"
       : "rgba(214,170,87,0.84)";
-    const pulse = state.reducedMotion
-      ? 0.72
-      : 0.64 +
-        (
-          Math.sin(
-            state.hole.elapsed *
-              3.1,
-          ) +
-          1
-        ) *
-          0.08;
+    const routeContrast =
+      state.highContrastNavigation ===
+      true;
+    const pulse =
+      (
+        routeContrast
+          ? 0.96
+          : state.reducedMotion
+          ? 0.72
+          : 0.64 +
+            (
+              Math.sin(
+                state.hole.elapsed *
+                  3.1,
+              ) +
+              1
+            ) *
+              0.08
+      ) *
+      routePresentation.cameraVisibility;
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.setLineDash([5, 8]);
-    ctx.beginPath();
-    ctx.moveTo(
-      visibleRoute[0].point.x,
-      visibleRoute[0].point.y - 2,
-    );
-    for (
-      let index = 1;
-      index < visibleRoute.length;
-      index += 1
-    ) {
-      ctx.lineTo(
-        visibleRoute[index].point.x,
-        visibleRoute[index].point.y - 2,
-      );
-    }
-    ctx.strokeStyle =
-      "rgba(2,8,5,0.78)";
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.globalAlpha = pulse;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.setLineDash([7, 9]);
+    ctx.lineDashOffset =
+      state.reducedMotion
+        ? 0
+        : -state.hole.elapsed * 9;
     for (
       let index = 0;
-      index < visibleRoute.length - 1;
+      index <
+      routePresentation.segments
+        .length;
       index += 1
     ) {
-      const current =
-        visibleRoute[index].point;
-      const next =
-        visibleRoute[index + 1]
-          .point;
+      const segment =
+        routePresentation.segments[
+          index
+        ];
+      ctx.beginPath();
+      ctx.moveTo(
+        segment.start.x,
+        segment.start.y - 2,
+      );
+      ctx.lineTo(
+        segment.end.x,
+        segment.end.y - 2,
+      );
+      ctx.strokeStyle =
+        "rgba(2,8,5,0.86)";
+      ctx.lineWidth =
+        routeContrast ? 10 : 7;
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = pulse;
+      ctx.lineWidth =
+        routeContrast ? 4 : 3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
+    let chevronsRemaining = 7;
+    for (
+      let index = 0;
+      index <
+        routePresentation.segments
+          .length &&
+      chevronsRemaining > 0;
+      index += 1
+    ) {
+      const segment =
+        routePresentation.segments[
+          index
+        ];
+      const current = segment.start;
+      const next = segment.end;
       const direction = Math.atan2(
         next.y - current.y,
         next.x - current.x,
       );
-      const size = clamp(
-        current.scale * 9,
-        5,
-        16,
+      const length = Math.hypot(
+        next.x - current.x,
+        next.y - current.y,
+      );
+      const count = Math.min(
+        chevronsRemaining,
+        clamp(
+          Math.floor(length / 88),
+          1,
+          3,
+        ),
+      );
+      chevronsRemaining -= count;
+      for (
+        let markerIndex = 0;
+        markerIndex < count;
+        markerIndex += 1
+      ) {
+        const amount =
+          (markerIndex + 1) /
+          (count + 1);
+        const size = clamp(
+          7 +
+            (
+              1 -
+              (
+                current.y +
+                (next.y - current.y) *
+                  amount
+              ) /
+                HEIGHT
+            ) *
+              3,
+          6,
+          11,
+        );
+        ctx.save();
+        ctx.translate(
+          lerp(
+            current.x,
+            next.x,
+            amount,
+          ),
+          lerp(
+            current.y,
+            next.y,
+            amount,
+          ) - 2,
+        );
+        ctx.rotate(direction);
+        ctx.globalAlpha = pulse;
+        ctx.strokeStyle = color;
+        ctx.lineWidth =
+          routeContrast ? 3 : 2;
+        ctx.beginPath();
+        ctx.moveTo(
+          -size * 0.7,
+          -size * 0.58,
+        );
+        ctx.lineTo(size * 0.34, 0);
+        ctx.lineTo(
+          -size * 0.7,
+          size * 0.58,
+        );
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    if (
+      routePresentation
+        .exitMarkerVisible
+    ) {
+      const exitPoint =
+        routePresentation.exitPoint;
+      const markerSize = clamp(
+        exitPoint.scale * 24,
+        8,
+        18,
       );
       ctx.save();
       ctx.translate(
-        current.x,
-        current.y - 2,
+        exitPoint.x,
+        exitPoint.y - 2,
       );
-      ctx.rotate(direction);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = clamp(
-        current.scale * 1.4,
-        1,
-        2.6,
-      );
+      ctx.globalAlpha = pulse;
+      ctx.scale(1, 0.38);
+      ctx.strokeStyle =
+        "rgba(2,8,5,0.9)";
+      ctx.lineWidth = 8;
       ctx.beginPath();
-      ctx.moveTo(
-        -size * 0.7,
-        -size * 0.55,
-      );
-      ctx.lineTo(size * 0.3, 0);
-      ctx.lineTo(
-        -size * 0.7,
-        size * 0.55,
+      ctx.arc(
+        0,
+        0,
+        markerSize * 1.5,
+        0,
+        Math.PI * 2,
       );
       ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth =
+        routeContrast ? 4 : 3;
+      ctx.stroke();
       ctx.restore();
+      ctx.save();
+      ctx.translate(
+        exitPoint.x,
+        exitPoint.y - markerSize * 0.8,
+      );
+      ctx.rotate(Math.PI * 0.25);
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = color;
+      ctx.lineWidth =
+        routeContrast ? 3 : 2;
+      ctx.strokeRect(
+        -markerSize * 0.42,
+        -markerSize * 0.42,
+        markerSize * 0.84,
+        markerSize * 0.84,
+      );
+      ctx.restore();
+      if (guidance.active) {
+        const kindLabel =
+          guidance.zone.kind === "roots"
+            ? "ROOTS"
+            : guidance.zone.kind.toUpperCase();
+        drawText(
+          `${kindLabel} EXIT`,
+          exitPoint.x,
+          exitPoint.y -
+            markerSize * 2.1,
+          8,
+          "#f0aa70",
+          "center",
+          true,
+        );
+      }
     }
     ctx.restore();
   }
@@ -38845,6 +44141,8 @@
     const joe = hole.joe;
     const searchContext =
       activeJoeSearchContext();
+    const statusSignal =
+      activeStatusRequestSignal();
     const point = worldToScreen(
       joe.x,
       joe.y,
@@ -38884,7 +44182,12 @@
             ? "JOE: PURSUING"
             : joe.mode ===
                 "investigate"
-              ? "JOE: DISTRACTED"
+              ? statusSignal
+                ? statusSignal.outcome ===
+                    "acknowledged"
+                  ? "JOE: CHECKING ROUGH GRID"
+                  : "JOE: CHECKING YOUR SECTOR"
+                : "JOE: DISTRACTED"
               : joe.mode ===
                   "search"
                 ? searchContext?.kind ===
@@ -38899,6 +44202,12 @@
                       : searchContext?.kind ===
                           "field_action"
                         ? `JOE: SWEEPING ${searchContext.sourceLabel}`
+                        : searchContext?.kind ===
+                              "status_ack"
+                          ? "JOE: SWEEPING ROUGH GRID"
+                          : searchContext?.kind ===
+                                "status_escalation"
+                            ? "JOE: SWEEPING YOUR SECTOR"
                         : "JOE: SEARCHING"
                 : "JOE: PATROLLING";
     const panelWidth = 184;
@@ -39183,6 +44492,8 @@
   }
 
   function renderCourseMiniMap() {
+    const collisionRecoveryRoute =
+      collisionRecoveryWorldRoutePresentation();
     const panel = {
       x: COURSE_MAP_X,
       y: COURSE_MAP_Y,
@@ -39193,6 +44504,14 @@
       currentCourseEcho();
     const fieldActionSignal =
       activeFieldActionSignal();
+    const fieldBreakaway =
+      activeFieldActionBreakaway();
+    const fieldBreakawayMapHold =
+      fieldBreakawayMapHoldPresentation(
+        fieldBreakaway,
+      );
+    const statusSpatialConsequence =
+      activeStatusRequestSpatialConsequence();
     const joeVisible =
       state.hole.joe.mode === "chase" ||
       worldDistance(
@@ -39205,6 +44524,8 @@
       state.hole.lastKnownJoeTimer > 0;
     const guide =
       state.hole.navigationGuide;
+    const footingOverride =
+      activeFootingNavigationOverride();
     const mapTop = panel.y + 62;
     const mapBottom = panel.y + panel.height - 18;
     const mapPoint = (worldX, worldY) => ({
@@ -39236,7 +44557,16 @@
     strokeRect(panel.x, panel.y, panel.width, panel.height, "#566a45", 2);
     drawText("COURSE MAP", panel.x + 14, panel.y + 23, 13, "#dce4ce", "left", true);
     const headerStatus =
-      fieldActionSignal
+      statusSpatialConsequence
+        ? {
+            text:
+              statusSpatialConsequence
+                .mapLabel,
+            color:
+              statusSpatialConsequence
+                .color,
+          }
+        : fieldActionSignal
         ? {
             text:
               fieldActionSignal.mapLabel,
@@ -39280,26 +44610,54 @@
       );
     }
     if (
-      guide &&
-      guide.target
+      collisionRecoveryRoute.active ||
+      footingOverride ||
+      (
+        guide &&
+        guide.target
+      )
     ) {
+      const routeColor =
+        collisionRecoveryRoute.active
+          ? collisionRecoveryRoute.color
+          : footingOverride?.color ||
+            guide.targetColor;
       drawText(
-        effectiveGuidanceDirection(),
+        fieldBreakawayMapHold.visible &&
+          !collisionRecoveryRoute.active &&
+          !footingOverride
+          ? fieldBreakawayMapHold.leftText
+          : collisionRecoveryRoute.active
+          ? collisionRecoveryRoute.instruction
+          : footingOverride?.instruction ||
+            effectiveGuidanceDirection(),
         panel.x + 14,
         panel.y + 43,
         9,
-        guide.targetColor,
+        routeColor,
         "left",
         true,
       );
       drawText(
-        `${guide.targetLabel} ${Math.ceil(guide.distance)}m`,
+        fieldBreakawayMapHold.visible &&
+          !collisionRecoveryRoute.active &&
+          !footingOverride
+          ? fieldBreakawayMapHold.rightText
+          : collisionRecoveryRoute.active
+          ? `${collisionRecoveryRoute.targetLabel} ${Math.ceil(collisionRecoveryRoute.remainingDistance)}m`
+          : footingOverride
+            ? `${footingOverride.targetLabel} ${Math.ceil(footingOverride.distanceToClear)}m`
+            : `${guide.targetLabel} ${Math.ceil(guide.distance)}m`,
         panel.x +
           panel.width -
           14,
         panel.y + 43,
         9,
-        "#e8eadc",
+        fieldBreakawayMapHold.visible &&
+          !collisionRecoveryRoute.active &&
+          !footingOverride
+          ? fieldBreakawayMapHold.color
+          : "#e8eadc",
         "right",
         true,
       );
@@ -39495,6 +44853,93 @@
       );
       ctx.fill();
       ctx.stroke();
+    }
+    if (collisionRecoveryRoute.active) {
+      const localTarget = mapPoint(
+        collisionRecoveryRoute
+          .worldTarget.x,
+        collisionRecoveryRoute
+          .worldTarget.y,
+      );
+      ctx.save();
+      ctx.strokeStyle =
+        collisionRecoveryRoute.color;
+      ctx.lineWidth = 2.25;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(
+        playerPoint.x,
+        playerPoint.y,
+      );
+      ctx.lineTo(
+        localTarget.x,
+        localTarget.y,
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.translate(
+        localTarget.x,
+        localTarget.y,
+      );
+      ctx.rotate(Math.PI * 0.25);
+      ctx.fillStyle =
+        "rgba(239,139,84,0.38)";
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.strokeStyle =
+        collisionRecoveryRoute.color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-5, -5, 10, 10);
+      ctx.restore();
+    }
+    else if (footingOverride) {
+      const localRoute = [
+        {
+          x: state.player.x,
+          y: state.player.y,
+        },
+        ...footingOverride.route.slice(1),
+      ].map((point) =>
+        mapPoint(point.x, point.y),
+      );
+      ctx.save();
+      ctx.strokeStyle =
+        footingOverride.color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(
+        localRoute[0].x,
+        localRoute[0].y,
+      );
+      for (
+        let index = 1;
+        index < localRoute.length;
+        index += 1
+      ) {
+        ctx.lineTo(
+          localRoute[index].x,
+          localRoute[index].y,
+        );
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const exitPoint =
+        localRoute[
+          localRoute.length - 1
+        ];
+      ctx.translate(
+        exitPoint.x,
+        exitPoint.y,
+      );
+      ctx.rotate(Math.PI * 0.25);
+      ctx.fillStyle =
+        "rgba(236,125,72,0.38)";
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.strokeStyle =
+        footingOverride.color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-5, -5, 10, 10);
+      ctx.restore();
     }
     if (state.hole.sprinklerSoakTimer > 0) {
       const wetAlpha = clamp(
@@ -40400,9 +45845,20 @@
       shotPreview?.target ||
       state.hole.ballAim.target ||
       state.hole.ballFlight?.target ||
-      (state.hole.distractionTimer > 0
-        ? state.hole.distraction
-        : null);
+      (
+        statusSpatialConsequence
+          ? {
+              ...statusSpatialConsequence
+                .target,
+              kind:
+                statusSpatialConsequence
+                  .kind,
+            }
+          : state.hole
+                .distractionTimer > 0
+            ? state.hole.distraction
+            : null
+      );
     if (shotTarget) {
       const shotPoint = mapPoint(
         shotTarget.x,
@@ -40437,6 +45893,61 @@
               ? "#eee7c9"
               : "#c9863f";
       ctx.lineWidth = aiming ? 2 : 1.5;
+      if (
+        statusSignal &&
+        statusSpatialConsequence
+      ) {
+        const radiusX = Math.max(
+          4,
+          statusSpatialConsequence
+            .radiusMeters /
+            224 *
+            (panel.width - 28),
+        );
+        const radiusY = Math.max(
+          2.5,
+          statusSpatialConsequence
+            .radiusMeters /
+            COURSE_LENGTH *
+            (mapBottom - mapTop),
+        );
+        ctx.save();
+        ctx.fillStyle =
+          statusSpatialConsequence
+              .outcome ===
+            "escalated"
+            ? "rgba(223,98,66,0.12)"
+            : "rgba(118,193,164,0.1)";
+        ctx.beginPath();
+        ctx.ellipse(
+          shotPoint.x,
+          shotPoint.y,
+          radiusX,
+          radiusY,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.setLineDash(
+          statusSpatialConsequence
+              .outcome ===
+            "escalated"
+            ? []
+            : [3, 3],
+        );
+        ctx.strokeStyle =
+          statusSpatialConsequence
+            .color;
+        ctx.lineWidth =
+          statusSpatialConsequence
+              .outcome ===
+            "escalated"
+            ? 2
+            : 1.4;
+        ctx.stroke();
+        ctx.restore();
+      }
       ctx.setLineDash(
         aiming ? [4, 4] : [2, 4],
       );
@@ -40637,12 +46148,18 @@
       runtimePerformance.tier === "low"
         ? 0.16
         : 0.12;
+    const criticalStateKey =
+      fieldBreakawayMapRefreshKey(
+        activeFieldActionBreakaway(),
+      );
     if (
       state.hole.elapsed -
         miniMapRenderedAt >=
         refreshInterval ||
       state.hole.elapsed <
-        miniMapRenderedAt
+        miniMapRenderedAt ||
+      criticalStateKey !==
+        miniMapCriticalStateKey
     ) {
       miniMapCtx.setTransform(
         1,
@@ -40672,6 +46189,8 @@
       }
       miniMapRenderedAt =
         state.hole.elapsed;
+      miniMapCriticalStateKey =
+        criticalStateKey;
     }
     ctx.drawImage(
       miniMapBuffer,
@@ -41282,6 +46801,293 @@
     }
   }
 
+  /**
+   * Projects the same coarse or precise area Joe is currently checking onto
+   * the ground plane. Physical entities render afterward and remain solid.
+   */
+  function drawStatusRequestSpatialFootprint() {
+    const consequence =
+      activeStatusRequestSpatialConsequence();
+    if (!consequence) {
+      return;
+    }
+    const footprint =
+      projectedGroundRadius(
+        consequence.target,
+        consequence.radiusMeters,
+      );
+    if (
+      !footprint.point.visible ||
+      footprint.point.x < -180 ||
+      footprint.point.x > WIDTH + 180
+    ) {
+      return;
+    }
+    const escalated =
+      consequence.outcome ===
+      "escalated";
+    const pulse = state.reducedMotion
+      ? 0
+      : Math.sin(
+          state.hole.elapsed *
+            (escalated ? 7.2 : 4.4),
+        ) *
+        0.045;
+    const radiusX =
+      footprint.radiusX *
+      (1 + pulse);
+    const radiusY =
+      footprint.radiusY *
+      (1 + pulse);
+    const rgb = escalated
+      ? "222,91,55"
+      : "111,194,157";
+    ctx.save();
+    ctx.fillStyle =
+      `rgba(${rgb},${escalated ? 0.105 : 0.105})`;
+    ctx.beginPath();
+    ctx.ellipse(
+      footprint.point.x,
+      footprint.point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(
+      footprint.point.x,
+      footprint.point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.clip();
+    ctx.strokeStyle =
+      `rgba(${rgb},${escalated ? 0.44 : 0.42})`;
+    ctx.lineWidth = Math.max(
+      1,
+      footprint.point.scale * 1.25,
+    );
+    if (!escalated) {
+      ctx.setLineDash([5, 5]);
+    }
+    const divisions = escalated
+      ? 2
+      : 4;
+    for (
+      let index = 1;
+      index < divisions;
+      index += 1
+    ) {
+      const ratio =
+        index / divisions * 2 - 1;
+      ctx.beginPath();
+      ctx.moveTo(
+        footprint.point.x +
+          radiusX * ratio,
+        footprint.point.y -
+          radiusY,
+      );
+      ctx.lineTo(
+        footprint.point.x +
+          radiusX * ratio,
+        footprint.point.y +
+          radiusY,
+      );
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(
+        footprint.point.x -
+          radiusX,
+        footprint.point.y +
+          radiusY * ratio,
+      );
+      ctx.lineTo(
+        footprint.point.x +
+          radiusX,
+        footprint.point.y +
+          radiusY * ratio,
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.setLineDash(
+      escalated
+        ? []
+        : [7, 5],
+    );
+    ctx.strokeStyle =
+      `rgba(${rgb},${escalated ? 0.88 : 0.82})`;
+    ctx.lineWidth = escalated
+      ? 2.4
+      : 1.7;
+    ctx.beginPath();
+    ctx.ellipse(
+      footprint.point.x,
+      footprint.point.y,
+      radiusX,
+      radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (escalated) {
+      ctx.strokeStyle =
+        `rgba(${rgb},0.72)`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(
+        footprint.point.x -
+          radiusX * 0.58,
+        footprint.point.y,
+      );
+      ctx.lineTo(
+        footprint.point.x +
+          radiusX * 0.58,
+        footprint.point.y,
+      );
+      ctx.moveTo(
+        footprint.point.x,
+        footprint.point.y -
+          radiusY * 0.72,
+      );
+      ctx.lineTo(
+        footprint.point.x,
+        footprint.point.y +
+          radiusY * 0.72,
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Keeps a coarsely rounded Status Request location readable when its center
+   * falls just behind the fixed forward camera. The cue owns only the spatial
+   * consequence; collision and objective routing retain their action lanes.
+   */
+  function drawStatusRequestRearEdgeCue() {
+    const consequence =
+      activeStatusRequestSpatialConsequence();
+    const presentation =
+      statusRequestRearEdgeCuePresentation(
+        consequence,
+      );
+    if (
+      !consequence ||
+      !presentation?.visible
+    ) {
+      return;
+    }
+    const escalated =
+      consequence.outcome ===
+      "escalated";
+    const rgb = escalated
+      ? "222,91,55"
+      : "111,194,157";
+    const centerX =
+      presentation.centerX;
+    const arcCenterY =
+      presentation.arcCenterY;
+    const radiusX = escalated
+      ? 78
+      : 118;
+    const radiusY = escalated
+      ? 27
+      : 36;
+    const label =
+      presentation.label;
+    const panelWidth = clamp(
+      label.length * 6.4 + 34,
+      248,
+      360,
+    );
+    const panelY =
+      presentation.panelY;
+    ctx.save();
+    ctx.fillStyle =
+      "rgba(2,9,6,0.9)";
+    ctx.fillRect(
+      centerX - panelWidth * 0.5,
+      panelY,
+      panelWidth,
+      28,
+    );
+    strokeRect(
+      centerX - panelWidth * 0.5,
+      panelY,
+      panelWidth,
+      28,
+      consequence.color,
+      1.5,
+    );
+    drawText(
+      label,
+      centerX,
+      panelY + 18,
+      fittedTextSize(
+        label,
+        10,
+        panelWidth - 22,
+        8,
+        true,
+      ),
+      consequence.color,
+      "center",
+      true,
+    );
+    ctx.fillStyle =
+      `rgba(${rgb},0.08)`;
+    ctx.strokeStyle =
+      `rgba(${rgb},0.72)`;
+    ctx.lineWidth = escalated
+      ? 2.2
+      : 1.7;
+    ctx.setLineDash(
+      escalated
+        ? []
+        : [7, 5],
+    );
+    ctx.beginPath();
+    ctx.ellipse(
+      centerX,
+      arcCenterY,
+      radiusX,
+      radiusY,
+      0,
+      Math.PI,
+      Math.PI * 2,
+    );
+    ctx.lineTo(
+      centerX + radiusX,
+      arcCenterY + 22,
+    );
+    ctx.lineTo(
+      centerX - radiusX,
+      arcCenterY + 22,
+    );
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle =
+      consequence.color;
+    polygon([
+      [centerX, panelY - 9],
+      [centerX - 7, panelY + 1],
+      [centerX + 7, panelY + 1],
+    ]);
+    ctx.restore();
+  }
+
   function drawWorldEffects() {
     const hole = state.hole;
     for (const effect of hole.worldEffects) {
@@ -41627,6 +47433,81 @@
               markerSize,
             point.y,
           ],
+        ]);
+      } else if (
+        effect.kind ===
+          "field_signal_breakaway"
+      ) {
+        ctx.strokeStyle =
+          `rgba(225,173,89,${
+            0.76 * alpha
+          })`;
+        ctx.lineWidth = Math.max(
+          1,
+          2.2 * scale,
+        );
+        ctx.setLineDash([
+          7 * scale,
+          6 * scale,
+        ]);
+        for (
+          let ring = 0;
+          ring < 3;
+          ring += 1
+        ) {
+          const radius =
+            (
+              54 +
+              ring * 12 -
+              progress * 24
+            ) *
+            scale;
+          ctx.beginPath();
+          ctx.ellipse(
+            point.x,
+            point.y,
+            radius,
+            radius * 0.2,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.strokeStyle =
+          `rgba(132,201,168,${
+            0.9 * alpha
+          })`;
+        ctx.lineWidth = Math.max(
+          1,
+          3 * scale,
+        );
+        const shieldRadius =
+          (13 + progress * 14) *
+          scale;
+        ctx.beginPath();
+        ctx.ellipse(
+          point.x,
+          point.y,
+          shieldRadius,
+          shieldRadius * 0.26,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+        const fold =
+          (9 + progress * 10) * scale;
+        ctx.fillStyle =
+          `rgba(221,241,207,${
+            0.82 * alpha
+          })`;
+        polygon([
+          [point.x - fold, point.y],
+          [point.x, point.y + 6 * scale],
+          [point.x + fold, point.y],
+          [point.x, point.y - 3 * scale],
         ]);
       } else if (
         effect.kind ===
@@ -44124,6 +50005,373 @@
     ctx.restore();
   }
 
+  function tutorialBriefingViewportPresentation(
+    clientWidth = canvas.clientWidth,
+    clientHeight = canvas.clientHeight,
+  ) {
+    const canvasScale = Math.min(
+      clientWidth / WIDTH,
+      clientHeight / HEIGHT,
+    );
+    const compact =
+      canvasScale < 0.72;
+    return {
+      compact,
+      layout: compact
+        ? "compact_readable_rows"
+        : "desktop_visual_dossier",
+      canvasScale,
+      density: compact
+        ? "three_decision_rows_two_control_lines"
+        : "three_visual_cards_four_keycap_groups",
+      criticalFontFloor: compact
+        ? 14
+        : 9,
+      panel: compact
+        ? {
+            x: 86,
+            y: 40,
+            width: 1108,
+            height: 640,
+          }
+        : {
+            x: 164,
+            y: 76,
+            width: 952,
+            height: 568,
+          },
+      rule:
+        "compact_viewports_reduce_density_and_raise_critical_type_instead_of_miniaturizing_the_desktop_briefing",
+    };
+  }
+
+  function drawCompactTutorialBriefing(
+    variant,
+    overtime,
+    stampCount,
+    presentation =
+      tutorialBriefingViewportPresentation(),
+  ) {
+    const panel = presentation.panel;
+    ctx.fillStyle =
+      "rgba(3,14,8,0.99)";
+    ctx.fillRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+    );
+    strokeRect(
+      panel.x,
+      panel.y,
+      panel.width,
+      panel.height,
+      "#d47431",
+      3,
+    );
+    strokeRect(
+      panel.x + 10,
+      panel.y + 10,
+      panel.width - 20,
+      panel.height - 20,
+      "#35492f",
+      1,
+    );
+    drawText(
+      `${
+        overtime
+          ? "OVERTIME AUDIT"
+          : "SURVIVAL BRIEFING"
+      } // NIGHT ORDER ${String(
+        variant.number,
+      ).padStart(2, "0")}`,
+      WIDTH * 0.5,
+      82,
+      28,
+      "#f0efd8",
+      "center",
+      true,
+    );
+    const variantLine = overtime
+      ? `${variant.name} // 2 BALLS â€¢ FASTER JOE â€¢ STRONGER EVIDENCE â€¢ SCORE Ã—1.30`
+      : `${variant.name} // ${variant.briefing}`;
+    drawText(
+      variantLine,
+      WIDTH * 0.5,
+      112,
+      fittedTextSize(
+        variantLine,
+        16,
+        1010,
+        13,
+        true,
+      ),
+      variant.accent,
+      "center",
+      true,
+    );
+    ctx.fillStyle =
+      "rgba(32,15,7,0.94)";
+    ctx.fillRect(
+      126,
+      130,
+      1028,
+      68,
+    );
+    strokeRect(
+      126,
+      130,
+      1028,
+      68,
+      "#8f5b32",
+      2,
+    );
+    drawText(
+      overtime
+        ? `OVERTIME TERMS // DOSSIER ${stampCount}/${PERFORMANCE_STAMPS.length}`
+        : "5:47 PM // ONE LAST ACTION ITEM",
+      WIDTH * 0.5,
+      151,
+      15,
+      "#f0ad68",
+      "center",
+      true,
+    );
+    drawText(
+      "JOE SENT HIS ASSOCIATE PRODUCT ANALYST ON ONE LAST NIGHT ORDER.",
+      WIDTH * 0.5,
+      173,
+      14,
+      "#e7e0c7",
+      "center",
+      true,
+    );
+    drawText(
+      "SOUTH GATE LOCKED. FILE 3 CHECKS, SECURE AN EXIT, AND STAY AHEAD.",
+      WIDTH * 0.5,
+      190,
+      14,
+      "#c99b6a",
+      "center",
+      true,
+    );
+
+    const controllerActive =
+      state.inputMethod === "gamepad";
+    const touchActive =
+      state.inputMethod === "touch";
+    const cards = [
+      {
+        y: 210,
+        icon: 0,
+        number: "1",
+        title:
+          "COMPLETE 3 CHECKS + FILE",
+        detail:
+          "KEY â†’ SHED  â€¢  VALVE â†’ DRAIN  â€¢  STAY STILL TO FILE",
+        subdetail: `OPTIONAL ${activeChangeRequest().code}: +${CHANGE_REQUEST_BONUS} EVIDENCE OR ONE CHASE APPEAL`,
+      },
+      {
+        y: 320,
+        icon: 1,
+        number: "2",
+        title:
+          "MISDIRECT JOE WITH A CHIP",
+        detail: touchActive
+          ? "HOLD CHIP  â€¢  SLIDE TO AIM  â€¢  RELEASE"
+          : controllerActive
+            ? "HOLD X  â€¢  LEFT STICK TO AIM  â€¢  RELEASE"
+            : `HOLD ${keyboardBindingLabel(
+                "chip",
+              )}  â€¢  ${keyboardBindingLabel(
+                "move_left",
+              )}/${keyboardBindingLabel(
+                "move_right",
+              )} TO AIM  â€¢  RELEASE`,
+        subdetail: touchActive
+          ? "LANDED BALLS MAKE NOISE  â€¢  TAP USE TO RECLAIM"
+          : controllerActive
+            ? "LANDED BALLS MAKE NOISE  â€¢  A RECLAIMS WHEN CLEAR"
+            : `LANDED BALLS MAKE NOISE  â€¢  ${keyboardBindingLabel(
+                "interact",
+              )} RECLAIMS WHEN CLEAR`,
+      },
+      {
+        y: 430,
+        icon: 2,
+        number: "3",
+        title: "BREAK CONTACT",
+        detail: touchActive
+          ? "HOLD CROUCH  â€¢  HOLD LISTEN  â€¢  ROUTE WIDE OR WAIT"
+          : controllerActive
+            ? "LB CROUCH  â€¢  LT LISTEN  â€¢  ROUTE WIDE OR WAIT"
+            : `${keyboardBindingLabel(
+                "crouch",
+              )} CROUCH  â€¢  ${keyboardBindingLabel(
+                "focus",
+              )} LISTEN  â€¢  ROUTE WIDE OR WAIT`,
+        subdetail:
+          "MARKED GROUND SLOWS YOU  â€¢  JOE KEEPS MOVING",
+      },
+    ];
+    for (const card of cards) {
+      ctx.fillStyle =
+        "rgba(10,28,15,0.94)";
+      ctx.fillRect(
+        126,
+        card.y,
+        1028,
+        102,
+      );
+      strokeRect(
+        126,
+        card.y,
+        1028,
+        102,
+        "#50633e",
+        2,
+      );
+      drawText(
+        card.number,
+        148,
+        card.y + 31,
+        20,
+        "#d47431",
+        "left",
+        true,
+      );
+      drawFieldIcon(
+        card.icon,
+        202,
+        card.y + 55,
+        64,
+      );
+      drawText(
+        card.title,
+        260,
+        card.y + 29,
+        19,
+        "#f0e8ce",
+        "left",
+        true,
+      );
+      drawText(
+        card.detail,
+        260,
+        card.y + 59,
+        15,
+        "#b9c5b1",
+        "left",
+        true,
+      );
+      drawText(
+        card.subdetail,
+        260,
+        card.y + 84,
+        14,
+        "#d69a5c",
+        "left",
+        true,
+      );
+    }
+
+    ctx.fillStyle =
+      "rgba(4,18,10,0.95)";
+    ctx.fillRect(
+      126,
+      542,
+      1028,
+      78,
+    );
+    strokeRect(
+      126,
+      542,
+      1028,
+      78,
+      "#40563a",
+      2,
+    );
+    const primaryControls =
+      touchActive
+        ? "MOVE LEFT PAD  â€¢  HOLD RUN  â€¢  TAP USE"
+        : controllerActive
+          ? "MOVE L STICK / D-PAD  â€¢  SPRINT RT  â€¢  USE A"
+          : `MOVE ${keyboardMovementCopy()}  â€¢  SPRINT ${keyboardBindingLabel(
+              "sprint",
+            )}  â€¢  USE ${keyboardBindingLabel(
+              "interact",
+            )}`;
+    const secondaryControls =
+      touchActive
+        ? "HOLD CROUCH  â€¢  HOLD LISTEN  â€¢  HOLD CHIP  â€¢  HOLD REAR"
+        : controllerActive
+          ? "CROUCH LB  â€¢  LISTEN LT  â€¢  CHIP X  â€¢  REAR R3"
+          : `CROUCH ${keyboardBindingLabel(
+              "crouch",
+            )}  â€¢  LISTEN ${keyboardBindingLabel(
+              "focus",
+            )}  â€¢  CHIP ${keyboardBindingLabel(
+              "chip",
+            )}  â€¢  REAR ${keyboardBindingLabel(
+              "look_back",
+            )}`;
+    drawText(
+      primaryControls,
+      WIDTH * 0.5,
+      570,
+      16,
+      "#e7e0c7",
+      "center",
+      true,
+    );
+    drawText(
+      secondaryControls,
+      WIDTH * 0.5,
+      601,
+      15,
+      "#83c9be",
+      "center",
+      true,
+    );
+    const pulse = state.reducedMotion
+      ? 1
+      : 0.62 +
+        (
+          Math.sin(
+            state.time * 4.2,
+          ) + 1
+        ) *
+          0.18;
+    ctx.globalAlpha = pulse;
+    drawText(
+      touchActive
+        ? "MOVE LEFT PAD OR TAP USE TO START"
+        : controllerActive
+          ? "MOVE OR PRESS A TO START"
+          : `MOVE OR PRESS ${keyboardBindingLabel(
+              "interact",
+            )} TO START`,
+      WIDTH * 0.5,
+      650,
+      20,
+      "#ffe2a0",
+      "center",
+      true,
+    );
+    ctx.globalAlpha = 1;
+    if (state.hole.courseEchoRecord) {
+      drawText(
+        `COURSE ECHO READY  //  ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD`,
+        WIDTH * 0.5,
+        672,
+        12,
+        "#83d9c1",
+        "center",
+        true,
+      );
+    }
+  }
+
   function drawTutorialBriefing() {
     const variant = activeRunVariant();
     const overtime = state.hole.overtime;
@@ -44133,6 +50381,17 @@
       ).length;
     ctx.fillStyle = "rgba(0,3,1,0.92)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const viewportPresentation =
+      tutorialBriefingViewportPresentation();
+    if (viewportPresentation.compact) {
+      drawCompactTutorialBriefing(
+        variant,
+        overtime,
+        stampCount,
+        viewportPresentation,
+      );
+      return;
+    }
     const panel = { x: 164, y: 76, width: 952, height: 568 };
     ctx.fillStyle = "rgba(3,14,8,0.985)";
     ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
@@ -46265,6 +52524,51 @@
     ctx.restore();
   }
 
+  /**
+   * Keeps recovery scoring visible without covering an interactable that has
+   * just become actionable in the center of the projected course.
+   */
+  function riskPremiumAwardPresentation(
+    interactionOwner =
+      state.hole?.interactionPromptOwner,
+  ) {
+    const protectsInteraction = Boolean(
+      interactionOwner?.targetId &&
+        interactionOwner.availability ===
+          "ready",
+    );
+    const centerX = WIDTH * 0.5;
+    const centerY =
+      protectsInteraction ? 224 : 434;
+    return {
+      centerX,
+      centerY,
+      card: {
+        left: centerX - 146,
+        top: centerY - 50,
+        right: centerX + 146,
+        bottom: centerY + 32,
+      },
+      relocatedForInteraction:
+        protectsInteraction,
+      protectedTargetId:
+        protectsInteraction
+          ? interactionOwner.targetId
+          : null,
+      protectedTargetLabel:
+        protectsInteraction
+          ? interactionOwner.label
+          : null,
+      gameplayEffect: "none",
+      presentation:
+        protectsInteraction
+          ? "risk_premium_moves_to_the_open_top_center_lane_while_an_in_reach_world_object_owns_interaction"
+          : "risk_premium_uses_the_dramatic_center_lane_when_no_world_interaction_needs_it",
+      rule:
+        "earned_score_remains_visible_without_hiding_the_object_the_player_can_act_on",
+    };
+  }
+
   function drawRiskPremiumAward() {
     const award = state.hole.riskAward;
     if (!award) {
@@ -46297,8 +52601,12 @@
         : award.tier === "close"
           ? "CLOSE CUT"
           : "CONTACT BROKEN";
-    const centerX = WIDTH * 0.5;
-    const centerY = 434 + entrance;
+    const presentation =
+      riskPremiumAwardPresentation();
+    const centerX =
+      presentation.centerX;
+    const centerY =
+      presentation.centerY + entrance;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = "rgba(3,12,6,0.92)";
@@ -46925,6 +53233,10 @@
           rearSightingPoint.x <
             WIDTH - 18,
       );
+    const immediateRouteHandoff =
+      rearImmediateRouteHandoffPresentation(
+        view.amount,
+      );
     const accent = joeVisible
       ? "#e66f45"
       : rearSightingVisible
@@ -47017,8 +53329,15 @@
           1,
         ),
       );
-      const width = 310;
+      const width =
+        immediateRouteHandoff.visible
+          ? 430
+          : 310;
       const panelY = 170;
+      const panelHeight =
+        immediateRouteHandoff.visible
+          ? 58
+          : 38;
       ctx.globalAlpha = labelAlpha;
       ctx.fillStyle =
         "rgba(2,10,8,0.88)";
@@ -47026,13 +53345,13 @@
         WIDTH * 0.5 - width * 0.5,
         panelY,
         width,
-        38,
+        panelHeight,
       );
       strokeRect(
         WIDTH * 0.5 - width * 0.5,
         panelY,
         width,
-        38,
+        panelHeight,
         accent,
         2,
       );
@@ -47050,16 +53369,69 @@
                   ? "LEFT"
                   : "RIGHT"
               }`
-            : "REAR VIEW  //  MOVEMENT UNCHANGED",
+            : immediateRouteHandoff.visible
+              ? "REAR VIEW  //  FORWARD ROUTE BEHIND"
+              : "REAR VIEW  //  MOVEMENT UNCHANGED",
         WIDTH * 0.5,
-        panelY + 25,
+        panelY +
+          (
+            immediateRouteHandoff.visible
+              ? 21
+              : 25
+          ),
         11,
         accent,
         "center",
         true,
       );
+      if (
+        immediateRouteHandoff.visible
+      ) {
+        const releaseLabel =
+          inputCopy(
+            `RELEASE ${keyboardBindingLabel(
+              "look_back",
+            )}`,
+            "RELEASE R3",
+            "RELEASE REAR",
+          );
+        drawText(
+          `${releaseLabel}  //  ${immediateRouteHandoff.bodyInstruction}  //  ${immediateRouteHandoff.targetLabel} ${Math.ceil(
+            immediateRouteHandoff.distance,
+          )}m`,
+          WIDTH * 0.5,
+          panelY + 43,
+          9,
+          immediateRouteHandoff.color,
+          "center",
+          true,
+        );
+      }
     }
     ctx.restore();
+  }
+
+  /**
+   * Keeps the Change Request's persistent HUD copy aligned with its real
+   * score state: secured paperwork remains unfiled until a successful exit.
+   */
+  function changeRequestHudStatus(
+    hole = state.hole,
+    appealEligible = null,
+  ) {
+    if (hole.appealUsed) {
+      return "CR X APPEALED";
+    }
+    if (!hole.changeRequestCollected) {
+      return `CR ◇ +${CHANGE_REQUEST_BONUS}`;
+    }
+    const eligible =
+      appealEligible === null
+        ? emergencyAppealState().eligible
+        : appealEligible;
+    return eligible
+      ? "CR ! APPEAL READY"
+      : `CR ✓ BANK +${CHANGE_REQUEST_BONUS}`;
   }
 
   function drawFirstHoleOverlay() {
@@ -47080,14 +53452,10 @@
       performanceStampsFor(
         variant.id,
       ).length;
+    const cleanBreakHud =
+      cleanBreakHudPresentation();
     const changeRequestStatus =
-      hole.appealUsed
-        ? "CR X APPEALED"
-        : hole.changeRequestCollected
-        ? emergencyAppealState().eligible
-          ? "CR ! APPEAL READY"
-          : `CR ✓ +${CHANGE_REQUEST_BONUS}`
-        : `CR ◇ +${CHANGE_REQUEST_BONUS}`;
+      changeRequestHudStatus(hole);
     const masteryStatus =
       hole.overtime
         ? "OVERTIME"
@@ -47156,7 +53524,52 @@
         "right",
         true,
       );
-      drawText(objective, 62, 112, 16, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
+      drawText(
+        objective,
+        62,
+        112,
+        cleanBreakHud.visible
+          ? fittedTextSize(
+              objective,
+              16,
+              278,
+              11,
+              true,
+            )
+          : 16,
+        hole.keyCollected
+          ? "#b9d77b"
+          : "#e38a3e",
+        "left",
+        true,
+      );
+      if (cleanBreakHud.visible) {
+        ctx.fillStyle =
+          cleanBreakHud.backgroundColor;
+        ctx.fillRect(
+          354,
+          94,
+          92,
+          24,
+        );
+        strokeRect(
+          354,
+          94,
+          92,
+          24,
+          cleanBreakHud.borderColor,
+          1,
+        );
+        drawText(
+          cleanBreakHud.text,
+          400,
+          111,
+          10,
+          cleanBreakHud.textColor,
+          "center",
+          true,
+        );
+      }
 
       drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
       drawText(
@@ -47235,7 +53648,52 @@
         "right",
         true,
       );
-      drawText(objective, 56, 94, 14, hole.keyCollected ? "#b9d77b" : "#e38a3e", "left", true);
+      drawText(
+        objective,
+        56,
+        94,
+        cleanBreakHud.visible
+          ? fittedTextSize(
+              objective,
+              14,
+              262,
+              10,
+              true,
+            )
+          : 14,
+        hole.keyCollected
+          ? "#b9d77b"
+          : "#e38a3e",
+        "left",
+        true,
+      );
+      if (cleanBreakHud.visible) {
+        ctx.fillStyle =
+          cleanBreakHud.backgroundColor;
+        ctx.fillRect(
+          326,
+          78,
+          94,
+          22,
+        );
+        strokeRect(
+          326,
+          78,
+          94,
+          22,
+          cleanBreakHud.borderColor,
+          1,
+        );
+        drawText(
+          cleanBreakHud.text,
+          373,
+          94,
+          10,
+          cleanBreakHud.textColor,
+          "center",
+          true,
+        );
+      }
       drawText(
         `${terrainStatus}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  ${hole.golfBalls} BALLS${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}`,
         56,
@@ -47382,6 +53840,11 @@
         "investigate"
         ? activeFieldActionSignal()
         : null;
+    const statusRequestInvestigation =
+      hole.joe.mode ===
+        "investigate"
+        ? activeStatusRequestSignal()
+        : null;
     const predatorTacticAttention =
       activePredatorTacticAttentionState();
     const joeSearchContext =
@@ -47417,7 +53880,10 @@
           ? fieldActionInvestigation
             ? fieldActionInvestigation
                 .attentionLabel
-            : "VERIFYING DISTURBANCE"
+            : statusRequestInvestigation
+              ? statusRequestInvestigation
+                  .attentionLabel
+              : "VERIFYING DISTURBANCE"
         : cadence.active
           ? `CADENCE READ // ${Math.round(cadence.progress / CADENCE_READ_SECONDS * 100)}%`
         : cadence.forecast
@@ -47467,6 +53933,7 @@
     const fieldActionStatusColor =
       predatorTacticAttention?.color ||
       fieldActionInvestigation?.color ||
+      statusRequestInvestigation?.color ||
       (
         joeSearchContext &&
         !searchRead.active
@@ -47728,24 +54195,39 @@
     if (
       fieldInteractionPromptOwnsBottomRail()
     ) {
+      const promptOwner =
+        activeInteractionPromptOwner();
+      const commitment =
+        promptOwner?.consequence ||
+        null;
+      const commitmentColor =
+        commitment?.risk
+          ?.accentColor ||
+        "#76c49a";
       const actionWidth = 720;
       const actionX =
         WIDTH * 0.5 -
         actionWidth * 0.5;
+      const actionHeight = commitment
+        ? 68
+        : 46;
+      const actionY = HEIGHT -
+        66 -
+        actionHeight;
       ctx.fillStyle =
         "rgba(2,12,8,0.94)";
       ctx.fillRect(
         actionX,
-        HEIGHT - 112,
+        actionY,
         actionWidth,
-        46,
+        actionHeight,
       );
       strokeRect(
         actionX,
-        HEIGHT - 112,
+        actionY,
         actionWidth,
-        46,
-        "#76c49a",
+        actionHeight,
+        commitmentColor,
         2,
       );
       const actionCopy =
@@ -47753,7 +54235,8 @@
       drawText(
         actionCopy,
         WIDTH * 0.5,
-        HEIGHT - 82,
+        actionY +
+          (commitment ? 27 : 30),
         fittedTextSize(
           actionCopy,
           15,
@@ -47765,6 +54248,23 @@
         "center",
         true,
       );
+      if (commitment) {
+        drawText(
+          commitment.text,
+          WIDTH * 0.5,
+          actionY + 52,
+          fittedTextSize(
+            commitment.text,
+            12,
+            actionWidth - 30,
+            9,
+            true,
+          ),
+          "#e6ad62",
+          "center",
+          true,
+        );
+      }
     } else if (
       !hole.escapeFiling.active &&
       !hole.escapeFiling.sealing &&
@@ -47775,20 +54275,45 @@
       !cutTraceScanOwnsSignalLane() &&
       !listeningSearchReadOwnsSignalLane() &&
       !openingMovementMessageDeferredByPanel() &&
-      hole.messageTimer > 0
+      !fieldBreakawayHoldOwnsBottomRail() &&
+      (
+        hole.messageTimer > 0 ||
+        fieldSignalBreakawayRewardCanPresent() ||
+        fieldSignalBreakawayMissCanPresent()
+      )
     ) {
       const presentedMessage =
         holeMessageForPresentation();
       const fieldCheckHandoff =
         activeNightOrderHandoff();
-      const alpha = clamp(hole.messageTimer, 0, 1);
+      const rewardRailVisible =
+        fieldSignalBreakawayRewardCanPresent();
+      const missRailVisible =
+        fieldSignalBreakawayMissCanPresent();
+      const messageRail =
+        fieldSignalBreakawayRailPresentation(
+          rewardRailVisible,
+          missRailVisible,
+        );
+      const alpha = clamp(
+        rewardRailVisible
+          ? hole.fieldSignalBreakaway
+              .rewardTimer
+          : missRailVisible
+          ? hole.fieldSignalBreakaway
+              .feedbackTimer
+          : hole.messageTimer,
+        0,
+        1,
+      );
       const messageWidth = 720;
       const messageHeight =
         fieldCheckHandoff ? 62 : 46;
       const messageY =
         HEIGHT - 66 - messageHeight;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = "rgba(2,8,4,0.9)";
+      ctx.fillStyle =
+        messageRail.backgroundColor;
       ctx.fillRect(
         WIDTH * 0.5 -
           messageWidth * 0.5,
@@ -47802,9 +54327,21 @@
         messageY,
         messageWidth,
         messageHeight,
-        "#d87532",
+        messageRail.borderColor,
         2,
       );
+      if (messageRail.innerBorderColor) {
+        strokeRect(
+          WIDTH * 0.5 -
+            messageWidth * 0.5 +
+            4,
+          messageY + 4,
+          messageWidth - 8,
+          messageHeight - 8,
+          messageRail.innerBorderColor,
+          1,
+        );
+      }
       const messageSize = fittedTextSize(
         presentedMessage,
         fieldCheckHandoff ? 13 : 15,
@@ -47818,7 +54355,7 @@
         messageY +
           (fieldCheckHandoff ? 23 : 30),
         messageSize,
-        "#f1e7c9",
+        messageRail.textColor,
         "center",
         true,
       );
@@ -50290,6 +56827,8 @@
       courseLocomotionState().bob;
     const footingGuidance =
       footingHazardBypassGuidance();
+    const collisionRecoveryRoute =
+      collisionRecoveryWorldRoutePresentation();
 
     ctx.fillStyle = "#07120c";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -50374,10 +56913,17 @@
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
     drawCourseBoundaryRopes();
     drawCourseWayfindingStakes();
-    drawWorldNavigationRibbon();
-    drawFootingHazardBypassRoute(
+    drawWorldNavigationRibbon(
       footingGuidance,
     );
+    drawCollisionRecoveryWorldRoute(
+      collisionRecoveryRoute,
+    );
+    drawFootingHazardBypassRoute(
+      footingGuidance,
+      collisionRecoveryRoute.active,
+    );
+    drawStatusRequestSpatialFootprint();
     drawCadenceForecast();
     drawCourseCollisionFootprints();
     drawMowerWorldParticles(
@@ -50396,6 +56942,7 @@
     drawWorldEffects();
     drawJoeWorldLabel();
     drawNearbyBlockerCallouts();
+    drawStatusRequestRearEdgeCue();
 
     if (!state.hole.keyCollected) {
       drawWorldInteractable(
@@ -50433,41 +56980,64 @@
         noiseHazardSignal &&
         state.hole.messageTimer >
           0.75;
-      if (!hazardMessageActive) {
+      if (
+        !statusAck &&
+        !statusEscalation &&
+        !hazardMessageActive
+      ) {
         drawWorldMarker(
           distraction.x,
           distraction.y,
           distraction.kind === "appeal"
             ? `APPEAL REVIEW // ${state.hole.appealReviewTimer.toFixed(1)}s`
-            : statusAck
-              ? `STATUS PING // ${state.hole.distractionTimer.toFixed(1)}s`
-              : statusEscalation
-                ? `ESCALATED SECTOR // ${state.hole.distractionTimer.toFixed(1)}s`
-                : noiseHazardSignal
-                  ? `NOISE SOURCE // ${state.hole.distractionTimer.toFixed(1)}s`
-                  : fieldActionSignal
-                    ? fieldActionSignal.worldLabel
-                    : "DISTRACTION",
+            : noiseHazardSignal
+              ? `NOISE SOURCE // ${state.hole.distractionTimer.toFixed(1)}s`
+              : fieldActionSignal
+                ? fieldActionSignal.worldLabel
+                : "DISTRACTION",
           distraction.kind === "appeal"
             ? "#ef9653"
-            : statusAck
-              ? "#76c1a4"
-              : statusEscalation
-                ? "#df6242"
-                : noiseHazardSignal
-                  ? "#e0ad52"
-                  : fieldActionSignal
-                    ? fieldActionSignal.color
-                    : "#d6a74c",
+            : noiseHazardSignal
+              ? "#e0ad52"
+              : fieldActionSignal
+                ? fieldActionSignal.color
+                : "#d6a74c",
           distraction.kind === "appeal"
             ? "CR"
-            : statusAck
-              ? "SR"
-              : statusEscalation
-                ? "!!"
-                : fieldActionSignal
-                  ? "!!"
-                  : "!",
+            : fieldActionSignal
+              ? "!!"
+              : "!",
+        );
+      }
+    }
+    const statusSpatialConsequence =
+      activeStatusRequestSpatialConsequence();
+    if (statusSpatialConsequence) {
+      drawWorldMarker(
+        statusSpatialConsequence
+          .target.x,
+        statusSpatialConsequence
+          .target.y,
+        statusSpatialConsequence
+          .worldLabel,
+        statusSpatialConsequence.color,
+        statusSpatialConsequence.glyph,
+      );
+    }
+    const fieldBreakaway =
+      activeFieldActionBreakaway();
+    if (fieldBreakaway) {
+      if (fieldBreakaway.reached) {
+        drawFieldBreakawayHoldPanel(
+          fieldBreakaway,
+        );
+      } else {
+        drawWorldMarker(
+          fieldBreakaway.target.x,
+          fieldBreakaway.target.y,
+          `SAFE BREAK // ${fieldBreakaway.coverLabel}`,
+          fieldBreakaway.color,
+          ">>",
         );
       }
     }
@@ -51149,7 +57719,7 @@
             : "REMATCH FILE",
         detail:
           captureReview
-            ? `COUNTER // ${captureReview.shortLabel}`
+            ? `${captureReview.coachingMode === "recovery_drill" ? "DRILL" : captureReview.coachingMode === "guided_adjustment" ? "ADJUST" : "COUNTER"} // ${captureReview.shortLabel}`
             : echoTarget
               ? echoTarget.detail
               : `TARGET // ${target.shortName}`,
@@ -51229,6 +57799,10 @@
     outcome,
     accent,
   ) {
+    const captureReview =
+      outcome === "defeat"
+        ? state.hole.captureReview
+        : null;
     const actions =
       resultActionPresentations(
         outcome,
@@ -51245,19 +57819,25 @@
       selected.description;
     const actionDescriptionText =
       `NEXT ACTION // ${actionDescription}`;
-    drawText(
-      actionDescriptionText,
-      WIDTH * 0.5,
-      588,
-      fittedTextSize(
+    const incidentReviewOwnsDescription =
+      outcome === "defeat" &&
+      Boolean(captureReview) &&
+      selected.id === "rematch";
+    if (!incidentReviewOwnsDescription) {
+      drawText(
         actionDescriptionText,
-        11,
-        1120,
-        9,
-      ),
-      "#c8d1bd",
-      "center",
-    );
+        WIDTH * 0.5,
+        588,
+        fittedTextSize(
+          actionDescriptionText,
+          11,
+          1120,
+          9,
+        ),
+        "#c8d1bd",
+        "center",
+      );
+    }
     for (
       let index = 0;
       index < actions.length;
@@ -51712,10 +58292,11 @@
       result.breakdown.delivery > 0
     ) {
       scoreNotes.push({
-        text: `+${result.breakdown.delivery.toLocaleString()} DELIVERY CHAIN // PEAK ×${deliveryMultiplier(result.deliveryPeak).toFixed(1)}`,
+        text: `+${result.breakdown.delivery.toLocaleString()} DELIVERY${result.signalBreakawayCount > 0 ? ` // CLEAN ${result.signalBreakawayCount}/${result.signalBreakawayRequired}` : ""} // PEAK ×${deliveryMultiplier(result.deliveryPeak).toFixed(1)}`,
         color:
+          result.perfectSignalMask ||
           result.deliveryPeak >=
-          DELIVERY_CHAIN_MAX
+            DELIVERY_CHAIN_MAX
             ? "#f1ce69"
             : "#84c9a8",
       });
@@ -52075,6 +58656,8 @@
           "Use Listening Focus, preserve cover, and keep a second route available.",
         repeatCount: 1,
       };
+    const cleanBreakPresentation =
+      cleanBreakDefeatPresentation();
     ctx.save();
     ctx.globalAlpha = textReveal;
     ctx.fillStyle = "rgba(10,2,1,0.9)";
@@ -52091,12 +58674,21 @@
       true,
     );
     drawText(
-      "DELIVERY BLOCKED: FAILED JOE'S ACCEPTANCE REVIEW",
+      cleanBreakPresentation.text,
       WIDTH * 0.5,
       panelY + 68,
-      12,
-      "#e6ad84",
+      fittedTextSize(
+        cleanBreakPresentation.text,
+        12,
+        920,
+        9,
+        true,
+      ),
+      cleanBreakPresentation.visible
+        ? "#ddc477"
+        : "#e6ad84",
       "center",
+      cleanBreakPresentation.visible,
     );
     const dialogueX = 232;
     const dialogueY =
@@ -52226,7 +58818,7 @@
     );
     drawText(
       captureReview.repeatCount > 1
-        ? `INCIDENT REVIEW // ${captureReview.label} // REPEAT ISSUE x${captureReview.repeatCount}`
+        ? `INCIDENT REVIEW // ${captureReview.label} // REPEAT x${captureReview.repeatCount} // ${captureReview.coachingMode === "recovery_drill" ? "RECOVERY DRILL" : "ONE CHANGE"}`
         : `INCIDENT REVIEW // ${captureReview.label} // ${captureReview.zoneName}`,
       reviewX + 14,
       reviewY + 17,
@@ -52240,7 +58832,7 @@
     const evidenceText =
       `EVIDENCE // ${captureReview.evidence}`;
     const counterplayText =
-      `NEXT RUN // ${captureReview.counterplay}`;
+      `${captureReview.coachingMode === "recovery_drill" ? "RECOVERY DRILL" : captureReview.coachingMode === "guided_adjustment" ? "ADJUSTMENT" : "NEXT RUN"} // ${captureReview.counterplay}`;
     drawText(
       evidenceText,
       reviewX + 14,
@@ -52575,6 +59167,87 @@
     ctx.fill();
   }
 
+  function accessibleGameStatusText() {
+    if (state.mode === "gate") {
+      return "Rough Cut opening gate. Activate the game to begin the incident.";
+    }
+    if (state.mode === "intro") {
+      return "Opening incident playing. Activate again to skip to the clubhouse menu.";
+    }
+    if (
+      state.mode === "menu" ||
+      state.mode === "claim"
+    ) {
+      return `Clubhouse menu. Selected: ${MENU_ITEMS[state.menuIndex]}. ${state.status}`;
+    }
+    if (state.mode === "settings") {
+      if (state.settingsPage === "bindings") {
+        return `Keyboard bindings. ${state.bindingStatus}`;
+      }
+      const setting =
+        SETTINGS_ROWS[state.settingsIndex];
+      const value =
+        setting.type === "toggle"
+          ? state[setting.key]
+            ? "on"
+            : "off"
+          : settingDisplayValue(setting);
+      return `Settings. Selected: ${setting.label}. Value: ${value}.`;
+    }
+    if (
+      state.mode === "first_hole"
+    ) {
+      if (state.hole.tutorialVisible) {
+        return "Survival briefing. Move or interact to start the round.";
+      }
+      const zone =
+        courseZoneAt(state.player.y)
+          .name;
+      const joeState =
+        state.hole.joe.mode === "chase"
+          ? "Joe is pursuing you"
+          : state.hole.joe.mode ===
+              "search"
+            ? "Joe is searching"
+            : state.hole.joe.mode ===
+                "investigate"
+              ? "Joe is investigating"
+              : "Joe is patrolling";
+      return `Gameplay. Zone: ${zone}. Objective: ${currentHoleObjective()}. ${joeState}.`;
+    }
+    if (state.mode === "paused") {
+      return `Game paused. Selected: ${PAUSE_ITEMS[state.pauseIndex]}. Objective: ${currentHoleObjective()}.`;
+    }
+    if (state.mode === "victory") {
+      return `Escape filed. Selected result action: ${RESULT_ACTION_IDS[state.resultIndex]}.`;
+    }
+    if (state.mode === "defeat") {
+      return `Joe caught the player. Selected result action: ${RESULT_ACTION_IDS[state.resultIndex]}.`;
+    }
+    if (state.mode === "clocked_out") {
+      return "Shift ended. Activate to return to the clubhouse.";
+    }
+    return "Rough Cut is ready.";
+  }
+
+  function syncAccessibleGameStatus() {
+    if (!accessibleStatus) {
+      return;
+    }
+    const nextStatus =
+      normalizeDisplayText(
+        accessibleGameStatusText(),
+      );
+    if (
+      nextStatus === lastAccessibleStatus
+    ) {
+      return;
+    }
+    lastAccessibleStatus = nextStatus;
+    accessibleStatus.textContent =
+      nextStatus;
+  }
+
   function render() {
     const renderStartedAt =
       performance.now();
@@ -52633,6 +59306,7 @@
       performance.now() -
         renderStartedAt,
     );
+    syncAccessibleGameStatus();
   }
 
   function update(delta) {
@@ -52640,6 +59314,19 @@
     pollGamepad();
     state.time += dt;
     state.transitionAlpha = Math.max(0, state.transitionAlpha - dt * 2.25);
+
+    if (
+      state.mode === "menu" &&
+      state.pendingCourseStart
+    ) {
+      const courseAssets =
+        gameplayAssetSummary();
+      state.status =
+        `PREPARING COURSE // ${courseAssets.percent}%`;
+      if (courseAssets.ready) {
+        beginFirstHoleFromMenu();
+      }
+    }
 
     if (state.mode === "intro") {
       if (!state.stingerPlayed && state.time >= LINE_END) {
@@ -52844,6 +59531,33 @@
         hole.blockedTransferFrom = null;
       }
       hole.stateBannerTimer = Math.max(0, hole.stateBannerTimer - dt);
+      if (
+        !fieldSignalBreakawayRewardDeferredBy()
+      ) {
+        hole.fieldSignalBreakaway.rewardTimer =
+          Math.max(
+            0,
+            hole.fieldSignalBreakaway
+              .rewardTimer - dt,
+          );
+      }
+      if (
+        !fieldSignalBreakawayMissDeferredBy()
+      ) {
+        hole.fieldSignalBreakaway.feedbackTimer =
+          Math.max(
+            0,
+            hole.fieldSignalBreakaway
+              .feedbackTimer - dt,
+          );
+      }
+      if (
+        hole.fieldSignalBreakaway
+          .rewardTimer <= 0
+      ) {
+        hole.fieldSignalBreakaway
+          .rewardMessage = "";
+      }
       if (hole.nightOrderHandoff) {
         hole.nightOrderHandoff.timer =
           Math.max(
@@ -53366,6 +60080,10 @@
             );
           const entryGuidance =
             footingHazardBypassGuidance();
+          hole.footingNavigationOverride =
+            footingNavigationOverrideFromGuidance(
+              entryGuidance,
+            );
           const clearSide =
             entryGuidance?.selected
               ?.sideLabel ||
@@ -53374,12 +60092,16 @@
             `SLOW FOOTING — clear ${clearSide} now; next patch, route wide or wait under cover.`,
             3.35,
           );
+          const footingThreat =
+            footingHazardThreatCaptionSpec(
+              hole,
+            );
           pushThreatCaption(
-            "FOOTING DRAG // JOE KEEPS MOVING",
-            state.player,
-            "world",
-            2.55,
-            "footing_hazard",
+            footingThreat.text,
+            footingThreat.source,
+            footingThreat.category,
+            footingThreat.duration,
+            footingThreat.key,
           );
           playFootingHazardCue(
             footingZone.kind,
@@ -53426,6 +60148,8 @@
           }
         }
         hole.activeFootingHazardId =
+          null;
+        hole.footingNavigationOverride =
           null;
       }
       const movementNoise = moving
@@ -53512,6 +60236,10 @@
         filingNoise,
       );
       hole.noise = lerp(hole.noise, targetNoise, clamp(dt * (moving ? 4 : 2), 0, 1));
+      updateFieldSignalBreakaway(
+        dt,
+        moving,
+      );
       updateNoiseHazards(
         dt,
         moving,
@@ -53551,192 +60279,16 @@
       );
       releaseInteractionRejectionOnRetreat();
 
-      const key = activeKeyPoint();
-      const sprinkler = activeSprinklerPoint();
-      const changeRequest =
-        activeChangeRequest();
-      const shed = SHED_EXIT;
-      const drain = DRAIN_EXIT;
-      const nearestBall =
-        nearestRecoverableBall();
-      const nearbyAction =
-        nearbyNightOrderAction();
-      const appeal =
-        emergencyAppealState();
-      if (hole.ballAim.active) {
-        hole.prompt = inputCopy(
-          `RELEASE ${keyboardBindingLabel("chip")} TO CHIP`,
-          "RELEASE X TO CHIP",
-          "RELEASE CHIP TO SHOOT",
-        );
-      } else if (hole.ballFlight) {
-        hole.prompt = "BALL IN FLIGHT";
-      } else if (hole.ballRoll) {
-        hole.prompt =
-          `${hole.ballRoll.outcomeLabel} // ${Math.max(0, Math.ceil(hole.ballRoll.duration - hole.ballRoll.elapsed))}s TO REST`;
-      } else if (
-        hole.escapeFiling.sealing
-      ) {
-        hole.prompt =
-          "RELEASE AUTHORIZED";
-      } else if (
-        hole.escapeFiling.active
-      ) {
-        hole.prompt =
-          `FINAL FILING ${Math.round(
-            hole.escapeFiling.progress /
-              hole.escapeFiling.duration *
-              100,
-          )}% // STAY STILL`;
-      } else if (appeal.eligible) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
-          `A — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
-          `TAP USE — FILE EMERGENCY APPEAL // FORFEIT +${appeal.forfeitedBonus}`,
-        );
-      } else if (
-        hole.statusRequest.active
-      ) {
-        const request =
-          hole.statusRequest;
-        hole.prompt = request.responding
-          ? `SUBMITTING STATUS ${Math.round(
-              request.responseProgress /
-                request.responseDuration *
-                100,
-            )}% // STAY STILL`
-          : inputCopy(
-              `${keyboardBindingLabel("interact")} — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
-              `A — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
-              `TAP USE — ACKNOWLEDGE ${request.code} // HOLD STILL ${request.responseDuration.toFixed(2)}s`,
-            );
-      } else if (nearbyAction) {
-        const action =
-          nearbyAction.action;
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — ${action.label}`,
-          `A — ${action.label}`,
-          `TAP USE — ${action.label}`,
-        );
-      } else if (!hole.keyCollected && worldDistance(state.player, key) < key.radius) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — TAKE SHED KEY`,
-          "A — TAKE SHED KEY",
-          "TAP USE — TAKE SHED KEY",
-        );
-      } else if (!hole.sprinklerUsed && worldDistance(state.player, sprinkler) < sprinkler.radius) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — OPEN DRAIN VALVE`,
-          "A — OPEN DRAIN VALVE",
-          "TAP USE — OPEN DRAIN VALVE",
-        );
-      } else if (
-        hole.keyCollected &&
-        worldDistance(state.player, shed) <
-          shed.radius
-      ) {
-        const remaining =
-          NIGHT_ORDER_ACTIONS.length -
-          completedNightOrderActionCount();
-        hole.prompt = nightOrderActionsComplete()
-          ? inputCopy(
-              `${keyboardBindingLabel("interact")} — FILE SHED RELEASE`,
-              "A — FILE SHED RELEASE",
-              "TAP USE — FILE SHED RELEASE",
-            )
-          : `SHED FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`;
-      } else if (
-        hole.drainUnlocked &&
-        worldDistance(state.player, drain) <
-          drain.radius
-      ) {
-        const remaining =
-          NIGHT_ORDER_ACTIONS.length -
-          completedNightOrderActionCount();
-        hole.prompt = nightOrderActionsComplete()
-          ? inputCopy(
-              `${keyboardBindingLabel("interact")} — FILE DRAIN RELEASE`,
-              "A — FILE DRAIN RELEASE",
-              "TAP USE — FILE DRAIN RELEASE",
-            )
-          : `DRAIN FILE BLOCKED // ${remaining} CHECK${remaining === 1 ? "" : "S"} REMAIN`;
-      } else if (
-        !hole.changeRequestCollected &&
-        !hole.appealUsed &&
-        worldDistance(
-          state.player,
-          changeRequest,
-        ) < changeRequest.radius
-      ) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
-          `A — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
-          `TAP USE — SECURE ${changeRequest.code} (+${CHANGE_REQUEST_BONUS})`,
-        );
-      } else if (
-        nearestBall.ball &&
-        nearestBall.distance <
-          BALL_RECOVERY_RADIUS
-      ) {
-        const recoveryDanger =
-          golfBallDangerState(
-            nearestBall.ball,
-          );
-        hole.prompt = inputCopy(
-          recoveryDanger.dangerous
-            ? `${keyboardBindingLabel("interact")} — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
-            : `${keyboardBindingLabel("interact")} — RECLAIM GOLF BALL`,
-          recoveryDanger.dangerous
-            ? `A — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
-            : "A — RECLAIM GOLF BALL",
-          recoveryDanger.dangerous
-            ? `TAP USE — RECLAIM BALL // JOE ${Math.round(recoveryDanger.joeDistance)}m`
-            : "TAP USE — RECLAIM GOLF BALL",
-        );
-      } else if (
-        practiceDrillActive() &&
-        !hole.blindsideTransfer &&
-        (
-          (
-            hole.practiceDrill
-              .lastCorrection &&
-            hole.messageTimer <= 0.01
-          ) ||
-          worldDistance(
-            state.player,
-            state.hole.practiceDrill.target,
-          ) < 58
-        )
-      ) {
-        const practiceRetry =
-          hole.practiceDrill
-            .lastCorrection;
-        hole.prompt = inputCopy(
-          practiceRetry
-            ? `HOLD ${keyboardBindingLabel("chip")} — RETRY BELL // ${practiceRetry}`
-            : `HOLD ${keyboardBindingLabel("chip")} — CHIP AT AMBER BELL (OPTIONAL)`,
-          practiceRetry
-            ? `HOLD X — RETRY BELL // ${practiceRetry}`
-            : "HOLD X — CHIP AT AMBER BELL (OPTIONAL)",
-          practiceRetry
-            ? `HOLD CHIP — RETRY BELL // ${practiceRetry}`
-            : "HOLD CHIP — AIM AT AMBER BELL (OPTIONAL)",
-        );
-      } else if (worldDistance(state.player, shed) < shed.radius) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — TRY SHED DOOR`,
-          "A — TRY SHED DOOR",
-          "TAP USE — TRY SHED DOOR",
-        );
-      } else if (worldDistance(state.player, drain) < drain.radius) {
-        hole.prompt = inputCopy(
-          `${keyboardBindingLabel("interact")} — INSPECT SEALED DRAIN`,
-          "A — INSPECT SEALED DRAIN",
-          "TAP USE — INSPECT SEALED DRAIN",
-        );
-      } else {
-        hole.prompt = "";
-      }
+      const interactionPrompt =
+        courseInteractionPromptPresentation();
+      hole.prompt =
+        interactionPrompt.text;
+      hole.interactionPromptOwner =
+        interactionPrompt.owner;
+      updateFieldCommitmentPressure(
+        dt,
+        interactionPrompt.owner,
+      );
 
       updateShelterMemory(
         dt,
@@ -53891,6 +60443,7 @@
 
   function startIntro() {
     ensureAudio();
+    loadAssetPhase("course");
     state.mode = "intro";
     state.time = 0;
     state.stingerPlayed = false;
@@ -53901,7 +60454,10 @@
 
   function enterMenu() {
     clearTouchInputs(true);
+    loadAssetPhase("course");
+    loadAssetPhase("results");
     state.mode = "menu";
+    state.pendingCourseStart = false;
     state.settingsReturnMode = "menu";
     state.time = Math.max(state.time, MENU_TIME);
     state.status =
@@ -53938,6 +60494,9 @@
     if (state.mode !== "paused") {
       return;
     }
+    ensureAudio();
+    runtimePerformance.lifecycle
+      .explicitResumes += 1;
     state.mode = "first_hole";
     state.keys.clear();
     state.transitionAlpha = 0.16;
@@ -53970,14 +60529,39 @@
     }
   }
 
+  function beginFirstHoleFromMenu() {
+    loadAssetPhase("results");
+    state.pendingCourseStart = false;
+    state.mode = "first_hole";
+    state.time = 0;
+    resetFirstHole();
+    state.transitionAlpha = 1;
+    state.status =
+      "South gate locked. Complete the field checks and file an exit.";
+    render();
+    beginGameplayPerformanceWindow();
+  }
+
   function activateMenu() {
     switch (state.menuIndex) {
       case 0:
-        state.mode = "first_hole";
-        state.time = 0;
-        resetFirstHole();
-        state.transitionAlpha = 1;
-        state.status = "South gate locked. Complete the field checks and file an exit.";
+        loadAssetPhase("course");
+        loadAssetPhase("results");
+        if (
+          gameplayAssetSummary().ready
+        ) {
+          beginFirstHoleFromMenu();
+        } else {
+          state.pendingCourseStart =
+            true;
+          state.status =
+            `PREPARING COURSE // ${gameplayAssetSummary().percent}%`;
+          playUiTone(
+            164,
+            0.05,
+            0.014,
+          );
+        }
         break;
       case 1:
         state.settingsReturnMode = "menu";
@@ -56463,13 +63047,23 @@
             id:
               `counter_${captureReview.id}`,
             name:
-              "INCIDENT COUNTERPLAN",
+              captureReview.coachingMode ===
+              "recovery_drill"
+                ? "RECOVERY DRILL"
+                : captureReview.coachingMode ===
+                    "guided_adjustment"
+                  ? "GUIDED ADJUSTMENT"
+                  : "INCIDENT COUNTERPLAN",
             shortName:
               captureReview.shortLabel,
             hint:
               captureReview.counterplay,
             source:
               "capture_review",
+            coachingMode:
+              captureReview.coachingMode,
+            repeatCount:
+              captureReview.repeatCount,
           }
         : quickStart
         ? echoTarget || {
@@ -56494,11 +63088,11 @@
         ...target,
       };
       hole.zoneBannerTimer = 0;
-      hole.controlHintTimer = 4.2;
-      hole.controlHintSource = "rematch";
+      hole.controlHintTimer = 0;
+      hole.controlHintSource = null;
       hole.message =
         captureReview
-          ? `COUNTERPLAN // ${target.hint}${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`
+          ? `${target.coachingMode === "recovery_drill" ? "RECOVERY DRILL" : target.coachingMode === "guided_adjustment" ? "ADJUSTMENT" : "COUNTERPLAN"} // ${target.hint}${hole.courseEchoRecord ? " COURSE ECHO ACTIVE." : ""}`
           : target.source ===
               "course_echo"
             ? `${target.name} // ${target.rematchMessage || target.hint}. COURSE ECHO ACTIVE.`
@@ -56506,7 +63100,7 @@
       hole.messageTimer = 4.2;
       hole.stateBanner =
         captureReview
-          ? `FILE REOPENED // COUNTER ${target.shortName}`
+          ? `FILE REOPENED // ${target.coachingMode === "recovery_drill" ? "DRILL" : target.coachingMode === "guided_adjustment" ? "ADJUST" : "COUNTER"} ${target.shortName}`
           :
         `FILE REOPENED // ${target.name}`;
       hole.stateBannerTimer = 3.4;
@@ -57171,9 +63765,2835 @@
     }
   });
 
+  /**
+   * Validates that each authored slowdown patch retains at least one clear
+   * full-speed bypass using the same collision ellipses as live navigation.
+   */
+  function staticFootingBypassReadiness(
+    zone,
+  ) {
+    const alternatives = [];
+    for (const side of [-1, 1]) {
+      let best = null;
+      for (const margin of [9, 15, 21, 27]) {
+        const laneX = clamp(
+          zone.x +
+            side *
+              (zone.radiusX + margin),
+          -COURSE_MAX_X + 7,
+          COURSE_MAX_X - 7,
+        );
+        const entry = {
+          x: laneX,
+          y:
+            zone.y -
+            zone.radiusY * 0.62,
+        };
+        const middle = {
+          x: laneX,
+          y: zone.y + 1,
+        };
+        const exit = {
+          x: laneX,
+          y:
+            zone.y +
+            zone.radiusY + 9,
+        };
+        const minimumClearance =
+          Math.min(
+            nearestObstacleClearance(
+              entry,
+            ),
+            nearestObstacleClearance(
+              middle,
+            ),
+            nearestObstacleClearance(
+              exit,
+            ),
+          );
+        const blocker =
+          joeObstacleOnSegment(
+            entry,
+            exit,
+            PLAYER_COLLISION_RADIUS +
+              0.9,
+          );
+        const valid =
+          minimumClearance >
+            PLAYER_COLLISION_RADIUS +
+              0.7 &&
+          !blocker;
+        const candidate = {
+          side:
+            side < 0
+              ? "left"
+              : "right",
+          margin,
+          laneX,
+          minimumClearance: Number(
+            minimumClearance.toFixed(2),
+          ),
+          blockerId:
+            blocker?.id || null,
+          valid,
+        };
+        if (
+          !best ||
+          (
+            candidate.valid &&
+            !best.valid
+          ) ||
+          candidate.minimumClearance >
+            best.minimumClearance
+        ) {
+          best = candidate;
+        }
+      }
+      alternatives.push(best);
+    }
+    return {
+      id: zone.id,
+      valid:
+        alternatives.some(
+          (alternative) =>
+            alternative.valid,
+        ),
+      alternatives,
+    };
+  }
+
+  /**
+   * Runs the release-candidate spatial and systems contract without mutating
+   * the live run. Expensive route sampling is opt-in through the audit hook.
+   */
+  function releaseReadinessSummary() {
+    const checks = [];
+    const addCheck = (
+      id,
+      passed,
+      evidence,
+    ) => {
+      checks.push({
+        id,
+        passed: Boolean(passed),
+        evidence,
+      });
+    };
+    const obstacleIds =
+      COURSE_OBSTACLES.map(
+        (obstacle) => obstacle.id,
+      );
+    const blockingObstacles =
+      COURSE_OBSTACLES.filter(
+        (obstacle) => obstacle.blocks,
+      );
+    const hiddenCollisionChildren =
+      blockingObstacles.filter(
+        (obstacle) =>
+          obstacle.draw === false,
+      );
+    const hiddenChildrenOwned =
+      hiddenCollisionChildren.every(
+        (obstacle) =>
+          Boolean(obstacle.tunnelWing) ||
+          obstacle.id.startsWith(
+            "shed-",
+          ),
+      );
+    addCheck(
+      "collision_ids_unique",
+      new Set(obstacleIds).size ===
+        obstacleIds.length,
+      `${obstacleIds.length} authored obstacles`,
+    );
+    addCheck(
+      "collision_footprints_valid",
+      blockingObstacles.every(
+        (obstacle) => {
+          const axes =
+            obstacleFootprintAxes(
+              obstacle,
+            );
+          return (
+            axes.x > 0 &&
+            axes.y > 0 &&
+            obstacle.x >=
+              -COURSE_MAX_X &&
+            obstacle.x <=
+              COURSE_MAX_X &&
+            obstacle.y >=
+              COURSE_MIN_Y &&
+            obstacle.y <=
+              COURSE_LENGTH
+          );
+        },
+      ),
+      `${blockingObstacles.length} blocking ellipses use positive authored axes`,
+    );
+    addCheck(
+      "hidden_collision_owned_by_parent_art",
+      hiddenChildrenOwned,
+      hiddenCollisionChildren.map(
+        (obstacle) => obstacle.id,
+      ),
+    );
+    const changeRequestHudPreview = {
+      available: changeRequestHudStatus(
+        {
+          appealUsed: false,
+          changeRequestCollected: false,
+        },
+        false,
+      ),
+      secured: changeRequestHudStatus(
+        {
+          appealUsed: false,
+          changeRequestCollected: true,
+        },
+        false,
+      ),
+      appealReady: changeRequestHudStatus(
+        {
+          appealUsed: false,
+          changeRequestCollected: true,
+        },
+        true,
+      ),
+      appealed: changeRequestHudStatus(
+        {
+          appealUsed: true,
+          changeRequestCollected: false,
+        },
+        false,
+      ),
+    };
+    addCheck(
+      "unfiled_change_request_hud_truth",
+      changeRequestHudPreview.available ===
+        `CR ◇ +${CHANGE_REQUEST_BONUS}` &&
+        changeRequestHudPreview.secured ===
+          `CR ✓ BANK +${CHANGE_REQUEST_BONUS}` &&
+        changeRequestHudPreview.appealReady ===
+          "CR ! APPEAL READY" &&
+        changeRequestHudPreview.appealed ===
+          "CR X APPEALED",
+      {
+        states: changeRequestHudPreview,
+        filesOnEscape: true,
+        rule:
+          "secured_change_request_copy_keeps_the_unfiled_bank_condition_visible_until_exit_or_appeal",
+      },
+    );
+    const tensionOmenPreview = {
+      key: "tension_omen",
+      text:
+        "GRASS FOLDS TOWARD THE MOWER",
+      category: "world",
+    };
+    const directorEchoPreview = {
+      key: "director_echo",
+      text:
+        "MOWER ECHOES ACROSS THE COURSE",
+      category: "mower",
+    };
+    const unrelatedDangerPreview = {
+      key: "incoming_ball",
+      text: "INCOMING BALL",
+      category: "danger",
+    };
+    const convergedDirectorPreview =
+      convergedThreatCaptions(
+        [
+          tensionOmenPreview,
+          directorEchoPreview,
+          unrelatedDangerPreview,
+        ],
+      );
+    const pairedDirectorPreview =
+      convergedThreatCaptions(
+        [
+          tensionOmenPreview,
+          directorEchoPreview,
+        ],
+      );
+    const standaloneOmenPreview =
+      convergedThreatCaptions(
+        [tensionOmenPreview],
+      );
+    addCheck(
+      "tension_director_signal_convergence",
+      convergedDirectorPreview.length ===
+        2 &&
+        !convergedDirectorPreview.includes(
+          tensionOmenPreview,
+        ) &&
+        convergedDirectorPreview.includes(
+          directorEchoPreview,
+        ) &&
+        convergedDirectorPreview.includes(
+          unrelatedDangerPreview,
+        ) &&
+        pairedDirectorPreview.length ===
+          1 &&
+        pairedDirectorPreview[0] ===
+          directorEchoPreview &&
+        standaloneOmenPreview.length ===
+          1 &&
+        standaloneOmenPreview[0] ===
+          tensionOmenPreview,
+      {
+        quietWindow:
+          convergedDirectorPreview.map(
+            (caption) => caption.key,
+          ),
+        pairedBeat:
+          pairedDirectorPreview.map(
+            (caption) => caption.key,
+          ),
+        standaloneOmen:
+          standaloneOmenPreview.map(
+            (caption) => caption.key,
+          ),
+        gameplayEffect: "none",
+        rule:
+          "one_director_beat_keeps_one_directional_mower_caption_while_unrelated_danger_and_standalone_omens_remain_intact",
+      },
+    );
+    const compactBriefingPreview =
+      tutorialBriefingViewportPresentation(
+        655,
+        369,
+      );
+    const desktopBriefingPreview =
+      tutorialBriefingViewportPresentation(
+        1209,
+        673,
+      );
+    addCheck(
+      "compact_survival_briefing_readability",
+      compactBriefingPreview.compact &&
+        compactBriefingPreview.layout ===
+          "compact_readable_rows" &&
+        compactBriefingPreview.density ===
+          "three_decision_rows_two_control_lines" &&
+        compactBriefingPreview
+          .criticalFontFloor >= 14 &&
+        compactBriefingPreview.panel.x >=
+          0 &&
+        compactBriefingPreview.panel.y >=
+          0 &&
+        compactBriefingPreview.panel.x +
+          compactBriefingPreview.panel.width <=
+          WIDTH &&
+        compactBriefingPreview.panel.y +
+          compactBriefingPreview.panel.height <=
+          HEIGHT &&
+        !desktopBriefingPreview.compact &&
+        desktopBriefingPreview.layout ===
+          "desktop_visual_dossier",
+      {
+        compact:
+          compactBriefingPreview,
+        desktop:
+          desktopBriefingPreview,
+        compactSections: [
+          "assignment_context",
+          "three_decision_rows",
+          "two_input_aware_control_lines",
+          "start_action",
+        ],
+        desktopPreserved: true,
+        rule:
+          "small_screens_receive_fewer_larger_instructions_while_desktop_keeps_the_full_visual_dossier",
+      },
+    );
+    const fieldCommitmentPreviews =
+      NIGHT_ORDER_ACTIONS.map(
+        (action) => ({
+          actionId: action.id,
+          preview:
+            fieldActionCommitmentPreview(
+              action,
+            ),
+        }),
+      );
+    addCheck(
+      "field_action_commitment_preview",
+      fieldCommitmentPreviews.every(
+        ({ preview }) =>
+          Boolean(preview) &&
+          preview.noiseSeconds > 0 &&
+          Boolean(preview.coverId) &&
+          Boolean(preview.coverLabel) &&
+          preview.text.includes(
+            "JOE WILL VERIFY",
+          ) &&
+          preview.text.includes(
+            preview.coverLabel,
+          ) &&
+          preview.gameplayTimingChanged ===
+            false,
+      ),
+      {
+        actions:
+          fieldCommitmentPreviews,
+        consumers: [
+          "authoritative_interaction_owner",
+          "bottom_action_rail",
+          "render_game_to_text",
+        ],
+        rule:
+          "every_loud_mandatory_check_names_its_duration_and_existing_breakaway_cover_before_activation",
+      },
+    );
+    const lowPressureCommitmentPreview =
+      fieldActionCommitmentPreview(
+        NIGHT_ORDER_ACTIONS[0],
+        { mode: "patrol", alert: 0 },
+        {
+          distance: 112,
+          mode: "patrol",
+          alert: 0,
+          hasLineOfSight: false,
+        },
+      );
+    const highPressureCommitmentPreview =
+      fieldActionCommitmentPreview(
+        NIGHT_ORDER_ACTIONS[1],
+        { mode: "search", alert: 0.72 },
+        {
+          distance: 45,
+          mode: "search",
+          alert: 0.72,
+          hasLineOfSight: false,
+        },
+      );
+    const divertedCommitmentPreview =
+      fieldActionCommitmentPreview(
+        NIGHT_ORDER_ACTIONS[0],
+        {
+          mode: "investigate",
+          alert: 0.18,
+        },
+        {
+          distance: 119,
+          mode: "investigate",
+          alert: 0.18,
+          hasLineOfSight: false,
+        },
+      );
+    const criticalCommitmentPreview =
+      fieldActionCommitmentPreview(
+        NIGHT_ORDER_ACTIONS[2],
+        { mode: "chase", alert: 1 },
+        {
+          distance: 18,
+          mode: "chase",
+          alert: 1,
+          hasLineOfSight: true,
+        },
+      );
+    addCheck(
+      "loud_station_commitment_pressure_read",
+      lowPressureCommitmentPreview
+        .risk.tier === "low" &&
+        lowPressureCommitmentPreview
+          .risk.localText ===
+          "LOW PRESSURE // JOE 112m" &&
+        lowPressureCommitmentPreview
+          .risk.accentColor ===
+          "#78cfa5" &&
+        lowPressureCommitmentPreview
+          .risk.groundRing.fillColor ===
+          "rgba(120,207,165,0.075)" &&
+        lowPressureCommitmentPreview
+          .risk.groundRing.motion ===
+          "steady" &&
+        highPressureCommitmentPreview
+          .risk.tier === "high" &&
+        highPressureCommitmentPreview
+          .risk.localText ===
+          "HIGH RISK // JOE 45m" &&
+        highPressureCommitmentPreview
+          .risk.accentColor ===
+          "#e8a55d" &&
+        highPressureCommitmentPreview
+          .risk.groundRing.pulseHz >
+          lowPressureCommitmentPreview
+            .risk.groundRing.pulseHz &&
+        highPressureCommitmentPreview
+          .risk.groundRing.motion ===
+          "urgent" &&
+        divertedCommitmentPreview
+          .risk.tier === "watch" &&
+        divertedCommitmentPreview
+          .risk.localText ===
+          "WATCH JOE // JOE 119m" &&
+        divertedCommitmentPreview
+          .risk.groundRing.motion ===
+          "watchful" &&
+        highPressureCommitmentPreview
+          .text.includes("5.6s") &&
+        highPressureCommitmentPreview
+          .text.includes("SERVICE CART") &&
+        criticalCommitmentPreview
+          .risk.tier === "critical" &&
+        criticalCommitmentPreview
+          .risk.localText ===
+          "CRITICAL // JOE 18m" &&
+        criticalCommitmentPreview
+          .risk.groundRing.pulseHz >
+          highPressureCommitmentPreview
+            .risk.groundRing.pulseHz &&
+        criticalCommitmentPreview
+          .risk.groundRing.fillColor ===
+          "rgba(240,116,65,0.13)" &&
+        !criticalCommitmentPreview
+          .risk.blocksInteraction &&
+        criticalCommitmentPreview
+          .risk.gameplayEffect ===
+          "none" &&
+        highPressureCommitmentPreview
+          .risk.visualChannels.includes(
+            "generated_station_pressure_label",
+          ) &&
+        highPressureCommitmentPreview
+          .risk.visualChannels.includes(
+            "bottom_action_frame",
+          ) &&
+        criticalCommitmentPreview
+          .risk.rule ===
+          "pressure_informs_the_wait_or_commit_decision_rewards_long_range_diversion_and_never_removes_player_agency",
+      {
+        low:
+          lowPressureCommitmentPreview.risk,
+        high:
+          highPressureCommitmentPreview.risk,
+        diverted:
+          divertedCommitmentPreview.risk,
+        critical:
+          criticalCommitmentPreview.risk,
+        consumers: [
+          "in_reach_world_marker",
+          "interaction_ground_ring",
+          "bottom_action_frame",
+          "render_game_to_text",
+        ],
+        rule:
+          "the_loud_action_remains_available_while_current_joe_pressure_makes_wait_or_commit_a_legible_choice",
+        visualRule:
+          "outline_fill_and_motion_share_one_pressure_tier_while_reduced_motion_holds_the_ring_static",
+      },
+    );
+    let pressureTransition =
+      fieldCommitmentPressureTransition(
+        freshFieldCommitmentPressure(),
+        "low",
+        "audit-bell",
+        0.016,
+      );
+    const pressureEscalationStarted =
+      fieldCommitmentPressureTransition(
+        pressureTransition,
+        "high",
+        "audit-bell",
+        0.08,
+      );
+    const pressureBoundaryRecovered =
+      fieldCommitmentPressureTransition(
+        pressureEscalationStarted,
+        "low",
+        "audit-bell",
+        0.03,
+      );
+    pressureTransition =
+      fieldCommitmentPressureTransition(
+        pressureBoundaryRecovered,
+        "high",
+        "audit-bell",
+        0.1,
+      );
+    const pressureEscalated =
+      fieldCommitmentPressureTransition(
+        pressureTransition,
+        "high",
+        "audit-bell",
+        0.09,
+      );
+    const pressureCritical =
+      fieldCommitmentPressureTransition(
+        pressureEscalated,
+        "critical",
+        "audit-bell",
+        0.001,
+      );
+    const pressureRecoveryStarted =
+      fieldCommitmentPressureTransition(
+        pressureCritical,
+        "watch",
+        "audit-bell",
+        0.2,
+      );
+    const pressureRecovered =
+      fieldCommitmentPressureTransition(
+        pressureRecoveryStarted,
+        "watch",
+        "audit-bell",
+        0.19,
+      );
+    const pressureRetargeted =
+      fieldCommitmentPressureTransition(
+        pressureRecovered,
+        "low",
+        "field-log",
+        0.016,
+      );
+    const stabilizedPressurePreview =
+      fieldActionCommitmentRiskPresentation(
+        { mode: "search", alert: 0.72 },
+        {
+          distance: 77.8,
+          mode: "search",
+          alert: 0.72,
+          hasLineOfSight: false,
+        },
+        "watch",
+      );
+    addCheck(
+      "loud_station_pressure_transition_stability",
+      pressureEscalationStarted.tier ===
+        "low" &&
+        pressureEscalationStarted
+          .pendingTier === "high" &&
+        pressureBoundaryRecovered.tier ===
+          "low" &&
+        pressureBoundaryRecovered
+          .pendingTier === null &&
+        pressureEscalated.tier ===
+          "high" &&
+        pressureEscalated.changes === 1 &&
+        pressureCritical.tier ===
+          "critical" &&
+        pressureCritical.changes === 2 &&
+        pressureRecoveryStarted.tier ===
+          "critical" &&
+        pressureRecoveryStarted
+          .pendingTier === "watch" &&
+        pressureRecovered.tier ===
+          "watch" &&
+        pressureRecovered.changes === 3 &&
+        pressureRetargeted.targetId ===
+          "field-log" &&
+        pressureRetargeted.tier ===
+          "low" &&
+        stabilizedPressurePreview.tier ===
+          "watch" &&
+        stabilizedPressurePreview.rawTier ===
+          "high" &&
+        stabilizedPressurePreview
+          .transitionPending &&
+        pressureRecovered.rule ===
+          "brief_boundary_motion_cannot_chatter_the_station_surface_while_critical_danger_escalates_immediately",
+      {
+        boundaryAttempt:
+          pressureEscalationStarted,
+        boundaryRecovered:
+          pressureBoundaryRecovered,
+        escalated:
+          pressureEscalated,
+        critical:
+          pressureCritical,
+        recoveryPending:
+          pressureRecoveryStarted,
+        recovered:
+          pressureRecovered,
+        retargeted:
+          pressureRetargeted,
+        stabilizedPresentation:
+          stabilizedPressurePreview,
+        consumers: [
+          "generated_station_ground_ring",
+          "generated_station_pressure_label",
+          "bottom_action_frame",
+          "render_game_to_text",
+        ],
+        gameplayEffect: "none",
+        rule:
+          "fast_escalation_slow_recovery_and_immediate_critical_keep_pressure_legible_without_threshold_chatter",
+      },
+    );
+
+    const origin = { x: 0, y: 8 };
+    const targetDefinitions = [
+      ...NIGHT_ORDER_ACTIONS.map(
+        (target) => ({
+          id: target.id,
+          target,
+        }),
+      ),
+      {
+        id: "shed-key",
+        target: activeKeyPoint(),
+      },
+      {
+        id: "drain-valve",
+        target:
+          activeSprinklerPoint(),
+      },
+      {
+        id: "maintenance-shed",
+        target: SHED_EXIT,
+      },
+      {
+        id: "drain-exit",
+        target: DRAIN_EXIT,
+      },
+    ];
+    const targetRoutes =
+      targetDefinitions.map(
+        (definition) => {
+          const approach =
+            planObjectiveApproach(
+              definition.target,
+              origin,
+            );
+          const interactionDistance =
+            worldDistance(
+              approach.point,
+              definition.target,
+            );
+          return {
+            id: definition.id,
+            reachable:
+              approach.path.length > 0 &&
+              interactionDistance <
+                definition.target.radius,
+            waypoints:
+              approach.path.length,
+            interactionDistance: Number(
+              interactionDistance.toFixed(
+                2,
+              ),
+            ),
+            radius:
+              definition.target.radius,
+            clearance: Number(
+              approach.clearance.toFixed(
+                2,
+              ),
+            ),
+          };
+        },
+      );
+    addCheck(
+      "all_required_targets_reachable",
+      targetRoutes.every(
+        (target) => target.reachable,
+      ),
+      targetRoutes,
+    );
+    const shedApproach =
+      shedApproachReadabilityState();
+    addCheck(
+      "shed_approach_clear",
+      shedApproach.clear &&
+        shedApproach
+          .interactionReachable,
+      shedApproach,
+    );
+
+    const footingBypasses =
+      FOOTING_HAZARD_ZONES.map(
+        staticFootingBypassReadiness,
+      );
+    addCheck(
+      "slow_footing_has_clear_bypasses",
+      footingBypasses.every(
+        (bypass) => bypass.valid,
+      ),
+      footingBypasses,
+    );
+    const footingThreatJoePreview = {
+      x: 84,
+      y: -18,
+    };
+    const footingThreatPreview =
+      footingHazardThreatCaptionSpec(
+        {
+          joe: footingThreatJoePreview,
+        },
+      );
+    addCheck(
+      "footing_entry_signal_role_separation",
+      footingThreatPreview.text ===
+        "JOE KEEPS MOVING" &&
+        footingThreatPreview.source ===
+          footingThreatJoePreview &&
+        footingThreatPreview.category ===
+          "mower" &&
+        footingThreatPreview.role ===
+          "joe_bearing" &&
+        directionFromPlayer(
+          footingThreatPreview.source,
+          { x: 0, y: 0 },
+        ) === "RIGHT",
+      {
+        caption:
+          footingThreatPreview.text,
+        threatRole:
+          footingThreatPreview.role,
+        threatDirection:
+          directionFromPlayer(
+            footingThreatPreview.source,
+            { x: 0, y: 0 },
+          ),
+        escapeRole: "safe_route",
+        gameplayEffect: "none",
+        rule:
+          "footing_entry_caption_tracks_joe_while_the_bottom_rail_and_world_route_track_the_safe_exit",
+      },
+    );
+    const footingNavigationPreview =
+      footingNavigationOverrideFromGuidance(
+        {
+          active: true,
+          zone: {
+            id: "pond-mud",
+            name: "IRRIGATION MUD",
+            kind: "mud",
+          },
+          selected: {
+            valid: true,
+            side: -1,
+            sideLabel: "LEFT",
+            entry: {
+              x: -19,
+              y: 214.7,
+            },
+            middle: {
+              x: -19,
+              y: 225,
+            },
+            exit: {
+              x: -19,
+              y: 248,
+            },
+            minimumClearance: 6.69,
+          },
+        },
+        {
+          targetId: "field-log",
+          targetLabel: "FIELD LOG",
+        },
+      );
+    addCheck(
+      "footing_escape_navigation_ownership",
+      footingNavigationPreview
+        ?.owner ===
+        "footing_hazard_escape" &&
+        footingNavigationPreview
+          .instruction ===
+          "CLEAR LEFT" &&
+        footingNavigationPreview
+          .direction ===
+          "BEAR LEFT" &&
+        footingNavigationPreview
+          .objectiveTargetId ===
+          "field-log" &&
+        footingNavigationPreview
+          .route.length === 3 &&
+        footingNavigationPreview
+          .handoff.includes(
+            "resume_same_objective",
+          ) &&
+        footingNavigationPreview
+          .rule ===
+          "one_immediate_route_owner_short_horizon_before_long_horizon",
+      footingNavigationPreview,
+    );
+    const deferredKeyMarkerPreview =
+      immediateRouteMarkerHierarchyPresentation(
+        "shed-key",
+        false,
+        footingNavigationPreview,
+      );
+    const deferredObjectiveMarkerPreview =
+      immediateRouteMarkerHierarchyPresentation(
+        "field-log",
+        false,
+        footingNavigationPreview,
+      );
+    const inReachMarkerPreview =
+      immediateRouteMarkerHierarchyPresentation(
+        "shed-key",
+        true,
+        footingNavigationPreview,
+      );
+    const restoredMarkerPreview =
+      immediateRouteMarkerHierarchyPresentation(
+        "shed-key",
+        false,
+        null,
+      );
+    addCheck(
+      "immediate_route_world_marker_ownership",
+      deferredKeyMarkerPreview.deferred &&
+        deferredObjectiveMarkerPreview.deferred &&
+        deferredKeyMarkerPreview
+          .markerAlpha === 0 &&
+        deferredKeyMarkerPreview
+          .physicalArtRetained &&
+        deferredKeyMarkerPreview
+          .interactionFootprintRetained &&
+        !inReachMarkerPreview.deferred &&
+        inReachMarkerPreview
+          .inReachOverride &&
+        !restoredMarkerPreview.deferred &&
+        restoredMarkerPreview
+          .markerAlpha === 1 &&
+        !restoredMarkerPreview
+          .inReachOverride,
+      {
+        distantOptional:
+          deferredKeyMarkerPreview,
+        distantObjective:
+          deferredObjectiveMarkerPreview,
+        inReachInteraction:
+          inReachMarkerPreview,
+        afterLocalRouteClears:
+          restoredMarkerPreview,
+        rule:
+          "one_short_horizon_route_owns_navigation_plaques_without_hiding_physical_props_or_reachable_actions",
+      },
+    );
+    const pausedCollisionActionPreview =
+      immediateRouteActionPresentation(
+        {
+          active: true,
+          instruction:
+            "CLEAR LEFT",
+          targetLabel:
+            "GROUNDS CART CLEAR",
+          obstacleId:
+            "service-cart",
+          remainingDistance: 6.48,
+          color: "#d9a55d",
+        },
+        null,
+      );
+    const pausedFootingActionPreview =
+      immediateRouteActionPresentation(
+        null,
+        {
+          ...footingNavigationPreview,
+          distanceToClear: 26.73,
+        },
+      );
+    const pausedOrdinaryActionPreview =
+      immediateRouteActionPresentation(
+        null,
+        null,
+      );
+    addCheck(
+      "pause_immediate_route_action_continuity",
+      pausedCollisionActionPreview
+        ?.phase ===
+        "collision_recovery" &&
+        pausedCollisionActionPreview
+          .text ===
+          "CLEAR LEFT // GROUNDS CART CLEAR 7m" &&
+        pausedCollisionActionPreview
+          .routeOwner ===
+          "collision_recovery" &&
+        pausedFootingActionPreview
+          ?.phase ===
+          "footing_escape" &&
+        pausedFootingActionPreview
+          .text ===
+          "CLEAR LEFT // MUD EXIT 27m" &&
+        pausedFootingActionPreview
+          .routeOwner ===
+          "footing_hazard_escape" &&
+        pausedOrdinaryActionPreview ===
+          null,
+      {
+        collision:
+          pausedCollisionActionPreview,
+        footing:
+          pausedFootingActionPreview,
+        ordinary:
+          pausedOrdinaryActionPreview,
+        consumers: [
+          "live_objective_dossier",
+          "pause_modal",
+          "paused_settings_context",
+          "render_game_to_text",
+        ],
+        rule:
+          "the_frozen_next_action_matches_the_visible_short_horizon_route_then_returns_to_the_preserved_objective_after_clearance",
+      },
+    );
+    const forwardRouteCameraPreview =
+      forwardImmediateRouteCameraPresentation(
+        0,
+      );
+    const rearRouteCameraPreview =
+      forwardImmediateRouteCameraPresentation(
+        1,
+      );
+    const rearCollisionHandoffPreview =
+      rearImmediateRouteHandoffPresentation(
+        1,
+        pausedCollisionActionPreview,
+      );
+    const rearFootingHandoffPreview =
+      rearImmediateRouteHandoffPresentation(
+        1,
+        pausedFootingActionPreview,
+      );
+    addCheck(
+      "rear_view_immediate_route_handoff",
+      forwardRouteCameraPreview
+        .routeVisible &&
+        forwardRouteCameraPreview
+          .routeAlpha === 1 &&
+        !rearRouteCameraPreview
+          .routeVisible &&
+        rearRouteCameraPreview
+          .routeAlpha === 0 &&
+        rearCollisionHandoffPreview
+          .visible &&
+        rearCollisionHandoffPreview
+          .bodyInstruction ===
+          "BODY LEFT" &&
+        rearCollisionHandoffPreview
+          .targetLabel ===
+          "GROUNDS CART CLEAR" &&
+        rearCollisionHandoffPreview
+          .worldRouteDeferred &&
+        rearCollisionHandoffPreview
+          .mapRetained &&
+        rearFootingHandoffPreview
+          .visible &&
+        rearFootingHandoffPreview
+          .bodyInstruction ===
+          "BODY LEFT" &&
+        rearFootingHandoffPreview
+          .targetLabel ===
+          "MUD EXIT" &&
+        rearFootingHandoffPreview
+          .worldRouteDeferred &&
+        rearFootingHandoffPreview
+          .movementBodyRelative,
+      {
+        forwardCamera:
+          forwardRouteCameraPreview,
+        rearCamera:
+          rearRouteCameraPreview,
+        collision:
+          rearCollisionHandoffPreview,
+        footing:
+          rearFootingHandoffPreview,
+        consumers: [
+          "collision_clearance_world_route",
+          "footing_escape_world_route",
+          "rear_view_handoff_panel",
+          "course_map",
+          "render_game_to_text",
+        ],
+        rule:
+          "rear_camera_never_mirrors_a_body_relative_forward_route_and_the_exact_local_decision_remains_available_until_forward_view_returns",
+      },
+    );
+    const footingRouteSamplesPreview =
+      footingHazardRouteWorldSamples(
+        {
+          active: true,
+          visible: true,
+          selected: {
+            valid: true,
+            entry: {
+              x: -19,
+              y: 214.7,
+            },
+            middle: {
+              x: -19,
+              y: 225,
+            },
+            exit: {
+              x: -19,
+              y: 248,
+            },
+          },
+        },
+        {
+          x: 22,
+          y: 223,
+        },
+      );
+    const footingClippedIngressPreview =
+      clipFootingRouteSegment(
+        {
+          x: WIDTH * 0.5,
+          y: HEIGHT - 180,
+        },
+        {
+          x: -245,
+          y: HEIGHT - 141,
+        },
+      );
+    addCheck(
+      "footing_escape_world_route_continuity",
+      footingRouteSamplesPreview.length ===
+        4 &&
+        footingRouteSamplesPreview[0]
+          .role === "player" &&
+        footingRouteSamplesPreview[3]
+          .role === "exit" &&
+        Boolean(
+          footingClippedIngressPreview,
+        ) &&
+        footingClippedIngressPreview
+          .clipped === true &&
+        Math.abs(
+          footingClippedIngressPreview
+            .end.x - 38,
+        ) < 0.01,
+      {
+        samples:
+          footingRouteSamplesPreview.map(
+            (sample) => sample.role,
+          ),
+        clippedIngress:
+          Boolean(
+            footingClippedIngressPreview,
+          ),
+        ingressEndsAtCourseEdge:
+          footingClippedIngressPreview
+            ? Math.abs(
+                footingClippedIngressPreview
+                  .end.x - 38,
+              ) < 0.01
+            : false,
+        presentation:
+          "active escape starts at the player, preserves wide offscreen segments at the course edge, and returns to a grounded exit marker",
+      },
+    );
+    const clearedFootingPreview = {
+      id: "pond-mud",
+      y: 224,
+      radiusY: 15,
+    };
+    addCheck(
+      "footing_escape_post_clear_handoff",
+      footingHazardRouteSuppressedAfterClear(
+        clearedFootingPreview,
+        false,
+        {
+          x: -24,
+          y: 223,
+        },
+        {
+          footingRecoveryZoneId:
+            "pond-mud",
+        },
+      ) &&
+        !footingHazardRouteSuppressedAfterClear(
+          clearedFootingPreview,
+          true,
+          {
+            x: 20,
+            y: 224,
+          },
+          {
+            footingRecoveryZoneId:
+              "pond-mud",
+          },
+        ) &&
+        !footingHazardRouteSuppressedAfterClear(
+          clearedFootingPreview,
+          false,
+          {
+            x: -24,
+            y: 205,
+          },
+          {
+            footingRecoveryZoneId:
+              "pond-mud",
+          },
+        ),
+      {
+        clearedPatch:
+          "pond-mud",
+        forwardExitSuppressed: true,
+        activeReentryRestores: true,
+        backtrackToEntryRestores: true,
+        presentation:
+          "the cleared local bypass yields completely to the resumed objective unless the player genuinely returns toward the patch entry",
+      },
+    );
+    addCheck(
+      "slow_footing_has_distinct_costs_and_art",
+      FOOTING_HAZARD_ZONES.every(
+        (zone) =>
+          zone.speedMultiplier > 0 &&
+          zone.speedMultiplier < 1 &&
+          zone.noiseFloor > 0 &&
+          FOOTING_HAZARD_ART_CELL_BY_KIND.has(
+            zone.kind,
+          ),
+      ),
+      FOOTING_HAZARD_ZONES.map(
+        (zone) => ({
+          id: zone.id,
+          kind: zone.kind,
+          speedMultiplier:
+            zone.speedMultiplier,
+          noiseFloor:
+            zone.noiseFloor,
+        }),
+      ),
+    );
+    addCheck(
+      "noise_hazards_use_authored_art",
+      COURSE_NOISE_HAZARDS.every(
+        (hazard) =>
+          Boolean(
+            NOISE_HAZARD_TYPES[
+              hazard.kind
+            ],
+          ),
+      ),
+      `${COURSE_NOISE_HAZARDS.length} route hazards`,
+    );
+    addCheck(
+      "objective_art_contract",
+      NIGHT_ORDER_ACTIONS.length === 3 &&
+        NIGHT_ORDER_OBJECTIVE_CELLS.length ===
+          NIGHT_ORDER_ACTIONS.length,
+      "three generated field stations plus generated key, valve, shed, and drain art",
+    );
+    const fieldSignalBreakaways =
+      NIGHT_ORDER_ACTIONS.map(
+        (action) => {
+          const target =
+            action.breakaway;
+          const route = target
+            ? planJoeRoute(
+                action,
+                target,
+                PLAYER_COLLISION_RADIUS,
+              )
+            : [];
+          const sightBlocker = target
+            ? lineBlockerBetween(
+                action,
+                target,
+              )
+            : null;
+          const targetBlocked = target
+            ? obstacleAtPosition(
+                target.x,
+                target.y,
+              )
+            : null;
+          const breakDistance = target
+            ? worldDistance(
+                action,
+                target,
+              )
+            : Infinity;
+          const minimumSignalSeconds =
+            breakDistance / 14 +
+            FIELD_SIGNAL_QUIET_SECONDS +
+            0.55;
+          return {
+            id: action.id,
+            valid:
+              Boolean(target) &&
+              route.length > 0 &&
+              !targetBlocked &&
+              sightBlocker ===
+                target.coverId &&
+              breakDistance <= 90 &&
+              action.noiseSeconds >=
+                minimumSignalSeconds,
+            coverId:
+              target?.coverId || null,
+            sightBlocker,
+            targetBlockedBy:
+              targetBlocked?.id || null,
+            routeWaypoints:
+              route.length,
+            signalSeconds:
+              action.noiseSeconds,
+            minimumSignalSeconds:
+              Number(
+                minimumSignalSeconds.toFixed(
+                  2,
+                ),
+              ),
+            breakDistance: target
+              ? Number(
+                  breakDistance.toFixed(2),
+                )
+              : null,
+          };
+        },
+      );
+    addCheck(
+      "field_signal_breakaway_routes",
+      fieldSignalBreakaways.every(
+        (breakaway) =>
+          breakaway.valid,
+      ),
+      fieldSignalBreakaways,
+    );
+    const fieldBreakawayLabelPreviews =
+      NIGHT_ORDER_ACTIONS.map(
+        (action) => {
+          const route =
+            fieldBreakawayRouteLabels(
+              action.breakaway,
+              false,
+            );
+          const reached =
+            fieldBreakawayRouteLabels(
+              action.breakaway,
+              true,
+            );
+          const commitment =
+            fieldActionCommitmentPreview(
+              action,
+            );
+          return {
+            actionId: action.id,
+            coverLabel:
+              action.breakaway
+                .coverLabel,
+            route,
+            reached,
+            commitmentText:
+              commitment.text,
+            valid:
+              route.label ===
+                "BREAK SIGNAL" &&
+              route.reasonLabel ===
+                "BREAK SIGNAL" &&
+              route.shortLabel ===
+                action.breakaway
+                  .coverLabel &&
+              route.destinationLabel ===
+                action.breakaway
+                  .coverLabel &&
+              route.previewHandoff ===
+                `BREAK TO ${action.breakaway.coverLabel}` &&
+              route.routeHandoff ===
+                `${action.breakaway.coverLabel} // NAMED COVER` &&
+              commitment.text.includes(
+                route.previewHandoff,
+              ) &&
+              reached.label ===
+                "HOLD QUIET" &&
+              reached.shortLabel ===
+                "HOLD QUIET" &&
+              reached.destinationLabel ===
+                route.destinationLabel &&
+              route.gameplayEffect ===
+                "none" &&
+              route.rule ===
+                "commitment_preview_and_every_breakaway_navigation_channel_share_the_same_physical_cover_name",
+          };
+        },
+      );
+    addCheck(
+      "field_signal_breakaway_destination_continuity",
+      fieldBreakawayLabelPreviews.every(
+        (preview) =>
+          preview.valid,
+      ),
+      {
+        actions:
+          fieldBreakawayLabelPreviews,
+        consumers: [
+          "commitment_preview",
+          "first_person_route_target",
+          "rear_bearing",
+          "course_map",
+          "immediate_route_card",
+          "render_game_to_text",
+        ],
+        gameplayEffect: "none",
+        presentation:
+          "BREAK SIGNAL remains the reason while every navigation channel names the authored cover destination promised before activation",
+      },
+    );
+    const fieldSignalResolutionHandoffPreview =
+      fieldSignalResolutionNavigationHandoff(
+        {
+          kind: "field_action",
+          sourceId: "audit-bell",
+        },
+        {
+          id: "field-log",
+          shortLabel: "FIELD LOG",
+        },
+      );
+    const inactiveSignalResolutionHandoffPreview =
+      fieldSignalResolutionNavigationHandoff(
+        {
+          kind: "golf_ball",
+          sourceId: "practice-ball",
+        },
+        {
+          id: "field-log",
+          shortLabel: "FIELD LOG",
+        },
+      );
+    const cleanBreakRewardRailPreview =
+      fieldSignalBreakawayRailPresentation(
+        true,
+        false,
+      );
+    const cleanBreakMissRailPreview =
+      fieldSignalBreakawayRailPresentation(
+        false,
+        true,
+      );
+    addCheck(
+      "field_signal_resolution_handoff_coherence",
+      fieldSignalResolutionHandoffPreview.active &&
+        fieldSignalResolutionHandoffPreview
+          .sourceId ===
+          "audit-bell" &&
+        fieldSignalResolutionHandoffPreview
+          .nextTargetId ===
+          "field-log" &&
+        fieldSignalResolutionHandoffPreview
+          .nextTargetLabel ===
+          "FIELD LOG" &&
+        fieldSignalResolutionHandoffPreview
+          .refreshNavigation &&
+        fieldSignalResolutionHandoffPreview
+          .invalidateMiniMap &&
+        !inactiveSignalResolutionHandoffPreview
+          .active &&
+        cleanBreakRewardRailPreview.tone ===
+          "clean_break_success" &&
+        cleanBreakRewardRailPreview
+          .borderColor ===
+          "#78cfa5" &&
+        cleanBreakRewardRailPreview
+          .innerBorderColor ===
+          "rgba(120,207,165,0.34)" &&
+        cleanBreakMissRailPreview.tone ===
+          "clean_break_miss" &&
+        cleanBreakMissRailPreview
+          .borderColor ===
+          "#d87532" &&
+        fieldSignalResolutionHandoffPreview
+          .gameplayEffect ===
+          "none",
+      {
+        resolution:
+          fieldSignalResolutionHandoffPreview,
+        unrelatedDistraction:
+          inactiveSignalResolutionHandoffPreview,
+        earnedRail:
+          cleanBreakRewardRailPreview,
+        missedRail:
+          cleanBreakMissRailPreview,
+        consumers: [
+          "first_person_navigation_guide",
+          "persistent_course_map",
+          "clean_break_reward_rail",
+          "render_game_to_text",
+        ],
+        presentation:
+          "the completed hold rewards immediately in mint while the next authored route replaces HOLD QUIET on the same frame",
+      },
+    );
+    addCheck(
+      "field_signal_breakaway_reward_loop",
+      FIELD_SIGNAL_QUIET_SECONDS >=
+        0.75 &&
+        FIELD_SIGNAL_BREAKAWAY_BONUS >
+          0 &&
+        DELIVERY_FAMILY_CAPS.field ===
+          NIGHT_ORDER_ACTIONS.length &&
+        Boolean(
+          state.hole
+            .fieldSignalBreakaway,
+        ) &&
+        Array.isArray(
+          state.hole
+            .fieldSignalBreakaway
+            .completed,
+        ),
+      {
+        quietSeconds:
+          FIELD_SIGNAL_QUIET_SECONDS,
+        baseBonus:
+          FIELD_SIGNAL_BREAKAWAY_BONUS,
+        familyCap:
+          DELIVERY_FAMILY_CAPS.field,
+        completed:
+          state.hole
+            .fieldSignalBreakaway
+            .completed.slice(),
+        attempts:
+          state.hole
+            .fieldSignalBreakaway
+            .attempts,
+        lastOutcome:
+          state.hole
+            .fieldSignalBreakaway
+            .lastOutcome,
+        rule:
+          "Reach the named sight blocker, become still and quiet for the visible hold, then remain masked until the station signal expires.",
+      },
+    );
+    const hiddenBreakawayHoldPreview =
+      fieldBreakawayHoldPanelPresentation({
+        reached: false,
+      });
+    const activeBreakawayHoldPreview =
+      fieldBreakawayHoldPanelPresentation(
+        {
+          reached: true,
+          quietSeconds:
+            FIELD_SIGNAL_QUIET_SECONDS *
+            0.5,
+          quietRequiredSeconds:
+            FIELD_SIGNAL_QUIET_SECONDS,
+          quietReady: false,
+          remainingSeconds: 3.4,
+          coverLabel: "SOUTH HEDGE",
+        },
+        {
+          moving: false,
+          noise: 0.08,
+        },
+      );
+    const maskedBreakawayHoldPreview =
+      fieldBreakawayHoldPanelPresentation(
+        {
+          reached: true,
+          quietSeconds:
+            FIELD_SIGNAL_QUIET_SECONDS,
+          quietRequiredSeconds:
+            FIELD_SIGNAL_QUIET_SECONDS,
+          quietReady: true,
+          remainingSeconds: 2.1,
+          coverLabel: "SOUTH HEDGE",
+        },
+        {
+          moving: false,
+          noise: 0.04,
+        },
+      );
+    addCheck(
+      "clean_break_hold_presentation",
+      !hiddenBreakawayHoldPreview.visible &&
+        activeBreakawayHoldPreview.visible &&
+        activeBreakawayHoldPreview.title ===
+          "MASK YOUR ROUTE" &&
+        activeBreakawayHoldPreview.progress ===
+          0.5 &&
+        activeBreakawayHoldPreview
+          .remainingLabel ===
+          "JOE CHECK 3.4s" &&
+        activeBreakawayHoldPreview
+          .instruction.includes(
+            "SOUTH HEDGE",
+          ) &&
+        activeBreakawayHoldPreview.panel.x >=
+          0 &&
+        activeBreakawayHoldPreview.panel.y >=
+          0 &&
+        activeBreakawayHoldPreview.panel.x +
+            activeBreakawayHoldPreview.panel
+              .width <=
+          WIDTH &&
+        activeBreakawayHoldPreview.panel.y +
+            activeBreakawayHoldPreview.panel
+              .height <=
+          HEIGHT &&
+        maskedBreakawayHoldPreview.visible &&
+        maskedBreakawayHoldPreview.title ===
+          "SIGNAL MASKED" &&
+        maskedBreakawayHoldPreview.progress ===
+          1 &&
+        maskedBreakawayHoldPreview.color ===
+          "#78cfa5" &&
+        maskedBreakawayHoldPreview
+          .progressLabel ===
+          "MASK COMPLETE" &&
+        activeBreakawayHoldPreview
+          .gameplayEffect ===
+          "none" &&
+        activeBreakawayHoldPreview
+          .presentation ===
+          "screen_stable_named_cover_progress_panel_without_detached_debug_glyphs",
+      {
+        hidden:
+          hiddenBreakawayHoldPreview,
+        holding:
+          activeBreakawayHoldPreview,
+        masked:
+          maskedBreakawayHoldPreview,
+        rule:
+          "one_grounded_hold_panel_carries_stillness_progress_signal_time_and_success_state",
+      },
+    );
+    const fieldBreakawayHoldOwnershipPreview = {
+      beforeCover:
+        fieldBreakawayHoldOwnsBottomRail({
+          reached: false,
+        }),
+      atCover:
+        fieldBreakawayHoldOwnsBottomRail({
+          reached: true,
+        }),
+    };
+    addCheck(
+      "field_breakaway_hold_panel_ownership",
+      !fieldBreakawayHoldOwnershipPreview
+        .beforeCover &&
+        fieldBreakawayHoldOwnershipPreview
+          .atCover,
+      {
+        ...fieldBreakawayHoldOwnershipPreview,
+        suppresses: [
+          "bottom_result_message",
+          "bottom_night_order_handoff",
+        ],
+        retains: [
+          "underlying_message_timer",
+          "underlying_handoff_timer",
+          "map_hold_state",
+          "signal_gameplay",
+        ],
+        gameplayEffect: "none",
+        rule:
+          "one_reached_cover_one_hold_panel_no_duplicate_bottom_rail",
+      },
+    );
+    const hiddenBreakawayMapHoldPreview =
+      fieldBreakawayMapHoldPresentation({
+        reached: false,
+      });
+    const activeBreakawayMapHoldPreview =
+      fieldBreakawayMapHoldPresentation({
+        reached: true,
+        quietSeconds:
+          FIELD_SIGNAL_QUIET_SECONDS *
+          0.5,
+        quietRequiredSeconds:
+          FIELD_SIGNAL_QUIET_SECONDS,
+        quietReady: false,
+        coverLabel: "SOUTH HEDGE",
+      });
+    const maskedBreakawayMapHoldPreview =
+      fieldBreakawayMapHoldPresentation({
+        reached: true,
+        quietSeconds:
+          FIELD_SIGNAL_QUIET_SECONDS,
+        quietRequiredSeconds:
+          FIELD_SIGNAL_QUIET_SECONDS,
+        quietReady: true,
+        coverLabel: "SOUTH HEDGE",
+      });
+    addCheck(
+      "clean_break_map_hold_continuity",
+      !hiddenBreakawayMapHoldPreview.visible &&
+        activeBreakawayMapHoldPreview.visible &&
+        activeBreakawayMapHoldPreview.leftText ===
+          "HOLD STILL" &&
+        activeBreakawayMapHoldPreview.rightText ===
+          "0.5/0.9s" &&
+        activeBreakawayMapHoldPreview.progress ===
+          0.5 &&
+        activeBreakawayMapHoldPreview
+          .destinationDistanceHidden &&
+        maskedBreakawayMapHoldPreview.visible &&
+        maskedBreakawayMapHoldPreview.leftText ===
+          "MASKED" &&
+        maskedBreakawayMapHoldPreview.rightText ===
+          "STAY HIDDEN" &&
+        maskedBreakawayMapHoldPreview.color ===
+          "#78cfa5" &&
+        maskedBreakawayMapHoldPreview.progress ===
+          1 &&
+        fieldBreakawayMapRefreshKey(null) ===
+          "field_breakaway:none" &&
+        fieldBreakawayMapRefreshKey({
+          sourceId: "audit-bell",
+          reached: false,
+          quietReady: false,
+        }) ===
+          "field_breakaway:audit-bell:route" &&
+        fieldBreakawayMapRefreshKey({
+          sourceId: "audit-bell",
+          reached: true,
+          quietReady: false,
+        }) ===
+          "field_breakaway:audit-bell:hold" &&
+        fieldBreakawayMapRefreshKey({
+          sourceId: "audit-bell",
+          reached: true,
+          quietReady: true,
+        }) ===
+          "field_breakaway:audit-bell:masked" &&
+        maskedBreakawayMapHoldPreview
+          .gameplayEffect ===
+          "none" &&
+        maskedBreakawayMapHoldPreview
+          .presentation ===
+          "persistent_map_hands_off_from_cover_distance_to_hold_progress_then_masked_state",
+      {
+        beforeArrival:
+          hiddenBreakawayMapHoldPreview,
+        holding:
+          activeBreakawayMapHoldPreview,
+        masked:
+          maskedBreakawayMapHoldPreview,
+        cachePhases: [
+          "field_breakaway:none",
+          "field_breakaway:audit-bell:route",
+          "field_breakaway:audit-bell:hold",
+          "field_breakaway:audit-bell:masked",
+        ],
+        rule:
+          "world_hold_panel_map_header_and_clean_break_state_share_one_reached_cover_truth",
+      },
+    );
+    const inactiveBreakawayRewardPreview =
+      fieldSignalBreakawayRewardPresentation(
+        {
+          rewardTimer: 0,
+          rewardMessage: "",
+        },
+        null,
+      );
+    const deferredBreakawayRewardPreview =
+      fieldSignalBreakawayRewardPresentation(
+        {
+          rewardTimer: 2.65,
+          rewardMessage:
+            "CLEAN BREAK — Joe verified the station, not your route.",
+        },
+        "predator_false_retreat",
+      );
+    const resumedBreakawayRewardPreview =
+      fieldSignalBreakawayRewardPresentation(
+        {
+          rewardTimer: 2.65,
+          rewardMessage:
+            "CLEAN BREAK — Joe verified the station, not your route.",
+        },
+        null,
+      );
+    addCheck(
+      "clean_break_reward_resume_continuity",
+      !inactiveBreakawayRewardPreview.active &&
+        !inactiveBreakawayRewardPreview.visible &&
+        deferredBreakawayRewardPreview.active &&
+        !deferredBreakawayRewardPreview.visible &&
+        deferredBreakawayRewardPreview
+          .timingPaused &&
+        deferredBreakawayRewardPreview
+          .deferredBy ===
+          "predator_false_retreat" &&
+        deferredBreakawayRewardPreview
+          .remainingSeconds ===
+          2.65 &&
+        resumedBreakawayRewardPreview.active &&
+        resumedBreakawayRewardPreview.visible &&
+        !resumedBreakawayRewardPreview
+          .timingPaused &&
+        resumedBreakawayRewardPreview
+          .deferredBy ===
+          null &&
+        resumedBreakawayRewardPreview
+          .message.startsWith(
+            "CLEAN BREAK",
+          ) &&
+        resumedBreakawayRewardPreview
+          .gameplayEffect ===
+          "none" &&
+        resumedBreakawayRewardPreview
+          .presentation ===
+          "earned_clean_break_lesson_queues_beneath_urgent_survival_then_resumes_for_its_full_remaining_duration",
+      {
+        inactive:
+          inactiveBreakawayRewardPreview,
+        deferred:
+          deferredBreakawayRewardPreview,
+        resumed:
+          resumedBreakawayRewardPreview,
+        rule:
+          "danger_keeps_priority_without_erasing_the_mastery_payoff",
+      },
+    );
+    const defaultRiskAwardPreview =
+      riskPremiumAwardPresentation(null);
+    const protectedRiskAwardPreview =
+      riskPremiumAwardPresentation({
+        targetId: "field-log",
+        label: "FIELD LOG",
+        availability: "ready",
+      });
+    addCheck(
+      "in_reach_interaction_scorecard_clearance",
+      !defaultRiskAwardPreview
+        .relocatedForInteraction &&
+        defaultRiskAwardPreview.centerY ===
+          434 &&
+        defaultRiskAwardPreview.card.top ===
+          384 &&
+        protectedRiskAwardPreview
+          .relocatedForInteraction &&
+        protectedRiskAwardPreview
+          .protectedTargetId ===
+          "field-log" &&
+        protectedRiskAwardPreview.centerY ===
+          224 &&
+        protectedRiskAwardPreview.card.bottom ===
+          256 &&
+        protectedRiskAwardPreview
+          .gameplayEffect ===
+          "none" &&
+        protectedRiskAwardPreview
+          .presentation ===
+          "risk_premium_moves_to_the_open_top_center_lane_while_an_in_reach_world_object_owns_interaction" &&
+        protectedRiskAwardPreview.rule ===
+          "earned_score_remains_visible_without_hiding_the_object_the_player_can_act_on",
+      {
+        default:
+          defaultRiskAwardPreview,
+        protected:
+          protectedRiskAwardPreview,
+        rule:
+          "in_reach_generated_art_and_use_footprints_keep_the_center_world_lane_while_scoring_moves_without_expiring",
+      },
+    );
+    const defaultJoeBarkPreview =
+      joeBarkSubtitlePresentation(null);
+    const protectedJoeBarkPreview =
+      joeBarkSubtitlePresentation({
+        targetId: "audit-bell",
+        label: "AUDIT BELL",
+        availability: "ready",
+      });
+    addCheck(
+      "in_reach_joe_bark_clearance",
+      !defaultJoeBarkPreview
+        .relocatedForInteraction &&
+        defaultJoeBarkPreview.baselineY ===
+          454 &&
+        protectedJoeBarkPreview
+          .relocatedForInteraction &&
+        protectedJoeBarkPreview
+          .protectedTargetId ===
+          "audit-bell" &&
+        protectedJoeBarkPreview
+          .baselineY === 224 &&
+        protectedJoeBarkPreview
+          .gameplayEffect === "none" &&
+        protectedJoeBarkPreview
+          .presentation ===
+          "joe_bark_moves_to_the_open_top_center_lane_while_an_in_reach_world_object_owns_interaction" &&
+        protectedJoeBarkPreview.rule ===
+          "joe_flavor_remains_visible_without_covering_the_object_or_action_the_player_can_commit",
+      {
+        default:
+          defaultJoeBarkPreview,
+        protected:
+          protectedJoeBarkPreview,
+        consumers: [
+          "joe_dialogue_subtitle",
+          "generated_interactable_art",
+          "interaction_ground_ring",
+          "bottom_action_frame",
+        ],
+        rule:
+          "optional_character_dialogue_relocates_without_expiring_when_the_player_reaches_a_world_action",
+      },
+    );
+    const cleanBreakResultPreview =
+      calculateRunResult(
+        state.hole.escapeRoute ||
+          "shed",
+      );
+    const expectedCleanBreakBonus =
+      state.hole.deliveryEvents.reduce(
+        (total, event) =>
+          total +
+          (
+            event.family === "field"
+              ? event.amount
+              : 0
+          ),
+        0,
+      );
+    addCheck(
+      "clean_break_result_continuity",
+      cleanBreakResultPreview
+        .signalBreakawayCount ===
+        state.hole
+          .fieldSignalBreakaway
+          .completed.length &&
+        cleanBreakResultPreview
+          .signalBreakawayRequired ===
+          NIGHT_ORDER_ACTIONS.length &&
+        cleanBreakResultPreview
+          .signalBreakawayBonus ===
+          expectedCleanBreakBonus &&
+        cleanBreakResultPreview
+          .perfectSignalMask ===
+          (
+            cleanBreakResultPreview
+              .signalBreakawayCount ===
+            NIGHT_ORDER_ACTIONS.length
+          ),
+      {
+        count:
+          cleanBreakResultPreview
+            .signalBreakawayCount,
+        required:
+          cleanBreakResultPreview
+            .signalBreakawayRequired,
+        completed:
+          cleanBreakResultPreview
+            .signalBreakawaysCompleted,
+        bonus:
+          cleanBreakResultPreview
+            .signalBreakawayBonus,
+        perfect:
+          cleanBreakResultPreview
+            .perfectSignalMask,
+        presentation:
+          "After-Action Review Delivery line appends CLEAN n/3 without adding another ledger row.",
+      },
+    );
+    const perfectDefeatPreview =
+      cleanBreakDefeatPresentation({
+        completed:
+          NIGHT_ORDER_ACTIONS.map(
+            (action) => action.id,
+          ),
+        count:
+          NIGHT_ORDER_ACTIONS.length,
+        required:
+          NIGHT_ORDER_ACTIONS.length,
+        deliveryBonus:
+          FIELD_SIGNAL_BREAKAWAY_BONUS *
+          NIGHT_ORDER_ACTIONS.length,
+        perfect: true,
+      });
+    const emptyDefeatPreview =
+      cleanBreakDefeatPresentation({
+        completed: [],
+        count: 0,
+        required:
+          NIGHT_ORDER_ACTIONS.length,
+        deliveryBonus: 0,
+        perfect: false,
+      });
+    addCheck(
+      "clean_break_defeat_continuity",
+      perfectDefeatPreview.visible &&
+        perfectDefeatPreview.text ===
+          `DELIVERY BLOCKED // CLEAN SIGNALS ${NIGHT_ORDER_ACTIONS.length}/${NIGHT_ORDER_ACTIONS.length}` &&
+        perfectDefeatPreview
+          .presentation ===
+          "integrated_into_defeat_status_line_without_replacing_incident_coaching" &&
+        perfectDefeatPreview
+          .persistence.includes(
+            "this_run_only",
+          ) &&
+        !emptyDefeatPreview.visible &&
+        emptyDefeatPreview.text ===
+          "DELIVERY BLOCKED: FAILED JOE'S ACCEPTANCE REVIEW",
+      {
+        completed:
+          perfectDefeatPreview,
+        empty: emptyDefeatPreview,
+      },
+    );
+    const liveHudPreview =
+      cleanBreakHudPresentation({
+        completed:
+          NIGHT_ORDER_ACTIONS.map(
+            (action) => action.id,
+          ),
+        count:
+          NIGHT_ORDER_ACTIONS.length,
+        required:
+          NIGHT_ORDER_ACTIONS.length,
+        deliveryBonus:
+          FIELD_SIGNAL_BREAKAWAY_BONUS *
+          NIGHT_ORDER_ACTIONS.length,
+        perfect: true,
+      }, 0);
+    const emptyHudPreview =
+      cleanBreakHudPresentation({
+        completed: [],
+        count: 0,
+        required:
+          NIGHT_ORDER_ACTIONS.length,
+        deliveryBonus: 0,
+        perfect: false,
+      }, 0);
+    addCheck(
+      "clean_break_live_hud_continuity",
+      liveHudPreview.visible &&
+        liveHudPreview.text ===
+          `CLEAN ${NIGHT_ORDER_ACTIONS.length}/${NIGHT_ORDER_ACTIONS.length}` &&
+        liveHudPreview.tone ===
+          "perfect" &&
+        liveHudPreview.placement ===
+          "right_side_of_existing_objective_row" &&
+        !emptyHudPreview.visible &&
+        emptyHudPreview.tone ===
+          "inactive",
+      {
+        completed:
+          liveHudPreview,
+        empty: emptyHudPreview,
+      },
+    );
+    const missedHudPreview =
+      cleanBreakHudPresentation(
+        {
+          completed: [],
+          count: 0,
+          required:
+            NIGHT_ORDER_ACTIONS.length,
+          deliveryBonus: 0,
+          perfect: false,
+        },
+        1,
+      );
+    const missedBreakawayPreview =
+      fieldSignalBreakawayMissPresentation(
+        {
+          reason:
+            "left_named_cover_before_expiry",
+        },
+        NIGHT_ORDER_ACTIONS[0],
+        NIGHT_ORDER_ACTIONS[1],
+      );
+    addCheck(
+      "clean_break_miss_feedback_continuity",
+      missedHudPreview.visible &&
+        missedHudPreview.text ===
+          `CLEAN 0/${NIGHT_ORDER_ACTIONS.length}` &&
+        missedHudPreview.tone ===
+          "missed" &&
+        missedHudPreview.attempts ===
+          1 &&
+        missedHudPreview.misses ===
+          1 &&
+        missedBreakawayPreview.kind ===
+          "missed" &&
+        missedBreakawayPreview.reason ===
+          "left_named_cover_before_expiry" &&
+        missedBreakawayPreview.banner ===
+          "CLEAN BREAK MISSED // LEFT COVER EARLY" &&
+        missedBreakawayPreview.message.includes(
+          "FIELD LOG CAN STILL SCORE",
+        ),
+      {
+        hud: missedHudPreview,
+        feedback:
+          missedBreakawayPreview,
+        rule:
+          "first_miss_teaches_the_exact_correction_and_reveals_clean_break_mastery_without_changing_survival_or_objective_progress",
+      },
+    );
+    const movedMissPreview =
+      fieldSignalBreakawayMissPresentation(
+        {
+          reason:
+            "noise_or_movement_at_expiry",
+        },
+        NIGHT_ORDER_ACTIONS[0],
+        NIGHT_ORDER_ACTIONS[1],
+      );
+    const incompleteMissPreview =
+      fieldSignalBreakawayMissPresentation(
+        {
+          reason:
+            "quiet_hold_incomplete",
+        },
+        NIGHT_ORDER_ACTIONS[0],
+        NIGHT_ORDER_ACTIONS[1],
+      );
+    addCheck(
+      "clean_break_miss_recovery_handoff_copy",
+      missedBreakawayPreview.message.includes(
+        "LEFT HEDGE TUNNEL BEFORE JOE'S FINAL CHECK",
+      ) &&
+        missedBreakawayPreview.message.includes(
+          "HOLD COVER NEXT TIME",
+        ) &&
+        movedMissPreview.message.includes(
+          "MOVED BEFORE JOE'S FINAL CHECK",
+        ) &&
+        movedMissPreview.message.includes(
+          "HOLD STILL NEXT TIME",
+        ) &&
+        incompleteMissPreview.message.includes(
+          "HOLD NEVER SET",
+        ) &&
+        incompleteMissPreview.message.includes(
+          "FIELD LOG CAN STILL SCORE",
+        ),
+      {
+        leftCover:
+          missedBreakawayPreview,
+        moved:
+          movedMissPreview,
+        incomplete:
+          incompleteMissPreview,
+        rule:
+          "resolved_signal_feedback_names_the_past_mistake_the_next_attempt_rule_and_the_live_followup_objective",
+      },
+    );
+    addCheck(
+      "clean_break_miss_trail_evidence_priority",
+      fieldSignalBreakawayMissFocusDefers(
+        "trail_evidence",
+      ) &&
+        fieldSignalBreakawayMissFocusDefers(
+          "pursuit",
+        ) &&
+        fieldSignalBreakawayMissFocusDefers(
+          "predator_false_retreat",
+        ) === false &&
+        fieldSignalBreakawayMissFocusDefers(
+          "ordinary_navigation",
+        ) === false,
+      {
+        urgentFocus:
+          "trail_evidence",
+        feedbackTimerPolicy:
+          "pause_without_consuming_remaining_seconds",
+        predatorPolicy:
+          "predator_tactics_defer_through_the_dedicated_active_tactic_branch",
+        ordinaryNavigation:
+          "miss_lesson_resumes_after_urgent_trail_and_predator_owners_yield",
+        rule:
+          "trail_chain_change_surface_warning_keeps_decision_priority_before_optional_clean_break_coaching",
+      },
+    );
+    const statusAckSearchPreview =
+      distractionSearchContext({
+        kind: "status_ack",
+        code: "SR-01",
+        x: 14,
+        y: 294,
+      });
+    const statusEscalationSearchPreview =
+      distractionSearchContext({
+        kind: "status_escalation",
+        code: "SR-01",
+        x: 16,
+        y: 296,
+      });
+    addCheck(
+      "status_request_consequence_continuity",
+      statusAckSearchPreview
+        ?.sourceLabel ===
+        "ROUGH STATUS GRID" &&
+        statusAckSearchPreview
+          .statusLead ===
+          "SWEEPING ROUGH STATUS GRID" &&
+        statusAckSearchPreview
+          .counterplay ===
+          "vacate the shared rough grid" &&
+        statusEscalationSearchPreview
+          ?.sourceLabel ===
+          "ESCALATED SECTOR" &&
+        statusEscalationSearchPreview
+          .statusLead ===
+          "SWEEPING ESCALATED SECTOR" &&
+        statusEscalationSearchPreview
+          .counterplay ===
+          "break laterally beyond the precise sector",
+      {
+        acknowledged:
+          statusAckSearchPreview,
+        escalated:
+          statusEscalationSearchPreview,
+        rule:
+          "status choice identity persists from the decision card through investigation and follow-up search without altering threat timing",
+      },
+    );
+    const statusAckSpatialPreview =
+      statusRequestSpatialPresentation(
+        statusAckSearchPreview,
+        {
+          x: 14,
+          y: 294,
+        },
+      );
+    const statusEscalationSpatialPreview =
+      statusRequestSpatialPresentation(
+        statusEscalationSearchPreview,
+        {
+          x: 30,
+          y: 296,
+        },
+      );
+    addCheck(
+      "status_request_spatial_consequence_continuity",
+      statusAckSpatialPreview
+        ?.inside === true &&
+        statusAckSpatialPreview
+          .radiusMeters ===
+          STATUS_ACK_GRID_RADIUS &&
+        statusAckSpatialPreview
+          .worldLabel ===
+          "VACATE ROUGH GRID // 14m" &&
+        statusAckSpatialPreview
+          .visualShape ===
+          "coarse_dashed_grid" &&
+        statusEscalationSpatialPreview
+          ?.inside === false &&
+        statusEscalationSpatialPreview
+          .radiusMeters ===
+          STATUS_ESCALATION_SECTOR_RADIUS &&
+        statusEscalationSpatialPreview
+          .worldLabel ===
+          "OUTSIDE SECTOR // 3m" &&
+        statusEscalationSpatialPreview
+          .visualShape ===
+          "tight_solid_sector_crosshair" &&
+        statusEscalationSpatialPreview
+          .gameplayEffect ===
+          "none_presentation_matches_existing_search_target_and_precision",
+      {
+        acknowledged:
+          statusAckSpatialPreview,
+        escalated:
+          statusEscalationSpatialPreview,
+        rule:
+          "the authored rough-grid and precise-sector footprints remain visible in world and map through the existing search, with distance-to-edge feedback and no gameplay mutation",
+      },
+    );
+    const actionRangeTarget = {
+      x: 0,
+      y: 0,
+      radius: 12,
+    };
+    const distantActionPreview =
+      objectiveActionRangePresentation(
+        actionRangeTarget,
+        "range-audit",
+        "RANGE AUDIT",
+        "STAMP RANGE AUDIT",
+        "field_check",
+        "#d9af52",
+        72,
+      );
+    const approachingActionPreview =
+      objectiveActionRangePresentation(
+        actionRangeTarget,
+        "range-audit",
+        "RANGE AUDIT",
+        "STAMP RANGE AUDIT",
+        "field_check",
+        "#d9af52",
+        20,
+      );
+    const boundaryActionPreview =
+      objectiveActionRangePresentation(
+        actionRangeTarget,
+        "range-audit",
+        "RANGE AUDIT",
+        "STAMP RANGE AUDIT",
+        "field_check",
+        "#d9af52",
+        actionRangeTarget.radius,
+      );
+    const readyActionPreview =
+      objectiveActionRangePresentation(
+        actionRangeTarget,
+        "range-audit",
+        "RANGE AUDIT",
+        "STAMP RANGE AUDIT",
+        "field_check",
+        "#d9af52",
+        actionRangeTarget.radius - 0.01,
+      );
+    addCheck(
+      "objective_action_range_truth",
+      distantActionPreview.availability ===
+        "distant" &&
+        distantActionPreview.text ===
+          "FOLLOW LANTERNS // RANGE AUDIT 72m" &&
+        !distantActionPreview.bindingVisible &&
+        approachingActionPreview.availability ===
+          "approaching" &&
+        approachingActionPreview.text ===
+          "CLOSE IN // RANGE AUDIT 20m" &&
+        !approachingActionPreview.bindingVisible &&
+        boundaryActionPreview.availability ===
+          "approaching" &&
+        !boundaryActionPreview.bindingVisible &&
+        readyActionPreview.availability ===
+          "ready" &&
+        readyActionPreview.bindingVisible &&
+        readyActionPreview.text.endsWith(
+          "STAMP RANGE AUDIT",
+        ),
+      {
+        distant: distantActionPreview,
+        approaching:
+          approachingActionPreview,
+        exactBoundary:
+          boundaryActionPreview,
+        ready: readyActionPreview,
+        blockedRule:
+          "blocked interactions suppress the binding and retain grounded feedback until retreat",
+      },
+    );
+    const interactionOwnerPreview = {
+      targetId: "audit-bell",
+      label: "AUDIT BELL",
+      binding: "interact",
+      availability: "ready",
+      localStatus: "IN REACH",
+      prompt:
+        "ENTER — RING AUDIT BELL",
+    };
+    const owningInteractionPreview =
+      interactionPromptRelationship(
+        "audit-bell",
+        interactionOwnerPreview,
+        true,
+      );
+    const yieldingInteractionPreview =
+      interactionPromptRelationship(
+        "sprinkler",
+        interactionOwnerPreview,
+        true,
+      );
+    const blockedInteractionPreview =
+      interactionPromptRelationship(
+        "maintenance-shed",
+        {
+          targetId:
+            "maintenance-shed",
+          label: "SHED EXIT",
+          binding: null,
+          availability: "blocked",
+          localStatus: "CHECKS OPEN",
+          prompt:
+            "SHED FILE BLOCKED // 2 CHECKS REMAIN",
+        },
+        true,
+      );
+    addCheck(
+      "simultaneous_interaction_prompt_ownership",
+      owningInteractionPreview
+        .ownerMatches &&
+        owningInteractionPreview
+          .ownsInteractBinding &&
+        !owningInteractionPreview
+          .conflictsWithOwner &&
+        !yieldingInteractionPreview
+          .ownerMatches &&
+        !yieldingInteractionPreview
+          .ownsInteractBinding &&
+        yieldingInteractionPreview
+          .conflictsWithOwner &&
+        blockedInteractionPreview
+          .ownerMatches &&
+        !blockedInteractionPreview
+          .ownsInteractBinding &&
+        !blockedInteractionPreview
+          .conflictsWithOwner &&
+        owningInteractionPreview.rule ===
+          "one_interact_binding_one_authoritative_target",
+      {
+        owner:
+          owningInteractionPreview,
+        overlappingTarget:
+          yieldingInteractionPreview,
+        blockedOwner:
+          blockedInteractionPreview,
+        presentation:
+          "the owner retains IN REACH and the action rail; simultaneous non-owners say OWNER FIRST, lose ready emphasis, and never claim the binding",
+      },
+    );
+    const owningInteractionFocusPreview =
+      readyInteractionFocusPresentation(
+        "audit-bell",
+        true,
+        interactionOwnerPreview,
+      );
+    const distantInteractionFocusPreview =
+      readyInteractionFocusPresentation(
+        "shed-key",
+        false,
+        interactionOwnerPreview,
+      );
+    const overlappingInteractionFocusPreview =
+      readyInteractionFocusPresentation(
+        "sprinkler",
+        true,
+        interactionOwnerPreview,
+      );
+    const inactiveInteractionFocusPreview =
+      readyInteractionFocusPresentation(
+        "shed-key",
+        false,
+        null,
+      );
+    const advisoryInteractionFocusPreview =
+      footingHazardAdvisoryFocusPresentation(
+        false,
+        interactionOwnerPreview,
+      );
+    const urgentHazardInteractionFocusPreview =
+      footingHazardAdvisoryFocusPresentation(
+        true,
+        interactionOwnerPreview,
+      );
+    const breakawayAdvisoryFocusPreview =
+      footingHazardAdvisoryFocusPresentation(
+        false,
+        null,
+        {
+          id:
+            "field-signal-break-audit-bell",
+          owner:
+            "mandatory_signal_breakaway",
+          label:
+            "HEDGE TUNNEL ROUTE",
+        },
+      );
+    const breakawayActiveHazardPreview =
+      footingHazardAdvisoryFocusPresentation(
+        true,
+        null,
+        {
+          id:
+            "field-signal-break-audit-bell",
+          owner:
+            "mandatory_signal_breakaway",
+          label:
+            "HEDGE TUNNEL ROUTE",
+        },
+      );
+    addCheck(
+      "ready_interaction_visual_focus",
+      owningInteractionFocusPreview.active &&
+        owningInteractionFocusPreview
+          .ownerMatches &&
+        !owningInteractionFocusPreview
+          .deferred &&
+        distantInteractionFocusPreview
+          .deferred &&
+        distantInteractionFocusPreview
+          .markerAlpha === 0 &&
+        distantInteractionFocusPreview
+          .physicalArtRetained &&
+        distantInteractionFocusPreview
+          .collisionTruthRetained &&
+        distantInteractionFocusPreview
+          .courseMapRetained &&
+        !overlappingInteractionFocusPreview
+          .deferred &&
+        overlappingInteractionFocusPreview
+          .overlappingActionRetained &&
+        !inactiveInteractionFocusPreview
+          .active &&
+        advisoryInteractionFocusPreview
+          .deferred &&
+        advisoryInteractionFocusPreview
+          .deferredBy ===
+          "ready_interaction:audit-bell" &&
+        !urgentHazardInteractionFocusPreview
+          .deferred &&
+        urgentHazardInteractionFocusPreview
+          .urgentLocalHazardRetained &&
+        breakawayAdvisoryFocusPreview
+          .deferred &&
+        breakawayAdvisoryFocusPreview
+          .deferredBy ===
+          "mandatory_signal_breakaway:field-signal-break-audit-bell" &&
+        !breakawayActiveHazardPreview
+          .deferred &&
+        breakawayActiveHazardPreview
+          .urgentLocalHazardRetained &&
+        distantInteractionFocusPreview
+          .gameplayEffect === "none" &&
+        advisoryInteractionFocusPreview
+          .gameplayEffect === "none",
+      {
+        owner:
+          owningInteractionFocusPreview,
+        distantAdvisory:
+          distantInteractionFocusPreview,
+        overlappingAction:
+          overlappingInteractionFocusPreview,
+        inactive:
+          inactiveInteractionFocusPreview,
+        footingAdvice:
+          advisoryInteractionFocusPreview,
+        activeFootingHazard:
+          urgentHazardInteractionFocusPreview,
+        breakawayAdvice:
+          breakawayAdvisoryFocusPreview,
+        breakawayActiveFooting:
+          breakawayActiveHazardPreview,
+        consumers: [
+          "world_marker_cards",
+          "footing_bypass_plaque",
+          "footing_bypass_ground_route",
+          "generated_world_art",
+          "course_map",
+        ],
+        presentation:
+          "one ready action gets a quiet commitment lane; distant cards and optional bypass advice yield while active hazards, overlapping actions, world art, collision, and map truth remain",
+      },
+    );
+    addCheck(
+      "runtime_assets_settled",
+      gameplayAssetSummary().ready &&
+        assetLoading.errors.length === 0,
+      gameplayAssetSummary(),
+    );
+    addCheck(
+      "navigation_without_map",
+      Boolean(
+        state.hole.navigationGuide &&
+        state.hole.navigationGuide.targetId,
+      ) &&
+        visiblePathLanternCount() >= 0,
+      {
+        targetId:
+          state.hole.navigationGuide
+            .targetId,
+        obstacleAwareWaypoints:
+          state.hole.navigationGuide
+            .path.length,
+        ribbon:
+          "world-space obstacle-aware route with physical lanterns, signs, bearings, and boundary art",
+      },
+    );
+    addCheck(
+      "collision_guidance_handoff",
+      Object.hasOwn(
+        state.hole.navigationGuide,
+        "collisionRecovery",
+      ) &&
+        Object.hasOwn(
+          state.hole.navigationGuide,
+          "collisionRecoveries",
+        ) &&
+        Object.hasOwn(
+          state.hole.navigationGuide,
+          "collisionRecoveryExpiresAt",
+        ),
+      "collision corrections own the route through physical contact and a bounded clear-lane follow-through before objective replanning",
+    );
+    const collisionRecoveryRoutePreview =
+      collisionRecoveryWorldRoutePresentation(
+        {
+          x: state.player.x - 9,
+          y: state.player.y,
+          direction: "LEFT",
+          distance: 9,
+          obstacleId:
+            "service-cart",
+          phase:
+            "clearance_followthrough",
+          remainingDistance: 6.77,
+        },
+        0,
+      );
+    addCheck(
+      "collision_recovery_world_route_continuity",
+      collisionRecoveryRoutePreview.active &&
+        collisionRecoveryRoutePreview
+          .startsAtPlayer &&
+        collisionRecoveryRoutePreview
+          .visibleSegments === 1 &&
+        collisionRecoveryRoutePreview
+          .markerVisible &&
+        collisionRecoveryRoutePreview
+          .instruction ===
+          "CLEAR LEFT" &&
+        collisionRecoveryRoutePreview
+          .obstacleId ===
+          "service-cart" &&
+        collisionRecoveryRoutePreview
+          .rule ===
+          "short_collision_recovery_owns_one_near_field_route_until_clearance_then_objective_navigation_resumes",
+      collisionRecoveryRoutePreview,
+    );
+    const contactIdentityPreview =
+      collisionStateBannerRelationship(
+        "service-cart",
+        true,
+        false,
+        "SOUTH GATE // SOMETHING KNOCKS BACK",
+      );
+    const releaseIdentityPreview =
+      collisionStateBannerRelationship(
+        "service-cart",
+        false,
+        true,
+        "SOUTH GATE // SOMETHING KNOCKS BACK",
+      );
+    const clearIdentityPreview =
+      collisionStateBannerRelationship(
+        "service-cart",
+        false,
+        false,
+        "SOUTH GATE // SOMETHING KNOCKS BACK",
+      );
+    addCheck(
+      "collision_feedback_identity_ownership",
+      contactIdentityPreview
+        .ownsImmediateSignalLane &&
+        !contactIdentityPreview
+          .stateBannerVisible &&
+        !contactIdentityPreview
+          .matchingThreatCaptionVisible &&
+        contactIdentityPreview
+          .deferredBy ===
+          "collision_contact" &&
+        releaseIdentityPreview
+          .ownsImmediateSignalLane &&
+        !releaseIdentityPreview
+          .stateBannerVisible &&
+        !releaseIdentityPreview
+          .matchingThreatCaptionVisible &&
+        releaseIdentityPreview
+          .deferredBy ===
+          "collision_release_echo" &&
+        !clearIdentityPreview
+          .ownsImmediateSignalLane &&
+        clearIdentityPreview
+          .stateBannerVisible &&
+        clearIdentityPreview
+          .matchingThreatCaptionVisible &&
+        clearIdentityPreview
+          .deferredBy === null,
+      {
+        contact:
+          contactIdentityPreview,
+        release:
+          releaseIdentityPreview,
+        clear:
+          clearIdentityPreview,
+        presentation:
+          "the grounded collision card alone names the blocker through contact and release; unrelated state banners resume only after that identity clears",
+      },
+    );
+    addCheck(
+      "joe_pressure_contract",
+      VERTICAL_PASS_MAX_LEAD >
+        VERTICAL_PASS_MIN_LEAD &&
+        TENSION_DIRECTOR_MAX_INTERCEPTS >
+          0 &&
+        PREDATOR_TACTIC_MAX_DISTANCE >
+          PREDATOR_TACTIC_MIN_DISTANCE,
+      "vertical wake, tension intercepts, searches, cover audits, and predator tactics remain bounded and counterable",
+    );
+    addCheck(
+      "transient_resources_bounded",
+      state.hole.worldEffects.length <=
+        MAX_WORLD_EFFECTS &&
+        state.hole.worldParticles.length <=
+          MAX_MOWER_WORLD_PARTICLES &&
+        state.hole.screenParticles.length <=
+          MAX_SCREEN_PARTICLES &&
+        state.hole.groundResponses.length <=
+          MAX_PLAYER_GROUND_RESPONSES &&
+        state.hole.captions.length <= 3,
+      {
+        current: {
+          worldEffects:
+            state.hole.worldEffects.length,
+          worldParticles:
+            state.hole.worldParticles.length,
+          screenParticles:
+            state.hole.screenParticles.length,
+          groundResponses:
+            state.hole.groundResponses.length,
+          captions:
+            state.hole.captions.length,
+        },
+        caps: {
+          worldEffects:
+            MAX_WORLD_EFFECTS,
+          worldParticles:
+            MAX_MOWER_WORLD_PARTICLES,
+          screenParticles:
+            MAX_SCREEN_PARTICLES,
+          groundResponses:
+            MAX_PLAYER_GROUND_RESPONSES,
+          captions: 3,
+        },
+      },
+    );
+    addCheck(
+      "gameplay_frame_budget",
+      runtimePerformance.window ===
+        "gameplay" &&
+        runtimePerformance
+          .renderAverageMs <= 12 &&
+        performancePercentile(
+          runtimePerformance.renderSamples,
+          0.95,
+        ) <= 16.7,
+      {
+        averageRenderMs: Number(
+          runtimePerformance
+            .renderAverageMs.toFixed(2),
+        ),
+        p95RenderMs: Number(
+          performancePercentile(
+            runtimePerformance
+              .renderSamples,
+            0.95,
+          ).toFixed(2),
+        ),
+        zones:
+          zonePerformanceSummary(),
+      },
+    );
+    addCheck(
+      "accessibility_contract",
+      Boolean(
+        canvas.getAttribute(
+          "aria-describedby",
+        ),
+      ) &&
+        Boolean(accessibleStatus) &&
+        typeof state.reducedMotion ===
+          "boolean" &&
+        typeof state.subtitles ===
+          "boolean" &&
+        typeof state.threatCaptions ===
+          "boolean" &&
+        typeof state
+          .highContrastNavigation ===
+          "boolean",
+      "live status, control description, subtitles, threat captions, reduced motion, and route contrast",
+    );
+    addCheck(
+      "dialogue_variety_contract",
+      JOE_CAPTURE_LINES.length >= 40 &&
+        JOE_DIALOGUE_VARIANT_COUNT >=
+          100,
+      {
+        captureLines:
+          JOE_CAPTURE_LINES.length,
+        totalVariants:
+          JOE_DIALOGUE_VARIANT_COUNT,
+      },
+    );
+    const conflictingJoeRoleTones =
+      JOE_CAPTURE_LINES.filter(
+        (line) =>
+          /ADJUSTER|RELEASE MANAGER|PROJECT MANAGER|SCRUM MASTER/u.test(
+            line.tone,
+          ),
+      );
+    addCheck(
+      "product_owner_role_language",
+      conflictingJoeRoleTones.length === 0,
+      conflictingJoeRoleTones.length === 0
+        ? "capture identities preserve Joe as the software Product Owner"
+        : conflictingJoeRoleTones.map(
+            (line) => ({
+              id: line.id,
+              tone: line.tone,
+            }),
+          ),
+    );
+    const adaptiveCaptureCoachingIds =
+      Array.from(
+        CAPTURE_REVIEW_IDS,
+      ).filter((id) => {
+        const coaching =
+          REPEAT_CAPTURE_COACHING[id];
+        return !(
+          coaching &&
+          coaching.adjustment &&
+          coaching.drill
+        );
+      });
+    addCheck(
+      "adaptive_repeat_capture_coaching",
+      adaptiveCaptureCoachingIds.length ===
+        0,
+      adaptiveCaptureCoachingIds.length ===
+        0
+        ? `${CAPTURE_REVIEW_IDS.size} diagnosed causes own adjustment and recovery-drill tiers`
+        : adaptiveCaptureCoachingIds,
+    );
+
+    const failed = checks.filter(
+      (check) => !check.passed,
+    );
+    return {
+      version:
+        "release-candidate-2026-08-08",
+      passed:
+        failed.length === 0,
+      checksPassed:
+        checks.length - failed.length,
+      checksTotal: checks.length,
+      failedIds:
+        failed.map(
+          (check) => check.id,
+        ),
+      checks,
+      humanDeviceGates: [
+        "complete one keyboard-and-mouse run",
+        "complete one standard-controller run",
+        "complete one touch-device run",
+        "run a sustained 10-15 minute mid-tier hardware session",
+      ],
+      scope:
+        "existing vertical slice refinement; no new level expansion",
+    };
+  }
+
+  window.audit_rough_cut_readiness =
+    () =>
+      JSON.stringify(
+        releaseReadinessSummary(),
+        displayTextJsonReplacer,
+      );
+
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && state.mode === "first_hole") {
       enterPause();
+      runtimePerformance.lifecycle
+        .visibilityAutoPauses += 1;
+      if (
+        audioContext &&
+        audioContext.state === "running"
+      ) {
+        runtimePerformance.lifecycle
+          .audioSuspends += 1;
+        audioContext
+          .suspend()
+          .catch(() => {
+            // A browser may close the audio context while the tab is hiding.
+          });
+      }
     }
   });
 
@@ -57195,6 +66615,11 @@
     mode: state.mode,
     performance: {
       targetFps: 60,
+      measurementWindow:
+        runtimePerformance.window,
+      startupSnapshot:
+        runtimePerformance
+          .startupSnapshot,
       effectsTier:
         runtimePerformance.tier,
       effectScale: Number(
@@ -57210,6 +66635,27 @@
         runtimePerformance
           .lastRenderMs.toFixed(2),
       ),
+      p95RenderMs: Number(
+        performancePercentile(
+          runtimePerformance
+            .renderSamples,
+          0.95,
+        ).toFixed(2),
+      ),
+      p99RenderMs: Number(
+        performancePercentile(
+          runtimePerformance
+            .renderSamples,
+          0.99,
+        ).toFixed(2),
+      ),
+      maxRenderMs: Number(
+        runtimePerformance
+          .maxRenderMs.toFixed(2),
+      ),
+      renderLongFrames:
+        runtimePerformance
+          .renderLongFrames,
       averagePresentationMs:
         Number(
           runtimePerformance
@@ -57233,6 +66679,135 @@
       refreshFramesSkipped:
         runtimePerformance
           .skippedFrames,
+      p95PresentationMs: Number(
+        performancePercentile(
+          runtimePerformance
+            .presentationSamples,
+          0.95,
+        ).toFixed(2),
+      ),
+      maxPresentationMs: Number(
+        runtimePerformance
+          .maxPresentationMs.toFixed(2),
+      ),
+      presentationLongFrames:
+        runtimePerformance
+          .presentationLongFrames,
+      tierChanges:
+        runtimePerformance
+          .tierChanges,
+      lastTierChangeFrame:
+        runtimePerformance
+          .lastTierChangeFrame,
+      zones:
+        zonePerformanceSummary(),
+      resources: {
+        current: {
+          worldEffects:
+            state.hole.worldEffects.length,
+          worldParticles:
+            state.hole.worldParticles.length,
+          screenParticles:
+            state.hole.screenParticles.length,
+          groundResponses:
+            state.hole.groundResponses.length,
+          turfMarks:
+            state.hole.turfMarks.length,
+          captions:
+            state.hole.captions.length,
+          recoverableBalls:
+            state.hole.recoverableBalls.length,
+          layeredEntities:
+            layeredCourseEntityCount,
+          atlasCells:
+            atlasCellCache.size,
+        },
+        highWater: {
+          ...runtimePerformance
+            .resourceHighWater,
+          worldEffects: Math.max(
+            runtimePerformance
+              .resourceHighWater
+              .worldEffects || 0,
+            state.hole
+              .peakWorldEffects || 0,
+          ),
+          worldParticles: Math.max(
+            runtimePerformance
+              .resourceHighWater
+              .worldParticles || 0,
+            state.hole
+              .peakWorldParticles || 0,
+          ),
+          screenParticles: Math.max(
+            runtimePerformance
+              .resourceHighWater
+              .screenParticles || 0,
+            state.hole
+              .peakScreenParticles || 0,
+          ),
+          groundResponses: Math.max(
+            runtimePerformance
+              .resourceHighWater
+              .groundResponses || 0,
+            state.hole
+              .peakGroundResponses || 0,
+          ),
+        },
+        caps: {
+          worldEffects:
+            MAX_WORLD_EFFECTS,
+          worldParticles:
+            MAX_MOWER_WORLD_PARTICLES,
+          screenParticles:
+            MAX_SCREEN_PARTICLES,
+          groundResponses:
+            MAX_PLAYER_GROUND_RESPONSES,
+          mowedMarks:
+            MAX_MOWED_MARKS,
+          playerTracks:
+            MAX_PLAYER_TRACKS,
+          captions: 3,
+        },
+        contract:
+          "all_high_frequency_effect_families_are_bounded_and_report_high_water_marks",
+      },
+      lifecycle: {
+        ...runtimePerformance.lifecycle,
+        hiddenTabPolicy:
+          "auto_pause_and_suspend_audio_until_explicit_resume",
+      },
+    },
+    assets: {
+      boot: assetPhaseSummary("boot"),
+      course:
+        assetPhaseSummary("course"),
+      results:
+        assetPhaseSummary("results"),
+      failed:
+        assetLoading.errors.slice(),
+      contract:
+        "boot_then_course_then_results_with_visible_progress_and_fallback_on_failure",
+    },
+    accessibility: {
+      canvasLabel:
+        canvas.getAttribute("aria-label"),
+      describedBy:
+        canvas.getAttribute(
+          "aria-describedby",
+        ),
+      liveStatus:
+        lastAccessibleStatus,
+      reducedMotion:
+        state.reducedMotion,
+      subtitles: state.subtitles,
+      threatCaptions:
+        state.threatCaptions,
+    },
+    readiness: {
+      ...releaseReadinessSummary(),
+      auditHook:
+        "window.audit_rough_cut_readiness()",
     },
     introTimeSeconds: Number(state.time.toFixed(2)),
     selectedMenuItem: state.mode === "menu" || state.mode === "claim"
@@ -57601,6 +67176,11 @@
       captionBackground: Number(state.captionBackground.toFixed(2)),
       threatCaptions: state.threatCaptions,
       reducedMotion: state.reducedMotion,
+      effectsDensity: Number(
+        state.effectsDensity.toFixed(2),
+      ),
+      highContrastNavigation:
+        state.highContrastNavigation,
       returnTarget: state.settingsReturnMode,
       pausedRunContext:
         state.mode === "settings" &&
@@ -57626,22 +67206,22 @@
                   12 * state.subtitleSize,
                 );
               const cardTop =
-                526 - previewSize - 11;
-              const cardBottom = 526 + 9;
+                532 - previewSize - 11;
+              const cardBottom = 532 + 9;
               return {
-                panelTop: 480,
-                panelBottom: 540,
-                headerBaseline: 494,
-                headerTextBottom: 496,
+                panelTop: 492,
+                panelBottom: 542,
+                headerBaseline: 503,
+                headerTextBottom: 505,
                 cardTop,
                 cardBottom,
                 headerClearancePixels:
-                  cardTop - 496,
+                  cardTop - 505,
                 bottomPaddingPixels:
-                  540 - cardBottom,
+                  542 - cardBottom,
                 footerBaseline: 548,
                 footerClearancePixels:
-                  548 - 540,
+                  548 - 542,
                 categoryLabel:
                   state.threatCaptions
                     ? "MOWER // AMBER"
@@ -58491,6 +68071,31 @@
                     "survival_briefing",
                   liveHudVisible: false,
                   worldContextVisible: true,
+                  viewport:
+                    (() => {
+                      const presentation =
+                        tutorialBriefingViewportPresentation();
+                      return {
+                        compact:
+                          presentation.compact,
+                        layout:
+                          presentation.layout,
+                        canvasScale:
+                          Number(
+                            presentation.canvasScale.toFixed(
+                              3,
+                            ),
+                          ),
+                        density:
+                          presentation.density,
+                        criticalFontFloor:
+                          presentation.criticalFontFloor,
+                        panel:
+                          presentation.panel,
+                        rule:
+                          presentation.rule,
+                      };
+                    })(),
                   rule:
                     "briefing_owns_instruction_layer_over_course_world",
                 }
@@ -58500,6 +68105,13 @@
               state.hole.quickRematch,
             briefingSkipped:
               state.hole.quickRematch,
+            controlRestoredImmediately:
+              state.hole.quickRematch &&
+              !state.hole.tutorialVisible,
+            hudMode:
+              state.hole.quickRematch
+                ? "compact_counterplan"
+                : "standard",
             target:
               state.hole.rematchTarget
                 ? {
@@ -58845,6 +68457,8 @@
                               state.hole.riskAward.age,
                           ).toFixed(2),
                         ),
+                      presentation:
+                        riskPremiumAwardPresentation(),
                     }
                   : null,
             },
@@ -58967,6 +68581,33 @@
                     courseEchoResultAdjudication(
                       state.hole.result,
                     ),
+                  cleanBreakLedger:
+                    state.hole.result
+                      ? {
+                          completed:
+                            state.hole
+                              .result
+                              .signalBreakawaysCompleted,
+                          count:
+                            state.hole
+                              .result
+                              .signalBreakawayCount,
+                          required:
+                            state.hole
+                              .result
+                              .signalBreakawayRequired,
+                          deliveryBonus:
+                            state.hole
+                              .result
+                              .signalBreakawayBonus,
+                          perfect:
+                            state.hole
+                              .result
+                              .perfectSignalMask,
+                          presentation:
+                            "integrated_into_delivery_score_line",
+                        }
+                      : null,
                 }
               : null,
           captureReview:
@@ -58995,6 +68636,8 @@
                       : "restrained_tableau_breath_ground_haze_and_periodic_review_sweep",
                   interfaceProtection:
                     "aftermath_clipped_above_result_panel",
+                  cleanBreakLedger:
+                    cleanBreakDefeatPresentation(),
                   selectedAction:
                     resultActionPresentations(
                       "defeat",
@@ -59028,6 +68671,121 @@
                 : null,
             activeSignal:
               activeFieldActionSignal(),
+            pressureTransition: {
+              ...state.hole
+                .fieldCommitmentPressure,
+              pendingSeconds: Number(
+                state.hole
+                  .fieldCommitmentPressure
+                  .pendingSeconds.toFixed(
+                    3,
+                  ),
+              ),
+              presentation:
+                "safety_first_hysteresis_fast_escalation_slow_recovery_and_immediate_critical",
+              gameplayEffect: "none",
+            },
+            interactionFocus: (() => {
+              const focus =
+                readyInteractionFocusPresentation();
+              const advisory =
+                footingHazardAdvisoryFocusPresentation(
+                  Boolean(
+                    state.hole
+                      .environment
+                      ?.footingHazard,
+                  ),
+                  activeInteractionPromptOwner(),
+                  immediateNavigationMarkerOwner(),
+                );
+              return {
+                active: focus.active,
+                ownerTargetId:
+                  focus.ownerTargetId,
+                ownerLabel:
+                  focus.ownerLabel,
+                distantMarkerCardsDeferred:
+                  focus.active,
+                optionalFootingAdviceDeferred:
+                  advisory.deferred,
+                activeFootingHazardRetained:
+                  advisory
+                    .urgentLocalHazardRetained,
+                physicalArtRetained:
+                  focus
+                    .physicalArtRetained,
+                collisionTruthRetained:
+                  focus
+                    .collisionTruthRetained,
+                courseMapRetained:
+                  focus.courseMapRetained,
+                gameplayEffect: "none",
+                presentation:
+                  "ready_action_owns_a_quiet_commitment_lane_while_world_and_urgent_route_truth_remain",
+              };
+            })(),
+            signalBreakaway:
+              activeFieldActionBreakaway(),
+            holdPresentation:
+              fieldBreakawayHoldPanelPresentation(
+                activeFieldActionBreakaway(),
+              ),
+            mapHoldPresentation:
+              fieldBreakawayMapHoldPresentation(
+                activeFieldActionBreakaway(),
+              ),
+            signalBreakawayRecord: {
+              attempts:
+                state.hole
+                  .fieldSignalBreakaway
+                  .attempts,
+              completed:
+                state.hole
+                  .fieldSignalBreakaway
+                  .completed.slice(),
+              lastOutcome:
+                state.hole
+                  .fieldSignalBreakaway
+                  .lastOutcome,
+              lastNavigationHandoff:
+                state.hole
+                  .fieldSignalBreakaway
+                  .lastNavigationHandoff,
+              activeReward:
+                activeFieldSignalBreakawayRewardPresentation(),
+              activeMissFeedback:
+                state.hole
+                  .fieldSignalBreakaway
+                  .feedbackTimer > 0
+                  ? {
+                      ...state.hole
+                        .fieldSignalBreakaway
+                        .lastFeedback,
+                      remainingSeconds:
+                        Number(
+                          state.hole
+                            .fieldSignalBreakaway
+                            .feedbackTimer.toFixed(
+                              2,
+                            ),
+                        ),
+                      deferredBy:
+                        fieldSignalBreakawayMissDeferredBy(),
+                      presentation:
+                        "queued_beneath_immediate_survival_signals_then_resumes_in_the_existing_bottom_rail",
+                    }
+                  : null,
+              lastFeedback:
+                state.hole
+                  .fieldSignalBreakaway
+                  .lastFeedback,
+              quietRequiredSeconds:
+                FIELD_SIGNAL_QUIET_SECONDS,
+              baseDeliveryBonus:
+                FIELD_SIGNAL_BREAKAWAY_BONUS,
+              liveHud:
+                cleanBreakHudPresentation(),
+            },
             searchHandoff:
               activeFieldActionSearch(),
             actions:
@@ -59236,6 +68994,16 @@
               ignore:
                 "allow the deadline to expire; Joe escalates to a longer, more precise sector search",
             },
+            investigation:
+              activeStatusRequestSignal(),
+            followUpSearch:
+              activeStatusRequestSearch(),
+            spatialConsequence:
+              activeStatusRequestSpatialConsequence(),
+            rearEdgeCue:
+              statusRequestRearEdgeCuePresentation(),
+            continuityRule:
+              "the chosen rough-grid or escalated-sector consequence remains named through Joe's investigation and follow-up search",
             onePerRun: true,
           },
           sprintReviews: {
@@ -59918,6 +69686,8 @@
             },
             guidance:
               footingHazardGuidanceForText(),
+            entrySignal:
+              footingHazardEntrySignalState(),
             zones:
               FOOTING_HAZARD_ZONES.map(
                 (zone) => ({
@@ -61339,7 +71109,11 @@
                 }
               : null,
           message:
-            state.hole.messageTimer > 0 &&
+            (
+              state.hole.messageTimer > 0 ||
+              fieldSignalBreakawayRewardCanPresent() ||
+              fieldSignalBreakawayMissCanPresent()
+            ) &&
             !state.hole.statusRequest.active &&
             !emergencyAppealOwnsSignalLane() &&
             !golfAimOwnsSignalLane() &&
@@ -61347,6 +71121,7 @@
             !cutTraceScanOwnsSignalLane() &&
             !listeningSearchReadOwnsSignalLane() &&
             !fieldInteractionPromptOwnsBottomRail() &&
+            !fieldBreakawayHoldOwnsBottomRail() &&
             !openingMovementMessageDeferredByPanel()
               ? holeMessageForPresentation()
               : null,
@@ -61377,6 +71152,7 @@
               cutTraceScanOwnsSignalLane() ||
               listeningSearchReadOwnsSignalLane() ||
               fieldInteractionPromptOwnsBottomRail() ||
+              fieldBreakawayHoldOwnsBottomRail() ||
               openingMovementMessageDeferredByPanel() ||
               holeMessageForPresentation() !==
                 state.hole.message
@@ -61393,6 +71169,7 @@
               cutTraceScanOwnsSignalLane() ||
               listeningSearchReadOwnsSignalLane() ||
               fieldInteractionPromptOwnsBottomRail() ||
+              fieldBreakawayHoldOwnsBottomRail() ||
               openingMovementMessageDeferredByPanel()
             )
               ? state.hole.statusRequest.active
@@ -61407,6 +71184,8 @@
                         ? "cut_trace"
                         : listeningSearchReadOwnsSignalLane()
                         ? "listening_search"
+                        : fieldBreakawayHoldOwnsBottomRail()
+                          ? "field_breakaway_hold_panel"
                         : openingMovementMessageDeferredByPanel()
                           ? "first_steps_panel"
                           : "interaction_prompt"
@@ -61458,6 +71237,14 @@
                       : cutTraceOwnsSignalLane()
                         ? "cut_trace"
                         : "listening_search"
+              : null,
+          interactionPromptOwner:
+            activeInteractionPromptOwner()
+              ? {
+                  ...activeInteractionPromptOwner(),
+                  arbitration:
+                    "one_bottom_rail_owner_matches_interact_priority; overlapping_world_markers_yield_without_claiming_the_binding",
+                }
               : null,
           blockedBy:
             state.hole.blockedTimer > 0 &&
@@ -61594,6 +71381,8 @@
                                 transfer.mode,
                             };
                           })(),
+                        stateBannerOwnership:
+                          collisionStateBannerRelationship(),
                       };
                     })(),
                 }
@@ -61665,6 +71454,8 @@
             threatCaptionSelectionPolicy:
               threatCaptionPresentation()
                 .selectionPolicy,
+            tensionDirectorCaptionConvergence:
+              tensionDirectorCaptionConvergenceState(),
             primaryThreatCaption:
               visibleThreatCaptions()[0]
                 ? {
@@ -61792,11 +71583,15 @@
                   visible:
                     joeStateBannerVisible(),
                   deferredBy:
-                    coverShredDirectionAndActionOwnSignal()
-                      ? "cover_shred_direction_and_action_pair"
-                      : falseRetreatDirectionAndCautionOwnSignal()
-                        ? "false_retreat_direction_and_caution_pair"
-                        : null,
+                    collisionStateBannerRelationship()
+                      .deferredBy ||
+                    (
+                      coverShredDirectionAndActionOwnSignal()
+                        ? "cover_shred_direction_and_action_pair"
+                        : falseRetreatDirectionAndCautionOwnSignal()
+                          ? "false_retreat_direction_and_caution_pair"
+                          : null
+                    ),
                   text:
                     state.hole.stateBanner,
                   direction:
@@ -62202,6 +71997,139 @@
                     .navigationGuide
                     .switchThresholdMeters,
               },
+              collisionRecovery:
+                state.mode ===
+                  "first_hole" &&
+                state.hole
+                  .navigationGuide
+                  .collisionRecovery
+                  ? {
+                      ...state.hole
+                        .navigationGuide
+                        .collisionRecovery,
+                      active: true,
+                      remainingDistance:
+                        Number(
+                          state.hole
+                            .navigationGuide
+                            .collisionRecovery
+                            .remainingDistance.toFixed(
+                              2,
+                            ),
+                        ),
+                      remainingSeconds:
+                        Number(
+                          Math.max(
+                            0,
+                            Math.min(
+                              NAVIGATION_COLLISION_RECOVERY_HOLD_SECONDS,
+                              state.hole
+                                .navigationGuide
+                                .collisionRecoveryExpiresAt -
+                                state.time,
+                            ),
+                          ).toFixed(2),
+                        ),
+                      recoveries:
+                        state.hole
+                          .navigationGuide
+                          .collisionRecoveries,
+                      routeOwner:
+                        "collision_contact_then_clearance_followthrough",
+                      handoff:
+                        "replan_to_objective_after_recovery_waypoint_or_safety_timeout",
+                      worldRoute: (() => {
+                        const presentation =
+                          collisionRecoveryWorldRoutePresentation(
+                            state.hole
+                              .navigationGuide
+                              .collisionRecovery,
+                          );
+                        return {
+                          visible:
+                            presentation.visible,
+                          startsAtPlayer:
+                            presentation.startsAtPlayer,
+                          visibleSegments:
+                            presentation.visibleSegments,
+                          markerVisible:
+                            presentation.markerVisible,
+                          cameraVisibility:
+                            Number(
+                              presentation.cameraVisibility.toFixed(
+                                3,
+                              ),
+                            ),
+                          deferredBy:
+                            presentation.deferredBy,
+                          instruction:
+                            presentation.instruction,
+                          targetLabel:
+                            presentation.targetLabel,
+                          obstacleId:
+                            presentation.obstacleId,
+                          phase:
+                            presentation.phase,
+                          rule:
+                            presentation.rule,
+                        };
+                      })(),
+                    }
+                  : {
+                      active: false,
+                      recoveries:
+                        state.hole
+                          .navigationGuide
+                          .collisionRecoveries,
+                    },
+              immediateRouteOverride:
+                (() => {
+                  const override =
+                    activeFootingNavigationOverride();
+                  if (!override) {
+                    return null;
+                  }
+                  return {
+                    id: override.id,
+                    owner:
+                      override.owner,
+                    zoneId:
+                      override.zoneId,
+                    zoneLabel:
+                      override.zoneLabel,
+                    instruction:
+                      override.instruction,
+                    direction:
+                      override.direction,
+                    targetLabel:
+                      override.targetLabel,
+                    distanceToClear:
+                      Number(
+                        override.distanceToClear.toFixed(
+                          2,
+                        ),
+                      ),
+                    minimumClearance:
+                      Number(
+                        override.minimumClearance.toFixed(
+                          2,
+                        ),
+                      ),
+                    objectiveTargetId:
+                      override.objectiveTargetId,
+                    objectiveTargetLabel:
+                      override.objectiveTargetLabel,
+                    objectiveRouteDeferred:
+                      true,
+                    mapHeader:
+                      `${override.instruction} // ${override.targetLabel} ${Math.ceil(override.distanceToClear)}m`,
+                    route:
+                      override.route,
+                    handoff:
+                      override.handoff,
+                    rule: override.rule,
+                  };
+                })(),
               direction:
                 effectiveGuidanceDirection(),
               rearBearingCue:
@@ -62234,14 +72162,84 @@
                       "guidance_only",
                   };
                 })(),
+              rearImmediateRouteHandoff:
+                (() => {
+                  const handoff =
+                    rearImmediateRouteHandoffPresentation();
+                  if (!handoff.active) {
+                    return null;
+                  }
+                  return {
+                    visible:
+                      handoff.visible,
+                    phase:
+                      handoff.phase,
+                    routeOwner:
+                      handoff.routeOwner,
+                    bodyInstruction:
+                      handoff.bodyInstruction,
+                    targetId:
+                      handoff.targetId,
+                    targetLabel:
+                      handoff.targetLabel,
+                    distance: Number(
+                      handoff.distance.toFixed(
+                        2,
+                      ),
+                    ),
+                    worldRouteDeferred:
+                      handoff.worldRouteDeferred,
+                    worldRouteAlpha:
+                      Number(
+                        handoff.camera.routeAlpha.toFixed(
+                          3,
+                        ),
+                      ),
+                    cueAlpha: Number(
+                      handoff.cueAlpha.toFixed(
+                        3,
+                      ),
+                    ),
+                    mapRetained:
+                      handoff.mapRetained,
+                    movementBodyRelative:
+                      handoff.movementBodyRelative,
+                    rule:
+                      handoff.rule,
+                  };
+                })(),
               pathWaypoints:
-                state.hole
-                  .navigationGuide
-                  .path.length,
+                activeFootingNavigationOverride()
+                  ? activeFootingNavigationOverride()
+                      .route.length - 1
+                  : state.hole
+                      .navigationGuide
+                      .path.length,
               nextWaypoint:
-                state.hole
-                  .navigationGuide
-                  .path.length > 0
+                activeFootingNavigationOverride()
+                  ? {
+                      x: Number(
+                        activeFootingNavigationOverride()
+                          .target.x.toFixed(
+                            2,
+                          ),
+                      ),
+                      y: Number(
+                        activeFootingNavigationOverride()
+                          .target.y.toFixed(
+                            2,
+                          ),
+                      ),
+                      distance: Number(
+                        activeFootingNavigationOverride()
+                          .distanceToClear.toFixed(
+                            2,
+                          ),
+                      ),
+                    }
+                  : state.hole
+                      .navigationGuide
+                      .path.length > 0
                   ? {
                       x: Number(
                         state.hole
@@ -62268,6 +72266,7 @@
                     }
                   : null,
               approach:
+                !activeFootingNavigationOverride() &&
                 state.hole
                   .navigationGuide
                   .approach
@@ -62308,12 +72307,16 @@
                         .target.radius,
                 ),
               visibleReflectors:
-                visibleNavigationRibbonEntries()
-                  .length,
+                activeFootingNavigationOverride()
+                  ? 0
+                  : visibleNavigationRibbonEntries()
+                      .length,
               routeThread: {
                 visibleSegments:
-                  visibleNavigationRibbonSegments()
-                    .length,
+                  activeFootingNavigationOverride()
+                    ? 0
+                    : visibleNavigationRibbonSegments()
+                        .length,
                 presentation: (() => {
                   const presentation =
                     navigationRibbonPresentation();
@@ -63480,6 +73483,12 @@
                   ? state.hole
                       .joeBark
                   : null,
+              barkPresentation:
+                state.hole
+                  .joeBarkTimer >
+                  0
+                  ? joeBarkSubtitlePresentation()
+                  : null,
               captureDialoguePool:
                 JOE_CAPTURE_LINES.length,
               dialogueLibrary: {
@@ -63595,84 +73604,6 @@
     requestAnimationFrame(frame);
   }
 
-  art.addEventListener("load", render);
-  grassArt.addEventListener("load", render);
-  nightSkyArt.addEventListener("load", render);
-  moonArt.addEventListener("load", render);
-  holeArt.addEventListener("load", render);
-  cloudAtlasArt.addEventListener("load", render);
-  distantTreeLineArt.addEventListener("load", render);
-  distantClubhouseArt.addEventListener("load", render);
-  farRidgeArt.addEventListener("load", render);
-  distantVillasArt.addEventListener("load", render);
-  estatePerimeterArt.addEventListener("load", render);
-  rearServiceBoundaryArt.addEventListener("load", render);
-  southServiceGateArt.addEventListener(
-    "load",
-    render,
-  );
-  signageAtlasArt.addEventListener("load", render);
-  bunkerAtlasArt.addEventListener("load", render);
-  joeMowerArt.addEventListener("load", render);
-  joeMowerAnimatedArt.addEventListener("load", render);
-  joeMowerErraticHeadArt.addEventListener("load", render);
-  shadowJoeArt.addEventListener("load", render);
-  horrorFlashJoeArt.addEventListener("load", render);
-  screenTearCourseArt.addEventListener("load", render);
-  fieldKitArt.addEventListener("load", render);
-  courseObstacleArt.addEventListener("load", render);
-  expandedCourseArt.addEventListener("load", render);
-  hedgeTunnelArt.addEventListener("load", render);
-  maintenanceShedArt.addEventListener("load", render);
-  hedgeHideArt.addEventListener("load", render);
-  stoneCoverArt.addEventListener("load", render);
-  serviceCartArt.addEventListener("load", render);
-  deadGreenSceneryArt.addEventListener("load", render);
-  foregroundFringeArt.addEventListener("load", render);
-  defeatArt.addEventListener("load", render);
-  joeExpressionArt.addEventListener("load", render);
-  drainArt.addEventListener("load", render);
-  pathLanternArt.addEventListener("load", render);
-  interactablePropArt.addEventListener(
-    "load",
-    render,
-  );
-  courseMechanicsArt.addEventListener(
-    "load",
-    render,
-  );
-  nightOrderObjectiveArt.addEventListener(
-    "load",
-    render,
-  );
-  courseClutterArt.addEventListener(
-    "load",
-    render,
-  );
-  courseVergeArt.addEventListener(
-    "load",
-    render,
-  );
-  courseBoundaryKitArt.addEventListener(
-    "load",
-    render,
-  );
-  footingHazardArt.addEventListener(
-    "load",
-    render,
-  );
-  wetTurfArt.addEventListener(
-    "load",
-    render,
-  );
-  movingGolfBallArt.addEventListener(
-    "load",
-    render,
-  );
-  courseEchoArt.addEventListener(
-    "load",
-    render,
-  );
   function primeHorrorOverlay(image) {
     if (
       image.complete &&

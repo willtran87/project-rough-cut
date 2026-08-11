@@ -4,9 +4,9 @@ Built-in ImageGen produced both production candidates on August 1, 2026. Existin
 
 ## Runtime assets
 
-- `web/assets/rough-cut-course-mechanics-atlas-v1-chroma.png` — original 1254×1254 chroma source.
+- `assets/source-atlases/rough-cut-course-mechanics-atlas-v1-chroma.png` — original 1254×1254 chroma source.
 - `web/assets/rough-cut-course-mechanics-atlas-v1.png` — transparent production atlas containing the field-test bell, Sprint Review chime, shed filing terminal, and drain release control.
-- `web/assets/rough-cut-turf-evidence-atlas-v1-chroma.png` — original 1672×941 chroma source.
+- `assets/source-atlases/rough-cut-turf-evidence-atlas-v1-chroma.png` — original 1672×941 chroma source.
 - `web/assets/rough-cut-turf-evidence-atlas-v1.png` — transparent production atlas containing three mower-cut ages, a divot, three surface-specific footprint pairs, and fairway compression.
 
 ## Course-mechanics prompt

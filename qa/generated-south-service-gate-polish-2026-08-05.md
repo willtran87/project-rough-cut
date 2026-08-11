@@ -13,7 +13,7 @@ The opening incident's locked south service gate is now a dedicated generated wo
 ## Art pipeline
 
 - Built-in OpenAI image generation produced one chroma-key source at `1774 × 887`.
-- The project preserves the chroma source, cleaned alpha runtime image, full prompt, cell bounds, and transparency details in `web/assets/rough-cut-south-service-gate-v1.md`.
+- The project preserves the chroma source, full prompt, cell bounds, and transparency details in `assets/source-atlases/rough-cut-south-service-gate-v1.md`; the cleaned alpha runtime image remains in `web/assets`.
 - Chroma removal detected `#fb06fa`; 711,948 pixels became fully transparent and 73,870 received partial alpha.
 - Direct alpha inspection confirmed transparent upper corners, connected pillars and gate leaves, preserved narrow ironwork, a readable chain and padlock, and no visible magenta field.
 

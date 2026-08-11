@@ -7,7 +7,7 @@ Make Joe feel like a course-aware predator rather than a single pursuer moving a
 ## Rear service-boundary panorama
 
 - Runtime asset: `web/assets/rough-cut-rear-service-boundary-v1.png`
-- Retained chroma source: `web/assets/rough-cut-rear-service-boundary-v1-chroma.png`
+- Retained chroma source: `assets/source-atlases/rough-cut-rear-service-boundary-v1-chroma.png`
 - Image-generation style reference: `web/assets/rough-cut-estate-perimeter-v2.png`
 - Native output: `2172x724` PNG.
 - Runtime crop: `{ x: 0, y: 206, width: 2172, height: 342 }`.

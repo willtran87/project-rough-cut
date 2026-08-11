@@ -34,6 +34,7 @@
 - [x] Reframe the player as the pilot's final "unplanned dependency" and the chase as Joe's live acceptance test.
 - [x] Make optional Change Requests evidence that Joe knew the pilot was unsafe, so collecting and filing them carries narrative as well as scoring value.
 - [x] Present the mandatory premise in a short, skippable survival briefing; quick rematches retain their existing briefing skip.
+- [x] Preserve the full visual dossier at standard and high resolution, but replace miniature desktop cards on small or short canvases with larger compact decision rows, two input-aware control lines, and one unmistakable start action.
 
 ### Opening and Menu
 
@@ -53,6 +54,7 @@
 - [x] Support WASD and arrow-key movement.
 - [x] Support Shift to sprint, C to crouch, Enter to interact, hold Space plus A/D to aim and chip a golf-ball distraction, H to recall controls, and Escape to cancel a shot or pause.
 - [x] Support a hold-to-glance rear view through a rebindable R key, R3 on gamepad, and a dedicated multi-touch button; rotate the projected course 180 degrees while keeping movement, collision, concealment, interactions, and Joe's AI body-relative and unchanged.
+- [x] Prevent body-relative collision-clearance and slow-footing routes from mirroring across the rear-view ground. Fade their forward world geometry before the turn completes, retain the exact route on the map, name the release/body-direction handoff, and restore the same route when the camera returns forward.
 - [x] Teach the rear glance in the briefing, How to Survive page, adaptive HUD, touch layer, controller copy, and text-state contract; use a clear rear-view frame and Joe-distance read without removing the persistent map.
 - [x] Keep the rear glance accessible under Reduced Camera Motion by preserving the tactical viewpoint while removing directional streaks and reducing transitional shift, roll, and scale.
 - [x] Give the rear glance its own image-generated service-boundary panorama instead of reusing the forward horizon; keep the gate, guard kiosk, pipes, utility sheds, fence, security lamps, and annex on an alpha-ready architectural plane beneath the independent sky, moon, clouds, and fog.
@@ -63,12 +65,30 @@
 - [x] Provide a locked shed as the escape target.
 - [x] Provide a sprinkler valve that creates a major distraction and opens the alternate drainage route.
 - [x] Give the player a limited supply of four golf balls for aimed chip-shot distractions.
+- [x] Preview every mandatory field check's exact loud-signal duration, Joe verification consequence, and named solid-cover answer in the authoritative input-aware action rail before activation; preserve that same cover as the post-action breakaway target.
+- [x] Once the exact breakaway cover is reached, replace the destination marker with one screen-stable quiet-hold panel that combines stillness progress, Joe's remaining verification time, the named-cover instruction, and `SIGNAL MASKED` success without detached debug-like glyphs or gameplay changes.
+- [x] Make the persistent map share that same reached-cover truth: route by cover distance before arrival, show live `HOLD STILL` progress during the commitment, switch to `MASKED // STAY HIDDEN` on completion, invalidate its cache on each critical phase boundary, and restore the next objective immediately after signal expiry.
+- [x] Preserve each loud station's promised physical cover across every navigation consumer. Keep `BREAK SIGNAL` as the reason while the route card, first-person target, rear bearing, course map, and diagnostics name Hedge Tunnel, Service Cart, or Range Cart until arrival.
+- [x] Give the reached-cover hold panel exclusive ownership of its instruction lane. Suppress the redundant result and handoff rail while preserving their timers and state so relevant consequence copy can return if cover is abandoned.
+- [x] Resolve a successful station signal and select the next authored route on the same frame. Refresh first-person guidance and invalidate the persistent map before presenting Clean Break so completed `HOLD QUIET 0m` copy cannot survive beneath the reward.
+- [x] Give earned Clean Break feedback a distinct mint success surface while leaving misses and ordinary consequences danger-orange; retain survival-first reward deferral, timing, score, and gameplay behavior.
+- [x] Pause an earned Clean Break lesson while urgent danger or interaction feedback owns the bottom rail, then resume its full remaining duration without erasing the next route or persistent mastery count.
+- [x] Phrase every missed Clean Break after resolution as past cause, next-attempt rule, and named live follow-up station; never tell the player to complete an already-expired check or fall back to a generic `next station` while the route is known.
+- [x] Defer optional missed-Clean-Break coaching while Joe is following a live trail chain, preserving the full remaining lesson timer until `CHANGE SURFACE` and its immediate counter-route instruction yield.
+- [x] Keep generated in-reach objects, their planted bases, use rings, and consequence copy visually clear by moving Risk Premium feedback to the open top-center lane until the interaction owner yields.
+- [x] Make the current wait-or-commit risk readable at every in-reach loud station: derive a four-tier pressure cue from Joe's live mode, distance, line of sight, and alert; apply it to the generated station ring, local label, and action frame; and never block Interact or alter the authored consequence.
+- [x] Keep that pressure surface visually and tactically honest: share one tier across outline, translucent fill, pulse, label, and frame; treat long-range investigation or search as `WATCH JOE` until Joe physically closes; hold all pulses static under Reduced Camera Motion; and preserve the value of a successful golf-ball diversion.
+- [x] Keep optional Joe dialogue from covering a ready generated object. Relocate the bark subtitle to the open top-center lane without expiring its authored timer while the object, footprint, local status, action, and consequence retain the physical decision lane.
+- [x] Prevent pressure-tier chatter at a ready loud station. Confirm sustained non-critical escalation quickly, confirm recovery more deliberately, clear an unfinished transition when the raw state reverses, reset memory when interaction ownership changes, and show critical chase, sightline, or proximity immediately.
+- [x] Give a ready world interaction exclusive visual focus: unrelated distant marker cards and optional footing-bypass cards/routes yield together, its named breakaway inherits focus after commitment, overlapping reachable actions and the persistent map remain truthful, and any active footing escape stays authoritative.
 - [x] Make the complete chip consequence readable before release and honest after it: show first impact and projected rest in the first-person view and persistent map, animate a damped bounce and decelerating roll, use the live wet/sand/rough/mower-cut terrain state, stop or bank against the same solid ellipses used by traversal, keep every endpoint inside the maintained course, vary Joe's lure commitment by lie, and leave the final ball reclaimable.
 - [x] Make fairway travel quieter but more exposed.
 - [x] Make rough travel noisier but more concealed.
 - [x] Turn course weather into a readable stealth opportunity: a 1.35-second grass-and-fog Crosswind warning opens 4.4 seconds of 42%-noise non-sand travel, preserves sight and physical tracks, excludes active pursuit and bunker sand, and rewards a 30-meter Wind Run through a capped Delivery family.
 - [x] Give Joe patrol, investigate, search, and chase states, including paced print-to-print turf investigation that physically routes him through discovered evidence.
 - [x] Give Joe three readable course-predator tactics: the warned service intercept, a falling-throttle False Retreat with a committed snapback, and Cover Shred, which telegraphs one threatened rough lane before converting its concealment into the persistent mower-cut network. Cancel special movement on direct sight, sound, or point-blank contact and enforce a shared cooldown.
+- [x] Give each ambient Tension Director beat one edited visual read: when its directional mower echo and synonymous grass, bird, or fog omen overlap, retain the stronger directional caption, preserve unrelated danger in the second slot, and leave standalone omens intact without changing cadence, AI, detection, or audio.
+- [x] Keep slow-footing signals role-specific: the immediate bottom rail, map header, and grounded corridor name the safe exit, while the field caption points only to Joe's real bearing. Never derive a tactical direction from the player's own entry position or let it compete with the authored bypass.
 - [x] Project Joe's mower beam through the ground fog as a restrained lane warning before his full sprite is legible; vary the treatment by pursuit and Cover Shred state without hiding objectives, interaction markers, or collision cues.
 - [x] Give all eight authored course zones one first-visit scare identity—boundary knock, hedge breath, submerged lights, door cycle, hedge breach, black sprinklers, range volley, and release sweep—without adding collision or changing detection.
 - [x] Track presentation-only Composure from Steady to Panic using real threat pressure, quiet recovery, the attention panel, heartbeat, vignette, and edge treatment. Never alter input, player speed, Joe speed, collision, detection, or actions; remove animated interference under Reduced Camera Motion.
@@ -468,6 +488,9 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Prevent Joe from seeing through terrain, closed opaque doors, or solid architecture without a specific explained tool.
 - [ ] Give accessibility options that clarify evidence and detection rules without trivializing stealth.
 
+- [x] Give collision clearance, slow-footing escape, and mandatory station breakaway exclusive ownership of distant navigation plaques while their short-horizon route is active. Physical generated props and exact interaction footprints remain visible; an action inside its real use radius overrides suppression, and ordinary objective/alternate marker emphasis returns immediately after clearance.
+- [x] Preserve that immediate-route ownership while the round is frozen: pause and paused Settings repeat the active collision-clearance or slow-footing direction, landmark, and distance, retain the long-horizon objective as the active file, and resume without changing the visible decision.
+
 ## Joe's Pursuit and Capture
 
 - [ ] Make active pursuit intense, readable, and shorter than the broader periods of stalking and uncertainty.
@@ -495,7 +518,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Turn backlog ownership, product goals, sprint commitments, dependencies, stakeholder pressure, and acceptance criteria into spatial, systemic, and threatening mechanics.
 - [ ] Use **scope lock** to close, redefine, or constrain routes in ways the player can anticipate and counter.
 - [ ] Use **action items** to mark objectives, locations, or player obligations that increase danger when ignored.
-- [x] Use **status requests** to create timed responses, audible devices, forced choices, or escalating searches. Each Night Order now issues one 5.4-second mid-course request: a 1.15-second stationary acknowledgment earns a Delivery beat but shares a rough location ping, movement cancels the response while the deadline runs, ignoring triggers a longer precise-sector search, and active pursuit supersedes the request without penalty.
+- [x] Use **status requests** to create timed responses, audible devices, forced choices, or escalating searches. Each Night Order now issues one 5.4-second mid-course request: a 1.15-second stationary acknowledgment earns a Delivery beat but shares a rough location ping, movement cancels the response while the deadline runs, ignoring triggers a longer precise-sector search, and active pursuit supersedes the request without penalty. The acknowledged grid and escalated sector retain distinct labels, projected world/map footprints, inside/outside distance-to-edge feedback, and a bounded behind-camera cue through Joe's investigation and follow-up search.
 - [ ] Use **risk registers** to reveal, distort, prioritize, or weaponize hazards across the course.
 - [ ] Use **change requests** to alter objectives, access rules, or route requirements after the player has committed.
 - [ ] Use **stakeholder escalation** to activate cameras, staff, gates, lights, announcements, or additional surveillance.
@@ -504,6 +527,7 @@ Image generation is an approved and central part of the Rough Cut art pipeline. 
 - [ ] Use **deductibles** as explicit costs paid in resources, time, exposure, or objective progress.
 - [ ] Use **change rejection** to revoke an apparent solution and force dangerous refinement or an alternate route.
 - [x] Use **appeals** as high-risk opportunities to reverse Joe's control or recover a lost option. A carried Change Request can be sacrificed once inside a 10–26m pursuit window to compel a 3.6-second Joe review; the player permanently loses its +650 evidence value and filing credit, receives no Risk Premium, and remains vulnerable at point blank.
+- [x] Keep the Change Request's persistent HUD state honest after its pickup message expires: available evidence uses `CR ◇ +650`, secured but unfiled evidence uses `CR ✓ BANK +650`, the close-chase decision uses `CR ! APPEAL READY`, and a consumed document uses `CR X APPEALED`.
 - [ ] Use **incident reports** to preserve evidence of the player's mistakes and change later searches.
 - [ ] Use **dependency blockers** to connect course machinery, keys, permissions, and objectives in understandable ways.
 - [ ] Use **rebaselining** to change timing or route conditions without arbitrarily deleting completed progress.
