@@ -13,7 +13,7 @@ The automated release gate is complete only when all of the following are true:
 - Runtime assets have valid image headers, no unreferenced shipped art, and no source atlas masters in the deployed bundle.
 - Representative browser replays produce no page or console errors at desktop, compact, and high-resolution viewports.
 
-Current baseline: 55/55 readiness checks, 87 deterministic fixtures, 48 runtime image assets, and a 60.75 MB deployed image payload.
+Current baseline: 57/57 readiness checks, 89 deterministic fixtures, 48 runtime image assets, and a 60.75 MB deployed image payload.
 
 ### 2026-08-13 browser evidence
 

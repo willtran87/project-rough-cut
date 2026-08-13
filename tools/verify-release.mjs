@@ -100,7 +100,9 @@ requireCondition(gameJs.includes("effectsDensity"), "Atmosphere-density control 
 requireCondition(
   gameJs.includes("pursuitIntensity") &&
     gameJs.includes("joePursuitIntensityMultiplier") &&
-    gameJs.includes("pursuit_intensity_player_choice"),
+    gameJs.includes("pursuit_intensity_player_choice") &&
+    gameJs.includes("pursuitIntensityHelpPresentation") &&
+    gameJs.includes("pursuit_intensity_help_clarity"),
   "The persisted Steady / Standard / Relentless Joe-pressure setting is missing.",
 );
 requireCondition(gameJs.includes("audit_rough_cut_readiness"), "The callable product-readiness audit is missing.");
@@ -401,8 +403,8 @@ requireCondition(
   "The product enhancement closure matrix is missing its automated acceptance condition.",
 );
 requireCondition(
-  releaseAcceptance.includes("55/55 readiness checks") &&
-    releaseAcceptance.includes("87 deterministic fixtures") &&
+  releaseAcceptance.includes("57/57 readiness checks") &&
+    releaseAcceptance.includes("89 deterministic fixtures") &&
     releaseAcceptance.includes("48 runtime image assets"),
   "The release-acceptance baseline is missing its auditable software qualification counts.",
 );

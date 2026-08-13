@@ -12166,6 +12166,34 @@
     return `${Math.round(state[setting.key] * 100)}%`;
   }
 
+  /**
+   * Keeps the Joe-pressure explanation inside the existing contextual
+   * preview lane, so players can understand the option without adding
+   * another settings panel or obscuring the playable course.
+   */
+  function pursuitIntensityHelpPresentation(
+    selectedSetting = SETTINGS_ROWS[state.settingsIndex],
+  ) {
+    const active =
+      selectedSetting?.id ===
+      "pursuit_intensity";
+    if (!active) {
+      return null;
+    }
+    return {
+      active: true,
+      tier: settingDisplayValue(
+        selectedSetting,
+      ),
+      lines: [
+        "ONLY JOE SPEED + DETECTION CHANGE.",
+        "ROUTES, COVER, TERRAIN, AND TIMERS STAY FAIR.",
+      ],
+      rule:
+        "pursuit_intensity_changes_joe_pressure_without_changing_course_geometry_or_player_counterplay",
+    };
+  }
+
   function drawSettingsToggle(
     row,
     label,
@@ -12705,6 +12733,8 @@
         );
       }
     }
+    const pressureHelp =
+      pursuitIntensityHelpPresentation();
     ctx.fillStyle = "rgba(15,30,17,0.86)";
     ctx.fillRect(676, 492, 420, 50);
     strokeRect(676, 492, 420, 50, "#4e6442", 1);
@@ -12745,6 +12775,35 @@
         "#788274",
         "center",
         true,
+      );
+    }
+    if (pressureHelp) {
+      ctx.fillStyle = "rgba(15,30,17,0.96)";
+      ctx.fillRect(678, 494, 416, 46);
+      drawText(
+        `JOE PRESSURE // ${pressureHelp.tier}`,
+        688,
+        506,
+        10,
+        "#e4ad6d",
+        "left",
+        true,
+      );
+      drawText(
+        pressureHelp.lines[0],
+        688,
+        521,
+        9,
+        "#dce4cd",
+        "left",
+      );
+      drawText(
+        pressureHelp.lines[1],
+        688,
+        534,
+        9,
+        "#aebba4",
+        "left",
       );
     }
     drawText(
@@ -66578,6 +66637,22 @@
           "collision geometry, objective timing, terrain costs, interaction ranges, and tactical counterplay",
       },
     );
+    const selectedPursuitHelp =
+      pursuitIntensityHelpPresentation(
+        SETTINGS_ROWS.find(
+          (setting) =>
+            setting.id ===
+            "pursuit_intensity",
+        ),
+      );
+    addCheck(
+      "pursuit_intensity_help_clarity",
+      selectedPursuitHelp?.active &&
+        selectedPursuitHelp.lines.length === 2 &&
+        selectedPursuitHelp.rule ===
+          "pursuit_intensity_changes_joe_pressure_without_changing_course_geometry_or_player_counterplay",
+      selectedPursuitHelp,
+    );
     addCheck(
       "dialogue_variety_contract",
       JOE_CAPTURE_LINES.length >= 40 &&
@@ -67278,6 +67353,8 @@
           : state.pursuitIntensity > 1.1
             ? "relentless"
             : "standard",
+      pursuitIntensityHelp:
+        pursuitIntensityHelpPresentation(),
       returnTarget: state.settingsReturnMode,
       pausedRunContext:
         state.mode === "settings" &&

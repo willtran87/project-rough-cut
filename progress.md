@@ -4,12 +4,13 @@ Original prompt: continue to refine and polish the game experience, make sure th
 
 - Added a persisted `JOE PRESSURE` field option with three deliberate tiers: `STEADY` (0.8), `STANDARD` (1.0), and `RELENTLESS` (1.2). The setting scales only Joe's movement and detection accumulation; collision geometry, objective timing, terrain costs, interaction ranges, and established counterplay do not change.
 - The setting is visible in Field Options, exported through `render_game_to_text`, protected by the `pursuit_intensity_player_choice` readiness contract, and statically enforced by `tools/verify-release.mjs`.
+- Selecting Joe Pressure now replaces the generic caption preview with an in-context two-line fairness explanation. `pursuit_intensity_help_clarity` verifies the explanation remains available without changing gameplay.
 
 ## Release-acceptance closure and evidence gate (2026-08-13)
 
-- Re-audited the current product-enhancement findings. The vertical slice already implements their software-facing route clarity, fair-pressure, accessibility, asset integrity, performance instrumentation, retry, and replayability contracts; current browser readiness is 55/55 and 87 deterministic fixtures cover the release surface.
+- Re-audited the current product-enhancement findings. The vertical slice already implements their software-facing route clarity, fair-pressure, accessibility, asset integrity, performance instrumentation, retry, and replayability contracts; current browser readiness is 57/57 and 89 deterministic fixtures cover the release surface.
 - Added `qa/release-acceptance-gates-2026-08-13.md`: one explicit software qualification gate plus four honest human acceptance sessions for keyboard/mouse, controller, touch, and a 10–15 minute mid-tier soak. Each names the required route, pass condition, and evidence record so subjective tuning can be reproduced instead of guessed.
-- `tools/verify-release.mjs` now requires that acceptance record and its auditable 55/55, 87-fixture, 48-asset baseline before a build qualifies. The physical sessions are intentionally pending: browser automation cannot certify real input feel, device safe areas, thermal behavior, or sustained hardware frame pacing.
+- `tools/verify-release.mjs` now requires that acceptance record and its auditable 57/57, 89-fixture, 48-asset baseline before a build qualifies. The physical sessions are intentionally pending: browser automation cannot certify real input feel, device safe areas, thermal behavior, or sustained hardware frame pacing.
 
 ## Slow-footing threat/route role-separation polish (2026-08-10)
 
