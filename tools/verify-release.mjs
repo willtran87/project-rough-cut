@@ -97,6 +97,12 @@ requireCondition(gameJs.includes('maxConcurrentLoads: 4'), "The bounded asset lo
 requireCondition(gameJs.includes("beginGameplayPerformanceWindow"), "Gameplay performance-window isolation is missing.");
 requireCondition(gameJs.includes("highContrastNavigation"), "High-contrast route support is missing.");
 requireCondition(gameJs.includes("effectsDensity"), "Atmosphere-density control is missing.");
+requireCondition(
+  gameJs.includes("pursuitIntensity") &&
+    gameJs.includes("joePursuitIntensityMultiplier") &&
+    gameJs.includes("pursuit_intensity_player_choice"),
+  "The persisted Steady / Standard / Relentless Joe-pressure setting is missing.",
+);
 requireCondition(gameJs.includes("audit_rough_cut_readiness"), "The callable product-readiness audit is missing.");
 requireCondition(gameJs.includes("zonePerformanceSummary"), "Per-zone render telemetry is missing.");
 requireCondition(gameJs.includes("MAX_WORLD_EFFECTS"), "World effects are not explicitly bounded.");
@@ -463,6 +469,14 @@ requireCondition(
 requireCondition(
   actionFiles.includes("release-hardening-field-signal-breakaway.json"),
   "The staged-load field-signal breakaway regression is missing.",
+);
+requireCondition(
+  actionFiles.includes("release-hardening-pursuit-intensity.json"),
+  "The persisted Joe-pressure settings regression is missing.",
+);
+requireCondition(
+  actionFiles.includes("release-hardening-pursuit-intensity-gameplay.json"),
+  "The Joe-pressure setting-to-gameplay regression is missing.",
 );
 for (const actionFile of actionFiles) {
   try {

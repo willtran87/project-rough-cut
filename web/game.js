@@ -311,6 +311,7 @@
     { id: "reduced_motion", group: "presentation", label: "REDUCED CAMERA MOTION", key: "reducedMotion", type: "toggle" },
     { id: "effects_density", group: "presentation", label: "ATMOSPHERE DENSITY", key: "effectsDensity", type: "slider", min: 0.5, max: 1, step: 0.25 },
     { id: "navigation_contrast", group: "presentation", label: "HIGH-CONTRAST ROUTES", key: "highContrastNavigation", type: "toggle" },
+    { id: "pursuit_intensity", group: "presentation", label: "JOE PRESSURE", key: "pursuitIntensity", type: "slider", min: 0.8, max: 1.2, step: 0.2 },
   ];
   const KEYBOARD_BINDING_ROWS = [
     { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
@@ -5836,6 +5837,25 @@
         highContrastNavigation:
           parsed.highContrastNavigation ===
           true,
+        pursuitIntensity:
+          Number.isFinite(parsed.pursuitIntensity)
+            ? Number(
+                (
+                  0.8 +
+                  Math.round(
+                    (
+                      clamp(
+                        parsed.pursuitIntensity,
+                        0.8,
+                        1.2,
+                      ) -
+                      0.8
+                    ) / 0.2,
+                  ) *
+                    0.2
+                ).toFixed(2),
+              )
+            : 1,
         keyboardBindings:
           validKeyboardBindings(
             parsed.keyboardBindings,
@@ -5857,6 +5877,7 @@
           systemReducedMotion,
         effectsDensity: 1,
         highContrastNavigation: false,
+        pursuitIntensity: 1,
         keyboardBindings:
           defaultKeyboardBindings(),
       };
@@ -6167,6 +6188,8 @@
     highContrastNavigation:
       savedPreferences
         .highContrastNavigation,
+    pursuitIntensity:
+      savedPreferences.pursuitIntensity,
     volume: savedPreferences.volume,
     ambienceVolume: savedPreferences.ambienceVolume,
     mowerVolume: savedPreferences.mowerVolume,
@@ -6638,6 +6661,9 @@
           ),
           highContrastNavigation:
             state.highContrastNavigation,
+          pursuitIntensity: Number(
+            state.pursuitIntensity.toFixed(2),
+          ),
           keyboardBindings: {
             ...state.keyboardBindings,
           },
@@ -12099,19 +12125,19 @@
     return {
       x: setting.group === "audio" ? 676 : 892,
       y:
-        230 +
+        (setting.group === "presentation" ? 220 : 230) +
         groupIndex *
           (
             setting.group ===
             "presentation"
-              ? 37
+              ? 33
               : 49
           ),
       width: 204,
       height:
         setting.group ===
         "presentation"
-          ? 35
+          ? 31
           : 43,
     };
   }
@@ -12130,6 +12156,13 @@
   }
 
   function settingDisplayValue(setting) {
+    if (setting.id === "pursuit_intensity") {
+      return state.pursuitIntensity < 0.9
+        ? "STEADY"
+        : state.pursuitIntensity > 1.1
+          ? "RELENTLESS"
+          : "STANDARD";
+    }
     return `${Math.round(state[setting.key] * 100)}%`;
   }
 
@@ -12594,7 +12627,7 @@
     ctx.stroke();
 
     drawText("AUDIO MIX", 686, 213, 13, "#8f9e84", "left", true);
-    drawText("PRESENTATION", 902, 213, 13, "#8f9e84", "left", true);
+    drawText("FIELD OPTIONS", 902, 213, 13, "#8f9e84", "left", true);
     const selectedSetting = settingsRowGeometry(state.settingsIndex);
     ctx.fillStyle = "rgba(50,72,28,0.36)";
     ctx.fillRect(
@@ -26654,7 +26687,8 @@
         (actionableSight || directSound)
           ? OVERTIME_DETECTION_MULTIPLIER
           : 1
-      );
+      ) *
+      joePursuitIntensityMultiplier();
     const wakeDetectionFloor =
       hole.verticalPassPressure
         .active
@@ -31032,6 +31066,19 @@
     }
   }
 
+  /**
+   * Returns the player-selected multiplier for Joe's pursuit only.
+   * The setting deliberately leaves collision, objective timing, terrain,
+   * interaction ranges, and tactical counterplay untouched.
+   */
+  function joePursuitIntensityMultiplier() {
+    return clamp(
+      state.pursuitIntensity,
+      0.8,
+      1.2,
+    );
+  }
+
   function joeCoursePressureMultiplier() {
     const progress =
       clamp(
@@ -31058,6 +31105,7 @@
     const effectiveSpeed =
       speed *
       joeCoursePressureMultiplier() *
+      joePursuitIntensityMultiplier() *
       (
         state.hole.overtime
           ? OVERTIME_JOE_SPEED_MULTIPLIER
@@ -62939,10 +62987,25 @@
   }
 
   function applySliderSetting(setting, value) {
-    state[setting.key] = clamp(
+    const clampedValue = clamp(
       value,
       setting.min,
       setting.max,
+    );
+    const steppedValue =
+      setting.step > 0
+        ? setting.min +
+          Math.round(
+            (clampedValue - setting.min) /
+              setting.step,
+          ) * setting.step
+        : clampedValue;
+    state[setting.key] = Number(
+      clamp(
+        steppedValue,
+        setting.min,
+        setting.max,
+      ).toFixed(4),
     );
     if (audioContext) {
       const gainTargets = {
@@ -66487,8 +66550,33 @@
           "boolean" &&
         typeof state
           .highContrastNavigation ===
-          "boolean",
-      "live status, control description, subtitles, threat captions, reduced motion, and route contrast",
+          "boolean" &&
+        Number.isFinite(
+          state.pursuitIntensity,
+        ) &&
+        state.pursuitIntensity >= 0.8 &&
+        state.pursuitIntensity <= 1.2,
+      "live status, control description, subtitles, threat captions, reduced motion, route contrast, and bounded Joe pressure",
+    );
+    addCheck(
+      "pursuit_intensity_player_choice",
+      joePursuitIntensityMultiplier() ===
+        state.pursuitIntensity &&
+        [0.8, 1, 1.2].includes(
+          state.pursuitIntensity,
+        ),
+      {
+        selected: state.pursuitIntensity,
+        tiers: {
+          steady: 0.8,
+          standard: 1,
+          relentless: 1.2,
+        },
+        affects:
+          "Joe movement and detection scaling only",
+        preserves:
+          "collision geometry, objective timing, terrain costs, interaction ranges, and tactical counterplay",
+      },
     );
     addCheck(
       "dialogue_variety_contract",
@@ -67181,6 +67269,15 @@
       ),
       highContrastNavigation:
         state.highContrastNavigation,
+      pursuitIntensity: Number(
+        state.pursuitIntensity.toFixed(2),
+      ),
+      pursuitIntensityTier:
+        state.pursuitIntensity < 0.9
+          ? "steady"
+          : state.pursuitIntensity > 1.1
+            ? "relentless"
+            : "standard",
       returnTarget: state.settingsReturnMode,
       pausedRunContext:
         state.mode === "settings" &&

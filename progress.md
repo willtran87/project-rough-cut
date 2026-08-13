@@ -1,5 +1,10 @@
 Original prompt: continue to refine and polish the game experience, make sure the game is engaging and addictive, fun and beautiful
 
+## Pursuit-intensity accessibility polish (2026-08-13)
+
+- Added a persisted `JOE PRESSURE` field option with three deliberate tiers: `STEADY` (0.8), `STANDARD` (1.0), and `RELENTLESS` (1.2). The setting scales only Joe's movement and detection accumulation; collision geometry, objective timing, terrain costs, interaction ranges, and established counterplay do not change.
+- The setting is visible in Field Options, exported through `render_game_to_text`, protected by the `pursuit_intensity_player_choice` readiness contract, and statically enforced by `tools/verify-release.mjs`.
+
 ## Release-acceptance closure and evidence gate (2026-08-13)
 
 - Re-audited the current product-enhancement findings. The vertical slice already implements their software-facing route clarity, fair-pressure, accessibility, asset integrity, performance instrumentation, retry, and replayability contracts; current browser readiness is 55/55 and 87 deterministic fixtures cover the release surface.
