@@ -1,5 +1,11 @@
 Original prompt: continue to refine and polish the game experience, make sure the game is engaging and addictive, fun and beautiful
 
+## Release-acceptance closure and evidence gate (2026-08-13)
+
+- Re-audited the current product-enhancement findings. The vertical slice already implements their software-facing route clarity, fair-pressure, accessibility, asset integrity, performance instrumentation, retry, and replayability contracts; current browser readiness is 55/55 and 87 deterministic fixtures cover the release surface.
+- Added `qa/release-acceptance-gates-2026-08-13.md`: one explicit software qualification gate plus four honest human acceptance sessions for keyboard/mouse, controller, touch, and a 10–15 minute mid-tier soak. Each names the required route, pass condition, and evidence record so subjective tuning can be reproduced instead of guessed.
+- `tools/verify-release.mjs` now requires that acceptance record and its auditable 55/55, 87-fixture, 48-asset baseline before a build qualifies. The physical sessions are intentionally pending: browser automation cannot certify real input feel, device safe areas, thermal behavior, or sustained hardware frame pacing.
+
 ## Slow-footing threat/route role-separation polish (2026-08-10)
 
 - The current deep-route replay reached Irrigation Mud with the correct immediate `CLEAR LEFT` escape route, but its player-origin caption read `FOOTING DRAG // JOE KEEPS MOVING — AHEAD`. Because the caption source was the player position itself, `AHEAD` was structural noise and appeared to compete with the safe leftward route.

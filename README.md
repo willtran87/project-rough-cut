@@ -4,6 +4,8 @@ Working directory for a first-person 2.5D pixel-horror game about Joe, a softwar
 
 **Play the current vertical slice:** [willtran87.github.io/project-rough-cut](https://willtran87.github.io/project-rough-cut/)
 
+**Release qualification:** the automated browser gate and the required physical-device sign-off are recorded in [release acceptance gates](qa/release-acceptance-gates-2026-08-13.md).
+
 > The course closes at dusk. Joe does not.
 
 ## Premise: One Last Action Item

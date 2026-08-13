@@ -82,6 +82,7 @@ const stylesCss = readUtf8("web/styles.css");
 const gameJs = readUtf8("web/game.js");
 const dialogueJs = readUtf8("web/joe-dialogue.js");
 const productClosure = readUtf8("qa/product-enhancement-closure-2026-08-08.md");
+const releaseAcceptance = readUtf8("qa/release-acceptance-gates-2026-08-13.md");
 
 runSyntaxCheck("web/game.js");
 runSyntaxCheck("web/joe-dialogue.js");
@@ -393,6 +394,23 @@ requireCondition(
   productClosure.includes("readiness.passed: true"),
   "The product enhancement closure matrix is missing its automated acceptance condition.",
 );
+requireCondition(
+  releaseAcceptance.includes("55/55 readiness checks") &&
+    releaseAcceptance.includes("87 deterministic fixtures") &&
+    releaseAcceptance.includes("48 runtime image assets"),
+  "The release-acceptance baseline is missing its auditable software qualification counts.",
+);
+for (const requiredGate of [
+  "Keyboard and mouse",
+  "Standard controller",
+  "Touch device",
+  "Mid-tier hardware soak",
+]) {
+  requireCondition(
+    releaseAcceptance.includes(requiredGate),
+    `The physical release-acceptance gate is missing: ${requiredGate}.`,
+  );
+}
 
 const runtimeReferences = collectRuntimeAssetReferences(indexHtml, gameJs, dialogueJs);
 let referencedBytes = 0;
