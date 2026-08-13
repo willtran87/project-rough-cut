@@ -1,6 +1,6 @@
 # Rough Cut release-acceptance gates
 
-Date: 2026-08-13  
+Date: 2026-08-13
 Scope: the published Rough Cut vertical slice; no level expansion.
 
 ## Software gate — passed
