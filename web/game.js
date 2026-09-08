@@ -1450,15 +1450,15 @@
     },
     upright_rough: {
       adjustment:
-        "Crouch before entering rough and wait for Joe's mower to turn away before moving.",
+        "Crouch before entering rough. Keep cover between you and Joe until attention falls.",
       drill:
         "Use rough only while crouched; freeze when attention rises and leave by the quietest edge.",
     },
     held_sightline: {
       adjustment:
-        "Stop crossing open turf. Reach solid cover, wait for Joe to turn away, then move one gap at a time.",
+        "Reach solid cover and let attention fall. Cross one gap at a time, keeping your distance.",
       drill:
-        "Use Listening Focus from solid cover; move only after Joe turns, and cross one short gap at a time.",
+        "Listen from solid cover. Let attention fall, then cross one short gap at a time.",
     },
     bunker_noise: {
       adjustment:
@@ -1476,11 +1476,11 @@
       adjustment:
         "Crouch before moving through rough, or step onto Joe's cut strip to silence the trail.",
       drill:
-        "Freeze at Joe's first reaction; wait for him to turn, then move one rough patch at a time.",
+        "Freeze at Joe's first reaction. Let attention fall, then crouch through one rough patch at a time.",
     },
     audible_movement: {
       adjustment:
-        "Stop when Joe reacts, use Listening Focus, and resume only after his mower turns away.",
+        "Stop when Joe reacts. Listen from cover, then move when attention falls and the route is clear.",
       drill:
         "Break movement into quiet checks: move, listen from cover, then move again.",
     },
@@ -1694,7 +1694,9 @@
   const VERTICAL_PASS_MAX_DISTANCE = 132;
   const KEY_POINT = { x: -48, y: 249, radius: 16 };
   const SPRINKLER_POINT = { x: -103, y: 42, radius: 18 };
-  const SHED_EXIT = { x: -18, y: 710, radius: 16 };
+  // Reach the filing terminal from the open apron without pressing into the
+  // door or its side walls. Collision stays solid throughout the interaction.
+  const SHED_EXIT = { x: -18, y: 710, radius: 22 };
   const DRAIN_EXIT = { x: -78, y: 699, radius: 17 };
   const INTERACTION_REJECTION_RETREAT_MULTIPLIER =
     1.35;
@@ -3022,9 +3024,9 @@
     { id: "release-cart", kit: "expanded", type: 1, x: -56, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
     { id: "release-board", kit: "expanded", type: 4, x: 76, y: 670, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.96, blocks: true, sight: true, landmark: "release board" },
     { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 58, y: 678, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
-    { id: "release-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: -18, y: 694, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
-    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 694, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
-    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 694, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: -18, y: 668, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
+    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 668, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 668, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
     { id: "release-pine", kit: "base", type: 2, x: 94, y: 702, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.04, blocks: true, sight: true, landmark: "release pine" },
     { id: "shed-left-wall", x: -44, y: 710, radius: 11, radiusX: 7, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
     { id: "shed-door", x: -18, y: 710, radius: 15, radiusX: 13, radiusY: 4, coverRadius: 20, blocks: true, sight: true, draw: false, landmark: "shed door" },
@@ -3032,9 +3034,8 @@
   ];
   const SHED_APPROACH_ROUTE = [
     { x: 24, y: 640 },
-    { x: 18, y: 654 },
-    { x: 6, y: 670 },
-    { x: -8, y: 684 },
+    { x: -18, y: 654 },
+    { x: -18, y: 680 },
     { x: -18, y: 699 },
   ];
   const COURSE_OBSTACLE_INDEX =
@@ -4469,6 +4470,30 @@
     };
   }
 
+  /** Optional reviews never activate from movement alone. */
+  function nearbySprintReview() {
+    return activeSprintReviews()
+      .filter((review) => !sprintReviewCleared(review) &&
+        worldDistance(state.player, review) < review.radius)
+      .sort((a, b) => worldDistance(state.player, a) - worldDistance(state.player, b))[0] || null;
+  }
+
+  function sprintReviewCommitment(review) {
+    const reserve = state.hole.golfBalls >= golfBallCapacity();
+    return {
+      kind: "optional_review_commitment",
+      text: `JOE HEARS THE BELL // +1 ${reserve ? "RESERVE " : ""}BALL // FILING -${SPRINT_REVIEW_FILING_REDUCTION.toFixed(2)}s`,
+      risk: { accentColor: "#e3b44e" },
+      reviewId: review.id,
+      reserve,
+    };
+  }
+
+  function golfBallInventoryLabel() {
+    const hole = state.hole;
+    return `${hole.golfBalls} BALLS${hole.reviewBallReserve > 0 ? ` +${hole.reviewBallReserve} RESERVE` : ""}`;
+  }
+
   /**
    * Previews the authored risk and escape answer before a loud mandatory
    * field check is committed. This is presentation-only and does not alter
@@ -5114,6 +5139,22 @@
         ),
         `recoverable-ball-${nearestBall.ball.id}`,
         "GOLF BALL",
+      );
+    }
+    const nearbyReview = nearbySprintReview();
+    if (nearbyReview) {
+      return interactionPromptResult(
+        inputCopy(
+          `${keyboardBindingLabel("interact")} — ACCEPT ${nearbyReview.code}`,
+          `A — ACCEPT ${nearbyReview.code}`,
+          `TAP USE — ACCEPT ${nearbyReview.code}`,
+        ),
+        nearbyReview.id,
+        nearbyReview.code,
+        "interact",
+        "ready",
+        "OPTIONAL // USE TO ACCEPT",
+        sprintReviewCommitment(nearbyReview),
       );
     }
     if (
@@ -6269,6 +6310,7 @@
       reviewRewards: 0,
       filingReduction: 0,
       golfBalls: 4,
+      reviewBallReserve: 0,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
       ballsRecovered: 0,
@@ -8859,7 +8901,7 @@
           "CROUCH ROUGH",
           "sight",
           `Standing movement exposed you inside ${contact.surface}.`,
-          "Crouch to use rough concealment, then move only after the mower turns away.",
+          "Crouch in rough and let attention fall. Use solid cover to break Joe's sightline.",
         );
       }
       return makeReview(
@@ -11913,6 +11955,30 @@
     );
   }
 
+  function drawFirstRoundInvitation() {
+    const x = 558;
+    ctx.fillStyle = "rgba(3,13,8,0.95)";
+    ctx.fillRect(x, 82, 650, 554);
+    strokeRect(x, 82, 650, 554, "#617c52", 2);
+    drawText("ONE LAST ACTION ITEM", x + 28, 127, 29, "#f0ebd6", "left", true);
+    drawText("The south gate is locked. Joe is still here.", x + 28, 166, 21, "#d4b785", "left");
+    const lessons = [
+      { title: "FOLLOW THE LANTERNS", detail: "Three field checks lead to your escape.", icon: 0 },
+      { title: "MAKE HIM LOOK ELSEWHERE", detail: "Chip a ball. Move while Joe investigates.", icon: 1 },
+      { title: "BREAK HIS SIGHTLINE", detail: "Use solid cover. Let attention fall.", icon: 2 },
+    ];
+    lessons.forEach((lesson, index) => {
+      const y = 202 + index * 116;
+      ctx.fillStyle = "rgba(19,37,24,0.95)";
+      ctx.fillRect(x + 24, y, 602, 98);
+      drawFieldIcon(lesson.icon, x + 67, y + 49, 62);
+      drawText(lesson.title, x + 116, y + 34, 22, "#c8e7cd", "left", true);
+      wrapReadableText(lesson.detail, 20, 475).forEach((line, lineIndex) =>
+        drawText(line, x + 116, y + 63 + lineIndex * 24, 20, "#d7d9c9", "left"));
+    });
+    drawText("GET OUT ALIVE. LEARN THE COURSE AS YOU GO.", x + 28, 598, 21, "#e3bb7a", "left", true);
+  }
+
   function drawMenu() {
     drawOpeningArt(state.time, 0, true);
     drawGrassCurtain(1, state.time, 0);
@@ -11970,102 +12036,106 @@
       drawText(label, 108, y + 31, 19, selected ? "#ffc16d" : "#dce5ca", "left");
     });
 
-    drawPortfolioBoard();
+    const overtimeAvailable = overtimeUnlocked();
+    if (state.career.roundsStarted === 0) {
+      drawFirstRoundInvitation();
+    } else {
+      drawPortfolioBoard();
 
-    const overtimeAvailable =
-      overtimeUnlocked();
-    const overtimePanel = {
-      x: 558,
-      y: 510,
-      width: 650,
-      height: 126,
-    };
-    const overtimeActive =
-      overtimeAvailable &&
-      state.overtimeSelected;
-    ctx.fillStyle = overtimeActive
-      ? "rgba(39,12,7,0.93)"
-      : "rgba(3,13,8,0.88)";
-    ctx.fillRect(
-      overtimePanel.x,
-      overtimePanel.y,
-      overtimePanel.width,
-      overtimePanel.height,
-    );
-    strokeRect(
-      overtimePanel.x,
-      overtimePanel.y,
-      overtimePanel.width,
-      overtimePanel.height,
-      overtimeActive
-        ? "#df6c2f"
-        : overtimeAvailable
-          ? "#8b7844"
-          : "#394637",
-      overtimeActive ? 3 : 2,
-    );
-    drawText(
-      overtimeAvailable
-        ? "OVERTIME AUDIT"
-        : "OVERTIME AUDIT // LOCKED",
-      overtimePanel.x + 24,
-      overtimePanel.y + 31,
-      18,
-      overtimeActive
-        ? "#ffb467"
-        : overtimeAvailable
-          ? "#dcc47b"
-          : "#738071",
-      "left",
-      true,
-    );
-    drawText(
-      overtimeAvailable
-        ? inputCopy(
-            `R — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-            `RB — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-            `TAP CARD — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-          )
-        : `${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED`,
-      overtimePanel.x + overtimePanel.width - 24,
-      overtimePanel.y + 31,
-      12,
-      overtimeActive ? "#ffcb89" : "#9eaa91",
-      "right",
-      overtimeAvailable,
-    );
-    drawText(
-      overtimeAvailable
-        ? "2 BALLS  •  FASTER JOE  •  STRONGER EVIDENCE  •  SCORE ×1.30"
-        : "MASTER EVERY ORDER TO UNLOCK JOE'S AFTER-HOURS CONTRACT.",
-      overtimePanel.x + 24,
-      overtimePanel.y + 65,
-      13,
-      overtimeActive ? "#e79355" : "#98a391",
-      "left",
-      overtimeActive,
-    );
-    const changeRequestProgress =
-      `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}`;
-    drawText(
-      `${
-        state.career.overtimeBest
-          ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
+      const overtimePanel = {
+        x: 558,
+        y: 510,
+        width: 650,
+        height: 126,
+      };
+      const overtimeActive =
+        overtimeAvailable &&
+        state.overtimeSelected;
+      ctx.fillStyle = overtimeActive
+        ? "rgba(39,12,7,0.93)"
+        : "rgba(3,13,8,0.88)";
+      ctx.fillRect(
+        overtimePanel.x,
+        overtimePanel.y,
+        overtimePanel.width,
+        overtimePanel.height,
+      );
+      strokeRect(
+        overtimePanel.x,
+        overtimePanel.y,
+        overtimePanel.width,
+        overtimePanel.height,
+        overtimeActive
+          ? "#df6c2f"
           : overtimeAvailable
-            ? "OVERTIME RECORD  —  UNFILED"
-            : "CLEARANCE REQUIRED // ALL ORDERS"
-      }  •  ${changeRequestProgress}`,
-      overtimePanel.x + 24,
-      overtimePanel.y + 99,
-      12,
-      state.career.overtimeBest
-        ? gradeColor(
-            state.career.overtimeBest.grade,
-          )
-        : "#70806d",
-      "left",
-      Boolean(state.career.overtimeBest),
-    );
+            ? "#8b7844"
+            : "#394637",
+        overtimeActive ? 3 : 2,
+      );
+      drawText(
+        overtimeAvailable
+          ? "OVERTIME AUDIT"
+          : "OVERTIME AUDIT // LOCKED",
+        overtimePanel.x + 24,
+        overtimePanel.y + 31,
+        18,
+        overtimeActive
+          ? "#ffb467"
+          : overtimeAvailable
+            ? "#dcc47b"
+            : "#738071",
+        "left",
+        true,
+      );
+      drawText(
+        overtimeAvailable
+          ? inputCopy(
+              `R — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+              `RB — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+              `TAP CARD — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
+            )
+          : `${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED`,
+        overtimePanel.x + overtimePanel.width - 24,
+        overtimePanel.y + 31,
+        12,
+        overtimeActive ? "#ffcb89" : "#9eaa91",
+        "right",
+        overtimeAvailable,
+      );
+      drawText(
+        overtimeAvailable
+          ? "2 BALLS  •  FASTER JOE  •  STRONGER EVIDENCE  •  SCORE ×1.30"
+          : "MASTER EVERY ORDER TO UNLOCK JOE'S AFTER-HOURS CONTRACT.",
+        overtimePanel.x + 24,
+        overtimePanel.y + 65,
+        13,
+        overtimeActive ? "#e79355" : "#98a391",
+        "left",
+        overtimeActive,
+      );
+      const changeRequestProgress =
+        `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}`;
+      drawText(
+        `${
+          state.career.overtimeBest
+            ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
+            : overtimeAvailable
+              ? "OVERTIME RECORD  —  UNFILED"
+              : "CLEARANCE REQUIRED // ALL ORDERS"
+        }  •  ${changeRequestProgress}`,
+        overtimePanel.x + 24,
+        overtimePanel.y + 99,
+        12,
+        state.career.overtimeBest
+          ? gradeColor(
+              state.career.overtimeBest.grade,
+            )
+          : "#70806d",
+        "left",
+        Boolean(state.career.overtimeBest),
+      );
+
+    }
 
     if (state.status.startsWith("CHANGE REJECTED:")) {
       drawText("CHANGE REJECTED:", 91, 622, 13, "#db8041", "left");
@@ -12860,6 +12930,15 @@
     );
   }
 
+  // Secure either branch while its pickup is still near the opening checks.
+  // The first station teaches the core loop; its tactical cover route retains
+  // priority. Acquiring either item immediately resumes the remaining checks.
+  function shouldPrepareExit() {
+    return completedNightOrderActionCount() > 0 &&
+      !nightOrderActionsComplete() &&
+      !state.hole.keyCollected && !state.hole.drainUnlocked;
+  }
+
   function currentHoleObjective() {
     const hole = state.hole;
     if (hole.escapeFiling.sealing) {
@@ -12869,6 +12948,10 @@
       return `FILE ${escapeRouteLabel(
         hole.escapeFiling.route,
       )}`;
+    }
+    if (shouldPrepareExit()) {
+      const route = activePlayerGuidanceTarget({ includeTacticalOverride: false });
+      return `PREPARE EXIT // ${route.shortLabel}`;
     }
     if (!nightOrderActionsComplete()) {
       const nextAction =
@@ -13523,6 +13606,7 @@
       reviewRewards: 0,
       filingReduction: 0,
       golfBalls: overtime ? 2 : 4,
+      reviewBallReserve: 0,
       recoverableBalls: [],
       nextRecoverableBallId: 1,
       ballsRecovered: 0,
@@ -20278,6 +20362,12 @@
       state.time;
   }
 
+  function shedContactOffersFiling(obstacleId) {
+    return ["shed-door", "shed-left-wall", "shed-right-wall"].includes(obstacleId) &&
+      state.hole.keyCollected && nightOrderActionsComplete() &&
+      worldDistance(state.player, SHED_EXIT) < SHED_EXIT.radius;
+  }
+
   function movePlayerBy(deltaX, deltaY) {
     const player = state.player;
     const initialX = player.x;
@@ -20421,7 +20511,7 @@
       appliedDistance += Math.hypot(player.x - startX, player.y - startY);
     }
 
-    if (initialBlocker) {
+    if (initialBlocker && !shedContactOffersFiling(initialBlocker.id)) {
       const newContact =
         state.hole.blockedObstacle !==
           initialBlocker.id ||
@@ -20478,6 +20568,12 @@
         state.hole.blockedCueCooldown =
           0.42;
       }
+    }
+    // Touching the usable shed is arrival, not a reason to retreat. Preserve
+    // solid collision while letting the filing prompt own the next action.
+    if (initialBlocker && shedContactOffersFiling(initialBlocker.id)) {
+      state.hole.blockedTimer = 0;
+      state.hole.blockedEscape = null;
     }
     state.hole.travelDistance += appliedDistance;
     state.hole.lastMovementRequestedDistance =
@@ -23684,6 +23780,12 @@
       golfBallCapacity(),
       hole.golfBalls + 1,
     );
+    if (hole.golfBalls === previousBalls) {
+      hole.reviewBallReserve = Math.min(
+        activeSprintReviews().length,
+        (hole.reviewBallReserve || 0) + 1,
+      );
+    }
     hole.detection = Math.max(
       0,
       hole.detection - 0.12,
@@ -23707,7 +23809,7 @@
     setHoleMessage(
       hole.golfBalls > previousBalls
         ? `${review.code} CLEARED — golf ball restored, filing shortened, and Joe heard the review bell.`
-        : `${review.code} CLEARED — filing shortened. Your pockets are full, and Joe heard the review bell.`,
+        : `${review.code} CLEARED — +1 reserve ball for your next shot. Faster filing; Joe heard the bell.`,
       3.8,
     );
     addWorldEffect(
@@ -23750,32 +23852,6 @@
       );
     }
     return true;
-  }
-
-  function updateSprintReviews() {
-    const reviews =
-      activeSprintReviews();
-    for (
-      let index = 0;
-      index < reviews.length;
-      index += 1
-    ) {
-      const review =
-        reviews[index];
-      if (
-        !sprintReviewCleared(
-          review,
-        ) &&
-        worldDistance(
-          state.player,
-          review,
-        ) < review.radius
-      ) {
-        clearSprintReview(
-          review,
-        );
-      }
-    }
   }
 
   function completeNightOrderAction(
@@ -23908,7 +23984,8 @@
     if (state.mode !== "first_hole") {
       return;
     }
-    if (state.hole.escapeFiling.sealing) {
+    if (state.hole.escapeFiling.sealing || state.hole.escapeFiling.active ||
+        state.hole.ballAim.active || state.hole.ballFlight || state.hole.ballRoll) {
       return;
     }
     if (activateEmergencyAppeal()) {
@@ -24061,6 +24138,13 @@
       recoverGolfBall(
         nearestBall.ball,
       );
+      return;
+    }
+
+    const nearbyReview = nearbySprintReview();
+    if (nearbyReview) {
+      clearSprintReview(nearbyReview);
+      completeFieldInteraction(true);
       return;
     }
 
@@ -24767,6 +24851,11 @@
     const flightDuration =
       0.34 + distance / 220;
     hole.golfBalls -= 1;
+    const reserveUsed = hole.reviewBallReserve > 0;
+    if (reserveUsed) {
+      hole.reviewBallReserve -= 1;
+      hole.golfBalls += 1;
+    }
     hole.ballThrowsUsed += 1;
     hole.ballFlight = {
       start: {
@@ -24799,7 +24888,9 @@
     hole.ballAim = freshBallAimState();
     hole.prompt = "";
     setHoleMessage(
-      "CHIP AWAY — listen for the landing.",
+      reserveUsed
+        ? "RESERVE BALL LOADED — listen for the landing."
+        : "CHIP AWAY — listen for the landing.",
       1.15,
     );
     playBallSwingCue(direction);
@@ -26747,7 +26838,9 @@
           ? OVERTIME_DETECTION_MULTIPLIER
           : 1
       ) *
-      joePursuitIntensityMultiplier();
+      (actionableSight || directSound
+        ? joePursuitIntensityMultiplier()
+        : 1);
     const wakeDetectionFloor =
       hole.verticalPassPressure
         .active
@@ -26866,7 +26959,7 @@
         hole.trailWarningTimer <= 0
       ) {
         setHoleMessage(
-          "ATTENTION LOST — move when the mower turns away.",
+          "ATTENTION LOST — stay quiet and move cover to cover.",
           1.45,
         );
       }
@@ -28006,13 +28099,14 @@
     const choices = [];
     const requiredAction =
       nextNightOrderAction();
+    const preparingExit = shouldPrepareExit();
     const drainRouteCommitted =
       hole.drainUnlocked &&
       !hole.keyCollected;
     const shedRouteCommitted =
       hole.keyCollected &&
       !hole.drainUnlocked;
-    if (requiredAction) {
+    if (requiredAction && !preparingExit) {
       choices.push({
         id: requiredAction.id,
         label: `${requiredAction.code} ROUTE`,
@@ -28024,7 +28118,7 @@
       });
     }
     if (
-      !requiredAction &&
+      (!requiredAction || preparingExit) &&
       !hole.keyCollected &&
       !drainRouteCommitted
     ) {
@@ -28037,7 +28131,7 @@
       });
     }
     if (
-      !requiredAction &&
+      (!requiredAction || preparingExit) &&
       !hole.sprinklerUsed &&
       !shedRouteCommitted
     ) {
@@ -28076,17 +28170,17 @@
     if (choices.length === 0) {
       return null;
     }
-    choices.sort(
-      (a, b) =>
-        worldDistance(
-          state.player,
-          a.target,
-        ) -
-        worldDistance(
-          state.player,
-          b.target,
-        ),
-    );
+    // During preparation, include the onward journey to the next check.
+    // Choosing only the closest pickup can send the player back to the tee
+    // even when the key lies along the route ahead. An item already in reach
+    // takes priority so the visible Use prompt agrees with the route.
+    const choiceCost = (choice) => {
+      const distance = worldDistance(state.player, choice.target);
+      return preparingExit && distance > choice.target.radius
+        ? distance + worldDistance(choice.target, requiredAction)
+        : distance;
+    };
+    choices.sort((a, b) => choiceCost(a) - choiceCost(b));
     const nearest = choices[0];
     const incumbent =
       choices.find(
@@ -28111,8 +28205,8 @@
       incumbent.id !== nearest.id
         ? Math.max(
             0,
-            incumbentDistance -
-              nearestDistance,
+            choiceCost(incumbent) -
+              choiceCost(nearest),
           )
         : 0;
     const retainIncumbent =
@@ -28138,6 +28232,9 @@
               : "nearest_available";
     return {
       ...selected,
+      selectionMetric: preparingExit
+        ? "pickup_plus_onward_distance_with_in_reach_priority"
+        : "direct_distance",
       selectionReason,
       nearestCandidateId:
         nearest.id,
@@ -28528,6 +28625,7 @@
     }
     guide.selectionReason =
       definition.selectionReason;
+    guide.selectionMetric = definition.selectionMetric || "tactical_override";
     guide.nearestCandidateId =
       definition.nearestCandidateId;
     guide.nearestCandidateDistance =
@@ -28571,7 +28669,9 @@
       };
       guide.path = [];
       guide.distance = targetDistance;
-      guide.direction = "STRAIGHT";
+      guide.direction = definition.id === "maintenance-shed"
+        ? "FILE RELEASE"
+        : "STRAIGHT";
       guide.collisionRecovery = null;
       guide.collisionRecoveryExpiresAt =
         0;
@@ -36139,13 +36239,12 @@
     ) {
       return;
     }
+    const readable = gameplayReadability();
     const panel = {
       x: 36,
-      y: expandedHud
-        ? 363
-        : 151,
-      width: 254,
-      height: 43,
+      y: readable.compact ? 202 : expandedHud ? 363 : 151,
+      width: readable.compact ? 560 : 254,
+      height: readable.compact ? 76 : 43,
     };
     const pulse =
       state.reducedMotion
@@ -36183,8 +36282,8 @@
     drawText(
       bearingLabel,
       panel.x + 14,
-      panel.y + 17,
-      10,
+      panel.y + (readable.compact ? 29 : 17),
+      readable.compact ? readable.fontSize : 10,
       cue.color,
       "left",
       true,
@@ -36194,8 +36293,8 @@
         cue.distance,
       )}m`,
       panel.x + 14,
-      panel.y + 34,
-      9,
+      panel.y + (readable.compact ? 62 : 34),
+      readable.compact ? readable.fontSize : 9,
       "#d9dfc7",
       "left",
       true,
@@ -36621,7 +36720,7 @@
     const expandedHud =
       firstPersonHudExpanded();
     const leftHudRight =
-      expandedHud
+      gameplayReadability().compact ? 596 : expandedHud
         ? 466
         : 438;
     const safeLeft =
@@ -42027,9 +42126,9 @@
       drawText(
         cleared
           ? `${review.code} // ACCEPTED`
-          : `${review.code} // ${Math.ceil(
-              distance,
-            )}m`,
+          : distance < review.radius
+            ? `${review.code} // USE TO ACCEPT`
+            : `${review.code} // OPTIONAL ${Math.ceil(distance)}m`,
         point.x,
         labelY + 4,
         10,
@@ -46304,6 +46403,18 @@
       COURSE_MAP_X,
       COURSE_MAP_Y,
     );
+    const readable = gameplayReadability();
+    if (readable.compact) {
+      ctx.fillStyle = "#07160e";
+      ctx.fillRect(COURSE_MAP_X + 2, COURSE_MAP_Y + 2, COURSE_MAP_WIDTH - 4, 58);
+      const route = compactMapRoutePresentation();
+      drawText(route.direction, COURSE_MAP_X + 12, COURSE_MAP_Y + 27,
+        readable.fontSize, route.color, "left", true);
+      drawText(route.target, COURSE_MAP_X + 12, COURSE_MAP_Y + 51,
+        fittedTextSize(route.target, readable.fontSize, COURSE_MAP_WIDTH - 24, 16, true),
+        "#d5e9dc", "left", true);
+    }
+
   }
 
   function movementFeedbackState() {
@@ -50152,331 +50263,46 @@
     };
   }
 
-  function drawCompactTutorialBriefing(
-    variant,
-    overtime,
-    stampCount,
-    presentation =
-      tutorialBriefingViewportPresentation(),
-  ) {
+  function drawCompactTutorialBriefing(variant, overtime, stampCount,
+    presentation = tutorialBriefingViewportPresentation()) {
     const panel = presentation.panel;
-    ctx.fillStyle =
-      "rgba(3,14,8,0.99)";
-    ctx.fillRect(
-      panel.x,
-      panel.y,
-      panel.width,
-      panel.height,
-    );
-    strokeRect(
-      panel.x,
-      panel.y,
-      panel.width,
-      panel.height,
-      "#d47431",
-      3,
-    );
-    strokeRect(
-      panel.x + 10,
-      panel.y + 10,
-      panel.width - 20,
-      panel.height - 20,
-      "#35492f",
-      1,
-    );
-    drawText(
-      `${
-        overtime
-          ? "OVERTIME AUDIT"
-          : "SURVIVAL BRIEFING"
-      } // NIGHT ORDER ${String(
-        variant.number,
-      ).padStart(2, "0")}`,
-      WIDTH * 0.5,
-      82,
-      28,
-      "#f0efd8",
-      "center",
-      true,
-    );
-    const variantLine = overtime
-      ? `${variant.name} // 2 BALLS â€¢ FASTER JOE â€¢ STRONGER EVIDENCE â€¢ SCORE Ã—1.30`
-      : `${variant.name} // ${variant.briefing}`;
-    drawText(
-      variantLine,
-      WIDTH * 0.5,
-      112,
-      fittedTextSize(
-        variantLine,
-        16,
-        1010,
-        13,
-        true,
-      ),
-      variant.accent,
-      "center",
-      true,
-    );
-    ctx.fillStyle =
-      "rgba(32,15,7,0.94)";
-    ctx.fillRect(
-      126,
-      130,
-      1028,
-      68,
-    );
-    strokeRect(
-      126,
-      130,
-      1028,
-      68,
-      "#8f5b32",
-      2,
-    );
-    drawText(
-      overtime
-        ? `OVERTIME TERMS // DOSSIER ${stampCount}/${PERFORMANCE_STAMPS.length}`
-        : "5:47 PM // ONE LAST ACTION ITEM",
-      WIDTH * 0.5,
-      151,
-      15,
-      "#f0ad68",
-      "center",
-      true,
-    );
-    drawText(
-      "JOE SENT HIS ASSOCIATE PRODUCT ANALYST ON ONE LAST NIGHT ORDER.",
-      WIDTH * 0.5,
-      173,
-      14,
-      "#e7e0c7",
-      "center",
-      true,
-    );
-    drawText(
-      "SOUTH GATE LOCKED. FILE 3 CHECKS, SECURE AN EXIT, AND STAY AHEAD.",
-      WIDTH * 0.5,
-      190,
-      14,
-      "#c99b6a",
-      "center",
-      true,
-    );
-
-    const controllerActive =
-      state.inputMethod === "gamepad";
-    const touchActive =
-      state.inputMethod === "touch";
-    const cards = [
-      {
-        y: 210,
-        icon: 0,
-        number: "1",
-        title:
-          "COMPLETE 3 CHECKS + FILE",
-        detail:
-          "KEY â†’ SHED  â€¢  VALVE â†’ DRAIN  â€¢  STAY STILL TO FILE",
-        subdetail: `OPTIONAL ${activeChangeRequest().code}: +${CHANGE_REQUEST_BONUS} EVIDENCE OR ONE CHASE APPEAL`,
-      },
-      {
-        y: 320,
-        icon: 1,
-        number: "2",
-        title:
-          "MISDIRECT JOE WITH A CHIP",
-        detail: touchActive
-          ? "HOLD CHIP  â€¢  SLIDE TO AIM  â€¢  RELEASE"
-          : controllerActive
-            ? "HOLD X  â€¢  LEFT STICK TO AIM  â€¢  RELEASE"
-            : `HOLD ${keyboardBindingLabel(
-                "chip",
-              )}  â€¢  ${keyboardBindingLabel(
-                "move_left",
-              )}/${keyboardBindingLabel(
-                "move_right",
-              )} TO AIM  â€¢  RELEASE`,
-        subdetail: touchActive
-          ? "LANDED BALLS MAKE NOISE  â€¢  TAP USE TO RECLAIM"
-          : controllerActive
-            ? "LANDED BALLS MAKE NOISE  â€¢  A RECLAIMS WHEN CLEAR"
-            : `LANDED BALLS MAKE NOISE  â€¢  ${keyboardBindingLabel(
-                "interact",
-              )} RECLAIMS WHEN CLEAR`,
-      },
-      {
-        y: 430,
-        icon: 2,
-        number: "3",
-        title: "BREAK CONTACT",
-        detail: touchActive
-          ? "HOLD CROUCH  â€¢  HOLD LISTEN  â€¢  ROUTE WIDE OR WAIT"
-          : controllerActive
-            ? "LB CROUCH  â€¢  LT LISTEN  â€¢  ROUTE WIDE OR WAIT"
-            : `${keyboardBindingLabel(
-                "crouch",
-              )} CROUCH  â€¢  ${keyboardBindingLabel(
-                "focus",
-              )} LISTEN  â€¢  ROUTE WIDE OR WAIT`,
-        subdetail:
-          "MARKED GROUND SLOWS YOU  â€¢  JOE KEEPS MOVING",
-      },
+    const size = Math.max(24, gameplayReadability().fontSize);
+    ctx.fillStyle = "rgba(3,14,8,0.99)";
+    ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
+    strokeRect(panel.x, panel.y, panel.width, panel.height, "#d9a45f", 2);
+    drawText(overtime ? "OVERTIME AUDIT" : "SURVIVAL BRIEFING", WIDTH / 2, 94, 36, "#f0efd8", "center", true);
+    drawText(overtime ? "2 BALLS // FASTER JOE // SCORE ×1.30" : variant.name,
+      WIDTH / 2, 138, size, "#a8d5b7", "center", true);
+    drawText("Joe locked the south gate.", WIDTH / 2, 184, size, "#e4c59a", "center", true);
+    drawText("Follow mint lanterns. Stay still to file your escape.", WIDTH / 2, 217,
+      size, "#e4c59a", "center", true);
+    const rows = [
+      ["1. FOLLOW THE LANTERNS", "File three checks. Secure a key or valve on the way."],
+      ["2. DIVERT JOE WITH A BALL", inputCopy(
+        `HOLD ${keyboardBindingLabel("chip")} // ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} AIM // RELEASE`,
+        "HOLD X // LEFT STICK AIM // RELEASE", "HOLD CHIP // SLIDE TO AIM // RELEASE")],
+      ["3. BREAK CONTACT", inputCopy(
+        `${keyboardBindingLabel("crouch")} CROUCH // SOLID COVER BLOCKS SIGHT`,
+        "LB CROUCH // SOLID COVER BLOCKS SIGHT", "HOLD CROUCH // SOLID COVER BLOCKS SIGHT")],
     ];
-    for (const card of cards) {
-      ctx.fillStyle =
-        "rgba(10,28,15,0.94)";
-      ctx.fillRect(
-        126,
-        card.y,
-        1028,
-        102,
-      );
-      strokeRect(
-        126,
-        card.y,
-        1028,
-        102,
-        "#50633e",
-        2,
-      );
-      drawText(
-        card.number,
-        148,
-        card.y + 31,
-        20,
-        "#d47431",
-        "left",
-        true,
-      );
-      drawFieldIcon(
-        card.icon,
-        202,
-        card.y + 55,
-        64,
-      );
-      drawText(
-        card.title,
-        260,
-        card.y + 29,
-        19,
-        "#f0e8ce",
-        "left",
-        true,
-      );
-      drawText(
-        card.detail,
-        260,
-        card.y + 59,
-        15,
-        "#b9c5b1",
-        "left",
-        true,
-      );
-      drawText(
-        card.subdetail,
-        260,
-        card.y + 84,
-        14,
-        "#d69a5c",
-        "left",
-        true,
-      );
-    }
-
-    ctx.fillStyle =
-      "rgba(4,18,10,0.95)";
-    ctx.fillRect(
-      126,
-      542,
-      1028,
-      78,
-    );
-    strokeRect(
-      126,
-      542,
-      1028,
-      78,
-      "#40563a",
-      2,
-    );
-    const primaryControls =
-      touchActive
-        ? "MOVE LEFT PAD  â€¢  HOLD RUN  â€¢  TAP USE"
-        : controllerActive
-          ? "MOVE L STICK / D-PAD  â€¢  SPRINT RT  â€¢  USE A"
-          : `MOVE ${keyboardMovementCopy()}  â€¢  SPRINT ${keyboardBindingLabel(
-              "sprint",
-            )}  â€¢  USE ${keyboardBindingLabel(
-              "interact",
-            )}`;
-    const secondaryControls =
-      touchActive
-        ? "HOLD CROUCH  â€¢  HOLD LISTEN  â€¢  HOLD CHIP  â€¢  HOLD REAR"
-        : controllerActive
-          ? "CROUCH LB  â€¢  LISTEN LT  â€¢  CHIP X  â€¢  REAR R3"
-          : `CROUCH ${keyboardBindingLabel(
-              "crouch",
-            )}  â€¢  LISTEN ${keyboardBindingLabel(
-              "focus",
-            )}  â€¢  CHIP ${keyboardBindingLabel(
-              "chip",
-            )}  â€¢  REAR ${keyboardBindingLabel(
-              "look_back",
-            )}`;
-    drawText(
-      primaryControls,
-      WIDTH * 0.5,
-      570,
-      16,
-      "#e7e0c7",
-      "center",
-      true,
-    );
-    drawText(
-      secondaryControls,
-      WIDTH * 0.5,
-      601,
-      15,
-      "#83c9be",
-      "center",
-      true,
-    );
-    const pulse = state.reducedMotion
-      ? 1
-      : 0.62 +
-        (
-          Math.sin(
-            state.time * 4.2,
-          ) + 1
-        ) *
-          0.18;
-    ctx.globalAlpha = pulse;
-    drawText(
-      touchActive
-        ? "MOVE LEFT PAD OR TAP USE TO START"
-        : controllerActive
-          ? "MOVE OR PRESS A TO START"
-          : `MOVE OR PRESS ${keyboardBindingLabel(
-              "interact",
-            )} TO START`,
-      WIDTH * 0.5,
-      650,
-      20,
-      "#ffe2a0",
-      "center",
-      true,
-    );
-    ctx.globalAlpha = 1;
-    if (state.hole.courseEchoRecord) {
-      drawText(
-        `COURSE ECHO READY  //  ${state.hole.courseEchoRecord.route.toUpperCase()} RECORD`,
-        WIDTH * 0.5,
-        672,
-        12,
-        "#83d9c1",
-        "center",
-        true,
-      );
-    }
+    rows.forEach(([title, detail], index) => {
+      const y = 248 + index * 94;
+      ctx.fillStyle = "#10251a";
+      ctx.fillRect(126, y, 1028, 80);
+      drawText(title, 150, y + 30, size + 2, "#e9eedb", "left", true);
+      drawText(detail, 150, y + 64, size, "#acd4ba", "left", true);
+    });
+    drawText(inputCopy(
+      `${keyboardMovementCopy()} MOVE // ${keyboardBindingLabel("sprint")} SPRINT // ${keyboardBindingLabel("interact")} USE`,
+      "LEFT STICK MOVE // RT SPRINT // A USE", "LEFT PAD MOVE // HOLD RUN // TAP USE"),
+      WIDTH / 2, 566, size, "#eee6d2", "center", true);
+    drawText(inputCopy(
+      `${keyboardBindingLabel("focus")} LISTEN // ${keyboardBindingLabel("look_back")} LOOK BEHIND`,
+      "LT LISTEN // R3 LOOK BEHIND", "HOLD LISTEN // HOLD REAR"),
+      WIDTH / 2, 606, size, "#acd4ba", "center", true);
+    drawText(inputCopy(`MOVE OR PRESS ${keyboardBindingLabel("interact")} TO START`,
+      "MOVE OR PRESS A TO START", "MOVE OR TAP USE TO START"),
+      WIDTH / 2, 654, size + 4, "#ffe2a0", "center", true);
   }
 
   function drawTutorialBriefing() {
@@ -50541,7 +50367,7 @@
           ? `PORTFOLIO OVERRIDE  //  DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
           : stampCount > 0
             ? `DOSSIER STAMPS ${stampCount}/${PERFORMANCE_STAMPS.length}  //  C CLEAN • R RECLAIM • B BAIT • E ECHO`
-        : "LINK RECOVERIES, BAITS, COURSE PROGRESS, AND CONTACT BREAKS INTO A DELIVERY CHAIN.",
+        : "FIRST: FOLLOW THE MINT LANTERNS. USE A CHIP SHOT WHEN YOU NEED SPACE.",
       WIDTH * 0.5,
       184,
       10,
@@ -50600,7 +50426,7 @@
         number: "1",
         title: "COMPLETE CHECKS + FILE",
         detail: "3 CHECKS  •  KEY → SHED  •  VALVE → DRAIN",
-        subdetail: `STAY STILL TO FILE  •  ◇ ${activeChangeRequest().code} +${CHANGE_REQUEST_BONUS} / CHASE APPEAL`,
+        subdetail: "FOLLOW MINT LANTERNS TO YOUR NEXT CHECK",
       },
       {
         x: 500,
@@ -52644,7 +52470,7 @@
         interactionOwner.availability ===
           "ready",
     );
-    const centerX = WIDTH * 0.5;
+    const centerX = protectsInteraction && gameplayReadability().compact ? 757 : WIDTH * 0.5;
     const centerY =
       protectsInteraction ? 224 : 434;
     return {
@@ -52801,7 +52627,7 @@
             )) *
           14;
     const centerX =
-      WIDTH * 0.5;
+      gameplayReadability().compact ? 757 : WIDTH * 0.5;
     const centerY =
       206 - entrance;
     const color =
@@ -53541,385 +53367,8 @@
       : `CR ✓ BANK +${CHANGE_REQUEST_BONUS}`;
   }
 
-  function drawFirstHoleOverlay() {
+  function courseAttentionPresentation(environment, attention) {
     const hole = state.hole;
-    const variant = activeRunVariant();
-    const exitRouteSummary =
-      exitRouteHudSummary();
-    const objectiveActionSummary =
-      objectiveActionHudSummary();
-    const playerDistance = worldDistance(hole.joe, state.player);
-    const environment = hole.environment || getPlayerEnvironmentState();
-    const inRough = environment.effectiveRough;
-    const objective =
-      currentHoleObjective();
-    const expandedHud =
-      firstPersonHudExpanded();
-    const activeStampCount =
-      performanceStampsFor(
-        variant.id,
-      ).length;
-    const cleanBreakHud =
-      cleanBreakHudPresentation();
-    const changeRequestStatus =
-      changeRequestHudStatus(hole);
-    const masteryStatus =
-      hole.overtime
-        ? "OVERTIME"
-        : masterProductOwnerUnlocked()
-          ? "MASTER"
-          : portfolioUnlocked()
-            ? "OVERRIDE"
-            : "";
-
-    const waterStatus =
-      hole.sprinklerSoakTimer > 0
-        ? `  •  WATER ${Math.ceil(hole.sprinklerSoakTimer)}s`
-        : "";
-    const windStatus =
-      hole.crosswind.phase === "active"
-        ? `  •  WIND ${Math.ceil(hole.crosswind.timer)}s`
-        : hole.crosswind.phase === "warning"
-          ? "  •  WIND BUILDING"
-          : "";
-    const reviewStatus =
-      `  •  REVIEWS ${hole.reviewsCleared.length}/${activeSprintReviews().length}`;
-    const terrainStatus =
-      expandedHud
-        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}${windStatus}${reviewStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}`
-        : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}${windStatus}`;
-    const terrainColor =
-      environment.sand
-        ? "#e3b96f"
-      : environment.wet
-        ? "#8fd4ca"
-        : environment.hardCover && hole.crouched
-        ? "#9fd285"
-        : environment.lightExposure > 0.15
-          ? "#f2a250"
-          : environment.mowed
-            ? "#d4c45e"
-          : inRough
-            ? "#d5b25f"
-            : "#9fac92";
-
-    if (expandedHud) {
-      ctx.fillStyle = "rgba(2,8,5,0.86)";
-      ctx.fillRect(36, 34, 430, 224);
-      strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
-      drawText(
-        `HOLE 1 — ${variant.shortName}`,
-        62,
-        76,
-        29,
-        "#efebcd",
-        "left",
-        true,
-      );
-      drawText(
-        changeRequestStatus,
-        446,
-        75,
-        11,
-        hole.appealUsed
-          ? "#b98062"
-          : hole.changeRequestCollected
-          ? emergencyAppealState().eligible
-            ? "#f2bd67"
-            : "#8fc58b"
-          : "#e69355",
-        "right",
-        true,
-      );
-      drawText(
-        objective,
-        62,
-        112,
-        cleanBreakHud.visible
-          ? fittedTextSize(
-              objective,
-              16,
-              278,
-              11,
-              true,
-            )
-          : 16,
-        hole.keyCollected
-          ? "#b9d77b"
-          : "#e38a3e",
-        "left",
-        true,
-      );
-      if (cleanBreakHud.visible) {
-        ctx.fillStyle =
-          cleanBreakHud.backgroundColor;
-        ctx.fillRect(
-          354,
-          94,
-          92,
-          24,
-        );
-        strokeRect(
-          354,
-          94,
-          92,
-          24,
-          cleanBreakHud.borderColor,
-          1,
-        );
-        drawText(
-          cleanBreakHud.text,
-          400,
-          111,
-          10,
-          cleanBreakHud.textColor,
-          "center",
-          true,
-        );
-      }
-
-      drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
-      drawText(
-        exitRouteSummary.text,
-        106,
-        151,
-        fittedTextSize(
-          exitRouteSummary.text,
-          13,
-          338,
-          10,
-          true,
-        ),
-        exitRouteSummary.color,
-        "left",
-        exitRouteSummary.phase !==
-          "choose_route",
-      );
-      drawFieldIcon(1, 79, 184, 38);
-      drawText(
-        `${inputCopy(`HOLD ${keyboardBindingLabel("chip")}`, "HOLD X", "HOLD CHIP")}  AIM / CHIP   ×${hole.golfBalls}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
-        106,
-        189,
-        13,
-        "#e5d9b8",
-        "left",
-      );
-      drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
-      drawText(
-        objectiveActionSummary.text,
-        106,
-        227,
-        fittedTextSize(
-          objectiveActionSummary.text,
-          13,
-          338,
-          10,
-          true,
-        ),
-        objectiveActionSummary.color,
-        "left",
-      );
-      drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
-    } else {
-      ctx.fillStyle = "rgba(2,8,5,0.82)";
-      ctx.fillRect(36, 34, 402, 104);
-      strokeRect(
-        36,
-        34,
-        402,
-        104,
-        hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
-        2,
-      );
-      drawText(
-        `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
-        56,
-        65,
-        16,
-        "#e9e4c9",
-        "left",
-        true,
-      );
-      drawText(
-        changeRequestStatus,
-        420,
-        65,
-        10,
-        hole.appealUsed
-          ? "#b98062"
-          : hole.changeRequestCollected
-          ? emergencyAppealState().eligible
-            ? "#f2bd67"
-            : "#8fc58b"
-          : "#e69355",
-        "right",
-        true,
-      );
-      drawText(
-        objective,
-        56,
-        94,
-        cleanBreakHud.visible
-          ? fittedTextSize(
-              objective,
-              14,
-              262,
-              10,
-              true,
-            )
-          : 14,
-        hole.keyCollected
-          ? "#b9d77b"
-          : "#e38a3e",
-        "left",
-        true,
-      );
-      if (cleanBreakHud.visible) {
-        ctx.fillStyle =
-          cleanBreakHud.backgroundColor;
-        ctx.fillRect(
-          326,
-          78,
-          94,
-          22,
-        );
-        strokeRect(
-          326,
-          78,
-          94,
-          22,
-          cleanBreakHud.borderColor,
-          1,
-        );
-        drawText(
-          cleanBreakHud.text,
-          373,
-          94,
-          10,
-          cleanBreakHud.textColor,
-          "center",
-          true,
-        );
-      }
-      drawText(
-        `${terrainStatus}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  ${hole.golfBalls} BALLS${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}`,
-        56,
-        120,
-        11,
-        terrainColor,
-        "left",
-      );
-    }
-
-    const meterX = WIDTH - 304;
-    const liveProjection =
-      hole.liveProjection ||
-      calculateRunResult(
-        hole.keyCollected
-          ? "shed"
-          : hole.drainUnlocked
-            ? "drain"
-            : "shed",
-      );
-    const projectionColor =
-      gradeColor(
-        liveProjection.grade,
-      );
-    const projectionChanging =
-      liveProjection.changeTimer > 0 &&
-      liveProjection.direction !==
-        "steady";
-    const echoProjection =
-      courseEchoComparisonState();
-    const echoProjectionVisible =
-      echoProjection
-        ?.fieldCardVisible &&
-      !echoProjection.finished;
-    const echoProjectionCopy =
-      !echoProjectionVisible
-        ? null
-        : echoProjection.scoreDelta > 0
-          ? `ECHO SCORE +${echoProjection.scoreDelta} // PROJECTED`
-          : echoProjection.scoreDelta < 0
-            ? `ECHO SCORE -${Math.abs(
-                echoProjection.scoreDelta,
-              )} // CLOSE GAP`
-            : echoProjection.resultState ===
-                  "score_tied"
-              ? "ECHO SCORE TIED // EXACT TIE"
-              : echoProjection.resultState ===
-                    "tiebreak_ahead"
-                ? "ECHO SCORE TIED // TIEBREAK +"
-                : "ECHO SCORE TIED // TIEBREAK -";
-    ctx.fillStyle = "rgba(2,8,5,0.82)";
-    ctx.fillRect(meterX, 36, 264, 170);
-    strokeRect(
-      meterX,
-      36,
-      264,
-      170,
-      hole.joe.mode === "chase"
-        ? "#c84627"
-        : projectionChanging
-          ? projectionColor
-          : "#536642",
-      2,
-    );
-    drawText("JOE ATTENTION", meterX + 18, 65, 13, "#d7deca", "left");
-    const projectionPulse =
-      state.reducedMotion ||
-      !projectionChanging
-        ? 1
-        : 0.82 +
-          (
-            Math.sin(
-              state.time * 13,
-            ) +
-            1
-          ) *
-            0.09;
-    ctx.save();
-    ctx.globalAlpha =
-      projectionPulse;
-    ctx.fillStyle =
-      projectionChanging
-        ? "rgba(34,48,23,0.96)"
-        : "rgba(18,34,20,0.82)";
-    ctx.fillRect(
-      meterX + 151,
-      48,
-      95,
-      23,
-    );
-    strokeRect(
-      meterX + 151,
-      48,
-      95,
-      23,
-      projectionColor,
-      projectionChanging
-        ? 2
-        : 1,
-    );
-    drawText(
-      `FILE // ${liveProjection.grade}`,
-      meterX + 198,
-      64,
-      10,
-      projectionColor,
-      "center",
-      true,
-    );
-    ctx.restore();
-    ctx.fillStyle = "#17231a";
-    ctx.fillRect(meterX + 18, 79, 228, 18);
-    const attention =
-      hole.joe.mode === "chase"
-        ? Math.max(0.72, hole.detection)
-        : hole.detection;
-    ctx.fillStyle = attention > 0.68 ? "#d84a28" : attention > 0.28 ? "#d88935" : "#6c8a50";
-    ctx.fillRect(meterX + 18, 79, 228 * attention, 18);
-    strokeRect(meterX + 18, 79, 228, 18, "#889879", 1);
     const blindsideReady =
       !hole.blindsideTransfer &&
       blindsideWindowEligible(
@@ -54059,143 +53508,637 @@
               ? "#e8a55d"
               : "#9db293"
       );
-    drawText(
-      attentionStatus,
-      meterX + 18,
-      119,
-      fittedTextSize(
-        attentionStatus,
-        11,
-        228,
-        8,
+    return { text: attentionStatus, color: attentionStatusColor };
+  }
+
+  /** Compact labels retain the same immediate route priority as the full map. */
+  function compactMapRoutePresentation() {
+    const collision = collisionRecoveryWorldRoutePresentation();
+    const footing = activeFootingNavigationOverride();
+    const hold = fieldBreakawayMapHoldPresentation(activeFieldActionBreakaway());
+    if (collision.active) return {
+      direction: collision.instruction, target: collision.targetLabel, color: collision.color,
+    };
+    if (footing) return {
+      direction: footing.instruction, target: footing.targetLabel, color: footing.color,
+    };
+    if (hold.visible) return {
+      direction: hold.leftText, target: hold.rightText, color: hold.color,
+    };
+    return {
+      direction: effectiveGuidanceDirection(),
+      target: state.hole.navigationGuide.targetLabel || "FOLLOW LANTERNS",
+      color: state.hole.navigationGuide.targetColor || "#edc17d",
+    };
+  }
+
+  /** Critical text is sized in displayed pixels, not just canvas units. */
+  function gameplayReadability() {
+    const scale = Math.max(0.25, Math.min(canvas.clientWidth / WIDTH, canvas.clientHeight / HEIGHT));
+    return { compact: scale < 0.86, scale, fontSize: Math.ceil(14 / scale) };
+  }
+
+  function wrapReadableText(text, size, maxWidth) {
+    ctx.save();
+    ctx.font = `bold ${size}px "Courier New", monospace`;
+    const lines = [];
+    let line = "";
+    for (const word of normalizeDisplayText(text).split(/\s+/)) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else line = candidate;
+    }
+    if (line) lines.push(line);
+    ctx.restore();
+    return lines;
+  }
+
+  function drawReadableRail(lines, color, borderColor, backgroundColor, bottom = HEIGHT - 66) {
+    const size = gameplayReadability().fontSize;
+    const width = state.inputMethod === "touch" ? 660 : WIDTH - 180;
+    const lineHeight = size + 7;
+    const wrapped = lines.flatMap((line) => wrapReadableText(line, size, width - 40));
+    const height = wrapped.length * lineHeight + 24;
+    const y = bottom - height;
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect((WIDTH - width) / 2, y, width, height);
+    strokeRect((WIDTH - width) / 2, y, width, height, borderColor, 2);
+    wrapped.forEach((line, index) => drawText(line, WIDTH / 2,
+      y + 12 + size + index * lineHeight, size, color, "center", true));
+  }
+
+  function drawCompactSurvivalHud(environment) {
+    const hole = state.hole;
+    const font = gameplayReadability().fontSize;
+    const next = nextNightOrderAction();
+    const title = shouldPrepareExit()
+      ? currentHoleObjective()
+      : next
+      ? `CHECKS ${completedNightOrderActionCount()}/3 // ${next.shortLabel}`
+      : `EXIT // ${hole.keyCollected ? "SHED" : hole.drainUnlocked ? "DRAIN" : "FIND KEY OR VALVE"}`;
+    const clean = cleanBreakHudPresentation();
+    const evidence = hole.changeRequestCollected || hole.appealUsed
+      ? changeRequestHudStatus(hole)
+      : clean.visible ? clean.text : environment.zone.name;
+    ctx.fillStyle = "rgba(2,12,8,0.96)";
+    ctx.fillRect(36, 34, 560, 154);
+    strokeRect(36, 34, 560, 154, hole.joe.mode === "chase" ? "#f07850" : "#81b997", 2);
+    drawText(title, 54, 66, font, "#f0ebd6", "left", true);
+    drawText(environment.turfLabel, 54, 102, font, "#e5bb78", "left", true);
+    const inventory = shouldPrepareExit()
+      ? `${golfBallInventoryLabel()} // CHECKS ${completedNightOrderActionCount()}/3`
+      : golfBallInventoryLabel();
+    drawText(inventory, 54, 138, font, "#e5ebdb", "left", true);
+    drawText(evidence, 54, 174, font, "#9ed5b7", "left", true);
+
+    const attention = hole.joe.mode === "chase" ? Math.max(0.72, hole.detection) : hole.detection;
+    const read = courseAttentionPresentation(environment, attention);
+    const x = WIDTH - 362;
+    const width = 326;
+    ctx.fillStyle = "rgba(2,12,8,0.96)";
+    ctx.fillRect(x, 34, width, 164);
+    strokeRect(x, 34, width, 164, read.color, 2);
+    drawText(`JOE ${Math.round(worldDistance(hole.joe, state.player))}m`, x + 16, 66, font, "#f0ebd6", "left", true);
+    ctx.fillStyle = "#243a2c";
+    ctx.fillRect(x + 16, 79, width - 32, 16);
+    ctx.fillStyle = attention > 0.68 ? "#f07850" : "#dca355";
+    ctx.fillRect(x + 16, 79, (width - 32) * attention, 16);
+    const status = wrapReadableText(read.text, font, width - 32);
+    // Preserve the full evidence source; the panel grows if a rare status needs it.
+    const height = Math.max(164, 76 + status.length * (font + 5));
+    if (height > 164) {
+      ctx.fillStyle = "rgba(2,12,8,0.96)";
+      ctx.fillRect(x, 198, width, height - 164);
+    }
+    status.forEach((line, index) => drawText(line, x + 16, 122 + index * (font + 5),
+      font, read.color, "left", true));
+  }
+
+  function drawFirstHoleOverlay() {
+    const hole = state.hole;
+    const readability = gameplayReadability();
+    const variant = activeRunVariant();
+    const exitRouteSummary =
+      exitRouteHudSummary();
+    const objectiveActionSummary =
+      objectiveActionHudSummary();
+    const playerDistance = worldDistance(hole.joe, state.player);
+    const environment = hole.environment || getPlayerEnvironmentState();
+    const inRough = environment.effectiveRough;
+    const objective =
+      currentHoleObjective();
+    const expandedHud =
+      firstPersonHudExpanded();
+    const activeStampCount =
+      performanceStampsFor(
+        variant.id,
+      ).length;
+    const cleanBreakHud =
+      cleanBreakHudPresentation();
+    const changeRequestStatus =
+      changeRequestHudStatus(hole);
+    const masteryStatus =
+      hole.overtime
+        ? "OVERTIME"
+        : masterProductOwnerUnlocked()
+          ? "MASTER"
+          : portfolioUnlocked()
+            ? "OVERRIDE"
+            : "";
+
+    const waterStatus =
+      hole.sprinklerSoakTimer > 0
+        ? `  •  WATER ${Math.ceil(hole.sprinklerSoakTimer)}s`
+        : "";
+    const windStatus =
+      hole.crosswind.phase === "active"
+        ? `  •  WIND ${Math.ceil(hole.crosswind.timer)}s`
+        : hole.crosswind.phase === "warning"
+          ? "  •  WIND BUILDING"
+          : "";
+    const reviewStatus =
+      `  •  REVIEWS ${hole.reviewsCleared.length}/${activeSprintReviews().length}`;
+    const terrainStatus =
+      expandedHud
+        ? `${environment.zone.name}  •  ${environment.turfLabel}${waterStatus}${windStatus}${reviewStatus}  •  ORDER ${String(variant.number).padStart(2, "0")}${masteryStatus ? `  •  ${masteryStatus}` : ""}`
+        : `${environment.turfLabel}  •  ${environment.coverQuality.toUpperCase()}${waterStatus}${windStatus}`;
+    const terrainColor =
+      environment.sand
+        ? "#e3b96f"
+      : environment.wet
+        ? "#8fd4ca"
+        : environment.hardCover && hole.crouched
+        ? "#9fd285"
+        : environment.lightExposure > 0.15
+          ? "#f2a250"
+          : environment.mowed
+            ? "#d4c45e"
+          : inRough
+            ? "#d5b25f"
+            : "#9fac92";
+
+    if (readability.compact) {
+      drawCompactSurvivalHud(environment);
+    } else {
+      if (expandedHud) {
+        ctx.fillStyle = "rgba(2,8,5,0.86)";
+        ctx.fillRect(36, 34, 430, 224);
+        strokeRect(36, 34, 430, 224, hole.joe.mode === "chase" ? "#c84627" : "#687e4a", 2);
+        drawText(
+          `HOLE 1 — ${variant.shortName}`,
+          62,
+          76,
+          29,
+          "#efebcd",
+          "left",
+          true,
+        );
+        drawText(
+          changeRequestStatus,
+          446,
+          75,
+          11,
+          hole.appealUsed
+            ? "#b98062"
+            : hole.changeRequestCollected
+            ? emergencyAppealState().eligible
+              ? "#f2bd67"
+              : "#8fc58b"
+            : "#e69355",
+          "right",
+          true,
+        );
+        drawText(
+          objective,
+          62,
+          112,
+          cleanBreakHud.visible
+            ? fittedTextSize(
+                objective,
+                16,
+                278,
+                11,
+                true,
+              )
+            : 16,
+          hole.keyCollected
+            ? "#b9d77b"
+            : "#e38a3e",
+          "left",
+          true,
+        );
+        if (cleanBreakHud.visible) {
+          ctx.fillStyle =
+            cleanBreakHud.backgroundColor;
+          ctx.fillRect(
+            354,
+            94,
+            92,
+            24,
+          );
+          strokeRect(
+            354,
+            94,
+            92,
+            24,
+            cleanBreakHud.borderColor,
+            1,
+          );
+          drawText(
+            cleanBreakHud.text,
+            400,
+            111,
+            10,
+            cleanBreakHud.textColor,
+            "center",
+            true,
+          );
+        }
+
+        drawFieldIcon(0, 79, 146, 38, hole.keyCollected ? 0.48 : 1);
+        drawText(
+          exitRouteSummary.text,
+          106,
+          151,
+          fittedTextSize(
+            exitRouteSummary.text,
+            13,
+            338,
+            10,
+            true,
+          ),
+          exitRouteSummary.color,
+          "left",
+          exitRouteSummary.phase !==
+            "choose_route",
+        );
+        drawFieldIcon(1, 79, 184, 38);
+        drawText(
+          `${inputCopy(`HOLD ${keyboardBindingLabel("chip")}`, "HOLD X", "HOLD CHIP")}  AIM / CHIP   ${golfBallInventoryLabel()}${hole.recoverableBalls.length > 0 ? `  •  ${hole.recoverableBalls.length} ON COURSE` : ""}`,
+          106,
+          189,
+          13,
+          "#e5d9b8",
+          "left",
+        );
+        drawFieldIcon(2, 79, 222, 38, hole.sprinklerUsed ? 0.48 : 1);
+        drawText(
+          objectiveActionSummary.text,
+          106,
+          227,
+          fittedTextSize(
+            objectiveActionSummary.text,
+            13,
+            338,
+            10,
+            true,
+          ),
+          objectiveActionSummary.color,
+          "left",
+        );
+        drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
+      } else {
+        ctx.fillStyle = "rgba(2,8,5,0.82)";
+        ctx.fillRect(36, 34, 402, 104);
+        strokeRect(
+          36,
+          34,
+          402,
+          104,
+          hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
+          2,
+        );
+        drawText(
+          `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
+          56,
+          65,
+          16,
+          "#e9e4c9",
+          "left",
+          true,
+        );
+        drawText(
+          changeRequestStatus,
+          420,
+          65,
+          10,
+          hole.appealUsed
+            ? "#b98062"
+            : hole.changeRequestCollected
+            ? emergencyAppealState().eligible
+              ? "#f2bd67"
+              : "#8fc58b"
+            : "#e69355",
+          "right",
+          true,
+        );
+        drawText(
+          objective,
+          56,
+          94,
+          cleanBreakHud.visible
+            ? fittedTextSize(
+                objective,
+                14,
+                262,
+                10,
+                true,
+              )
+            : 14,
+          hole.keyCollected
+            ? "#b9d77b"
+            : "#e38a3e",
+          "left",
+          true,
+        );
+        if (cleanBreakHud.visible) {
+          ctx.fillStyle =
+            cleanBreakHud.backgroundColor;
+          ctx.fillRect(
+            326,
+            78,
+            94,
+            22,
+          );
+          strokeRect(
+            326,
+            78,
+            94,
+            22,
+            cleanBreakHud.borderColor,
+            1,
+          );
+          drawText(
+            cleanBreakHud.text,
+            373,
+            94,
+            10,
+            cleanBreakHud.textColor,
+            "center",
+            true,
+          );
+        }
+        drawText(
+          `${terrainStatus}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  ${golfBallInventoryLabel()}${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}`,
+          56,
+          120,
+          11,
+          terrainColor,
+          "left",
+        );
+      }
+
+      const meterX = WIDTH - 304;
+      const liveProjection =
+        hole.liveProjection ||
+        calculateRunResult(
+          hole.keyCollected
+            ? "shed"
+            : hole.drainUnlocked
+              ? "drain"
+              : "shed",
+        );
+      const projectionColor =
+        gradeColor(
+          liveProjection.grade,
+        );
+      const projectionChanging =
+        liveProjection.changeTimer > 0 &&
+        liveProjection.direction !==
+          "steady";
+      const echoProjection =
+        courseEchoComparisonState();
+      const echoProjectionVisible =
+        echoProjection
+          ?.fieldCardVisible &&
+        !echoProjection.finished;
+      const echoProjectionCopy =
+        !echoProjectionVisible
+          ? null
+          : echoProjection.scoreDelta > 0
+            ? `ECHO SCORE +${echoProjection.scoreDelta} // PROJECTED`
+            : echoProjection.scoreDelta < 0
+              ? `ECHO SCORE -${Math.abs(
+                  echoProjection.scoreDelta,
+                )} // CLOSE GAP`
+              : echoProjection.resultState ===
+                    "score_tied"
+                ? "ECHO SCORE TIED // EXACT TIE"
+                : echoProjection.resultState ===
+                      "tiebreak_ahead"
+                  ? "ECHO SCORE TIED // TIEBREAK +"
+                  : "ECHO SCORE TIED // TIEBREAK -";
+      ctx.fillStyle = "rgba(2,8,5,0.82)";
+      ctx.fillRect(meterX, 36, 264, 170);
+      strokeRect(
+        meterX,
+        36,
+        264,
+        170,
+        hole.joe.mode === "chase"
+          ? "#c84627"
+          : projectionChanging
+            ? projectionColor
+            : "#536642",
+        2,
+      );
+      drawText("JOE ATTENTION", meterX + 18, 65, 13, "#d7deca", "left");
+      const projectionPulse =
+        state.reducedMotion ||
+        !projectionChanging
+          ? 1
+          : 0.82 +
+            (
+              Math.sin(
+                state.time * 13,
+              ) +
+              1
+            ) *
+              0.09;
+      ctx.save();
+      ctx.globalAlpha =
+        projectionPulse;
+      ctx.fillStyle =
+        projectionChanging
+          ? "rgba(34,48,23,0.96)"
+          : "rgba(18,34,20,0.82)";
+      ctx.fillRect(
+        meterX + 151,
+        48,
+        95,
+        23,
+      );
+      strokeRect(
+        meterX + 151,
+        48,
+        95,
+        23,
+        projectionColor,
+        projectionChanging
+          ? 2
+          : 1,
+      );
+      drawText(
+        `FILE // ${liveProjection.grade}`,
+        meterX + 198,
+        64,
+        10,
+        projectionColor,
+        "center",
         true,
-      ),
-      attentionStatusColor,
-      "left",
-      true,
-    );
-    const composure =
-      hole.composure;
-    drawText(
-      `COMPOSURE ${composure.state.toUpperCase()} ${Math.round(composure.value * 100)}`,
-      meterX + 246,
-      132,
-      9,
-      composure.state === "panic"
-        ? "#f06a43"
-        : composure.state ===
-              "frayed"
-          ? "#e6a15a"
-          : composure.state ===
-                "tense"
-            ? "#aab982"
-            : "#6f826c",
-      "right",
-      composure.value < 0.53,
-    );
-    drawText(
-      hole.joe.mode === "chase"
-        ? `PREMIUM +${hole.riskPremiumBanked} // LIVE +${hole.riskBreakBonuses.length < 3 ? hole.currentRiskPremium : 0}`
-        : `RISK PREMIUM +${hole.riskPremiumBanked}`,
-      meterX + 18,
-      145,
-      9,
-      hole.riskPremiumBanked > 0
-        ? "#d9b369"
-        : "#71816e",
-      "left",
-      hole.joe.mode === "chase",
-    );
-    drawText(
-      `JOE ${Math.round(playerDistance)}m`,
-      meterX + 246,
-      145,
-      11,
-      playerDistance < 42 ? "#e8a55d" : "#899985",
-      "right",
-    );
-    const deliveryActive =
-      hole.deliveryTimer > 0 &&
-      hole.deliveryChain > 0;
-    const deliveryColor =
-      hole.deliveryChain >=
-      DELIVERY_CHAIN_MAX
-        ? "#efc95e"
-        : deliveryActive
-          ? "#84c9a2"
-          : "#586a59";
-    drawText(
-      deliveryActive
-        ? `DELIVERY ×${deliveryMultiplier(hole.deliveryChain).toFixed(1)}`
-        : "DELIVERY CHAIN",
-      meterX + 18,
-      170,
-      9,
-      deliveryColor,
-      "left",
-      deliveryActive,
-    );
-    drawText(
-      deliveryActive
-        ? `${Math.ceil(hole.deliveryTimer)}s  +${hole.deliveryBonus}`
-        : "LINK SMART PLAYS",
-      meterX + 246,
-      170,
-      9,
-      deliveryColor,
-      "right",
-      deliveryActive,
-    );
-    ctx.fillStyle =
-      "#17251b";
-    ctx.fillRect(
-      meterX + 18,
-      178,
-      228,
-      5,
-    );
-    ctx.fillStyle =
-      deliveryColor;
-    ctx.fillRect(
-      meterX + 18,
-      178,
-      228 *
-        clamp(
-          hole.deliveryTimer /
-            DELIVERY_CHAIN_WINDOW,
-          0,
-          1,
+      );
+      ctx.restore();
+      ctx.fillStyle = "#17231a";
+      ctx.fillRect(meterX + 18, 79, 228, 18);
+      const attention =
+        hole.joe.mode === "chase"
+          ? Math.max(0.72, hole.detection)
+          : hole.detection;
+      ctx.fillStyle = attention > 0.68 ? "#d84a28" : attention > 0.28 ? "#d88935" : "#6c8a50";
+      ctx.fillRect(meterX + 18, 79, 228 * attention, 18);
+      strokeRect(meterX + 18, 79, 228, 18, "#889879", 1);
+      const { text: attentionStatus, color: attentionStatusColor } =
+        courseAttentionPresentation(environment, attention);
+      drawText(
+        attentionStatus,
+        meterX + 18,
+        119,
+        fittedTextSize(
+          attentionStatus,
+          11,
+          228,
+          8,
+          true,
         ),
-      5,
-    );
-    drawText(
-      projectionChanging
-        ? `GRADE ${liveProjection.direction === "up" ? "UP" : "DOWN"} // ${liveProjection.reason}`
-        : echoProjectionCopy ||
-          "PROJECTED IF FILED NOW",
-      meterX + 132,
-      199,
-      9,
-      projectionChanging
-        ? projectionColor
-        : echoProjectionVisible
-          ? echoProjection.scoreDelta < 0
-            ? "#d99a65"
-            : echoProjection.scoreDelta > 0
-              ? "#80c7a5"
-              : "#d8cf9a"
-          : "#647461",
-      "center",
-      projectionChanging ||
-        echoProjectionVisible,
-    );
+        attentionStatusColor,
+        "left",
+        true,
+      );
+      const composure =
+        hole.composure;
+      drawText(
+        `COMPOSURE ${composure.state.toUpperCase()} ${Math.round(composure.value * 100)}`,
+        meterX + 246,
+        132,
+        9,
+        composure.state === "panic"
+          ? "#f06a43"
+          : composure.state ===
+                "frayed"
+            ? "#e6a15a"
+            : composure.state ===
+                  "tense"
+              ? "#aab982"
+              : "#6f826c",
+        "right",
+        composure.value < 0.53,
+      );
+      drawText(
+        hole.joe.mode === "chase"
+          ? `PREMIUM +${hole.riskPremiumBanked} // LIVE +${hole.riskBreakBonuses.length < 3 ? hole.currentRiskPremium : 0}`
+          : `RISK PREMIUM +${hole.riskPremiumBanked}`,
+        meterX + 18,
+        145,
+        9,
+        hole.riskPremiumBanked > 0
+          ? "#d9b369"
+          : "#71816e",
+        "left",
+        hole.joe.mode === "chase",
+      );
+      drawText(
+        `JOE ${Math.round(playerDistance)}m`,
+        meterX + 246,
+        145,
+        11,
+        playerDistance < 42 ? "#e8a55d" : "#899985",
+        "right",
+      );
+      const deliveryActive =
+        hole.deliveryTimer > 0 &&
+        hole.deliveryChain > 0;
+      const deliveryColor =
+        hole.deliveryChain >=
+        DELIVERY_CHAIN_MAX
+          ? "#efc95e"
+          : deliveryActive
+            ? "#84c9a2"
+            : "#586a59";
+      drawText(
+        deliveryActive
+          ? `DELIVERY ×${deliveryMultiplier(hole.deliveryChain).toFixed(1)}`
+          : "DELIVERY CHAIN",
+        meterX + 18,
+        170,
+        9,
+        deliveryColor,
+        "left",
+        deliveryActive,
+      );
+      drawText(
+        deliveryActive
+          ? `${Math.ceil(hole.deliveryTimer)}s  +${hole.deliveryBonus}`
+          : "LINK SMART PLAYS",
+        meterX + 246,
+        170,
+        9,
+        deliveryColor,
+        "right",
+        deliveryActive,
+      );
+      ctx.fillStyle =
+        "#17251b";
+      ctx.fillRect(
+        meterX + 18,
+        178,
+        228,
+        5,
+      );
+      ctx.fillStyle =
+        deliveryColor;
+      ctx.fillRect(
+        meterX + 18,
+        178,
+        228 *
+          clamp(
+            hole.deliveryTimer /
+              DELIVERY_CHAIN_WINDOW,
+            0,
+            1,
+          ),
+        5,
+      );
+      drawText(
+        projectionChanging
+          ? `GRADE ${liveProjection.direction === "up" ? "UP" : "DOWN"} // ${liveProjection.reason}`
+          : echoProjectionCopy ||
+            "PROJECTED IF FILED NOW",
+        meterX + 132,
+        199,
+        9,
+        projectionChanging
+          ? projectionColor
+          : echoProjectionVisible
+            ? echoProjection.scoreDelta < 0
+              ? "#d99a65"
+              : echoProjection.scoreDelta > 0
+                ? "#80c7a5"
+                : "#d8cf9a"
+            : "#647461",
+        "center",
+        projectionChanging ||
+          echoProjectionVisible,
+      );
+    }
     drawCourseMiniMap();
     drawRearNavigationCue(
       expandedHud,
     );
     drawCourseEchoComparison();
 
-    if (expandedHud) {
+    if (expandedHud && !readability.compact) {
       const openingMovementCue =
         openingMovementCueActive();
       ctx.fillStyle = "rgba(2,8,5,0.82)";
@@ -54282,7 +54225,7 @@
     }
 
     if (
-      hole.zoneBannerTimer > 0 &&
+      !readability.compact && hole.zoneBannerTimer > 0 &&
       activeHudPresentationFocus() ===
         "zone_arrival"
     ) {
@@ -54311,6 +54254,10 @@
         commitment?.risk
           ?.accentColor ||
         "#76c49a";
+      if (readability.compact) {
+        drawReadableRail([hole.prompt, ...(commitment ? [commitment.text] : [])],
+          "#e7f2df", commitmentColor, "rgba(2,12,8,0.98)");
+      } else {
       const actionWidth = 720;
       const actionX =
         WIDTH * 0.5 -
@@ -54372,6 +54319,7 @@
           true,
         );
       }
+      }
     } else if (
       !hole.escapeFiling.active &&
       !hole.escapeFiling.sealing &&
@@ -54413,6 +54361,12 @@
         0,
         1,
       );
+      if (readability.compact) {
+        ctx.globalAlpha = alpha;
+        drawReadableRail([presentedMessage, ...(fieldCheckHandoff ? [fieldCheckHandoff.nextText] : [])],
+          messageRail.textColor, messageRail.borderColor, messageRail.backgroundColor);
+        ctx.globalAlpha = 1;
+      } else {
       const messageWidth = 720;
       const messageHeight =
         fieldCheckHandoff ? 62 : 46;
@@ -54484,6 +54438,7 @@
         );
       }
       ctx.globalAlpha = 1;
+      }
     } else if (
       !hole.escapeFiling.active &&
       !hole.escapeFiling.sealing &&
@@ -54503,7 +54458,7 @@
       !golfAimOwnsSignalLane()
     ) {
       drawText(
-        expandedHud
+        expandedHud && !readability.compact
           ? inputCopy(
               `MOVE ${keyboardMovementCopy()}  •  ${keyboardBindingLabel("sprint")} SPRINT  •  ${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTEN  •  ${keyboardBindingLabel("look_back")} REAR  •  ${keyboardBindingLabel("interact")} USE  •  HOLD ${keyboardBindingLabel("chip")} AIM  •  ESC`,
               "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  R3 REAR  •  A USE  •  HOLD X AIM  •  START",
@@ -54514,7 +54469,7 @@
             ),
         28,
         HEIGHT - 25,
-        11,
+        readability.compact ? readability.fontSize : 11,
         expandedHud ? "#c0c9b4" : "#829079",
         "left",
       );
@@ -57280,6 +57235,7 @@
     }
 
     ctx.restore();
+    drawScreenTexture();
     if (state.hole.tutorialVisible) {
       drawTutorialBriefing();
       return;
@@ -59402,7 +59358,7 @@
       default:
         drawGate();
     }
-    drawScreenTexture();
+    if (!["first_hole", "paused"].includes(state.mode)) drawScreenTexture();
     const suppressTransition = state.mode === "first_hole" && state.hole.tutorialVisible;
     if (!suppressTransition && state.transitionAlpha > 0.001) {
       const resultTransitionScale = ["victory", "defeat"].includes(state.mode) ? 0.28 : 1;
@@ -60100,7 +60056,6 @@
         }
       }
       updateZoneSetPiece(dt);
-      updateSprintReviews();
       hole.discoveredY = Math.max(hole.discoveredY, state.player.y + 48);
       const environment = getPlayerEnvironmentState();
       const inRough = environment.inRough;
@@ -69180,7 +69135,10 @@
               "the chosen rough-grid or escalated-sector consequence remains named through Joe's investigation and follow-up search",
             onePerRun: true,
           },
+          readability: { ...gameplayReadability(), mapRoute: compactMapRoutePresentation() },
           sprintReviews: {
+            activation: "explicit_interact_only",
+            reserveBalls: state.hole.reviewBallReserve || 0,
             cleared:
               state.hole.reviewsCleared.length,
             total:
@@ -69192,7 +69150,7 @@
                 ),
               ),
             reward:
-              "one golf ball plus shorter final filing",
+              "one golf ball (reserved if full) plus shorter final filing",
             risk:
               "review bell redirects Joe unless he is already chasing",
             gates:
@@ -72130,6 +72088,7 @@
                     ),
                 ),
               targetSelection: {
+                metric: state.hole.navigationGuide.selectionMetric || "direct_distance",
                 reason:
                   state.hole
                     .navigationGuide

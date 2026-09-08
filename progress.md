@@ -1,5 +1,21 @@
 Original prompt: continue to refine and polish the game experience, make sure the game is engaging and addictive, fun and beautiful
 
+## Gameplay clarity and deliberate rewards (2026-09-08)
+
+- Implemented a simpler first-run menu, shorter compact briefing, larger compact survival HUD, wrapped critical instructions, touch-safe action rails, and readable map bearings. Rear navigation and reward cards now clear the expanded compact panels; map labels preserve immediate collision/footing/cover-hold priority. Gameplay scanlines now precede the HUD.
+- Corrected turn-away stealth coaching and made attention recovery consistent across Joe Pressure settings. Optional reviews now require Use and preview their cost/reward; full pockets bank one reserve ball per review, consumed by the next chip and reset on retry.
+- Added `tools/verify-gameplay-polish.cjs` for browser interaction, inventory, priority, difficulty-recovery, exit, retry, and simulated input coverage. Test-only state access is injected into the intercepted browser source and is not shipped.
+- Static release verification passes 48 image assets and 89 fixture parses. The installed client passed 57/57 readiness in the final opening/collision replay at 5.6 ms p95 render work. Visual checks cover 2560x1600, 1280x720, 800x600, and 844x390. See `qa/gameplay-polish-2026-09-08.md` for exact evidence and limitations.
+- A normal-time high-resolution headless comparison was slow for both original and edited builds (14.4 versus 15.1 estimated FPS). Do not claim hardware performance certification; physical-device sessions and sustained profiling remain necessary. Larger station/vision/rehearsal proposals remain experiments for full-run human playtesting.
+
+## Gameplay experience review (2026-09-08)
+
+- Reviewed the current browser game in response to a request to identify gameplay issues and enhancements. Findings and acceptance criteria: `qa/gameplay-experience-review-2026-09-08.md`. No gameplay implementation changed.
+- Replayed ordinary input through Audit Bell and into Irrigation Mud (223/720 progress); the standard client passed 57/57 readiness checks with no browser errors and 5.4 ms p95 canvas render work. Inspected screenshots at 2560x1600, 1280x720, and 800x600.
+- Identified a facing-independent sight predicate versus turn-away advice, dense/small critical text, shared station structure, automatically triggered optional reviews with a 0.18-second filing benefit, and full-course resets despite targeted retry coaching. Separate hypotheses from confirmed rules in the report.
+- A separate 181-frame high-resolution Tee sample failed the frame-budget check (25.1 ms zone p95); needs warmed-up real-time profiling on representative hardware. Local evidence is under `output/gameplay-review-2026-09-08/`.
+- Next: prioritize truthful stealth cues and small-screen legibility, then human-test distinct station choices and optional failed-encounter practice. Full escape, controller, touch, and sustained hardware feel were not certified by this review.
+
 ## Pursuit-intensity accessibility polish (2026-08-13)
 
 - Added a persisted `JOE PRESSURE` field option with three deliberate tiers: `STEADY` (0.8), `STANDARD` (1.0), and `RELENTLESS` (1.2). The setting scales only Joe's movement and detection accumulation; collision geometry, objective timing, terrain costs, interaction ranges, and established counterplay do not change.
@@ -2294,3 +2310,20 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Recursive inspection of every exported string found zero `U+FFFD` replacement characters and zero remaining `â` or `Ã` mojibake markers. The normalized state retained the single-glyph `◀` marker text.
 - Rendering averaged 4.9 ms, ended at 2.4 ms, and produced no browser-error artifact. Evidence is recorded in `qa/compact-hud-glyph-normalization-polish-2026-08-05.md`.
 - Suggested next refinement: capture the secured Change Request state to confirm `CR ✓ +650` visually; preserve the shared table and avoid substituting ASCII if the checked icon renders correctly.
+
+## Exit preparation and route pacing — 2026-09-08
+
+- Found that primary guidance excluded both early exit unlocks until all three late-course checks were complete. Added an exit preparation phase after the first station, while retaining its tactical breakaway/hold and all existing filing requirements.
+- Pickup guidance now considers onward travel to the next check, prioritizes reachable items, and preserves the existing commitment margin. Either explicit pickup immediately resumes the field checks.
+- Added clear PREPARE EXIT copy, compact check progress during preparation, and matching briefing text. Navigation diagnostics identify the selection metric.
+- Added tools/verify-exit-preparation.cjs for the route/variant matrix and tools/play-guided-route.cjs for bounded ordinary-input exploratory runs. No test-state access is shipped in production.
+- Verified the route matrix, existing gameplay-polish regression groups, release static/asset checks, and official opening replay. Inspected four viewport sizes. Full ordinary-input wins occurred on the intermediate nearest-unlock route; final forward-key probes reached two checks/518 meters and ended in capture. Do not cite those earlier wins as final-route balance approval.
+- Detailed evidence and remaining human playtesting requirements: qa/exit-preparation-polish-2026-09-08.md.
+## Shed access and completion fix — 2026-09-08
+
+- Reproduced the user's side-approach blockage: x=-36 and x=0 starting at y=680 stopped on the gate around y=688, outside the old shed interaction radius. Center lanes did work.
+- Moved the final gate and its collision wings from y=694 to y=668, enlarged the shared shed interaction radius from 16 to 22, and updated the authored approach audit. The door remains solid and visible across an open forecourt.
+- Suppressed retreat feedback only for usable shed-wall/door contact; in-range guidance now says FILE RELEASE. Kept key/check requirements and filing/cancellation mechanics intact.
+- Added tools/verify-shed-clearance.cjs: 15 lane/variant approaches and 3 longer corridor approaches reach victory using actual movement and Use from controlled prerequisite setups. Missing key/check and cancellation/retry checks pass. Browser errors: none. Authored route minimum clearance beyond player radius: 4.6.
+- Inspected before/after shed screenshots and four viewport captures; broader gameplay regressions, official readiness replay, and release checks pass. Evidence: qa/shed-clearance-fix-2026-09-08.md and ignored output/shed-clearance/.
+- This is a local fix; no hosted deployment was performed.
