@@ -1,17 +1,19 @@
 /* Walk into the shed from multiple lanes, then file using actual input.
  * Test-only injection seeds prerequisites and keeps Joe away to isolate access.
- * node tools/verify-shed-clearance.cjs [--probe]
+ * node tools/verify-shed-clearance.cjs [--probe] [--url URL]
  */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
 (async()=>{
   const probe=process.argv.includes('--probe');
-  const out=path.resolve(`output/shed-clearance/${probe?'before':'after'}`);fs.mkdirSync(out,{recursive:true});
+  const urlIndex=process.argv.indexOf('--url');
+  const url=urlIndex>=0?process.argv[urlIndex+1]:'http://127.0.0.1:4187';
+  const out=path.resolve(`output/shed-clearance/${urlIndex>=0?'published':probe?'before':'after'}`);fs.mkdirSync(out,{recursive:true});
   const browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[],results=[];
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  const source=fs.readFileSync(path.resolve('web/game.js'),'utf8');
+  const source=urlIndex>=0?await (await fetch(new URL('game.js',url))).text():fs.readFileSync(path.resolve('web/game.js'),'utf8');
   await page.route('**/game.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('  window.advanceTime = (milliseconds) => {',
     '  window.__shedTest = {state, resetFirstHole, NIGHT_ORDER_ACTIONS, SHED_EXIT, SHED_APPROACH_ROUTE, obstacleAtPosition, shedApproachReadabilityState};\n  window.advanceTime = (milliseconds) => {')}));
   const tick=n=>page.evaluate(n=>window.advanceTime(n*1000/60),n);
@@ -26,7 +28,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
     },{x,variant,key,checks,y});await tick(1);
   };
   try{
-    await page.goto('http://127.0.0.1:4187');await page.waitForFunction(()=>typeof window.advanceTime==='function');
+    await page.goto(url);await page.waitForFunction(()=>typeof window.advanceTime==='function');
     await page.locator('canvas').click();await page.keyboard.press('Space');
     await page.waitForFunction(()=>{const s=JSON.parse(window.render_game_to_text());return s.assets.course.loaded===42&&s.assets.results.loaded===4;},null,{timeout:60000});await tick(180);
     for(const variant of (probe?[0]:[0,1,2]))for(const x of [-36,-27,-18,-9,0]){
@@ -40,6 +42,16 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
       if(!probe){assert.equal(reached.prompt?.targetId,'maintenance-shed');assert.equal(reached.guide.direction,'FILE RELEASE');assert.equal(filing.filing.active,true);assert.equal(finished.mode,'victory');}
     }
     if(!probe){
+      // Cross the former gate location using ordinary forward input over a
+      // broad band, instead of only spawning beyond it or following its center.
+      for(const variant of [0,1,2])for(const x of [-24,-18,-12,-6,0,6]){
+        await reset(x,variant,true,true,650);
+        if(x===0&&variant===0)await page.screenshot({path:path.join(out,'open-approach.png')});
+        await press('ArrowUp',200);
+        const reached=await read();assert.equal(reached.prompt?.targetId,'maintenance-shed',`Open lane ${x} must reach the shed`);
+        await press('Enter');await tick(150);assert.equal((await read()).mode,'victory');
+        results.push({variant,x,approachStart:{x,y:650},mode:'victory'});
+      }
       // The full final approach must be navigable, not only a seeded doorstep.
       for(const x of [-92,24,92]){
         await reset(x,0,true,true,632);
@@ -67,5 +79,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({probe,results,errors},null,2));
     console.log(JSON.stringify({probe,results:results.map(r=>({variant:r.variant,x:r.x,y:r.reached?.progress,filing:r.filing,mode:r.mode,approachStart:r.approachStart})),errors},null,2));
+  }catch(error){
+    await page.screenshot({path:path.join(out,'failure.png')});
+    fs.writeFileSync(path.join(out,'failure.json'),JSON.stringify({error:error.message,state:await read(),results},null,2));
+    throw error;
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

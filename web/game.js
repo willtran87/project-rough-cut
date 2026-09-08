@@ -3024,9 +3024,8 @@
     { id: "release-cart", kit: "expanded", type: 1, x: -56, y: 657, radius: 18, radiusX: 20, radiusY: 8, coverRadius: 27, scale: 1.02, blocks: true, sight: true, landmark: "release cart" },
     { id: "release-board", kit: "expanded", type: 4, x: 76, y: 670, radius: 11, radiusX: 7, radiusY: 5, coverRadius: 19, scale: 0.96, blocks: true, sight: true, landmark: "release board" },
     { id: "release-stone", asset: "stone-cover", kit: "base", type: 1, x: 58, y: 678, radius: 17, radiusX: 19, radiusY: 8, coverRadius: 24, scale: 1.02, blocks: true, sight: true, landmark: "release stone cover" },
-    { id: "release-arch", asset: "hedge-tunnel", kit: "expanded", type: 0, x: -18, y: 668, radius: 0, scale: 1.04, blocks: false, sight: false, landmark: "final release gate" },
-    { id: "release-arch-left", kit: "expanded", type: 0, tunnelWing: "left", x: -53, y: 668, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
-    { id: "release-arch-right", kit: "expanded", type: 0, tunnelWing: "right", x: 17, y: 668, radius: 15, radiusX: 12.5, radiusY: 7, coverRadius: 23, scale: 1.04, blocks: true, sight: true, draw: false, landmark: "final release gate" },
+    // The final approach is an open forecourt. Do not place a second hedge
+    // gate between the release intake and the shed's interaction apron.
     { id: "release-pine", kit: "base", type: 2, x: 94, y: 702, radius: 20, radiusX: 8, radiusY: 8, coverRadius: 29, scale: 1.04, blocks: true, sight: true, landmark: "release pine" },
     { id: "shed-left-wall", x: -44, y: 710, radius: 11, radiusX: 7, radiusY: 8, coverRadius: 22, blocks: true, sight: true, draw: false, landmark: "shed wall" },
     { id: "shed-door", x: -18, y: 710, radius: 15, radiusX: 13, radiusY: 4, coverRadius: 20, blocks: true, sight: true, draw: false, landmark: "shed door" },
@@ -19419,7 +19418,7 @@
           (point) => ({ ...point }),
         ),
       presentation:
-        "visible_release_chicane_into_widened_gate_and_shed_apron",
+        "open_release_forecourt_into_shed_apron",
     };
   }
 

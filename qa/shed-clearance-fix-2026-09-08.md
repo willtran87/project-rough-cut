@@ -1,5 +1,15 @@
 # Shed approach clearance
 
+## Follow-up: remove the remaining choke point
+
+The first fix moved the gate but left its two blocking wings. A subsequent report was reproduced against the published build: forward movement from x=0, y=650 stopped before reaching the shed, and no interaction prompt appeared. Earlier straight-lane tests started beyond the relocated gate; navigation-driven tests threaded its center and missed this failure.
+
+The final gate artwork and both collision wings are now removed. The test adds six straight approach lanes from y=650 across all three course variants, crossing the former gate location. Combined with the previous tests, 36 approach/file/completion sequences pass locally. The same added test fails on the previous published build. The test accepts `--url` to run using the actual published game source and assets, with only controlled test-state access injected.
+
+The HTML references a versioned game script so reloading the page requests this correction instead of reusing the previous script URL. Evidence is under `output/shed-clearance/`; the original published failure is retained in `published/failure.json` and `published/failure.png`.
+
+The sections below document the initial fix; this follow-up supersedes its gate relocation.
+
 ## Reproduction
 
 With the key and all three checks completed, walking forward from x=-36 or x=0 at y=680 stopped at the final hedge gate around y=688. The player remained outside the shed's old 16-unit interaction radius, and Use could not begin filing. The center lanes were reachable, so the problem was a cramped and poorly communicated approach rather than universal exit failure.

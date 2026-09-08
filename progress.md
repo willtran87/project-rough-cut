@@ -2327,3 +2327,9 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Added tools/verify-shed-clearance.cjs: 15 lane/variant approaches and 3 longer corridor approaches reach victory using actual movement and Use from controlled prerequisite setups. Missing key/check and cancellation/retry checks pass. Browser errors: none. Authored route minimum clearance beyond player radius: 4.6.
 - Inspected before/after shed screenshots and four viewport captures; broader gameplay regressions, official readiness replay, and release checks pass. Evidence: qa/shed-clearance-fix-2026-09-08.md and ignored output/shed-clearance/.
 - This is a local fix; no hosted deployment was performed.
+## Remove the remaining final gate choke point — 2026-09-08
+
+- Reproduced the follow-up against the published game source: straight movement from x=0,y=650 stopped on a relocated final-gate wing before the shed interaction zone. The earlier tests spawned beyond that gate or navigated through its center, so they missed this route.
+- Removed the final gate artwork and both solid wings, preserving the shed door, interaction requirements, and the earlier course. Added a versioned game script URL for reloads.
+- Expanded the shed regression to cross the former gate on six straight lanes in every course variant. All 36 approach-to-completion scenarios pass locally; the new lane test fails against the old published build. Added --url support to repeat tests using published source/assets.
+- Publishing this correction under the existing commit/push/Pages authorization, then verifying the deployed source and repeating the route test against it.
