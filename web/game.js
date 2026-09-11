@@ -14094,7 +14094,18 @@
       return false;
     }
     const input = movementInput();
-    return Math.hypot(input.x, input.y) > 0.12;
+    return Math.hypot(input.x, input.y) > 0.12 && !filingEntryInputHeld(input);
+  }
+
+  // Committing an exit consumes the approach input already held. A deliberate
+  // direction change, or a fresh movement after release, still cancels filing.
+  function filingEntryInputHeld(input) {
+    const filing = state.hole?.escapeFiling;
+    const entry = filing?.entryMovement;
+    if (!filing?.active || !entry) return false;
+    const length = Math.hypot(input.x, input.y);
+    if (length <= 0.12) return false;
+    return (input.x * entry.x + input.y * entry.y) / length > 0.96;
   }
 
   function movementInput() {
@@ -22758,6 +22769,11 @@
     }
     filing.active = true;
     filing.sealing = false;
+    const entryInput = movementInput();
+    const entryLength = Math.hypot(entryInput.x, entryInput.y);
+    filing.entryMovement = entryLength > 0.12
+      ? { x: entryInput.x / entryLength, y: entryInput.y / entryLength }
+      : null;
     filing.route = route;
     filing.progress = 0;
     filing.duration = Math.max(
@@ -23913,18 +23929,13 @@
     hole.phase = allComplete
       ? "secure_exit_access"
       : "field_checks";
-    hole.stateBanner = allComplete
-      ? "DEFINITION OF DONE // FIELD CHECKS COMPLETE"
-      : `${action.completionLabel} // ${completed}/${NIGHT_ORDER_ACTIONS.length}`;
+    hole.stateBanner = `CHECK ${completed}/${NIGHT_ORDER_ACTIONS.length} COMPLETE // ${action.shortLabel}`;
     hole.stateBannerTimer = 3.2;
     const handoffAction =
       objectiveActionHudSummary({
         includeTacticalOverride: false,
       });
-    const completionMessage =
-      allComplete
-        ? "FIELD CHECKS COMPLETE — secure an exit and file the Night Order."
-        : `${action.completionLabel} — Joe is routing to the signal.`;
+    const completionMessage = `${action.shortLabel} FILED — CHECK ${completed}/${NIGHT_ORDER_ACTIONS.length} COMPLETE.`;
     const breakaway =
       action.breakaway;
     const routedCompletionMessage =
@@ -53406,7 +53417,7 @@
       activeJoeSearchContext();
     const attentionStatus =
       hole.joe.mode === "chase"
-        ? "PURSUIT LOCK"
+        ? hole.hasLineOfSight ? "JOE SEES YOU" : "JOE IS PURSUING"
         : predatorTacticAttention
           ? predatorTacticAttention.label
           : directorWarning
@@ -53474,11 +53485,11 @@
               : `BLINDSIDE // ${blindsideLaneDirection(blindsidePrimary)} ${Math.ceil(blindsidePrimary.distance)}m`
             : "BLINDSIDE READY // MOVE"
         : hole.detectionSource === "sight"
-          ? "SIGHTLINE BUILDING"
+          ? "JOE CAN SEE YOU"
           : hole.detectionSource === "sound"
-            ? "NOISE DETECTED"
+            ? "JOE HEARD YOU"
             : hole.detectionSource === "trail"
-              ? "TRAIL EVIDENCE FOUND"
+              ? "JOE FOUND YOUR TRAIL"
             : environment.blocker
               ? "SIGHTLINE BLOCKED"
               : hole.tensionDirector
@@ -53568,27 +53579,44 @@
       y + 12 + size + index * lineHeight, size, color, "center", true));
   }
 
+  function playerNextActionPresentation() {
+    const hole = state.hole;
+    const next = objectiveActionHudSummary();
+    const completedNow = Boolean(hole.nightOrderActivation?.timer > 0);
+    const count = completedNightOrderActionCount();
+    const exit = hole.keyCollected ? "KEY HELD" : hole.drainUnlocked ? "VALVE OPEN" : "EXIT LOCKED";
+    const progress = completedNow
+      ? `CHECK ${count}/3 COMPLETE`
+      : `CHECKS ${count}/3 // ${exit}`;
+    let text = next.text;
+    if (next.phase === "authorized") text = "ESCAPE SECURED";
+    else if (next.phase === "filing") text = "HOLD STILL TO ESCAPE";
+    else if (["collision_recovery", "footing_escape"].includes(next.phase)) text = next.text.split(" // ")[0];
+    else if (next.phase === "field_signal_breakaway") text = next.availability === "tactical_route"
+      ? `REACH ${next.targetLabel}` : "HOLD STILL IN COVER";
+    else if (hole.joe.mode === "chase" && hole.hasLineOfSight) text = "BREAK JOE'S SIGHTLINE";
+    else if (next.phase === "blocked") text = nightOrderActionsComplete() ? "SECURE KEY OR VALVE" : "FINISH FIELD CHECKS";
+    else if (practiceDrillActive() && !hole.ballFlight && !hole.ballRoll) text = "TRY A PRACTICE CHIP";
+    else if (next.availability === "ready") text = next.text.replace(/\s+/g, " ");
+    else if (next.targetLabel) text = `REACH ${next.targetLabel}`;
+    return {text, progress, completedNow, phase: next.phase, targetId: next.targetId};
+  }
+
   function drawCompactSurvivalHud(environment) {
     const hole = state.hole;
     const font = gameplayReadability().fontSize;
-    const next = nextNightOrderAction();
-    const title = shouldPrepareExit()
-      ? currentHoleObjective()
-      : next
-      ? `CHECKS ${completedNightOrderActionCount()}/3 // ${next.shortLabel}`
-      : `EXIT // ${hole.keyCollected ? "SHED" : hole.drainUnlocked ? "DRAIN" : "FIND KEY OR VALVE"}`;
+    const action = playerNextActionPresentation();
+    const title = action.text;
     const clean = cleanBreakHudPresentation();
     const evidence = hole.changeRequestCollected || hole.appealUsed
       ? changeRequestHudStatus(hole)
-      : clean.visible ? clean.text : environment.zone.name;
+      : clean.visible ? clean.text : environment.turfLabel;
     ctx.fillStyle = "rgba(2,12,8,0.96)";
     ctx.fillRect(36, 34, 560, 154);
     strokeRect(36, 34, 560, 154, hole.joe.mode === "chase" ? "#f07850" : "#81b997", 2);
     drawText(title, 54, 66, font, "#f0ebd6", "left", true);
-    drawText(environment.turfLabel, 54, 102, font, "#e5bb78", "left", true);
-    const inventory = shouldPrepareExit()
-      ? `${golfBallInventoryLabel()} // CHECKS ${completedNightOrderActionCount()}/3`
-      : golfBallInventoryLabel();
+    drawText(action.progress, 54, 102, font, action.completedNow ? "#a3efb8" : "#e5bb78", "left", true);
+    const inventory = golfBallInventoryLabel();
     drawText(inventory, 54, 138, font, "#e5ebdb", "left", true);
     drawText(evidence, 54, 174, font, "#9ed5b7", "left", true);
 
@@ -53627,7 +53655,7 @@
     const environment = hole.environment || getPlayerEnvironmentState();
     const inRough = environment.effectiveRough;
     const objective =
-      currentHoleObjective();
+      playerNextActionPresentation().text;
     const expandedHud =
       firstPersonHudExpanded();
     const activeStampCount =
@@ -53800,17 +53828,17 @@
         drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
       } else {
         ctx.fillStyle = "rgba(2,8,5,0.82)";
-        ctx.fillRect(36, 34, 402, 104);
+        ctx.fillRect(36, 34, 402, 130);
         strokeRect(
           36,
           34,
           402,
-          104,
+          130,
           hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
           2,
         );
         drawText(
-          `HOLE 1  //  ORDER ${String(variant.number).padStart(2, "0")}`,
+          playerNextActionPresentation().progress,
           56,
           65,
           16,
@@ -53880,13 +53908,17 @@
           );
         }
         drawText(
-          `${terrainStatus}${masteryStatus ? `  •  ${masteryStatus}` : ""}  •  ${golfBallInventoryLabel()}${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}`,
+          terrainStatus,
           56,
           120,
-          11,
+          fittedTextSize(terrainStatus, 12, 364, 10, false),
           terrainColor,
           "left",
         );
+        const inventoryStatus = `${golfBallInventoryLabel()}${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}${masteryStatus ? `  •  ${masteryStatus}` : ""}`;
+        drawText(inventoryStatus, 56, 145,
+          fittedTextSize(inventoryStatus, 12, 364, 10, false),
+          "#e5ebdb", "left");
       }
 
       const meterX = WIDTH - 304;
@@ -54526,11 +54558,16 @@
       filing.route === "drain"
         ? "#73c9aa"
         : "#d7b35d";
+    const readability = gameplayReadability();
+    const compact = readability.compact;
+    const font = compact ? readability.fontSize : 14;
+    const panelWidth = compact ? (state.inputMethod === "touch" ? 660 : 1000) : 660;
+    const panelHeight = compact ? 144 : 96;
     const panel = {
-      x: WIDTH * 0.5 - 300,
-      y: HEIGHT - 150,
-      width: 600,
-      height: 82,
+      x: (WIDTH - panelWidth) / 2,
+      y: HEIGHT - 68 - panelHeight,
+      width: panelWidth,
+      height: panelHeight,
     };
     ctx.save();
     ctx.fillStyle =
@@ -54555,20 +54592,20 @@
     );
     drawText(
       filing.sealing
-        ? "FILE ACCEPTED // RELEASE AUTHORIZED"
-        : `FINAL FILING // ${escapeRouteLabel(filing.route)}`,
+        ? "ESCAPE SECURED"
+        : `FILING ${escapeRouteLabel(filing.route)} // ${Math.round(progress * 100)}%`,
       WIDTH * 0.5,
-      panel.y + 24,
-      14,
+      panel.y + (compact ? 38 : 25),
+      font,
       "#f1e8ce",
       "center",
       true,
     );
     const bar = {
       x: panel.x + 34,
-      y: panel.y + 34,
+      y: panel.y + (compact ? 53 : 36),
       width: panel.width - 68,
-      height: 12,
+      height: compact ? 16 : 12,
     };
     ctx.fillStyle = "#121c13";
     ctx.fillRect(
@@ -54608,11 +54645,13 @@
     }
     drawText(
       filing.sealing
-        ? `${escapeRouteLabel(filing.route)} SECURED  •  EXIT AUTHORIZED`
-        : `STAY STILL  •  MOVE TO ABORT  •  JOE ${Math.round(joeDistance)}m`,
+        ? "RELEASE AUTHORIZED"
+        : filing.entryMovement
+          ? "LET GO // HOLD STILL"
+          : "MOVE TO CANCEL",
       WIDTH * 0.5,
-      panel.y + 67,
-      11,
+      panel.y + (compact ? 102 : 73),
+      compact ? font : 14,
       danger
         ? "#f2a06f"
         : "#b8c5af",
@@ -59721,6 +59760,9 @@
       updateCourseEffects(dt);
       updateTurfMarks(dt);
       const movement = movementInput();
+      if (hole.escapeFiling.active && !filingEntryInputHeld(movement)) {
+        hole.escapeFiling.entryMovement = null;
+      }
       if (!hole.escapeFiling.sealing) {
         updateGolfBallTactics(
           dt,
@@ -69134,7 +69176,7 @@
               "the chosen rough-grid or escalated-sector consequence remains named through Joe's investigation and follow-up search",
             onePerRun: true,
           },
-          readability: { ...gameplayReadability(), mapRoute: compactMapRoutePresentation() },
+          readability: { ...gameplayReadability(), mapRoute: compactMapRoutePresentation(), nextAction: playerNextActionPresentation() },
           sprintReviews: {
             activation: "explicit_interact_only",
             reserveBalls: state.hole.reviewBallReserve || 0,
@@ -73117,6 +73159,8 @@
                     ),
                   ),
             movementAborts: true,
+            approachInputConsumed: Boolean(state.hole.escapeFiling.entryMovement),
+            movementAbortRule: "new_direction_or_movement_after_release",
             joeContinuesDuringFiling: true,
             playerLockedDuringSeal: true,
             joeFrozenDuringSeal: true,

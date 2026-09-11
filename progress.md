@@ -2333,3 +2333,18 @@ Original prompt: continue to refine and polish the game experience, make sure th
 - Removed the final gate artwork and both solid wings, preserving the shed door, interaction requirements, and the earlier course. Added a versioned game script URL for reloads.
 - Expanded the shed regression to cross the former gate on six straight lanes in every course variant. All 36 approach-to-completion scenarios pass locally; the new lane test fails against the old published build. Added --url support to repeat tests using published source/assets.
 - Publishing this correction under the existing commit/push/Pages authorization, then verifying the deployed source and repeating the route test against it.
+
+## Core loop clarity and interaction polish — 2026-09-11
+
+- Added a shared immediate-action HUD presentation over the existing objective resolver: practice invitation, station interaction, breakaway cover, hold, hazard recovery, pursuit, and filing. Persistent check count and explicit key/valve state keep the overall loop visible.
+- Replaced jargon-heavy check completion copy with CHECK N/3 COMPLETE and direct detection wording. Existing reward/audio events remain authoritative.
+- Filing consumes the already-held approach direction without moving the player. Release followed by fresh movement, or a direction change, still cancels. Added readable filing progress and a touch layout that clears controls.
+- Screenshot review caught a desktop HUD overflow; separated terrain and inventory into two rows. Updated the script version for the next deployment.
+- Added tools/verify-core-loop.cjs: six groups pass, covering guidance, both exits, cancellation, and synthetic keyboard/controller/touch interaction. Existing 12 gameplay regression groups and all 36 shed approach cases pass. Release checks pass; official deep replay reports 57/57 runtime readiness checks.
+- Inspected actual captures at 2560x1600, 1280x720, 800x600, and 844x390. Evidence and test limitations: qa/core-loop-polish-2026-09-11.md. Changes remain local; no deployment in this pass.
+- Next: first-time human playtests for unaided comprehension, reward satisfaction, and voluntary replay; physical controller/touch checks. Do not equate automated passes or deterministic timing with proven fun or device performance.
+
+## Reconcile branches and publish — 2026-09-11
+
+- Fetched origin and checked all branches/open pull requests. Main is synchronized; no feature branches or open pull requests exist. Legacy gh-pages at bb6a8a1 is exactly the web tree from historical main commit bfd3ead, so it has no independent work to merge.
+- Keep the legacy deployment history intact and commit the tested core-loop polish on main. Publish through the existing Actions workflow, then verify the deployed content and shed approaches.
