@@ -30,7 +30,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
   try{
     await page.goto(url);await page.waitForFunction(()=>typeof window.advanceTime==='function');
     await page.locator('canvas').click();await page.keyboard.press('Space');
-    await page.waitForFunction(()=>{const s=JSON.parse(window.render_game_to_text());return s.assets.course.loaded===42&&s.assets.results.loaded===4;},null,{timeout:60000});await tick(180);
+    await page.waitForFunction(()=>{const s=JSON.parse(window.render_game_to_text());return s.assets.course.ready && s.assets.course.failed===0&&s.assets.results.loaded===4;},null,{timeout:60000});await tick(180);
     for(const variant of (probe?[0]:[0,1,2]))for(const x of [-36,-27,-18,-9,0]){
       await reset(x,variant);
       if(x===-18&&variant===0)await page.screenshot({path:path.join(out,'approach.png')});

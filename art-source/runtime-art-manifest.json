@@ -1,0 +1,682 @@
+{
+  "entries": [
+    {
+      "source": "joe-mower-animated-v1.png",
+      "runtime": "optimized/joe-mower-animated-v1.webp",
+      "sourceBytes": 215540,
+      "runtimeBytes": 148296,
+      "dimensions": [
+        1920,
+        192
+      ],
+      "losslessRGB": true,
+      "exactAlpha": true,
+      "sourceSha256": "e298dd54cf369fdf0c36234c27776cc8e6331f8c4c27ecdd0e8b45ab4f3baf86"
+    },
+    {
+      "source": "joe-mower-erratic-head-v1.png",
+      "runtime": "optimized/joe-mower-erratic-head-v1.webp",
+      "sourceBytes": 208371,
+      "runtimeBytes": 143296,
+      "dimensions": [
+        1920,
+        192
+      ],
+      "losslessRGB": true,
+      "exactAlpha": true,
+      "sourceSha256": "0e22e59e9333a137236d697d0f7950d2964c20b1f589bd33b43e3c4bd09e3df8"
+    },
+    {
+      "source": "joe-mower-v1.png",
+      "runtime": "optimized/joe-mower-v1.webp",
+      "sourceBytes": 979221,
+      "runtimeBytes": 152644,
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "6a6a6c21fe5a81c29c1ca81965fbd295cbf71acbcc9bb5a92bc996f7af19f095"
+    },
+    {
+      "source": "rough-cut-bunker-atlas-v2.png",
+      "runtime": "optimized/rough-cut-bunker-atlas-v2.webp",
+      "sourceBytes": 1528723,
+      "runtimeBytes": 301674,
+      "dimensions": [
+        2172,
+        724
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "1fc67096102be3afacab86399cb59b50b53d6b187e5231dbf5c56a7cd2406cea"
+    },
+    {
+      "source": "rough-cut-cart-directions-v1.png",
+      "runtime": "optimized/rough-cut-cart-directions-v1.webp",
+      "sourceBytes": 1585877,
+      "runtimeBytes": 295788,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "1b606e9b1cdbc9611ba8c56fd9eef138fbc1b3482da676751677fd6cbc614fb0"
+    },
+    {
+      "source": "rough-cut-cloud-atlas-v2.png",
+      "runtime": "optimized/rough-cut-cloud-atlas-v2.webp",
+      "sourceBytes": 635783,
+      "runtimeBytes": 127642,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "5df9750a17554db134e02e217eeae344d8e886d4094ced1217fd7b0b892fd4c5"
+    },
+    {
+      "source": "rough-cut-course-boundary-kit-v1.png",
+      "runtime": "optimized/rough-cut-course-boundary-kit-v1.webp",
+      "sourceBytes": 839746,
+      "runtimeBytes": 119936,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "7d599c8981c539076085e85c6a48034faf7715b0a7151837c9a9ab624832f5ee"
+    },
+    {
+      "source": "rough-cut-course-clutter-v1.png",
+      "runtime": "optimized/rough-cut-course-clutter-v1.webp",
+      "sourceBytes": 1821510,
+      "runtimeBytes": 383108,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "099af6e9e501c90f0496ac707fd2d697146ed4bf8a2cd535dab32dc8f0ca627a"
+    },
+    {
+      "source": "rough-cut-course-echo-atlas-v1.png",
+      "runtime": "optimized/rough-cut-course-echo-atlas-v1.webp",
+      "sourceBytes": 775201,
+      "runtimeBytes": 165192,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "56cf6ce5440d8d3840d7a2a5bb64acb21e81c48705190aad0fd25926c2807fa4"
+    },
+    {
+      "source": "rough-cut-course-ground-v4.png",
+      "runtime": "optimized/rough-cut-course-ground-v4.webp",
+      "sourceBytes": 1785938,
+      "runtimeBytes": 232830,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "1910c436c36ddd9ca9de81ea1d6139ff0d4d7726991cfbcc96f13696d78008a4"
+    },
+    {
+      "source": "rough-cut-course-mechanics-atlas-v1.png",
+      "runtime": "optimized/rough-cut-course-mechanics-atlas-v1.webp",
+      "sourceBytes": 1398293,
+      "runtimeBytes": 264050,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "1b90dac9388e921208f7bdb3563652b5fa00faad6cc0266849c08a2ac52cf572"
+    },
+    {
+      "source": "rough-cut-course-obstacle-kit-v1.png",
+      "runtime": "optimized/rough-cut-course-obstacle-kit-v1.webp",
+      "sourceBytes": 1094837,
+      "runtimeBytes": 258246,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "b54ef4fcaedbc877c682551cfb90ac3b7f231ef78792ff196a215f9b67b4911a"
+    },
+    {
+      "source": "rough-cut-dead-green-kit-v1.png",
+      "runtime": "optimized/rough-cut-dead-green-kit-v1.webp",
+      "sourceBytes": 1221664,
+      "runtimeBytes": 310702,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "a44bec1dca62f801affcda1529fe7bd7dec01093b7e7c473e6afffa0ef9ddbf8"
+    },
+    {
+      "source": "rough-cut-distant-clubhouse-v1.png",
+      "runtime": "optimized/rough-cut-distant-clubhouse-v1.webp",
+      "sourceBytes": 861330,
+      "runtimeBytes": 129926,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "4fb069e06b0b0a4f03b5601ccc6e97f32dba57374a492b3ccf66ae06e83b6c6c"
+    },
+    {
+      "source": "rough-cut-distant-treeline-v1.png",
+      "runtime": "optimized/rough-cut-distant-treeline-v1.webp",
+      "sourceBytes": 889330,
+      "runtimeBytes": 199780,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "a74031e4950bf34735a4a5c11f93fc50eed5d784191cb31c3e4de04183d89bce"
+    },
+    {
+      "source": "rough-cut-distant-villas-v1.png",
+      "runtime": "optimized/rough-cut-distant-villas-v1.webp",
+      "sourceBytes": 185691,
+      "runtimeBytes": 36800,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "af893872b9a08f47af533829fae9df34a65d3d2e0e99d24156c6bd78006da7b4"
+    },
+    {
+      "source": "rough-cut-drain-culvert-v1.png",
+      "runtime": "optimized/rough-cut-drain-culvert-v1.webp",
+      "sourceBytes": 1592332,
+      "runtimeBytes": 281732,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "c8376f23f143161d74cfae4415622fd8514ba9273458049b74ad04887255dbdc"
+    },
+    {
+      "source": "rough-cut-drain-escape-tableau-v1.png",
+      "runtime": "optimized/rough-cut-drain-escape-tableau-v1.webp",
+      "sourceBytes": 2306627,
+      "runtimeBytes": 297750,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "6fcd509d1bf5f561a434d970a98c98a04811062d619756460d72b86f1846a498"
+    },
+    {
+      "source": "rough-cut-estate-perimeter-v2.png",
+      "runtime": "optimized/rough-cut-estate-perimeter-v2.webp",
+      "sourceBytes": 592976,
+      "runtimeBytes": 126078,
+      "dimensions": [
+        2172,
+        724
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "bc0d8245df5b718035c15d63d9042ecc66ca6711d38d1a583d0626bbb3803eaf"
+    },
+    {
+      "source": "rough-cut-expanded-course-kit-v1.png",
+      "runtime": "optimized/rough-cut-expanded-course-kit-v1.webp",
+      "sourceBytes": 1566592,
+      "runtimeBytes": 308804,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "dce8cb74353428e4d4530e329e8ff26767c4ea54f2e9840fbf8da637e1213286"
+    },
+    {
+      "source": "rough-cut-far-ridge-v1.png",
+      "runtime": "optimized/rough-cut-far-ridge-v1.webp",
+      "sourceBytes": 472956,
+      "runtimeBytes": 54774,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "eace16adf0ca564dac124ffb5b90b42ff25e623e14e924dd240d8911d4b2dc03"
+    },
+    {
+      "source": "rough-cut-field-kit-v1.png",
+      "runtime": "optimized/rough-cut-field-kit-v1.webp",
+      "sourceBytes": 735926,
+      "runtimeBytes": 107904,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "84c4d17bdfca6f4f3a1a02201ddba2b621246b3880e69064fc9a06562ed11667"
+    },
+    {
+      "source": "rough-cut-footing-hazards-v1.png",
+      "runtime": "optimized/rough-cut-footing-hazards-v1.webp",
+      "sourceBytes": 916793,
+      "runtimeBytes": 189334,
+      "dimensions": [
+        2098,
+        750
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "95cb52fed4854291986409cb49c59536f15bb5cfe97ebfedaa53b5585f0c6945"
+    },
+    {
+      "source": "rough-cut-foreground-fringe-v1.png",
+      "runtime": "optimized/rough-cut-foreground-fringe-v1.webp",
+      "sourceBytes": 1258399,
+      "runtimeBytes": 232830,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "955f23ab4875dfecba0acb59fb61c49dee8cf82730c67c2fbd325749d2f1f054"
+    },
+    {
+      "source": "rough-cut-grass-curtain.png",
+      "runtime": "optimized/rough-cut-grass-curtain.webp",
+      "sourceBytes": 2569939,
+      "runtimeBytes": 436002,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "3a3b29e32b1f9908e838d1354316cc47825eec5eca8a4c9f8a5cf3e737324cdf"
+    },
+    {
+      "source": "rough-cut-hedge-hide-v2.png",
+      "runtime": "optimized/rough-cut-hedge-hide-v2.webp",
+      "sourceBytes": 1890771,
+      "runtimeBytes": 316026,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "6090353737768ef4ff30332322c6c0126a863a44050d966f1d425e1c7c78690e"
+    },
+    {
+      "source": "rough-cut-hedge-tunnel-v1.png",
+      "runtime": "optimized/rough-cut-hedge-tunnel-v1.webp",
+      "sourceBytes": 1878460,
+      "runtimeBytes": 364336,
+      "dimensions": [
+        2172,
+        724
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "a3e47598947c72018eb7b3199c5f4eece3c625df9d4d8b458c39140fc8d1f711"
+    },
+    {
+      "source": "rough-cut-horror-flash-joe-v2.png",
+      "runtime": "optimized/rough-cut-horror-flash-joe-v2.webp",
+      "sourceBytes": 1148766,
+      "runtimeBytes": 413530,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "c08eeb3f6b647515997ad3661cce7dd20c595673a4d4d66594ef045b7c2f0870"
+    },
+    {
+      "source": "rough-cut-interactable-props-v1.png",
+      "runtime": "optimized/rough-cut-interactable-props-v1.webp",
+      "sourceBytes": 1774897,
+      "runtimeBytes": 333530,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "41b6fbc15f640d23ac4eb46b4acd87cc013082f17e135910dc5b851a9cc471c2"
+    },
+    {
+      "source": "rough-cut-joe-capture-v1.png",
+      "runtime": "optimized/rough-cut-joe-capture-v1.webp",
+      "sourceBytes": 2274658,
+      "runtimeBytes": 270692,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "7bd3940378aad523145018592e25e22a290545c2d26ce53747945ad8a5bb410c"
+    },
+    {
+      "source": "rough-cut-joe-expressions-v1.png",
+      "runtime": "optimized/rough-cut-joe-expressions-v1.webp",
+      "sourceBytes": 1802558,
+      "runtimeBytes": 275460,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "5e9cc5ae7955c7ec9e78882dae63b5799c0e15e86dff1843801f0a88c017bb8b"
+    },
+    {
+      "source": "rough-cut-joe-state-directions-v1.png",
+      "runtime": "optimized/rough-cut-joe-state-directions-v1.webp",
+      "sourceBytes": 1217123,
+      "runtimeBytes": 329838,
+      "dimensions": [
+        1536,
+        1152
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "729eb9030cebbd4f8a6fe221bde015b3b586661af5ee2156b4af0866ce392f3b"
+    },
+    {
+      "source": "rough-cut-joe-walk-directions-v2.png",
+      "runtime": "optimized/rough-cut-joe-walk-directions-v2.webp",
+      "sourceBytes": 1336099,
+      "runtimeBytes": 361530,
+      "dimensions": [
+        1536,
+        1152
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "3bf03b3923597cfcf378f4937de9b3bd78edb1e724f04e18423305120b631d8c"
+    },
+    {
+      "source": "rough-cut-maintenance-shed-v2.png",
+      "runtime": "optimized/rough-cut-maintenance-shed-v2.webp",
+      "sourceBytes": 2090204,
+      "runtimeBytes": 340838,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "db66a5e0e40c9eaaee7dab0558c9854ac0ce6f2f793c0c601f05412bdff31752"
+    },
+    {
+      "source": "rough-cut-moon-v1.png",
+      "runtime": "optimized/rough-cut-moon-v1.webp",
+      "sourceBytes": 1040521,
+      "runtimeBytes": 132700,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "a9904b9e0dda50255720c193817df25a345de128170f2631eab910680b8c43ec"
+    },
+    {
+      "source": "rough-cut-moving-golf-ball-atlas-v1.png",
+      "runtime": "optimized/rough-cut-moving-golf-ball-atlas-v1.webp",
+      "sourceBytes": 704235,
+      "runtimeBytes": 96236,
+      "dimensions": [
+        2072,
+        759
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "0ddf0cb2661d231532873f57eb2d2a0bac8c2ac5f6ecb0470a6352df2b60bd77"
+    },
+    {
+      "source": "rough-cut-night-order-objectives-v1.png",
+      "runtime": "optimized/rough-cut-night-order-objectives-v1.webp",
+      "sourceBytes": 1671557,
+      "runtimeBytes": 328038,
+      "dimensions": [
+        1774,
+        887
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "13a0c0702a88d6e37b0df7a4b6fac62a0b1955bacf267b3d102a92cc81e0c9d5"
+    },
+    {
+      "source": "rough-cut-night-sky-v2.png",
+      "runtime": "optimized/rough-cut-night-sky-v2.webp",
+      "sourceBytes": 1252692,
+      "runtimeBytes": 42612,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "7f6b62873d35b5fff7fd3e3ec1e0666e607d48291a8746d93db1dc816e189bb0"
+    },
+    {
+      "source": "rough-cut-opening.png",
+      "runtime": "optimized/rough-cut-opening.webp",
+      "sourceBytes": 2171484,
+      "runtimeBytes": 308196,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "308e8a9463bff2d37fbdef36e386a6457d3e41e188341a9224d902867e085e5a"
+    },
+    {
+      "source": "rough-cut-path-lantern-atlas-v1.png",
+      "runtime": "optimized/rough-cut-path-lantern-atlas-v1.webp",
+      "sourceBytes": 1152288,
+      "runtimeBytes": 219574,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "415ab6a0866c3402c6882d7a736397168aaee78ed098ec51b10fe0e1e910258d"
+    },
+    {
+      "source": "rough-cut-rear-service-boundary-v1.png",
+      "runtime": "optimized/rough-cut-rear-service-boundary-v1.webp",
+      "sourceBytes": 974600,
+      "runtimeBytes": 245326,
+      "dimensions": [
+        2172,
+        724
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "05556ec68b782fe11cf0f114301006ed2bc52114e3ff5ce2e2e711d455830433"
+    },
+    {
+      "source": "rough-cut-screen-tear-course-v2.png",
+      "runtime": "optimized/rough-cut-screen-tear-course-v2.webp",
+      "sourceBytes": 1451089,
+      "runtimeBytes": 523452,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "bdba84c0e8f01f8cf85fd9de47fc65a6fe9bc6587ff3a4742041f4f4f6857257"
+    },
+    {
+      "source": "rough-cut-service-cart-v2.png",
+      "runtime": "optimized/rough-cut-service-cart-v2.webp",
+      "sourceBytes": 1844571,
+      "runtimeBytes": 346060,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "a5dd6cafb9ad577d3ecb15e90719a2972550481684db316e096ddb501e895d1d"
+    },
+    {
+      "source": "rough-cut-shadow-joe-v1.png",
+      "runtime": "optimized/rough-cut-shadow-joe-v1.webp",
+      "sourceBytes": 1093352,
+      "runtimeBytes": 182592,
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "bb5a4266f9f428565fd54b0f18407ba28ed8d388f351f86231ea8a9bc6bfea3e"
+    },
+    {
+      "source": "rough-cut-shed-directions-v2.png",
+      "runtime": "optimized/rough-cut-shed-directions-v2.webp",
+      "sourceBytes": 2100219,
+      "runtimeBytes": 351450,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "83f1c41c5459e0eb44cc98d978800b735c769db02a017e416ae8c0a5afb755e0"
+    },
+    {
+      "source": "rough-cut-shed-escape-tableau-v1.png",
+      "runtime": "optimized/rough-cut-shed-escape-tableau-v1.webp",
+      "sourceBytes": 2197109,
+      "runtimeBytes": 246960,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "075cec816d8ed0f1263c05bfe905755317dd96d5b3b659f23ee260a5b420a2eb"
+    },
+    {
+      "source": "rough-cut-signage-atlas-v1.png",
+      "runtime": "optimized/rough-cut-signage-atlas-v1.webp",
+      "sourceBytes": 1225969,
+      "runtimeBytes": 170296,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "5e128ad1dfb7c8a99fe8b00209437ea32a0bf4b2c311f4398d5aea854f08358b"
+    },
+    {
+      "source": "rough-cut-south-service-gate-v1.png",
+      "runtime": "optimized/rough-cut-south-service-gate-v1.webp",
+      "sourceBytes": 1801083,
+      "runtimeBytes": 302510,
+      "dimensions": [
+        1774,
+        887
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "70e1aa1d9ca792e19cf475d138313725d6967fac6fd57fb2e4c9b541e64e3b60"
+    },
+    {
+      "source": "rough-cut-stone-cover-v2.png",
+      "runtime": "optimized/rough-cut-stone-cover-v2.webp",
+      "sourceBytes": 1752685,
+      "runtimeBytes": 290812,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "51335121db9c0fbb675a7c455ce35980a1a1be47eb4dab72c0c96727b839f92b"
+    },
+    {
+      "source": "rough-cut-turf-evidence-atlas-v1.png",
+      "runtime": "optimized/rough-cut-turf-evidence-atlas-v1.webp",
+      "sourceBytes": 1313930,
+      "runtimeBytes": 292082,
+      "dimensions": [
+        1672,
+        941
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "77bfe4ac69e629697b342d962d4e27d227ffd83358070c7d15108641d722ef65"
+    },
+    {
+      "source": "rough-cut-verge-atlas-v1.png",
+      "runtime": "optimized/rough-cut-verge-atlas-v1.webp",
+      "sourceBytes": 1701440,
+      "runtimeBytes": 458330,
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "8365e1f1e5ec8d671033ba053747ff2d0eaf88bc0ba92309c2206f8eb148a28c"
+    },
+    {
+      "source": "rough-cut-wet-turf-atlas-v1.png",
+      "runtime": "optimized/rough-cut-wet-turf-atlas-v1.webp",
+      "sourceBytes": 1043171,
+      "runtimeBytes": 179290,
+      "dimensions": [
+        1774,
+        887
+      ],
+      "losslessRGB": false,
+      "exactAlpha": true,
+      "sourceSha256": "652b511b10961e64161b121ef79853e411a5cba9892d16efc8e9b44747a4dc5d"
+    }
+  ],
+  "sourceBytes": 69945126,
+  "runtimeBytes": 13027414
+}

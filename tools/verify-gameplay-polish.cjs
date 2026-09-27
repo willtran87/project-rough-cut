@@ -57,7 +57,7 @@ const keyNames = {up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRig
     await page.keyboard.press('Space');
     await page.waitForFunction(()=>{
       const s=JSON.parse(window.render_game_to_text());
-      return s.assets.course.loaded===42 && s.assets.results.loaded===4;
+      return s.assets.course.ready && s.assets.course.failed===0 && s.assets.results.loaded===4;
     },null,{timeout:60000});
     await tick(180);
     assert.equal((await state()).mode,'menu');

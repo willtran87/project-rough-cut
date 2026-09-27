@@ -21,14 +21,14 @@
   <link rel="canonical" href="https://willtran87.github.io/project-rough-cut/">
   <title>Rough Cut &mdash; A Joe Horror Game</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050b07'/%3E%3Cpath d='M4 4h24v24H4z' fill='%23142618' stroke='%23d87532' stroke-width='2'/%3E%3Cpath d='M8 22L23 7l2 3L10 25z' fill='%23e9dfb7'/%3E%3C/svg%3E">
-  <link rel="preload" as="image" href="./assets/rough-cut-opening.png" fetchpriority="high">
-  <link rel="preload" as="image" href="./assets/rough-cut-grass-curtain.png" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/optimized/rough-cut-opening.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/optimized/rough-cut-grass-curtain.webp" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main id="game-shell">
     <p id="game-instructions" class="visually-hidden">
-      Rough Cut is controlled from the keyboard, a standard gamepad, or the on-screen touch controls. Press F to toggle fullscreen. The opening screen explains the active controls before play begins.
+      Move with WASD relative to your view. Click the game to look horizontally with the mouse, or drag to look. Escape pauses and releases the mouse. On a gamepad, the left stick moves and the right stick looks. On touch, use the movement pad and swipe open screen space to look. Press F to toggle fullscreen.
     </p>
     <canvas
       id="game"
@@ -44,6 +44,6 @@
   </main>
   <noscript>Rough Cut requires JavaScript to run.</noscript>
   <script src="./joe-dialogue.js"></script>
-  <script src="./game.js?v=20260911-clear-loop"></script>
+  <script src="./game.js?v=20260927-qa"></script>
 </body>
 </html>

@@ -59,8 +59,10 @@
     "";
   const courseBackdropBuffer =
     document.createElement("canvas");
-  courseBackdropBuffer.width = WIDTH;
-  courseBackdropBuffer.height = HEIGHT;
+  // Atmosphere is deliberately softer than live geometry and UI. Rasterizing
+  // at half resolution avoids full-frame alpha work during continuous turns.
+  courseBackdropBuffer.width = WIDTH / 2;
+  courseBackdropBuffer.height = HEIGHT / 2;
   const courseBackdropCtx =
     courseBackdropBuffer.getContext(
       "2d",
@@ -298,6 +300,7 @@
   ];
   const SETTINGS_STORAGE_KEY = "rough-cut.settings.v1";
   const CAREER_STORAGE_KEY = "rough-cut.career.v1";
+  const RUN_RULESET = "readable-acquisition-20260926";
   const SETTINGS_ROWS = [
     { id: "master", group: "audio", label: "MASTER MIX", key: "volume", type: "slider", min: 0, max: 1, step: 0.05 },
     { id: "ambience", group: "audio", label: "COURSE AMBIENCE", key: "ambienceVolume", type: "slider", min: 0, max: 1, step: 0.05 },
@@ -312,6 +315,16 @@
     { id: "effects_density", group: "presentation", label: "ATMOSPHERE DENSITY", key: "effectsDensity", type: "slider", min: 0.5, max: 1, step: 0.25 },
     { id: "navigation_contrast", group: "presentation", label: "HIGH-CONTRAST ROUTES", key: "highContrastNavigation", type: "toggle" },
     { id: "pursuit_intensity", group: "presentation", label: "JOE PRESSURE", key: "pursuitIntensity", type: "slider", min: 0.8, max: 1.2, step: 0.2 },
+    { id: "look_sensitivity", group: "presentation", label: "LOOK SENSITIVITY", key: "lookSensitivity", type: "slider", min: 0.4, max: 1.8, step: 0.2 },
+    { id: "invert_look", group: "presentation", label: "INVERT HORIZONTAL LOOK", key: "invertLook", type: "toggle" },
+    { id: "stick_deadzone", group: "presentation", label: "STICK DEAD ZONE", key: "stickDeadzone", type: "slider", min: 0.1, max: 0.3, step: 0.05 },
+    { id: "focused_hud", group: "presentation", label: "FOCUSED HUD", key: "focusedHud", type: "toggle" },
+    { id: "clear_scenery", group: "presentation", label: "CLEAR PATH SCENERY", key: "clearScenery", type: "toggle" },
+    { id: "screen_texture", group: "presentation", label: "GAMEPLAY SCANLINES", key: "screenTexture", type: "toggle" },
+    { id: "ui_scale", group: "presentation", label: "GAMEPLAY TEXT SIZE", key: "uiScale", type: "slider", min: 1, max: 1.3, step: 0.1 },
+    { id: "guided_hints", group: "presentation", label: "CONTEXTUAL COACHING", key: "guidedHints", type: "toggle" },
+    { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
+    { id: "route_guidance", group: "presentation", label: "ROUTE THREAD", key: "routeGuidance", type: "toggle" },
   ];
   const KEYBOARD_BINDING_ROWS = [
     { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
@@ -324,7 +337,7 @@
     { id: "look_back", label: "LOOK BEHIND", defaultCode: "KeyR" },
     { id: "interact", label: "INTERACT / RECLAIM", defaultCode: "Enter" },
     { id: "chip", label: "AIM / CHIP", defaultCode: "Space" },
-    { id: "controls", label: "SHOW CONTROLS", defaultCode: "KeyH" },
+    { id: "controls", label: "MAP / CONTROLS", defaultCode: "KeyH" },
   ];
   const RESERVED_BINDING_CODES = new Set([
     "Escape",
@@ -371,7 +384,7 @@
     entry.status = "loading";
     entry.startedAt = performance.now();
     assetLoading.activeLoads += 1;
-    entry.image.src = entry.src;
+    entry.image.src = entry.retries ? `${entry.src}${entry.src.includes("?") ? "&" : "?"}retry=${entry.retries}` : entry.src;
   }
 
   function pumpAssetQueue() {
@@ -419,6 +432,27 @@
     }
   }
 
+  const preparedImageSources = new WeakMap();
+
+  function drawableImage(image) {
+    return preparedImageSources.get(image) || image;
+  }
+
+  async function prepareManagedImage(entry) {
+    const image = entry.image;
+    try { await image.decode?.(); } catch { /* The load event still permits the normal image fallback. */ }
+    let source = image;
+    if (typeof createImageBitmap === "function") {
+      try { source = await createImageBitmap(image); } catch { /* Unsupported decoders retain the loaded image. */ }
+    }
+    // A decoded bitmap materializes the source once. Otherwise each lazily
+    // rasterized atlas canvas can trigger expensive first-use image work.
+    preparedImageSources.set(image, source);
+    entry.rasterPrepared = source !== image;
+    image.dispatchEvent(new Event("rasterready"));
+    settleManagedImage(entry, "loaded");
+  }
+
   function managedImage(label, src, phase = "course") {
     const image = new Image();
     image.decoding = "async";
@@ -431,38 +465,29 @@
       status: "pending",
       startedAt: null,
       settledAt: null,
+      retries: 0,
     };
     image.addEventListener(
       "load",
-      () => {
-        if (
-          typeof image.decode ===
-          "function"
-        ) {
-          image.decode().then(
-            () =>
-              settleManagedImage(
-                entry,
-                "loaded",
-              ),
-            () =>
-              settleManagedImage(
-                entry,
-                "loaded",
-              ),
-          );
-        } else {
-          settleManagedImage(
-            entry,
-            "loaded",
-          );
-        }
-      },
+      () => prepareManagedImage(entry),
       { once: true },
     );
     image.addEventListener(
       "error",
       () => {
+        if (entry.status !== "loading") return;
+        if (entry.retries < 2) {
+          entry.retries += 1;
+          entry.status = "retrying";
+          assetLoading.activeLoads = Math.max(0, assetLoading.activeLoads - 1);
+          pumpAssetQueue();
+          window.setTimeout(() => {
+            entry.status = "queued";
+            assetLoading.queue.push(entry);
+            pumpAssetQueue();
+          }, entry.retries * 500);
+          return;
+        }
         assetLoading.errors.push({
           label,
           src,
@@ -473,7 +498,6 @@
           "failed",
         );
       },
-      { once: true },
     );
     assetLoading.entries.push(entry);
     return image;
@@ -524,6 +548,8 @@
       loaded,
       failed,
       settled,
+      preparedRasters: entries.filter((entry) => entry.status === "loaded" && entry.rasterPrepared).length,
+      imageFallbacks: entries.filter((entry) => entry.status === "loaded" && !entry.rasterPrepared).length,
       percent:
         total > 0
           ? Math.round(
@@ -557,6 +583,8 @@
         course.loaded + results.loaded,
       failed:
         course.failed + results.failed,
+      preparedRasters: course.preparedRasters + results.preparedRasters,
+      imageFallbacks: course.imageFallbacks + results.imageFallbacks,
       percent:
         total > 0
           ? Math.round(
@@ -568,54 +596,65 @@
     };
   }
 
-  const art = managedImage("opening", "./assets/rough-cut-opening.png", "boot");
-  const grassArt = managedImage("grass curtain", "./assets/rough-cut-grass-curtain.png", "boot");
-  const nightSkyArt = managedImage("night sky", "./assets/rough-cut-night-sky-v2.png");
-  const moonArt = managedImage("moon", "./assets/rough-cut-moon-v1.png");
-  const holeArt = managedImage("course ground", "./assets/rough-cut-course-ground-v4.png");
-  const cloudAtlasArt = managedImage("cloud atlas", "./assets/rough-cut-cloud-atlas-v2.png");
-  const distantTreeLineArt = managedImage("distant tree line", "./assets/rough-cut-distant-treeline-v1.png");
-  const distantClubhouseArt = managedImage("distant clubhouse", "./assets/rough-cut-distant-clubhouse-v1.png");
-  const farRidgeArt = managedImage("far ridge", "./assets/rough-cut-far-ridge-v1.png");
-  const distantVillasArt = managedImage("distant villas", "./assets/rough-cut-distant-villas-v1.png");
-  const estatePerimeterArt = managedImage("estate perimeter", "./assets/rough-cut-estate-perimeter-v2.png");
-  const rearServiceBoundaryArt = managedImage("rear service boundary", "./assets/rough-cut-rear-service-boundary-v1.png");
-  const southServiceGateArt = managedImage("south service gate", "./assets/rough-cut-south-service-gate-v1.png");
-  const signageAtlasArt = managedImage("signage", "./assets/rough-cut-signage-atlas-v1.png");
-  const bunkerAtlasArt = managedImage("bunkers", "./assets/rough-cut-bunker-atlas-v2.png");
-  const joeMowerArt = managedImage("Joe mower base", "./assets/joe-mower-v1.png");
-  const joeMowerAnimatedArt = managedImage("Joe mower animation", "./assets/joe-mower-animated-v1.png");
-  const joeMowerErraticHeadArt = managedImage("Joe search animation", "./assets/joe-mower-erratic-head-v1.png");
-  const shadowJoeArt = managedImage("Shadow Joe", "./assets/rough-cut-shadow-joe-v1.png");
-  const horrorFlashJoeArt = managedImage("horror flash", "./assets/rough-cut-horror-flash-joe-v2.png");
-  const screenTearCourseArt = managedImage("screen tear", "./assets/rough-cut-screen-tear-course-v2.png");
-  const fieldKitArt = managedImage("field kit", "./assets/rough-cut-field-kit-v1.png");
-  const courseObstacleArt = managedImage("course obstacles", "./assets/rough-cut-course-obstacle-kit-v1.png");
-  const expandedCourseArt = managedImage("expanded course", "./assets/rough-cut-expanded-course-kit-v1.png");
-  const hedgeTunnelArt = managedImage("hedge tunnel", "./assets/rough-cut-hedge-tunnel-v1.png");
-  const maintenanceShedArt = managedImage("maintenance shed", "./assets/rough-cut-maintenance-shed-v2.png");
-  const hedgeHideArt = managedImage("hedge hide", "./assets/rough-cut-hedge-hide-v2.png");
-  const stoneCoverArt = managedImage("stone cover", "./assets/rough-cut-stone-cover-v2.png");
-  const serviceCartArt = managedImage("service cart", "./assets/rough-cut-service-cart-v2.png");
-  const deadGreenSceneryArt = managedImage("dead green scenery", "./assets/rough-cut-dead-green-kit-v1.png");
-  const foregroundFringeArt = managedImage("foreground fringe", "./assets/rough-cut-foreground-fringe-v1.png");
-  const defeatArt = managedImage("defeat tableau", "./assets/rough-cut-joe-capture-v1.png", "results");
-  const shedEscapeTableauArt = managedImage("shed escape tableau", "./assets/rough-cut-shed-escape-tableau-v1.png", "results");
-  const drainEscapeTableauArt = managedImage("drain escape tableau", "./assets/rough-cut-drain-escape-tableau-v1.png", "results");
-  const joeExpressionArt = managedImage("Joe expressions", "./assets/rough-cut-joe-expressions-v1.png", "results");
-  const drainArt = managedImage("drain culvert", "./assets/rough-cut-drain-culvert-v1.png");
-  const pathLanternArt = managedImage("path lanterns", "./assets/rough-cut-path-lantern-atlas-v1.png");
-  const interactablePropArt = managedImage("interactable props", "./assets/rough-cut-interactable-props-v1.png");
-  const courseMechanicsArt = managedImage("course mechanics", "./assets/rough-cut-course-mechanics-atlas-v1.png");
-  const nightOrderObjectiveArt = managedImage("Night Order objectives", "./assets/rough-cut-night-order-objectives-v1.png");
-  const turfEvidenceArt = managedImage("turf evidence", "./assets/rough-cut-turf-evidence-atlas-v1.png");
-  const courseClutterArt = managedImage("course clutter", "./assets/rough-cut-course-clutter-v1.png");
-  const courseVergeArt = managedImage("course verge", "./assets/rough-cut-verge-atlas-v1.png");
-  const courseBoundaryKitArt = managedImage("course boundary", "./assets/rough-cut-course-boundary-kit-v1.png");
-  const footingHazardArt = managedImage("footing hazards", "./assets/rough-cut-footing-hazards-v1.png");
-  const wetTurfArt = managedImage("wet turf", "./assets/rough-cut-wet-turf-atlas-v1.png");
-  const movingGolfBallArt = managedImage("moving golf ball", "./assets/rough-cut-moving-golf-ball-atlas-v1.png");
-  const courseEchoArt = managedImage("Course Echo", "./assets/rough-cut-course-echo-atlas-v1.png");
+  const art = managedImage("opening", "./assets/optimized/rough-cut-opening.webp", "boot");
+  const grassArt = managedImage("grass curtain", "./assets/optimized/rough-cut-grass-curtain.webp", "boot");
+  const nightSkyArt = managedImage("night sky", "./assets/optimized/rough-cut-night-sky-v2.webp");
+  const moonArt = managedImage("moon", "./assets/optimized/rough-cut-moon-v1.webp");
+  const holeArt = managedImage("course ground", "./assets/optimized/rough-cut-course-ground-v4.webp");
+  const cloudAtlasArt = managedImage("cloud atlas", "./assets/optimized/rough-cut-cloud-atlas-v2.webp");
+  const distantTreeLineArt = managedImage("distant tree line", "./assets/optimized/rough-cut-distant-treeline-v1.webp");
+  const distantClubhouseArt = managedImage("distant clubhouse", "./assets/optimized/rough-cut-distant-clubhouse-v1.webp");
+  const farRidgeArt = managedImage("far ridge", "./assets/optimized/rough-cut-far-ridge-v1.webp");
+  const distantVillasArt = managedImage("distant villas", "./assets/optimized/rough-cut-distant-villas-v1.webp");
+  const estatePerimeterArt = managedImage("estate perimeter", "./assets/optimized/rough-cut-estate-perimeter-v2.webp");
+  const rearServiceBoundaryArt = managedImage("rear service boundary", "./assets/optimized/rough-cut-rear-service-boundary-v1.webp");
+  const southServiceGateArt = managedImage("south service gate", "./assets/optimized/rough-cut-south-service-gate-v1.webp");
+  const signageAtlasArt = managedImage("signage", "./assets/optimized/rough-cut-signage-atlas-v1.webp");
+  const bunkerAtlasArt = managedImage("bunkers", "./assets/optimized/rough-cut-bunker-atlas-v2.webp");
+  const joeMowerArt = managedImage("Joe mower base", "./assets/optimized/joe-mower-v1.webp");
+  const joeDirectionalArt = managedImage("Joe directional walk", "./assets/optimized/rough-cut-joe-walk-directions-v2.webp");
+  const joeStateArt = managedImage("Joe directional states", "./assets/optimized/rough-cut-joe-state-directions-v1.webp");
+  const joeMowerAnimatedArt = managedImage("Joe mower animation", "./assets/optimized/joe-mower-animated-v1.webp");
+  const joeMowerErraticHeadArt = managedImage("Joe search animation", "./assets/optimized/joe-mower-erratic-head-v1.webp");
+  const shadowJoeArt = managedImage("Shadow Joe", "./assets/optimized/rough-cut-shadow-joe-v1.webp");
+  const horrorFlashJoeArt = managedImage("horror flash", "./assets/optimized/rough-cut-horror-flash-joe-v2.webp");
+  const screenTearCourseArt = managedImage("screen tear", "./assets/optimized/rough-cut-screen-tear-course-v2.webp");
+  const fieldKitArt = managedImage("field kit", "./assets/optimized/rough-cut-field-kit-v1.webp");
+  const courseObstacleArt = managedImage("course obstacles", "./assets/optimized/rough-cut-course-obstacle-kit-v1.webp");
+  const expandedCourseArt = managedImage("expanded course", "./assets/optimized/rough-cut-expanded-course-kit-v1.webp");
+  const hedgeTunnelArt = managedImage("hedge tunnel", "./assets/optimized/rough-cut-hedge-tunnel-v1.webp");
+  const maintenanceShedArt = managedImage("maintenance shed", "./assets/optimized/rough-cut-maintenance-shed-v2.webp");
+  const shedDirectionalArt = managedImage("shed directional views", "./assets/optimized/rough-cut-shed-directions-v2.webp");
+  // Real alpha cutouts preserve roof edges with a common ground anchor.
+  const SHED_DIRECTION_CELLS = [
+    { x: 123, y: 40, width: 720, height: 450, gable: false },
+    { x: 948, y: 40, width: 455, height: 450, gable: true },
+    { x: 108, y: 525, width: 746, height: 451, gable: false },
+    { x: 948, y: 531, width: 454, height: 445, gable: true },
+  ];
+  const hedgeHideArt = managedImage("hedge hide", "./assets/optimized/rough-cut-hedge-hide-v2.webp");
+  const stoneCoverArt = managedImage("stone cover", "./assets/optimized/rough-cut-stone-cover-v2.webp");
+  const serviceCartArt = managedImage("service cart", "./assets/optimized/rough-cut-service-cart-v2.webp");
+  const cartDirectionalArt = managedImage("cart directional views", "./assets/optimized/rough-cut-cart-directions-v1.webp");
+  const deadGreenSceneryArt = managedImage("dead green scenery", "./assets/optimized/rough-cut-dead-green-kit-v1.webp");
+  const foregroundFringeArt = managedImage("foreground fringe", "./assets/optimized/rough-cut-foreground-fringe-v1.webp");
+  const defeatArt = managedImage("defeat tableau", "./assets/optimized/rough-cut-joe-capture-v1.webp", "results");
+  const shedEscapeTableauArt = managedImage("shed escape tableau", "./assets/optimized/rough-cut-shed-escape-tableau-v1.webp", "results");
+  const drainEscapeTableauArt = managedImage("drain escape tableau", "./assets/optimized/rough-cut-drain-escape-tableau-v1.webp", "results");
+  const joeExpressionArt = managedImage("Joe expressions", "./assets/optimized/rough-cut-joe-expressions-v1.webp", "results");
+  const drainArt = managedImage("drain culvert", "./assets/optimized/rough-cut-drain-culvert-v1.webp");
+  const pathLanternArt = managedImage("path lanterns", "./assets/optimized/rough-cut-path-lantern-atlas-v1.webp");
+  const interactablePropArt = managedImage("interactable props", "./assets/optimized/rough-cut-interactable-props-v1.webp");
+  const courseMechanicsArt = managedImage("course mechanics", "./assets/optimized/rough-cut-course-mechanics-atlas-v1.webp");
+  const nightOrderObjectiveArt = managedImage("Night Order objectives", "./assets/optimized/rough-cut-night-order-objectives-v1.webp");
+  const turfEvidenceArt = managedImage("turf evidence", "./assets/optimized/rough-cut-turf-evidence-atlas-v1.webp");
+  const courseClutterArt = managedImage("course clutter", "./assets/optimized/rough-cut-course-clutter-v1.webp");
+  const courseVergeArt = managedImage("course verge", "./assets/optimized/rough-cut-verge-atlas-v1.webp");
+  const courseBoundaryKitArt = managedImage("course boundary", "./assets/optimized/rough-cut-course-boundary-kit-v1.webp");
+  const footingHazardArt = managedImage("footing hazards", "./assets/optimized/rough-cut-footing-hazards-v1.webp");
+  const wetTurfArt = managedImage("wet turf", "./assets/optimized/rough-cut-wet-turf-atlas-v1.webp");
+  const movingGolfBallArt = managedImage("moving golf ball", "./assets/optimized/rough-cut-moving-golf-ball-atlas-v1.webp");
+  const courseEchoArt = managedImage("Course Echo", "./assets/optimized/rough-cut-course-echo-atlas-v1.webp");
   loadAssetPhase("boot");
   const grassBuffer = document.createElement("canvas");
   grassBuffer.width = WIDTH;
@@ -2373,6 +2412,9 @@
     if (!hole || hole.messageTimer <= 0) {
       return "";
     }
+    if (hole.message?.startsWith("SLOW FOOTING") && activeFootingNavigationOverride()) {
+      return `SLOW FOOTING // ${activeFootingNavigationOverride().instruction} TO FIRM GROUND`;
+    }
     const breakaway =
       activeFieldActionBreakaway();
     if (
@@ -3918,9 +3960,9 @@
         kind: "missed",
         reason,
         banner:
-          "CLEAN BREAK MISSED // LEFT COVER EARLY",
+          "CHECK SAVED // COVER BONUS MISSED",
         message:
-          `SIGNAL TRACKED — LEFT ${coverLabel} BEFORE JOE'S FINAL CHECK. HOLD COVER NEXT TIME; ${nextLabel} CAN STILL SCORE.`,
+          `CHECK SAVED. BONUS TIP: STAY IN ${coverLabel} UNTIL THE SIGNAL ENDS.`,
         lesson:
           "reach named cover and remain there through signal expiry",
       };
@@ -3933,9 +3975,9 @@
         kind: "missed",
         reason,
         banner:
-          "CLEAN BREAK MISSED // MOVED TOO SOON",
+          "CHECK SAVED // QUIET BONUS MISSED",
         message:
-          `SIGNAL TRACKED — MOVED BEFORE JOE'S FINAL CHECK. HOLD STILL NEXT TIME; ${nextLabel} CAN STILL SCORE.`,
+          `CHECK SAVED. BONUS TIP: KEEP STILL UNTIL THE SIGNAL ENDS.`,
         lesson:
           "stop moving and keep noise below the hold threshold through signal expiry",
       };
@@ -3944,9 +3986,9 @@
       kind: "missed",
       reason,
       banner:
-        "CLEAN BREAK MISSED // HOLD INCOMPLETE",
+        "CHECK SAVED // COVER BONUS OPTIONAL",
       message:
-        `SIGNAL TRACKED — HOLD NEVER SET. SETTLE ${FIELD_SIGNAL_QUIET_SECONDS.toFixed(1)}s BEHIND ${coverLabel}, THEN STAY HIDDEN; ${nextLabel} CAN STILL SCORE.`,
+        `CHECK SAVED. BONUS TIP: SETTLE BEHIND ${coverLabel} AND WAIT FOR THE SIGNAL.`,
       lesson:
         "complete the visible quiet hold before signal expiry",
     };
@@ -4134,6 +4176,10 @@
         action.id,
       );
     }
+    // A successful quiet break buys a real recovery beat. This suppresses
+    // director ambushes and old-track rediscovery, not fresh sight or sound.
+    hole.tensionDirector.reliefSeconds = Math.max(hole.tensionDirector.reliefSeconds, 8);
+    hole.trailDiscoveryCooldown = Math.max(hole.trailDiscoveryCooldown, 8);
     const deliveryAward =
       awardDeliveryBeat(
         "SIGNAL BREAKAWAY",
@@ -4494,9 +4540,8 @@
   }
 
   /**
-   * Previews the authored risk and escape answer before a loud mandatory
-   * field check is committed. This is presentation-only and does not alter
-   * signal duration, Joe routing, scoring, or the post-action breakaway.
+   * Previews the shared station tactic rule and existing escape destination.
+   * Reading this preview never commits the action or advances its timers.
    */
   function fieldActionCommitmentPreview(
     action,
@@ -4528,9 +4573,9 @@
       kind:
         "loud_field_check_commitment",
       text:
-        `LOUD SIGNAL ${action.noiseSeconds.toFixed(1)}s // JOE WILL VERIFY // BREAK TO ${action.breakaway.coverLabel}`,
+        `SIGNAL ${stationPlan(action).signalSeconds.toFixed(1)}s // JOE WILL VERIFY // BREAK TO ${action.breakaway.coverLabel}`,
       noiseSeconds:
-        action.noiseSeconds,
+        stationPlan(action).signalSeconds,
       coverId:
         action.breakaway.coverId,
       coverLabel:
@@ -4538,7 +4583,8 @@
       instruction:
         action.breakaway.instruction,
       risk,
-      gameplayTimingChanged: false,
+      gameplayTimingChanged: stationPlan(action).signalSeconds !== action.noiseSeconds,
+      tactic: stationPlan(action),
       rule:
         "commitment_warning_precedes_activation_and_names_the_existing_counterplay",
     };
@@ -5896,6 +5942,20 @@
                 ).toFixed(2),
               )
             : 1,
+        lookSensitivity: Number.isFinite(parsed.lookSensitivity) ? clamp(parsed.lookSensitivity, 0.4, 1.8) : 1,
+        stickDeadzone: Number.isFinite(parsed.stickDeadzone) ? clamp(parsed.stickDeadzone, 0.1, 0.3) : 0.22,
+        uiScale: Number.isFinite(parsed.uiScale) ? clamp(parsed.uiScale, 1, 1.3) : 1,
+        invertLook: typeof parsed.invertLook === "boolean" ? parsed.invertLook : false,
+        focusedHud: typeof parsed.focusedHud === "boolean" ? parsed.focusedHud : true,
+        clearScenery: typeof parsed.clearScenery === "boolean" ? parsed.clearScenery : true,
+        screenTexture: typeof parsed.screenTexture === "boolean" ? parsed.screenTexture : false,
+        guidedHints: typeof parsed.guidedHints === "boolean" ? parsed.guidedHints : true,
+        freeLook: typeof parsed.freeLook === "boolean" ? parsed.freeLook : true,
+        routeGuidance: parsed.routeGuidance !== false,
+        learnedControls: Object.fromEntries(["move","look","chip","cover"].map(key=>[key,parsed.learnedControls?.[key]===true])),
+        learnedControlsByDevice: Object.fromEntries(["keyboard","gamepad","touch"].map(device=>[device,
+          Object.fromEntries(["move","look","chip","cover"].map(key=>[key,
+            parsed.learnedControlsByDevice?.[device]?.[key]===true || device==="keyboard" && !parsed.learnedControlsByDevice && parsed.learnedControls?.[key]===true]))])),
         keyboardBindings:
           validKeyboardBindings(
             parsed.keyboardBindings,
@@ -5918,6 +5978,18 @@
         effectsDensity: 1,
         highContrastNavigation: false,
         pursuitIntensity: 1,
+        lookSensitivity: 1,
+        stickDeadzone: 0.22,
+        uiScale: 1,
+        invertLook: false,
+        focusedHud: true,
+        clearScenery: true,
+        screenTexture: false,
+        guidedHints: true,
+        freeLook: true,
+        routeGuidance: true,
+        learnedControls: {},
+        learnedControlsByDevice: {},
         keyboardBindings:
           defaultKeyboardBindings(),
       };
@@ -5996,6 +6068,8 @@
       ? record.variantId
       : null;
     return {
+      ruleset: typeof record.ruleset === "string" ? record.ruleset : "legacy",
+      pressure: Number.isFinite(record.pressure) ? record.pressure : 1,
       score: Math.max(0, Math.round(record.score)),
       timeSeconds: Math.max(0, record.timeSeconds),
       grade: record.grade.slice(0, 1),
@@ -6179,6 +6253,7 @@
           : 0,
         overtimeBest:
           validCareerRecord(parsed.overtimeBest),
+        legacyRecords: Array.isArray(parsed.legacyRecords) ? parsed.legacyRecords.map(validCareerRecord).filter(Boolean).slice(-64) : [],
         routes: {
           shed: validCareerRecord(parsed.routes?.shed),
           drain: validCareerRecord(parsed.routes?.drain),
@@ -6203,6 +6278,7 @@
         overtimeEscapes: 0,
         overtimeCaptures: 0,
         overtimeBest: null,
+        legacyRecords: [],
         routes: { shed: null, drain: null },
       };
     }
@@ -6237,6 +6313,20 @@
     dangerVolume: savedPreferences.dangerVolume,
     keyboardBindings:
       savedPreferences.keyboardBindings,
+    lookSensitivity: savedPreferences.lookSensitivity,
+    stickDeadzone: savedPreferences.stickDeadzone,
+    uiScale: savedPreferences.uiScale,
+    invertLook: savedPreferences.invertLook,
+    focusedHud: savedPreferences.focusedHud,
+    clearScenery: savedPreferences.clearScenery,
+    screenTexture: savedPreferences.screenTexture,
+    guidedHints: savedPreferences.guidedHints,
+    freeLook: savedPreferences.freeLook,
+    routeGuidance: savedPreferences.routeGuidance,
+    learnedControls: savedPreferences.learnedControls,
+    learnedControlsByDevice: savedPreferences.learnedControlsByDevice,
+    lessonInputMethod: null,
+    settingsFieldPage: 0,
     inputMethod: "keyboard",
     settingsIndex: 0,
     settingsPage: "mix",
@@ -6268,6 +6358,7 @@
       id: "",
       inputX: 0,
       inputY: 0,
+      lookX: 0,
       crouch: false,
       sprint: false,
       focus: false,
@@ -6277,6 +6368,8 @@
     },
     touch: {
       seen: false,
+      lookPointerId: null,
+      lookLastX: 0,
       movePointerId: null,
       moveX: 0,
       moveY: 0,
@@ -6288,7 +6381,7 @@
       focusPointerId: null,
       lookBackPointerId: null,
     },
-    player: { x: 0, y: 0, heading: 0 },
+    player: { x: 0, y: 0, heading: 0, yaw: 0 },
     hole: {
       variantIndex: 0,
       variantId: RUN_VARIANTS[0].id,
@@ -6705,6 +6798,18 @@
           pursuitIntensity: Number(
             state.pursuitIntensity.toFixed(2),
           ),
+          lookSensitivity: state.lookSensitivity,
+          stickDeadzone: state.stickDeadzone,
+          uiScale: state.uiScale,
+          invertLook: state.invertLook,
+          focusedHud: state.focusedHud,
+          clearScenery: state.clearScenery,
+          screenTexture: state.screenTexture,
+          guidedHints: state.guidedHints,
+          freeLook: state.freeLook,
+          routeGuidance: state.routeGuidance,
+          learnedControls: state.learnedControls,
+          learnedControlsByDevice: state.learnedControlsByDevice,
           keyboardBindings: {
             ...state.keyboardBindings,
           },
@@ -6717,6 +6822,7 @@
   }
 
   function saveCareer() {
+    if (state.hole?.rehearsal) return;
     try {
       window.localStorage.setItem(
         CAREER_STORAGE_KEY,
@@ -6731,7 +6837,8 @@
     const records = [
       state.career.routes.shed,
       state.career.routes.drain,
-    ].filter(Boolean);
+      ...(state.career.legacyRecords || []),
+    ].filter(record => record && !record.overtime && record.ruleset === RUN_RULESET && record.pressure === state.pursuitIntensity);
     if (records.length === 0) {
       return null;
     }
@@ -7001,14 +7108,17 @@
     overtime = state.hole?.overtime === true,
   ) {
     const records = overtime
-      ? [state.career.overtimeBest]
+      ? [state.career.overtimeBest, ...(state.career.legacyRecords || [])]
       : [
           state.career.routes.shed,
           state.career.routes.drain,
+          ...(state.career.legacyRecords || []),
         ];
     const compatible = records.filter(
       (record) =>
         record &&
+        record.ruleset === RUN_RULESET &&
+        record.pressure === state.pursuitIntensity &&
         record.variantId === variantId &&
         record.overtime === overtime &&
         Array.isArray(record.ghostPath) &&
@@ -7466,6 +7576,7 @@
   }
 
   function drawCourseEchoComparison() {
+    if (state.focusedHud && !state.hole.focus) return;
     const comparison =
       courseEchoComparisonState();
     if (
@@ -9027,6 +9138,7 @@
   }
 
   function recordVictory(route) {
+    if (state.hole.rehearsal || state.hole.recordRulesChanged) return {...calculateRunResult(route),newBest:false,previousBestScore:null,unranked:true};
     addCourseEchoSample(true);
     const result = calculateRunResult(route);
     const echoRecord =
@@ -9050,9 +9162,14 @@
       overtimeUnlocked();
     const portfolioBefore =
       portfolioUnlocked();
-    const previous = result.overtime
-      ? state.career.overtimeBest
-      : state.career.routes[route];
+    const storedPrevious = result.overtime ? state.career.overtimeBest : state.career.routes[route];
+    const sameRules = record => record && record.ruleset === RUN_RULESET && record.pressure === state.pursuitIntensity && record.variantId === result.variantId && record.route === route && record.overtime === result.overtime;
+    const previous = [storedPrevious, ...(state.career.legacyRecords || [])].filter(sameRules).sort((a,b)=>b.score-a.score || a.timeSeconds-b.timeSeconds)[0] || null;
+    if(storedPrevious && !sameRules(storedPrevious)) {
+      const signature = r => [r.ruleset,r.pressure,r.variantId,r.route,r.overtime].join("|");
+      const history = (state.career.legacyRecords || []).filter(r=>signature(r)!==signature(storedPrevious));
+      state.career.legacyRecords = [...history,storedPrevious].slice(-64);
+    }
     result.previousBestScore = previous?.score || null;
     result.newBest =
       !previous ||
@@ -9102,6 +9219,7 @@
       result.overtime
     ) {
       state.career.overtimeBest = {
+        ruleset: RUN_RULESET, pressure: state.pursuitIntensity,
         route,
         score: result.score,
         grade: result.grade,
@@ -9115,6 +9233,7 @@
       };
     } else if (result.newBest) {
       state.career.routes[route] = {
+        ruleset: RUN_RULESET, pressure: state.pursuitIntensity,
         route,
         score: result.score,
         grade: result.grade,
@@ -9637,7 +9756,7 @@
     const width = image.width * baseScale * zoom;
     const height = image.height * baseScale * zoom;
     target.drawImage(
-      image,
+      drawableImage(image),
       (WIDTH - width) * 0.5 + panX,
       (HEIGHT - height) * 0.5 + panY,
       width,
@@ -9692,18 +9811,14 @@
   ) {
     if (
       !image.complete ||
-      image.naturalWidth === 0
+      image.naturalWidth === 0 || ctx.globalAlpha * alpha <= 0.002
     ) {
       return;
     }
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha *= alpha;
     ctx.drawImage(
-      image,
-      source.x,
-      source.y,
-      source.width,
-      source.height,
+      cachedAtlasCell(image, { ...source, cacheMaxDimension: ctx === courseBackdropCtx ? 1024 : 2048 }),
       x,
       y,
       width,
@@ -9753,7 +9868,7 @@
     bufferContext.imageSmoothingEnabled =
       false;
     bufferContext.drawImage(
-      image,
+      drawableImage(image),
       cell.x,
       cell.y,
       cell.width,
@@ -10692,7 +10807,7 @@
       smoothstep(
         clamp(
           (
-            lookBackView().amount -
+            lookBackView().worldRearAmount -
             0.18
           ) /
             0.68,
@@ -10721,11 +10836,15 @@
       HEIGHT,
     );
 
-    drawMoonLayer(
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.cos(lookBackView().angle));
+    ctx.translate(-Math.sin(lookBackView().angle) * WIDTH * 0.6, 0);
+    if (Math.cos(lookBackView().angle) > 0) drawMoonLayer(
       progress,
       panX,
       walkBob,
     );
+    ctx.restore();
     drawIndependentClouds(
       progress,
       panX,
@@ -10998,63 +11117,20 @@
     );
   }
 
-  function drawCourseBackdrop(
-    progress,
-    walkBob,
-  ) {
-    if (
-      runtimePerformance.tier ===
-      "high"
-    ) {
-      renderCourseBackdrop(
-        progress,
-        walkBob,
-      );
-      return;
-    }
-    const refreshInterval =
-      runtimePerformance.tier ===
-      "low"
-        ? 1 / 12
-        : 1 / 24;
-    if (
-      state.hole.elapsed -
-        courseBackdropRenderedAt >=
-        refreshInterval ||
-      state.hole.elapsed <
-        courseBackdropRenderedAt
-    ) {
-      courseBackdropCtx.setTransform(
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-      );
-      courseBackdropCtx.clearRect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT,
-      );
+  function drawCourseBackdrop(progress, walkBob) {
+    const refreshInterval = runtimePerformance.tier === "low" ? 1 / 20 : 1 / 30;
+    if (state.hole.elapsed - courseBackdropRenderedAt >= refreshInterval ||
+        state.hole.elapsed < courseBackdropRenderedAt) {
+      courseBackdropCtx.setTransform(0.5, 0, 0, 0.5, 0, 0);
       ctx = courseBackdropCtx;
       try {
-        renderCourseBackdrop(
-          progress,
-          walkBob,
-        );
+        renderCourseBackdrop(progress, walkBob);
       } finally {
         ctx = mainCtx;
       }
-      courseBackdropRenderedAt =
-        state.hole.elapsed;
+      courseBackdropRenderedAt = state.hole.elapsed;
     }
-    ctx.drawImage(
-      courseBackdropBuffer,
-      0,
-      0,
-    );
+    ctx.drawImage(courseBackdropBuffer, 0, 0, WIDTH, HEIGHT);
   }
 
   function traceCutPath(target, centerX, centerY, radiusX, radiusY, time) {
@@ -11101,6 +11177,8 @@
   }
 
   function drawScreenTexture() {
+    if (state.mode === "settings") return;
+    if (["first_hole", "paused"].includes(state.mode) && !state.screenTexture) return;
     ctx.drawImage(
       screenTextureBuffer,
       0,
@@ -11136,7 +11214,7 @@
     ctx.scale(zoom, zoom);
     ctx.translate(-WIDTH * 0.5, -HEIGHT * 0.5);
     ctx.globalAlpha = state.mode === "intro" ? clamp(time / 0.85, 0, 1) : 1;
-    ctx.drawImage(art, cover.x, cover.y, cover.width, cover.height);
+    ctx.drawImage(drawableImage(art), cover.x, cover.y, cover.width, cover.height);
 
     const menuTwitch = menuMode && !reduced
       ? Math.pow(Math.max(0, Math.sin(time * 0.71)), 18)
@@ -11170,7 +11248,7 @@
       ctx.ellipse(0, -dh * 0.08, dw * 0.46, dh * 0.5, 0, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(
-        art,
+        drawableImage(art),
         source.x,
         source.y,
         source.width,
@@ -11437,10 +11515,10 @@
       assetPhaseSummary("course");
     if (
       courseAssets.requested &&
-      !courseAssets.ready
+      (!courseAssets.ready || courseAssets.failed > 0)
     ) {
       drawText(
-        `PREPARING COURSE // ${courseAssets.percent}%`,
+        courseAssets.failed > 0 ? "SOME ART UNAVAILABLE // RELOAD TO RETRY" : `PREPARING COURSE // ${courseAssets.percent}%`,
         32,
         HEIGHT - 25,
         13,
@@ -11460,9 +11538,10 @@
       state.career.routes.shed,
       state.career.routes.drain,
       state.career.overtimeBest,
+      ...(state.career.legacyRecords || []),
     ].filter(
       (record) =>
-        record?.variantId === variantId,
+        record?.variantId === variantId && record.ruleset === RUN_RULESET && record.pressure === state.pursuitIntensity,
     );
     records.sort(
       (a, b) =>
@@ -11978,7 +12057,43 @@
     drawText("GET OUT ALIVE. LEARN THE COURSE AS YOU GO.", x + 28, 598, 21, "#e3bb7a", "left", true);
   }
 
+  function compactMenuButton(index) {
+    return {x:80,y:190+index*96,width:432,height:88};
+  }
+
+  function drawCompactMenu() {
+    drawOpeningArt(state.time,0,true);
+    ctx.fillStyle="rgba(2,13,8,.94)";ctx.fillRect(48,32,1184,656);
+    drawText("ROUGH CUT",80,112,56,"#f0f0d4","left",true);
+    drawText("THE COURSE CLOSES AT DUSK.",80,154,26,"#eacb88","left",true);
+    ["START ROUND","SETTINGS","CHANGE REQUEST","REPLAY INTRO","CLOCK OUT"].forEach((label,index)=>{
+      const b=compactMenuButton(index),selected=index===state.menuIndex;
+      ctx.fillStyle=selected?"#3d4023":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);
+      strokeRect(b.x,b.y,b.width,b.height,selected?"#e7974e":"#547964",2);
+      drawText(label,b.x+24,b.y+54,32,"#eef3df","left",true);
+    });
+    const selected=selectedMenuVariant(),unlocked=portfolioUnlocked();
+    drawText("CHOOSE YOUR NIGHT ORDER",580,112,32,"#eacb88","left",true);
+    RUN_VARIANTS.forEach((variant,index)=>{
+      const x=PORTFOLIO_PANEL.x+22+index*(PORTFOLIO_CARD_WIDTH+PORTFOLIO_CARD_GAP);
+      ctx.fillStyle=selected.id===variant.id?"#34432c":"#10271b";ctx.fillRect(x,146,190,286);
+      strokeRect(x,146,190,286,selected.id===variant.id?"#eacb88":"#547964",2);
+      drawText(String(index+1).padStart(2,"0"),x+95,216,54,"#eef3df","center",true);
+      const names=[["STANDARD","REVIEW"],["EASTERN","EXCEPTION"],["CLOSING","SHIFT"]][index];
+      names.forEach((line,i)=>drawText(line,x+95,274+i*36,28,"#eef3df","center",true));
+      drawText(state.career.completedVariants.includes(variant.id)?"CLEARED":selected.id===variant.id?"NEXT":unlocked?"SELECT":"LOCKED",x+95,390,26,"#b6dfd1","center",true);
+    });
+    const plans={standard_review:["KEY: WEST OF WATER","LURE JOE BEFORE CROSSING"],eastern_exception:["KEY: BY THE FLOODLIGHT","SCOUT JOE; KEEP A BALL"],closing_shift:["KEY: AUDIT ROW","JOE GUARDS THE EXITS"]};
+    plans[selected.id].forEach((line,i)=>drawText(line,580,468+i*36,28,"#b6dfd1","left",true));
+    ctx.fillStyle="#10271b";ctx.fillRect(558,530,650,106);strokeRect(558,530,650,106,"#547964",2);
+    drawText(overtimeUnlocked()?`OVERTIME: ${state.overtimeSelected?"ON":"OFF"}`:"OVERTIME LOCKED",580,568,30,"#eacb88","left",true);
+    drawText(overtimeUnlocked()?inputCopy("R / CLICK TO TOGGLE","RB TO TOGGLE","TAP TO TOGGLE"):"CLEAR ALL THREE ORDERS",580,610,26,"#b6dfd1","left",true);
+    const assets=assetPhaseSummary("course");
+    drawText(!assets.ready?`LOADING COURSE ${assets.percent}%`:assets.failed?`${assets.failed} IMAGES UNAVAILABLE · RELOAD TO RETRY`:inputCopy("ARROWS SELECT · ENTER CONFIRM","D-PAD SELECT · A CONFIRM","TAP TO CHOOSE"),640,686,25,"#eacb88","center",true);
+  }
+
   function drawMenu() {
+    if (gameplayReadability().compact) {drawCompactMenu();return;}
     drawOpeningArt(state.time, 0, true);
     drawGrassCurtain(1, state.time, 0);
     ctx.fillStyle = "rgba(1,8,4,0.25)";
@@ -12136,7 +12251,10 @@
 
     }
 
-    if (state.status.startsWith("CHANGE REJECTED:")) {
+    if (gameplayAssetSummary().failed > 0) {
+      drawText("SOME ART COULD NOT LOAD", 91, 622, 22, "#efbd80", "left", true);
+      drawText("RELOAD TO RETRY", 91, 650, 24, "#e8e5cc", "left", true);
+    } else if (state.status.startsWith("CHANGE REJECTED:")) {
       drawText("CHANGE REJECTED:", 91, 622, 13, "#db8041", "left");
       drawText(
         state.status.slice("CHANGE REJECTED:".length).trim(),
@@ -12185,43 +12303,48 @@
     );
   }
 
+  function settingsFieldPage() {
+    const selected = SETTINGS_ROWS[state.settingsIndex];
+    if (selected?.group === "presentation") {
+      const groupIndex = SETTINGS_ROWS.slice(0, state.settingsIndex).filter(row => row.group === "presentation").length;
+      return groupIndex >= 8 ? 1 : 0;
+    }
+    return state.settingsFieldPage || 0;
+  }
+
+  function nextSettingsFieldPage() {
+    state.settingsFieldPage = (settingsFieldPage() + 1) % 2;
+    state.settingsIndex = SETTINGS_ROWS.findIndex((row, index) => row.group === "presentation" &&
+      SETTINGS_ROWS.slice(0, index).filter(r => r.group === "presentation").length === state.settingsFieldPage * 8);
+  }
+
+  const SETTINGS_CATEGORIES = [
+    {name:"AUDIO",ids:["master","ambience","mower","effects","danger"]},
+    {name:"CONTROLS",ids:["look_sensitivity","invert_look","stick_deadzone","free_look"]},
+    {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","threat_captions","ui_scale","focused_hud","guided_hints","route_guidance"]},
+    {name:"ATMOSPHERE",ids:["reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
+    {name:"CHALLENGE",ids:["pursuit_intensity"]}
+  ];
+  function settingsCategory(index=state.settingsIndex) {return SETTINGS_CATEGORIES.findIndex(c=>c.ids.includes(SETTINGS_ROWS[index]?.id));}
+  function settingsVisibleIndices() {
+    const ids=SETTINGS_CATEGORIES[settingsCategory()].ids, selected=ids.indexOf(SETTINGS_ROWS[state.settingsIndex].id), start=Math.floor(selected/6)*6;
+    return ids.slice(start,start+6).map(id=>SETTINGS_ROWS.findIndex(r=>r.id===id));
+  }
+  function selectSettingsCategory(index) {const c=SETTINGS_CATEGORIES[(index+SETTINGS_CATEGORIES.length)%SETTINGS_CATEGORIES.length];state.settingsIndex=SETTINGS_ROWS.findIndex(r=>r.id===c.ids[0]);}
+  function resetSettingsCategory() {
+    const defaults={volume:.72,ambienceVolume:.9,mowerVolume:1,effectsVolume:1,dangerVolume:.9,subtitles:true,subtitleSize:1,captionBackground:.78,threatCaptions:true,reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches,effectsDensity:1,highContrastNavigation:false,pursuitIntensity:1,lookSensitivity:1,stickDeadzone:.22,uiScale:1,invertLook:false,focusedHud:true,clearScenery:true,screenTexture:false,guidedHints:true,freeLook:true};
+    defaults.routeGuidance = true;
+    for(const id of SETTINGS_CATEGORIES[settingsCategory()].ids) {const row=SETTINGS_ROWS.find(r=>r.id===id);if(row.type==="slider")applySliderSetting(row,defaults[row.key]);else if(state[row.key]!==defaults[row.key])toggleSetting(row);}
+    state.settingsNotice="CATEGORY DEFAULTS RESTORED";
+  }
   function settingsRowGeometry(index) {
-    const setting = SETTINGS_ROWS[index];
-    const groupIndex = SETTINGS_ROWS
-      .slice(0, index)
-      .filter((row) => row.group === setting.group)
-      .length;
-    return {
-      x: setting.group === "audio" ? 676 : 892,
-      y:
-        (setting.group === "presentation" ? 220 : 230) +
-        groupIndex *
-          (
-            setting.group ===
-            "presentation"
-              ? 33
-              : 49
-          ),
-      width: 204,
-      height:
-        setting.group ===
-        "presentation"
-          ? 31
-          : 43,
-    };
+    const slot=settingsVisibleIndices().indexOf(index);
+    return {visible:slot>=0,x:slot>=0?80+slot%2*572:-10000,y:174+Math.floor(Math.max(0,slot)/2)*110,width:548,height:100};
   }
 
   function settingsSliderGeometry(index) {
-    const row = settingsRowGeometry(index);
-    return {
-      x: row.x + 10,
-      y:
-        row.y +
-        (row.height < 40 ? 24 : 27),
-      width: 144,
-      height:
-        row.height < 40 ? 7 : 8,
-    };
+    const row=settingsRowGeometry(index);
+    return {x:row.x+18,y:row.y+72,width:row.width-144,height:12};
   }
 
   function settingDisplayValue(setting) {
@@ -12321,13 +12444,33 @@
         : index - 6;
     return {
       x: column === 0 ? 194 : 664,
-      y: 198 + rowIndex * 54,
+      y: gameplayReadability().compact ? 158+rowIndex*60 : 198 + rowIndex * 54,
       width: 422,
-      height: 44,
+      height: gameplayReadability().compact ? 54 : 44,
     };
   }
 
+  function drawCompactBindings() {
+    ctx.fillStyle="#06150e";ctx.fillRect(0,0,WIDTH,HEIGHT);
+    drawText("KEY BINDINGS",640,74,40,"#eef3df","center",true);
+    drawText(inputCopy("SELECT AN ACTION · PRESS A KEY","SELECT WITH D-PAD · A TO REBIND","TAP AN ACTION · USE A PHYSICAL KEY"),640,122,28,"#eacb88","center",true);
+    const labels=["FORWARD","LEFT","BACK","RIGHT","SPRINT","CROUCH","LISTEN","REAR VIEW","USE","CHIP","MAP"];
+    KEYBOARD_BINDING_ROWS.forEach((binding,index)=>{
+      const b=bindingRowGeometry(index),selected=state.bindingIndex===index;
+      ctx.fillStyle=selected?"#344b29":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);
+      strokeRect(b.x,b.y,b.width,b.height,selected?"#eacb88":"#547964",2);
+      drawText(labels[index]||binding.label,b.x+12,b.y+36,28,"#eef3df","left",true);
+      const key=state.bindingCaptureId===binding.id?"PRESS KEY":keyboardBindingLabel(binding.id);
+      drawText(key,b.x+b.width-12,b.y+36,fittedTextSize(key,28,216,25,true),"#eacb88","right",true);
+    });
+    const notice=state.bindingCaptureId?"PRESS A KEY · ESC CANCELS":state.bindingStatus||"ARROW KEYS ALWAYS MOVE";
+    wrapReadableText(notice,26,1000).slice(0,2).forEach((line,i)=>drawText(line,640,550+i*30,26,"#b6dfd1","center",true));
+    for(const [x,label] of [[194,"RESET KEYS"],[834,"BACK"]]){ctx.fillStyle="#193827";ctx.fillRect(x,600,252,66);strokeRect(x,600,252,66,"#9edac3",2);drawText(label,x+126,643,30,"#eef3df","center",true);}
+    drawText("R RESET · ESC BACK",640,704,26,"#eacb88","center",true);
+  }
+
   function drawKeyboardBindings() {
+    if (gameplayReadability().compact) {drawCompactBindings();return;}
     if (state.settingsReturnMode === "paused") {
       drawFirstHole();
     } else {
@@ -12561,377 +12704,77 @@
     );
   }
 
-  function drawSettings() {
-    if (state.settingsPage === "bindings") {
-      drawKeyboardBindings();
-      return;
-    }
-    if (state.settingsReturnMode === "paused") {
-      drawFirstHole();
-    } else {
-      drawMenu();
-    }
-    ctx.fillStyle = "rgba(0,0,0,0.9)";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    const panel = { x: 150, y: 82, width: 980, height: 556 };
-    ctx.fillStyle = "rgba(5,16,9,0.98)";
-    ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
-    strokeRect(panel.x, panel.y, panel.width, panel.height, "#dc6c25", 3);
-    strokeRect(
-      panel.x + 10,
-      panel.y + 10,
-      panel.width - 20,
-      panel.height - 20,
-      "#35492f",
-      1,
-    );
-    drawText("HOW TO SURVIVE", WIDTH * 0.5, 133, 34, "#eee8c9", "center", true);
-    drawText("ACCEPTANCE CRITERIA // NIGHT SHIFT", WIDTH * 0.5, 163, 13, "#d77b3b", "center");
-    if (
-      state.settingsReturnMode ===
-      "paused"
-    ) {
-      const pausedAction =
-        objectiveActionHudSummary();
-      const pausedContext =
-        `PAUSED FILE // ${currentHoleObjective()}  •  NEXT // ${pausedAction.text}`;
-      drawText(
-        pausedContext,
-        WIDTH * 0.5,
-        184,
-        fittedTextSize(
-          pausedContext,
-          11,
-          850,
-          9,
-          true,
-        ),
-        pausedAction.color,
-        "center",
-        true,
-      );
-    }
-
-    const controllerActive = state.inputMethod === "gamepad";
-    const touchActive = state.inputMethod === "touch";
-    drawText("THE ASSIGNMENT", 205, 213, 15, "#8f9e84", "left", true);
-    const steps = [
-      {
-        y: 260,
-        icon: 0,
-        title: "1. COMPLETE CHECKS + FILE",
-        detail: "3 FIELD CHECKS  •  KEY → SHED  •  VALVE → DRAIN",
-        subdetail: "CHECKS MAKE NOISE. MOVE ABORTS FILING. CR +650.",
-      },
-      {
-        y: 348,
-        icon: 1,
-        title: "2. MISDIRECT JOE",
-        detail: touchActive
-          ? "Hold CHIP + slide, then release."
-          : controllerActive
-            ? "Hold X + stick L/R, then release."
-            : `Hold ${keyboardBindingLabel("chip")} + ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")}, then release.`,
-        subdetail: touchActive
-          ? "Landed balls stay. USE reclaims them."
-          : controllerActive
-            ? "Landed balls stay. A reclaims them."
-            : `Landed balls stay. ${keyboardBindingLabel("interact")} reclaims them.`,
-      },
-      {
-        y: 436,
-        icon: 2,
-        title: "3. BREAK CONTACT",
-        detail: touchActive
-          ? "Hold CROUCH near cover or in rough."
-          : controllerActive
-            ? "Hold LB near hard cover or in rough."
-            : `Hold ${keyboardBindingLabel("crouch")} near hard cover or in rough.`,
-        subdetail:
-          "MARKED FOOTING SLOWS YOU: CROSS, ROUTE WIDE, OR WAIT.",
-      },
-    ];
-    for (const step of steps) {
-      drawFieldIcon(step.icon, 242, step.y, 64);
-      drawText(step.title, 292, step.y - 4, 15, "#eee8ce", "left", true);
-      drawText(step.detail, 292, step.y + 22, 12, "#9eaa96", "left");
-      if (step.subdetail) {
-        drawText(
-          step.subdetail,
-          292,
-          step.y + 40,
-          11,
-          "#d29a5b",
-          "left",
-        );
-      }
-    }
-    drawText(
-      touchActive
-        ? "LEFT PAD  MOVE  •  RUN  SPRINT"
-        : controllerActive
-          ? "LEFT STICK / D-PAD  MOVE"
-          : `${keyboardMovementCopy()}  MOVE`,
-      205,
-      520,
-      14,
-      "#d9dfcc",
-      "left",
-    );
-    drawText(
-      touchActive
-        ? "HOLD CROUCH  •  HOLD LISTEN"
-        : controllerActive
-          ? "LB CROUCH  •  LT LISTENING FOCUS"
-          : `${keyboardBindingLabel("crouch")} CROUCH  •  ${keyboardBindingLabel("focus")} LISTENING FOCUS`,
-      205,
-      542,
-      14,
-      "#9fc98a",
-      "left",
-    );
-    drawText(
-      touchActive
-        ? "HOLD REAR  LOOK BEHIND"
-        : controllerActive
-          ? "R3  LOOK BEHIND"
-          : `${keyboardBindingLabel("look_back")}  LOOK BEHIND`,
-      205,
-      566,
-      12,
-      "#82c8bc",
-      "left",
-      true,
-    );
-    drawText(
-      controllerActive
-        ? "RT SPRINTS — FAST, LOUD, AND EXPOSED."
-        : touchActive
-          ? "RUN IS FAST, LOUD, AND EXPOSED."
-          : `${keyboardBindingLabel("sprint")} SPRINTS — FAST, LOUD, AND EXPOSED.`,
-      205,
-      590,
-      12,
-      "#d98946",
-      "left",
-    );
-
-    ctx.strokeStyle = "#394b31";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(640, 195);
-    ctx.lineTo(640, 590);
-    ctx.stroke();
-
-    drawText("AUDIO MIX", 686, 213, 13, "#8f9e84", "left", true);
-    drawText("FIELD OPTIONS", 902, 213, 13, "#8f9e84", "left", true);
-    const selectedSetting = settingsRowGeometry(state.settingsIndex);
-    ctx.fillStyle = "rgba(50,72,28,0.36)";
-    ctx.fillRect(
-      selectedSetting.x,
-      selectedSetting.y,
-      selectedSetting.width,
-      selectedSetting.height,
-    );
-    strokeRect(
-      selectedSetting.x,
-      selectedSetting.y,
-      selectedSetting.width,
-      selectedSetting.height,
-      "#d47431",
-      2,
-    );
-    for (let index = 0; index < SETTINGS_ROWS.length; index += 1) {
-      const setting = SETTINGS_ROWS[index];
-      const row = settingsRowGeometry(index);
-      const compactRow =
-        row.height < 40;
+  function drawCompactSettings() {
+    ctx.fillStyle = "#06150e"; ctx.fillRect(0,0,WIDTH,HEIGHT);
+    const category=settingsCategory(), ids=SETTINGS_CATEGORIES[category].ids;
+    const indices=settingsVisibleIndices();
+    drawText("SETTINGS", 80, 84, 38, "#eee8ce", "left", true);
+    drawText(SETTINGS_CATEGORIES[category].name, WIDTH - 80, 84, 30, "#b5dac5", "right", true);
+    SETTINGS_CATEGORIES.forEach((c,i)=>{const x=80+i*224;ctx.fillStyle=i===category?"#34513b":"#10281c";ctx.fillRect(x,106,212,46);strokeRect(x,106,212,46,"#547964",2);drawText(c.name,x+106,136,25,"#e9ead7","center",true);});
+    for (const index of indices) {
+      const setting = SETTINGS_ROWS[index], row = settingsRowGeometry(index), selected = state.settingsIndex === index;
+      ctx.fillStyle = selected ? "#193a28" : "#10271b"; ctx.fillRect(row.x,row.y,row.width,row.height);
+      strokeRect(row.x,row.y,row.width,row.height,selected ? "#f1c37f" : "#6eaa89",2);
+      drawText(setting.label,row.x+18,row.y+36,fittedTextSize(setting.label,28,row.width-36,24,true),"#edf0df","left",true);
       if (setting.type === "slider") {
-        const value = state[setting.key];
-        const slider = settingsSliderGeometry(index);
-        const normalized =
-          (value - setting.min) /
-          (setting.max - setting.min);
-        drawText(
-          setting.label,
-          row.x + 10,
-          row.y +
-            (compactRow ? 14 : 18),
-          10,
-          index === state.settingsIndex ? "#f2e7bd" : "#c6d0ba",
-          "left",
-          index === state.settingsIndex,
-        );
-        ctx.fillStyle = "#172719";
-        ctx.fillRect(slider.x, slider.y, slider.width, slider.height);
-        ctx.fillStyle =
-          setting.id === "danger"
-            ? "#bf4937"
-            : setting.id === "mower"
-              ? "#d17a31"
-              : "#879d55";
-        ctx.fillRect(
-          slider.x,
-          slider.y,
-          slider.width * normalized,
-          slider.height,
-        );
-        strokeRect(
-          slider.x,
-          slider.y,
-          slider.width,
-          slider.height,
-          "#65785a",
-          1,
-        );
-        drawText(
-          settingDisplayValue(setting),
-          row.x + row.width - 8,
-          row.y +
-            (compactRow ? 32 : 36),
-          10,
-          "#dfe5d3",
-          "right",
-        );
-      } else {
-        drawSettingsToggle(
-          row,
-          setting.label,
-          Boolean(state[setting.key]),
-          index === state.settingsIndex,
-        );
-      }
+        const bar = settingsSliderGeometry(index), amount = (state[setting.key]-setting.min)/(setting.max-setting.min);
+        ctx.fillStyle="#375742";ctx.fillRect(bar.x,bar.y,bar.width,bar.height);
+        ctx.fillStyle="#b9e4c5";ctx.fillRect(bar.x,bar.y,bar.width*amount,bar.height);
+        drawText(settingDisplayValue(setting),row.x+row.width-18,row.y+84,25,"#f1d29a","right",true);
+      } else drawText(state[setting.key] ? "ON  [x]" : "OFF  [ ]",row.x+row.width-18,row.y+82,28,state[setting.key]?"#b9e4c5":"#e0bc88","right",true);
     }
-    const pressureHelp =
-      pursuitIntensityHelpPresentation();
-    ctx.fillStyle = "rgba(15,30,17,0.86)";
-    ctx.fillRect(676, 492, 420, 50);
-    strokeRect(676, 492, 420, 50, "#4e6442", 1);
-    drawText("CAPTION PREVIEW", 688, 503, 9, "#819277", "left", true);
-    drawText(
-      state.threatCaptions
-        ? "MOWER // AMBER"
-        : "DISABLED",
-      1084,
-      503,
-      9,
-      state.threatCaptions
-        ? threatCaptionTheme("mower")
-            .textColor
-        : "#788274",
-      "right",
-      true,
-    );
-    if (state.threatCaptions) {
-      drawSubtitleCard(
-        "[ JOE APPROACHING — RIGHT ]",
-        886,
-        532,
-        12,
-        threatCaptionTheme("mower")
-          .textColor,
-        threatCaptionTheme("mower")
-          .frameColor,
-        threatCaptionTheme("mower")
-          .minimumFrameOpacity,
-      );
+    if(category===1) {
+      ["STANDARD", "CALM", "FIXED VIEW"].forEach((name,index)=>{
+        const x=80+index*380;
+        const selected=index===0?state.freeLook&&!state.reducedMotion&&state.lookSensitivity===1:index===1?state.freeLook&&state.reducedMotion&&state.lookSensitivity===.65:!state.freeLook&&state.reducedMotion;
+        ctx.fillStyle=selected?"#34513b":"#193323";ctx.fillRect(x,414,360,64);strokeRect(x,414,360,64,selected?"#f1c37f":"#9dc9ab",2);
+        drawText(name,x+180,455,26,"#f1e6c9","center",true);
+      });
+      ctx.fillStyle="#123125";ctx.fillRect(80,508,1120,54);strokeRect(80,508,1120,54,"#89bba1",2);
+      drawText(inputCopy("1 STANDARD · 2 CALM · 3 FIXED · DRAG TO TEST","LB/RB: PRESET · RIGHT STICK: TEST LOOK","TAP A PRESET · DRAG HERE TO TEST LOOK"),96,535,24,"#e2d5a9","left",true);
+      ctx.fillStyle="#c5ebcd";ctx.fillRect(640+Math.sin(state.lookPreviewYaw||0)*500,547,8,12);
     } else {
-      drawText(
-        "THREAT CAPTIONS OFF",
-        886,
-        531,
-        12,
-        "#788274",
-        "center",
-        true,
-      );
+      if(category===2 && indices.length<6) {
+        ctx.fillStyle="#193323";ctx.fillRect(80,414,360,64);strokeRect(80,414,360,64,"#9dc9ab",2);
+        drawText("REPLAY LESSONS",260,455,26,"#f1e6c9","center",true);
+      }
+      drawText(state.settingsNotice || (category===4?"Pressure changes during play make that run unranked.":category===2?inputCopy("T: REPLAY LESSONS · Listen reveals a hidden route.","X: REPLAY LESSONS · Listen reveals a hidden route.","MORE: lessons and route guidance options."):"Changes save automatically. RESET affects this category only."),80,542,24,"#b9d9c7","left");
     }
-    if (pressureHelp) {
-      ctx.fillStyle = "rgba(15,30,17,0.96)";
-      ctx.fillRect(678, 494, 416, 46);
-      drawText(
-        `JOE PRESSURE // ${pressureHelp.tier}`,
-        688,
-        506,
-        10,
-        "#e4ad6d",
-        "left",
-        true,
-      );
-      drawText(
-        pressureHelp.lines[0],
-        688,
-        521,
-        9,
-        "#dce4cd",
-        "left",
-      );
-      drawText(
-        pressureHelp.lines[1],
-        688,
-        534,
-        9,
-        "#aebba4",
-        "left",
-      );
-    }
-    drawText(
-      touchActive
-        ? "TAP ROWS TO ADJUST"
-        : controllerActive
-          ? "D-PAD  SELECT / ADJUST"
-          : "F  FULLSCREEN",
-      700,
-      548,
-      11,
-      "#d9dfcc",
-      "left",
-    );
-    ctx.fillStyle = "rgba(21,41,23,0.8)";
-    ctx.fillRect(676, 554, 194, 36);
-    strokeRect(676, 554, 194, 36, "#687e4a", 1);
-    drawText(
-      touchActive
-        ? "KEY BINDINGS"
-        : controllerActive
-          ? "Y  KEY BINDINGS"
-          : "B  KEY BINDINGS",
-      773,
-      578,
-      11,
-      "#d9dfcc",
-      "center",
-      true,
-    );
-    ctx.fillStyle = "rgba(21,41,23,0.8)";
-    ctx.fillRect(880, 554, 216, 36);
-    strokeRect(880, 554, 216, 36, "#687e4a", 1);
-    drawText(
-      `←  RETURN TO ${state.settingsReturnMode === "paused" ? "PAUSE" : "MENU"}`,
-      988,
-      578,
-      11,
-      "#d9dfcc",
-      "center",
-      true,
-    );
-    drawText(
-      controllerActive
-        ? "LEFT / RIGHT MIX  •  A TOGGLE  •  Y BINDINGS  •  B RETURN"
-        : touchActive
-          ? "TAP SLIDERS  •  TAP TOGGLES  •  TAP BUTTONS"
-          : "ARROWS ADJUST  •  ENTER TOGGLE  •  B BINDINGS  •  ESC RETURN",
-      700,
-      612,
-      11,
-      "#8fa084",
-      "left",
-    );
+    [[80,196,"< CATEGORY"],[300,196,"RESET"],[520,196,ids.length>6?"MORE":"KEYS"],[740,196,"RETURN"],[960,240,"CATEGORY >"]].forEach(([x,width,label])=>{
+      ctx.fillStyle="#193323";ctx.fillRect(x,576,width,72);strokeRect(x,576,width,72,"#9dc9ab",2);
+      drawText(label,x+width/2,622,27,"#f1e6c9","center",true);
+    });
+    drawText("ESC RETURN // B KEY BINDINGS // ARROWS ADJUST",WIDTH/2,691,24,"#b6d4c0","center");
   }
 
-  // Secure either branch while its pickup is still near the opening checks.
-  // The first station teaches the core loop; its tactical cover route retains
-  // priority. Acquiring either item immediately resumes the remaining checks.
+  function handleCompactSettingsPointer(point) {
+    state.settingsNotice="";
+    if(settingsCategory()===1 && point.y>=414 && point.y<=478 && point.x>=80 && point.x<1200) {
+      applyComfortPreset(Math.floor((point.x-80)/380));return;
+    }
+    if(settingsCategory()===2 && settingsVisibleIndices().length<6 && point.y>=414 && point.y<=478 && point.x>=80 && point.x<=440) {
+      replayPracticalLessons();return;
+    }
+    if(point.y>=106&&point.y<=152&&point.x>=80&&point.x<1200){selectSettingsCategory(Math.floor((point.x-80)/224));return;}
+    if(point.y>=576&&point.y<=648) {
+      const category=settingsCategory(),ids=SETTINGS_CATEGORIES[category].ids;
+      if(point.x>=80&&point.x<=276)selectSettingsCategory(category-1);
+      else if(point.x>=300&&point.x<=496)resetSettingsCategory();
+      else if(point.x>=520&&point.x<=716){if(ids.length>6)state.settingsIndex=SETTINGS_ROWS.findIndex(r=>r.id===ids[settingsVisibleIndices().includes(SETTINGS_ROWS.findIndex(r=>r.id===ids[0]))?6:0]);else openKeyboardBindings();}
+      else if(point.x>=740&&point.x<=936)returnFromSettings();
+      else if(point.x>=960&&point.x<=1200)selectSettingsCategory(category+1);
+      return;
+    }
+    const index=settingsIndexAt(point);if(index<0)return;
+    state.settingsIndex=index;const setting=SETTINGS_ROWS[index];
+    if(setting.type==="toggle")toggleSetting(setting);else{const bar=settingsSliderGeometry(index);applySliderSetting(setting,setting.min+clamp((point.x-bar.x)/bar.width,0,1)*(setting.max-setting.min));playMixPreview(setting.id);}
+  }
+
+  function drawSettings() {
+    if(state.settingsPage==="bindings") drawKeyboardBindings();
+    else drawCompactSettings();
+  }
+
   function shouldPrepareExit() {
     return completedNightOrderActionCount() > 0 &&
       !nightOrderActionsComplete() &&
@@ -13381,7 +13224,27 @@
     };
   }
 
+  function pauseButtonGeometry(index) {
+    return gameplayReadability().compact ? {x:230,y:254+index*98,width:820,height:88}
+      : {x:390,y:264+index*68,width:500,height:50};
+  }
+
+  function drawCompactPause() {
+    drawFirstHole();ctx.fillStyle="rgba(2,12,8,.86)";ctx.fillRect(0,0,WIDTH,HEIGHT);
+    ctx.fillStyle="rgba(2,12,8,.96)";ctx.fillRect(100,38,1080,656);
+    drawText("PAUSED",640,110,44,"#eef3df","center",true);
+    drawText(playerNextActionPresentation().text,640,174,32,"#eacb88","center",true);
+    drawText(`${completedNightOrderActionCount()}/3 CHECKS · PROGRESS SAVED IN THIS RUN`,640,218,28,"#b6dfd1","center",true);
+    ["RESUME","SETTINGS","RESTART FROM TEE","RETURN TO MENU"].forEach((label,index)=>{
+      const b=pauseButtonGeometry(index),selected=state.pauseIndex===index;ctx.fillStyle=selected?"#3d4023":"#10271b";
+      ctx.fillRect(b.x,b.y,b.width,b.height);strokeRect(b.x,b.y,b.width,b.height,selected?"#e7974e":"#547964",2);
+      drawText(label,640,b.y+55,34,"#eef3df","center",true);
+    });
+    drawText(inputCopy("ESC RESUME · ENTER CONFIRM","B RESUME · A CONFIRM","TAP AN ACTION"),640,678,28,"#eacb88","center",true);
+  }
+
   function drawPause() {
+    if(gameplayReadability().compact){drawCompactPause();return;}
     drawFirstHole();
     const pauseAction =
       objectiveActionHudSummary();
@@ -13555,7 +13418,7 @@
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.drawImage(
-      fieldKitArt,
+      drawableImage(fieldKitArt),
       sourceWidth * index,
       sourceY,
       sourceWidth,
@@ -13569,6 +13432,9 @@
   }
 
   function resetFirstHole(variantOverride = null) {
+    restoreRankedCareer();
+    courseBackdropRenderedAt = -Infinity;
+    miniMapRenderedAt = -Infinity;
     clearTouchInputs(true);
     const variant =
       variantOverride ||
@@ -13582,7 +13448,7 @@
         variant.id,
         overtime,
       );
-    state.player = { x: 0, y: 0, heading: 0 };
+    state.player = { x: 0, y: 0, heading: 0, yaw: 0 };
     state.shedReached = false;
     state.status = "South gate locked. Complete the field checks and file an exit.";
     state.hole = {
@@ -14212,6 +14078,57 @@
     return state.hole.lookBack;
   }
 
+  function cameraYaw() {
+    return state.freeLook ? state.player.yaw || 0 : 0;
+  }
+
+  function turnCamera(delta) {
+    if (!state.freeLook || !Number.isFinite(delta) || delta === 0) return;
+    delta *= state.lookSensitivity * (state.invertLook ? -1 : 1);
+    if (state.mode !== "first_hole" || state.hole.tutorialVisible ||
+        state.hole.escapeFiling.sealing || lookBackHeld()) return;
+    state.player.yaw = Math.atan2(Math.sin(cameraYaw() + delta), Math.cos(cameraYaw() + delta));
+    state.hole.lookPracticeRadians = (state.hole.lookPracticeRadians || 0) + Math.abs(delta);
+    // Small turns use the existing scenery refresh budget; large jumps refresh
+    // immediately. The map's facing arrow is drawn live over its cached terrain.
+    if (Math.abs(delta) > 0.18) {
+      courseBackdropRenderedAt = -Infinity;
+      miniMapRenderedAt = -Infinity;
+    }
+  }
+
+  // Course x coordinates are authored at 0.72 physical meters per unit.
+  function cameraRelativePoint(target, angle = cameraYaw()) {
+    const dx = (target.x - state.player.x) * 0.72;
+    const dy = target.y - state.player.y;
+    return { x: (dx * Math.cos(angle) - dy * Math.sin(angle)) / 0.72,
+      y: dx * Math.sin(angle) + dy * Math.cos(angle) };
+  }
+
+  function cameraRelativeMovement(input) {
+    const angle = cameraYaw();
+    return { x: (input.x * Math.cos(angle) + input.y * Math.sin(angle)) / 0.72,
+      y: input.y * Math.cos(angle) - input.x * Math.sin(angle) };
+  }
+
+  function clearanceInstruction(target) {
+    const relative = cameraRelativePoint(target);
+    if (Math.abs(relative.x * 0.72) > Math.abs(relative.y)) {
+      return relative.x < 0 ? "CLEAR LEFT" : "CLEAR RIGHT";
+    }
+    return relative.y < 0 ? "STEP BACK" : "CLEAR AHEAD";
+  }
+
+  function requestMouseLook() {
+    if (!state.freeLook || document.pointerLockElement === canvas) return;
+    try {
+      const request = canvas.requestPointerLock?.();
+      request?.catch(() => setHoleMessage("MOUSE LOOK UNAVAILABLE // DRAG TO LOOK", 3));
+    } catch {
+      setHoleMessage("DRAG TO LOOK", 3);
+    }
+  }
+
   function updateLookBack(
     dt,
     lateralInput,
@@ -14258,7 +14175,7 @@
     const amount = smoothstep(
       clamp(glance.amount, 0, 1),
     );
-    const angle =
+    const angle = cameraYaw() +
       amount *
       Math.PI *
       glance.direction;
@@ -14268,6 +14185,7 @@
       sine: Math.sin(angle),
       cosine: Math.cos(angle),
       rear: amount >= 0.82,
+      worldRearAmount: (1 - Math.cos(angle)) / 2,
       transitioning:
         amount > 0.02 &&
         amount < 0.98,
@@ -14275,6 +14193,8 @@
   }
 
   function clearTouchInputs(cancelAim = false) {
+    state.touch.lookPointerId = null;
+    state.touch.lookLastX = 0;
     if (
       cancelAim &&
       state.hole?.ballAim?.active &&
@@ -16487,6 +16407,8 @@
     }
     return {
       ...override,
+      instruction: Math.abs(cameraYaw()) > 0.001 ? clearanceInstruction(override.target) : override.instruction,
+      direction: Math.abs(cameraYaw()) > 0.001 ? guidanceDirection(override.target) : override.direction,
       distanceToClear: Math.max(
         0,
         worldDistance(
@@ -17582,13 +17504,7 @@
             22,
           );
     const view = lookBackView();
-    const relativeX =
-      source.x - state.player.x;
-    const relativeY =
-      source.y - state.player.y;
-    const lateral =
-      relativeX * view.cosine -
-      relativeY * view.sine;
+    const lateral = cameraRelativePoint(source, view.angle).x;
     const pan = clamp(
       lateral / Math.max(42, distance),
       -0.9,
@@ -19270,16 +19186,9 @@
     const cameraMotion =
       courseCameraMotion();
     const view = lookBackView();
-    const relativeX =
-      x - state.player.x;
-    const relativeY =
-      y - state.player.y;
-    const forwardDistance =
-      relativeX * view.sine +
-      relativeY * view.cosine;
-    const lateralDistance =
-      relativeX * view.cosine -
-      relativeY * view.sine;
+    const relative = cameraRelativePoint({ x, y }, view.angle);
+    const forwardDistance = relative.y;
+    const lateralDistance = relative.x;
     const positiveDistance = Math.max(0, forwardDistance);
     const pixelsPerMeter =
       COURSE_CAMERA.focalPixels /
@@ -20382,8 +20291,10 @@
     const player = state.player;
     const initialX = player.x;
     const initialY = player.y;
-    const requestedDistance = Math.hypot(deltaX, deltaY);
-    const steps = Math.max(1, Math.ceil(requestedDistance / 1.15));
+    const requestedDistance = Math.hypot(deltaX * 0.72, deltaY);
+    // Keep conservative authored-coordinate collision steps, but count actual
+    // meters for gait, footsteps, route distance and blocked-motion feedback.
+    const steps = Math.max(1, Math.ceil(Math.hypot(deltaX, deltaY) / 1.15));
     const stepX = deltaX / steps;
     const stepY = deltaY / steps;
     let appliedDistance = 0;
@@ -20518,7 +20429,7 @@
           player.y = targetY;
         }
       }
-      appliedDistance += Math.hypot(player.x - startX, player.y - startY);
+      appliedDistance += Math.hypot((player.x - startX) * 0.72, player.y - startY);
     }
 
     if (initialBlocker && !shedContactOffersFiling(initialBlocker.id)) {
@@ -20738,8 +20649,11 @@
     if (!source) {
       return null;
     }
-    const deltaX = source.x - player.x;
-    const deltaY = source.y - player.y;
+    const angle = player === state.player ? lookBackView().angle : (player.yaw || 0);
+    const dx = (source.x - player.x) * 0.72;
+    const dy = source.y - player.y;
+    const deltaX = (dx * Math.cos(angle) - dy * Math.sin(angle)) / 0.72;
+    const deltaY = dx * Math.sin(angle) + dy * Math.cos(angle);
     if (Math.abs(deltaX) > Math.abs(deltaY) * 0.55) {
       return deltaX < 0 ? "LEFT" : "RIGHT";
     }
@@ -20936,6 +20850,7 @@
 
   function firstPersonHudExpanded() {
     const hole = state.hole;
+    if (state.focusedHud && hole.controlHintSource !== "manual" && !hole.focus) return false;
     const compactOnboardingCourseView =
       compactCourseViewport() &&
       hole.controlHintSource ===
@@ -21897,11 +21812,12 @@
       Math.max(0.001, dt);
     joe.effectSpeed =
       movementSpeed;
+    joe.walkMeters = (joe.walkMeters || 0) + movementDistance;
     if (movementDistance > 0.015) {
       joe.effectHeading =
         Math.atan2(
           deltaY,
-          deltaX,
+          deltaX * 0.72,
         );
     }
     joe.effectLastX = joe.x;
@@ -23889,6 +23805,8 @@
       timer: 1.45,
       duration: 1.45,
     };
+    const stationChoice = stationPlan(action);
+    hole.lastStationChoice = { id: action.id, ...stationChoice };
     const completed =
       completedNightOrderActionCount();
     const allComplete =
@@ -23908,7 +23826,7 @@
     };
     hole.searchContext = null;
     hole.distractionTimer =
-      action.noiseSeconds;
+      stationChoice.signalSeconds;
     hole.fieldSignalBreakaway.sourceId =
       action.id;
     hole.fieldSignalBreakaway.quietSeconds =
@@ -23939,7 +23857,7 @@
     const breakaway =
       action.breakaway;
     const routedCompletionMessage =
-      `${completionMessage} ${breakaway.instruction}.`;
+      `${completionMessage} ${stationChoice.reward || `REACH ${breakaway.coverLabel}.`}`;
     hole.nightOrderHandoff = {
       timer: 3.2,
       duration: 3.2,
@@ -23973,7 +23891,7 @@
       "sound",
       action.x,
       action.y,
-      action.noiseSeconds,
+      stationChoice.signalSeconds,
     );
     playNightOrderActionCue(action);
     pushThreatCaption(
@@ -24729,8 +24647,8 @@
       BALL_MAX_RANGE,
       aim.power,
     );
-    const physicalX = Math.sin(aim.angle);
-    const forwardY = Math.cos(aim.angle);
+    const physicalX = Math.sin(cameraYaw() + aim.angle);
+    const forwardY = Math.cos(cameraYaw() + aim.angle);
     return {
       x: clamp(
         state.player.x +
@@ -24767,22 +24685,7 @@
       playUiTone(112, 0.08, 0.018);
       return;
     }
-    let openingAngle = 0;
-    if (state.hole.hasMoved) {
-      const headingForward = Math.sin(
-        state.player.heading,
-      );
-      if (headingForward > 0.08) {
-        openingAngle = clamp(
-          Math.atan2(
-            Math.cos(state.player.heading) * 0.72,
-            headingForward,
-          ),
-          -BALL_MAX_AIM_ANGLE,
-          BALL_MAX_AIM_ANGLE,
-        );
-      }
-    }
+    const openingAngle = 0;
     state.hole.ballAim = {
       ...freshBallAimState(),
       active: true,
@@ -24830,6 +24733,10 @@
     ) {
       return;
     }
+    hole.practiceChips = (hole.practiceChips || 0) + 1;
+    // A mouse event can turn between the last simulation frame and release.
+    hole.ballAim.target = golfBallAimTarget();
+    hole.ballAim.preview = golfBallShotPlan(state.player, hole.ballAim.target, hole.ballAim.power);
     const requestedTarget =
       hole.ballAim.target ||
       golfBallAimTarget();
@@ -25517,8 +25424,14 @@
           correction.correction;
         hole.practiceDrill.lastMissDistance =
           correction.missDistance;
+        const returnedPracticeBall = hole.practiceDrill.misses === 1;
+        if (returnedPracticeBall) {
+          // One first-lesson retry, never an extra recoverable copy or a farm.
+          hole.golfBalls = Math.min(golfBallCapacity(), hole.golfBalls + 1);
+          hole.recoverableBalls = hole.recoverableBalls.filter(ball => ball.id !== landedBall.id);
+        }
         setHoleMessage(
-          `BELL MISSED // ${correction.summary}. BALL MARKED; RETRY OR CONTINUE.`,
+          `BELL MISSED // ${correction.summary}. ${returnedPracticeBall ? "PRACTICE BALL RETURNED; TRY AGAIN." : "BALL MARKED; RECLAIM OR CONTINUE."}`,
           4.2,
         );
       }
@@ -26694,7 +26607,7 @@
       lerp(1, 0.62, hole.concealment);
     const visibleNow =
       !blocker &&
-      playerDistance < visibilityRange;
+      playerDistance < visibilityRange && joeFacingSeesPoint(joe, state.player);
     const hearingRange = 18 + hole.noise * 58;
     const audibleNow =
       hole.noise > 0.16 &&
@@ -26908,8 +26821,14 @@
     }
     hole.visibilityRange = visibilityRange;
     hole.hearingRange = hearingRange;
+    // Existing track/wake awareness cannot turn a fresh non-contact sight or
+    // sound into an instant chase. Direct contact and an ongoing chase retain
+    // their existing behavior; breaking fresh contact drains confirmation.
+    hole.contactConfirmationSeconds = actionableSight || directSound
+      ? Math.min(1, (hole.contactConfirmationSeconds || 0) + dt)
+      : Math.max(0, (hole.contactConfirmationSeconds || 0) - dt * 2);
     const confirmedDetection =
-      hole.detection >= 0.55 ||
+      (hole.detection >= 0.55 && hole.contactConfirmationSeconds >= 0.65) ||
       playerDistance < 11;
     const canSee =
       actionableSight &&
@@ -27438,7 +27357,7 @@
       hole.lastKnownJoeTimer = 4.5;
     }
     hole.previousJoeMode = joe.mode;
-    if (worldDistance(joe, state.player) < 8.2) {
+    if (worldDistance(joe, state.player) < 8.2 && !lineBlockerBetween(joe, state.player)) {
       const capturedDuringFiling =
         hole.escapeFiling.active;
       if (capturedDuringFiling) {
@@ -28407,10 +28326,9 @@
     if (!waypoint) {
       return "STRAIGHT";
     }
-    const deltaX =
-      waypoint.x - state.player.x;
-    const deltaY =
-      waypoint.y - state.player.y;
+    const relative = cameraRelativePoint(waypoint);
+    const deltaX = relative.x;
+    const deltaY = relative.y;
     if (deltaY < -6) {
       return "TURN BACK";
     }
@@ -28424,6 +28342,11 @@
   }
 
   function effectiveGuidanceDirection() {
+    if (Math.abs(cameraYaw()) > 0.001) {
+      const guide = state.hole.navigationGuide;
+      const target = guide.collisionRecovery || activeFootingNavigationOverride()?.target;
+      if (target) return guidanceDirection(target);
+    }
     if (
       state.hole.blockedTimer > 0 &&
       state.hole.blockedEscape
@@ -28564,6 +28487,7 @@
   }
 
   function rearNavigationCueState() {
+    if (activeFootingNavigationOverride() || state.hole?.navigationGuide?.collisionRecovery) return null;
     const guide =
       state.hole?.navigationGuide;
     if (
@@ -28576,9 +28500,7 @@
     const waypoint =
       guide.path[0] ||
       guide.target;
-    const deltaX =
-      waypoint.x -
-      state.player.x;
+    const deltaX = cameraRelativePoint(waypoint).x;
     return {
       side:
         deltaX < -4
@@ -31712,8 +31634,19 @@
     interactionRadius = null,
     distance = null,
   ) {
+    const compact = gameplayReadability().compact;
+    if (compact) {
+      // The HUD carries the full objective name; local markers carry a short,
+      // readable identity instead of shrinking a sentence over distant art.
+      const shortLabels = { "MAINTENANCE SHED": "SHED EXIT", "SHED KEY": "KEY",
+        "DRAIN VALVE": "VALVE", "DRAIN EXIT": "DRAIN", "AUDIT BELL": "CHECK 1",
+        "FIELD LOG": "CHECK 2", "RELEASE REVIEW": "CHECK 3" };
+      label = shortLabels[label] || label;
+      if (/REVIEW [ABC]/.test(label)) label = "BONUS";
+      label = label.replace("MAINTENANCE SHED", "SHED").replace("DRAIN — SEALED", "DRAIN LOCKED");
+    }
     const distanceLabel =
-      interactionRadius !== null &&
+      !compact && interactionRadius !== null &&
       distance !== null
         ? `  //  ${Math.ceil(
             distance,
@@ -31734,9 +31667,9 @@
       placement.width - 16;
     const fontSize = fittedTextSize(
       text,
-      12,
+      compact ? Math.min(24, gameplayReadability().fontSize) : 14,
       maximumWidth,
-      10,
+      compact ? 20 : 11,
       true,
     );
     ctx.save();
@@ -32032,6 +31965,15 @@
   function worldMarkerReachPresentation(
     targetId = null,
   ) {
+    const filing = state.hole.escapeFiling;
+    if (filing.active || filing.sealing) {
+      const exitId = filing.route === "drain" ? "drain-exit" : "maintenance-shed";
+      return {
+        localText: filing.sealing ? "RELEASE AUTHORIZED" : targetId === exitId ? "FILING // HOLD STILL" : "FINISH EXIT FILING",
+        localRole: "active_exit_filing", localAlign: "center", localInset: 0,
+        bindingOwner: "exit_filing", actionText: null, actionTargetId: exitId,
+      };
+    }
     const rejection =
       activeInteractionRejection(
         targetId,
@@ -32461,7 +32403,7 @@
       "center",
       true,
     );
-    if (inReach) {
+    if (inReach && !gameplayReadability().compact) {
       const reachPresentation =
         placement.reachPresentation;
       drawText(
@@ -33308,7 +33250,7 @@
         .naturalWidth > 0
     ) {
       ctx.drawImage(
-        interactablePropArt,
+        drawableImage(interactablePropArt),
         propCell.x,
         propCell.y,
         propCell.width,
@@ -35018,10 +34960,10 @@
       visible:
         visibleReflectors > 0 &&
         !footingEscapeOwner &&
-        !footingSignalOwner,
+        !footingSignalOwner && !gameplayReadability().compact,
       deferredBy:
         footingEscapeOwner?.owner ||
-        footingSignalOwner,
+        footingSignalOwner || (gameplayReadability().compact ? "focused_hud" : null),
       routeGeometryVisible:
         visibleReflectors > 0 &&
         !footingEscapeOwner,
@@ -35259,7 +35201,7 @@
             HEIGHT - 154,
           ),
     };
-    const instruction =
+    const instruction = Math.abs(cameraYaw()) > 0.001 ? clearanceInstruction(recovery) :
       recovery.direction === "BACK"
         ? "STEP BACK"
         : recovery.direction ===
@@ -35312,6 +35254,7 @@
   function drawWorldNavigationRibbon(
     footingGuidance = null,
   ) {
+    if (!routeThreadVisible()) return;
     const guide =
       state.hole.navigationGuide;
     const footingOverride =
@@ -37595,6 +37538,13 @@
   }
 
   function drawPerspectiveCourse(progress, walkBob) {
+    if(state.clearScenery) {
+      const groundLift=ctx.createLinearGradient(0,COURSE_CAMERA.horizonY,0,HEIGHT);
+      groundLift.addColorStop(0,"rgba(100,121,90,0)");
+      groundLift.addColorStop(.5,"rgba(100,121,90,0.055)");
+      groundLift.addColorStop(1,"rgba(113,126,93,0.12)");
+      ctx.fillStyle=groundLift;ctx.fillRect(0,COURSE_CAMERA.horizonY,WIDTH,HEIGHT-COURSE_CAMERA.horizonY);
+    }
     const horizonY = COURSE_CAMERA.horizonY;
     const cameraOffset =
       -state.player.x * 3.1 +
@@ -37604,20 +37554,18 @@
 
     ctx.save();
     ctx.globalAlpha = 0.2;
-    for (let lane = -6; lane <= 6; lane += 1) {
-      const horizonX = WIDTH * 0.5 + lane * 24 + cameraOffset * 0.12;
-      const bottomX = WIDTH * 0.5 + lane * 178 + cameraOffset;
-      const edge = Math.abs(lane) >= 4;
-      ctx.strokeStyle = edge ? "rgba(135,157,82,0.42)" : "rgba(151,167,102,0.2)";
-      ctx.lineWidth = edge ? 3 : 2;
+    for (let lane = -5; lane <= 5; lane += 1) {
+      ctx.strokeStyle = "rgba(151,167,102,0.2)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(horizonX, horizonY);
-      ctx.quadraticCurveTo(
-        lerp(horizonX, bottomX, 0.42),
-        lerp(horizonY, HEIGHT + 20, 0.45),
-        bottomX,
-        HEIGHT + 18,
-      );
+      let connected = false;
+      for (let y = Math.max(0, state.player.y - 132); y <= Math.min(COURSE_LENGTH, state.player.y + 132); y += 4) {
+        const point = worldToScreen(lane * 22, y);
+        if (point.forwardDistance < 3 || !point.visible) { connected = false; continue; }
+        if (connected) ctx.lineTo(point.x, point.y);
+        else ctx.moveTo(point.x, point.y);
+        connected = true;
+      }
       ctx.stroke();
     }
 
@@ -38013,8 +37961,8 @@
       );
       ctx.rotate(zone.angle || 0);
       ctx.strokeStyle =
-        `rgba(${palette.marker},${pulse})`;
-      ctx.lineWidth = active ? 2.2 : 1.25;
+        `rgba(${palette.marker},${state.clearScenery ? Math.max(.65,pulse) : pulse})`;
+      ctx.lineWidth = active ? 2.2 : state.clearScenery ? 2 : 1.25;
       ctx.setLineDash(
         active ? [] : [7, 5],
       );
@@ -40241,7 +40189,7 @@
           .naturalWidth > 0
       ) {
         ctx.drawImage(
-          interactablePropArt,
+          drawableImage(interactablePropArt),
           propCell.x,
           propCell.y,
           propCell.width,
@@ -40414,7 +40362,7 @@
         .naturalWidth > 0
     ) {
       ctx.drawImage(
-        interactablePropArt,
+        drawableImage(interactablePropArt),
         propCell.x,
         propCell.y,
         propCell.width,
@@ -40579,7 +40527,7 @@
       const cell =
         INTERACTABLE_PROP_CELLS[1];
       ctx.drawImage(
-        interactablePropArt,
+        drawableImage(interactablePropArt),
         cell.x,
         cell.y,
         cell.width,
@@ -40739,7 +40687,7 @@
         dedicatedArt) &&
       drawWidth < targetWidth
     ) {
-      if (dedicatedArt) {
+      if (dedicatedArt && obstacle.asset !== "hedge-hide") {
         const ratio =
           targetWidth /
           drawWidth;
@@ -41270,7 +41218,7 @@
     const deferredBy =
       collisionOwnsGroundCue
         ? "collision_contact"
-        : interactionOwner ||
+        : interactionOwner || (gameplayReadability().compact ? "focused_hud" : null) ||
           (!screenVisible
             ? "offscreen"
             : null);
@@ -41333,6 +41281,36 @@
     };
   }
 
+  function drawHedgePlane(image, cell, start, end, heightMeters) {
+    const texture = cachedAtlasCell(image,cell);
+    // Narrow perspective strips keep authored foliage while fixing its world
+    // orientation. An arch opening must never swivel toward the camera.
+    const strips = 20;
+    for (let i=0;i<strips;i++) {
+      const a=i/strips,b=(i+1)/strips;
+      const p=worldToScreen(lerp(start.x,end.x,a),lerp(start.y,end.y,a));
+      const q=worldToScreen(lerp(start.x,end.x,b),lerp(start.y,end.y,b));
+      if(p.forwardDistance<.5 || q.forwardDistance<.5 || Math.max(p.x,q.x)<-4 || Math.min(p.x,q.x)>WIDTH+4)continue;
+      const sw=texture.width/strips, height=heightMeters*(p.pixelsPerMeter+q.pixelsPerMeter)*.5;
+      if(Math.abs(q.x-p.x)<.05)continue;
+      ctx.save();ctx.transform((q.x-p.x)/sw,(q.y-p.y)/sw,0,height/texture.height,p.x,p.y-height);
+      ctx.drawImage(texture,i*sw,0,sw,texture.height,0,0,sw+.08,texture.height);ctx.restore();
+    }
+  }
+
+  function drawOrientedHedgeArch(obstacle, cell) {
+    const side = state.player.y<obstacle.y ? -1 : 1;
+    const edge = state.player.x<obstacle.x ? -1 : 1;
+    const height = cell.heightMeters*obstacle.scale;
+    const endX=obstacle.x+edge*56;
+    const sideCell={...cell,x:cell.x+80,width:300};
+    ctx.save();
+    // End caps give the collision wings visible thickness from lateral views.
+    drawHedgePlane(hedgeTunnelArt,sideCell,{x:endX,y:obstacle.y-7},{x:endX,y:obstacle.y+7},height);
+    drawHedgePlane(hedgeTunnelArt,cell,{x:obstacle.x-56,y:obstacle.y+side*7},{x:obstacle.x+56,y:obstacle.y+side*7},height);
+    ctx.restore();
+  }
+
   function drawCourseObstacle(obstacle) {
     if (obstacle.draw === false) {
       return;
@@ -41342,11 +41320,15 @@
         obstacle.asset,
       );
     const obstacleArt =
-      dedicatedArt ||
+      (obstacle.asset === "service-cart" ? cartDirectionalArt : dedicatedArt) ||
       (obstacle.kit === "expanded"
         ? expandedCourseArt
         : courseObstacleArt);
     if (!obstacleArt.complete || obstacleArt.naturalWidth === 0) {
+      return;
+    }
+    if (obstacle.asset === "hedge-tunnel") {
+      drawOrientedHedgeArch(obstacle,courseObstacleCell(obstacle,dedicatedArt));
       return;
     }
     const point = worldToScreen(
@@ -41356,7 +41338,7 @@
     if (!point.visible || point.x < -420 || point.x > WIDTH + 420) {
       return;
     }
-    const cell = courseObstacleCell(
+    const cell = obstacle.asset === "service-cart" ? cartDirectionalCell(obstacle) : courseObstacleCell(
       obstacle,
       dedicatedArt,
     );
@@ -41484,13 +41466,16 @@
       drawWidth,
       drawHeight,
     );
-    ctx.drawImage(
-      maintenanceShedArt,
-      point.x - drawWidth * 0.5,
-      point.y - drawHeight,
-      drawWidth,
-      drawHeight,
-    );
+    if (shedDirectionalArt.complete && shedDirectionalArt.naturalWidth > 0) {
+      const cell = SHED_DIRECTION_CELLS[directionalViewIndex(-Math.PI / 2, shed)];
+      // Height stays fixed; a gable is physically narrower than the front.
+      const height = drawHeight * 0.9;
+      const width = height * cell.width / cell.height;
+      const left = point.x - width / 2, top = point.y - height;
+      drawCachedAtlasCell(shedDirectionalArt, cell, left, top, width, height);
+    } else {
+      ctx.drawImage(drawableImage(maintenanceShedArt), point.x - drawWidth * 0.5, point.y - drawHeight, drawWidth, drawHeight);
+    }
     ctx.restore();
     drawCourseMechanicFixture(
       SHED_FILING_TERMINAL,
@@ -41511,7 +41496,7 @@
   /** Draws the authored gate that physically owns the exact south course boundary. */
   function drawSouthServiceGate() {
     const rearAmount =
-      lookBackView().amount;
+      lookBackView().worldRearAmount;
     if (
       rearAmount < 0.5 ||
       !southServiceGateArt.complete ||
@@ -41857,7 +41842,7 @@
     }
     if (drainArt.complete && drainArt.naturalWidth > 0) {
       ctx.drawImage(
-        drainArt,
+        drawableImage(drainArt),
         DRAIN_SOURCE.x,
         DRAIN_SOURCE.y,
         DRAIN_SOURCE.width,
@@ -42155,6 +42140,7 @@
   function drawCourseClutter(
     clutter,
   ) {
+    if (decorativeClutterInApproach(clutter)) return;
     if (
       !courseClutterArt.complete ||
       courseClutterArt
@@ -42869,12 +42855,21 @@
     ctx.restore();
   }
 
+  function decorativeClutterInApproach(item) {
+    if (!state.clearScenery || !item) return false;
+    const targets = [...NIGHT_ORDER_ACTIONS, SHED_EXIT, DRAIN_EXIT, activeKeyPoint(), activeSprinklerPoint()];
+    if (targets.some(target => worldDistance(item, target) < (target.radius || 12) + 8)) return true;
+    const p = cameraRelativePoint(item, lookBackView().angle);
+    return p.y > 0 && p.y < 22 && Math.abs(p.x * 0.72) < 8;
+  }
+
   function queueLayeredCourseEntity(
     kind,
     item,
     itemIndex,
     y,
   ) {
+    if ((kind === 2 || kind === 7) && decorativeClutterInApproach(item)) return;
     let entity =
       layeredCourseEntities[
         layeredCourseEntityCount
@@ -43085,7 +43080,7 @@
         shedPoint.y,
       );
     }
-    if (lookBackView().amount >= 0.5) {
+    if (lookBackView().worldRearAmount >= 0.5) {
       const gatePoint = worldToScreen(
         SOUTH_SERVICE_GATE.x,
         SOUTH_SERVICE_GATE.y,
@@ -43210,15 +43205,16 @@
     }
     const breathing = state.reducedMotion ? 0 : Math.sin(state.time * 0.72) * 3;
     ctx.save();
-    ctx.globalAlpha = 0.9 * transform.visibility;
+    // Decorative foreground cannot masquerade as a solid barrier.
+    ctx.globalAlpha = (state.clearScenery ? 0.32 : 0.9) * transform.visibility;
     ctx.drawImage(
-      foregroundFringeArt,
+      drawableImage(foregroundFringeArt),
       0,
       179,
       foregroundFringeArt.naturalWidth,
       751,
       transform.x + breathing,
-      transform.y,
+      transform.y + (state.clearScenery ? 75 : 0),
       transform.width,
       transform.height,
     );
@@ -43234,7 +43230,8 @@
     const playbackRate =
       animation.fps * (state.reducedMotion ? 0.72 : 1);
     const sequenceIndex =
-      Math.floor(state.hole.elapsed * playbackRate) %
+      (joeMode === "search" ? Math.floor(state.hole.elapsed * playbackRate)
+        : state.hole.joe.effectSpeed < 0.4 ? 0 : Math.floor((state.hole.joe.walkMeters || 0) / 1.6)) %
       animation.sequence.length;
     const frame = animation.sequence[sequenceIndex];
     return {
@@ -44238,6 +44235,75 @@
     ctx.restore();
   }
 
+  function directionalViewIndex(heading, target) {
+    const toViewer = Math.atan2(state.player.y - target.y, (state.player.x - target.x) * 0.72);
+    const facing = Math.cos(heading - toViewer);
+    if (facing > 0.68) return 0;
+    if (facing < -0.68) return 2;
+    return Math.sin(heading - toViewer) >= 0 ? 1 : 3;
+  }
+
+  function cartDirectionalCell(target) {
+    const index = directionalViewIndex(-Math.PI / 2, target);
+    return { x: (index % 2) * 768, y: Math.floor(index / 2) * 512 + 10,
+      width: 768, height: 492, heightMeters: 3.25 };
+  }
+
+  function joeDirectionalCell(viewIndex) {
+    const joe = state.hole.joe;
+    const frame = joe.effectSpeed < 0.4 ? 1 : Math.floor((joe.walkMeters || 0) / 1.6) % 4;
+    return {x: frame * 384, y: (viewIndex - 1) * 384 + 24, width: 384, height: 336};
+  }
+
+  function joeDirectionalPresentation(viewIndex) {
+    const joe = state.hole.joe;
+    const pose = joe.mode === "chase" ? 3 : state.hole.contactConfirmationSeconds > .05 ? 0
+      : joe.mode === "search" ? 2 : joe.mode === "investigate" ? 1 : -1;
+    // Use authored stationary poses only at an actual stop. Moving poses retain
+    // the distance-driven leg cycle instead of sliding a still across the turf.
+    const stationary = joe.effectSpeed < .4 && pose >= 0 && joeStateArt.complete && joeStateArt.naturalWidth > 0;
+    return {pose, stationary, art: stationary ? joeStateArt : joeDirectionalArt,
+      cell: stationary ? {x:pose*384,y:(viewIndex-1)*384+24,width:384,height:336} : joeDirectionalCell(viewIndex),
+      lean: stationary || viewIndex===2 ? 0 : (viewIndex===1?-1:1) * (pose===3?.10:pose===1?.035:0)};
+  }
+
+  function drawJoeWheelMotion(cell, viewIndex, spriteHeight) {
+    const joe = state.hole.joe;
+    if (joe.effectSpeed < .4 || viewIndex===2) return;
+    const frame = Math.floor(cell.x/384);
+    const hubs = [[[245,326,9],[347,334,7]],[[230,324,9],[330,331,7]],
+      [[245,326,9],[345,334,7]],[[230,323,9],[330,331,7]]][frame];
+    const unit = spriteHeight/336;
+    const rotation = (joe.walkMeters || 0)/.28*(viewIndex===1?1:-1);
+    ctx.save();ctx.shadowBlur=0;ctx.strokeStyle="rgba(179,176,151,.65)";ctx.lineWidth=Math.max(.5,unit*1.3);
+    for(const [rightX,y,radius] of hubs) {
+      const x = viewIndex===3 ? 384-rightX : rightX;
+      ctx.save();ctx.translate((x-192)*unit,(y-360)*unit);ctx.rotate(rotation);
+      ctx.beginPath();ctx.moveTo(-radius*unit,0);ctx.lineTo(radius*unit,0);
+      ctx.moveTo(0,-radius*unit);ctx.lineTo(0,radius*unit);ctx.stroke();ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function stableJoeViewIndex(heading, joe) {
+    const angle = Math.atan2(state.player.y-joe.y,(state.player.x-joe.x)*.72);
+    const facing = Math.cos(heading-angle), side = Math.sin(heading-angle);
+    const previous = joe.renderViewIndex;
+    if (previous===0 && facing>.56 || previous===2 && facing<-.56 ||
+        previous===1 && side>0 && Math.abs(facing)<.78 || previous===3 && side<0 && Math.abs(facing)<.78) return previous;
+    joe.renderViewIndex = directionalViewIndex(heading,joe);
+    return joe.renderViewIndex;
+  }
+
+  function joeFacingSeesPoint(joe, point) {
+    const dx = (point.x - joe.x) * 0.72, dy = point.y - joe.y;
+    // Very close movement is perceptible on either side. Hearing and tracks
+    // still work in every direction; open ground behind Joe is not invisibility.
+    if (Math.hypot(dx, dy) <= 10 || joe.mode === "chase") return true;
+    const halfAngle = joe.mode === "search" ? 110 : 85;
+    return Math.cos(Math.atan2(dy, dx) - (joe.effectHeading ?? Math.PI / 2)) >= Math.cos(halfAngle * Math.PI / 180);
+  }
+
   function drawJoeOnCourse() {
     const joe = state.hole.joe;
     const point = worldToScreen(joe.x, joe.y);
@@ -44248,6 +44314,9 @@
     const scale = point.scale;
     const labelScale = clamp(scale, 0.55, 1.35);
     const animation = joeAnimationState();
+    const viewIndex = stableJoeViewIndex(joe.effectHeading ?? Math.PI / 2, joe);
+    const directionalCell = viewIndex !== 0 && joeDirectionalArt.complete && joeDirectionalArt.naturalWidth > 0
+      ? joeDirectionalCell(viewIndex) : null;
     const twitch = state.reducedMotion
       ? 0
       : Math.sin(state.time * 17) *
@@ -44256,10 +44325,10 @@
           0.25,
           joe.mode === "chase" ? 3.2 : 1.2,
         );
-    const bob = state.reducedMotion
+    const bob = state.reducedMotion || joe.effectSpeed < 0.4
       ? 0
-      : Math.abs(Math.sin(state.time * animation.fps * Math.PI)) *
-        clamp(point.scale * 1.25, 0.3, 3.2);
+      : -Math.abs(Math.sin((joe.walkMeters || 0) / 1.6 * Math.PI)) *
+        clamp(point.scale * 0.4, 0, 0.8);
     const spriteHeight = JOE_SOURCE.heightMeters * point.pixelsPerMeter;
     const animatedSpriteWidth = spriteHeight;
     const staticSpriteWidth =
@@ -44321,7 +44390,14 @@
       ctx.shadowColor = "rgba(213,172,75,0.42)";
       ctx.shadowBlur = 9;
     }
-    if (animatedArtReady) {
+    if (directionalCell) {
+      const pose = joeDirectionalPresentation(viewIndex);
+      const width = spriteHeight * pose.cell.width / pose.cell.height;
+      ctx.save();ctx.transform(1,0,pose.lean,1,0,0);
+      drawCachedAtlasCell(pose.art, pose.cell, -width / 2, -spriteHeight, width, spriteHeight);
+      if (!pose.stationary) drawJoeWheelMotion(pose.cell,viewIndex,spriteHeight);
+      ctx.restore();
+    } else if (animatedArtReady) {
       drawCachedAtlasCell(
         animation.art,
         JOE_ANIMATION_FRAME_CELLS[
@@ -44334,7 +44410,7 @@
       );
     } else if (joeMowerArt.complete && joeMowerArt.naturalWidth > 0) {
       ctx.drawImage(
-        joeMowerArt,
+        drawableImage(joeMowerArt),
         JOE_SOURCE.x,
         JOE_SOURCE.y,
         JOE_SOURCE.width,
@@ -46303,13 +46379,6 @@
       ctx.arc(lastPoint.x, lastPoint.y, pulse, 0, Math.PI * 2);
       ctx.stroke();
     }
-    ctx.fillStyle = "#f2f0d9";
-    polygon([
-      [playerPoint.x, playerPoint.y - 7],
-      [playerPoint.x - 6, playerPoint.y + 6],
-      [playerPoint.x + 6, playerPoint.y + 6],
-    ]);
-    drawText("YOU", playerPoint.x + 10, playerPoint.y + 4, 10, "#e7ead7", "left", true);
     const golfBallMapStatus =
       state.hole.ballAim.active &&
       state.hole.ballAim.preview
@@ -46359,7 +46428,20 @@
     );
   }
 
+  function toggleCourseMap() {
+    const hole = state.hole;
+    hole.mapOpen = !hole.mapOpen;
+    hole.controlHintSource = "manual";
+    hole.controlHintTimer = hole.mapOpen ? MANUAL_CONTROL_HINT_SECONDS : 0;
+  }
+
   function drawCourseMiniMap() {
+    if (state.focusedHud) {
+      const buttonX = state.hole.mapOpen ? 810 : 1078;
+      ctx.fillStyle="#0b251a";ctx.fillRect(buttonX,180,178,70);strokeRect(buttonX,180,178,70,"#9bbdab",2);
+      drawText(state.hole.mapOpen ? "CLOSE MAP" : inputCopy(`${keyboardBindingLabel("controls")} MAP`,"Y MAP","MAP"),buttonX+89,225,24,"#d4e8db","center",true);
+      if (!state.hole.mapOpen && !state.hole.focus) return;
+    }
     const refreshInterval =
       runtimePerformance.tier === "low"
         ? 0.16
@@ -46413,6 +46495,17 @@
       COURSE_MAP_X,
       COURSE_MAP_Y,
     );
+    const mapTop = COURSE_MAP_Y + 62;
+    const mapBottom = COURSE_MAP_Y + COURSE_MAP_HEIGHT - 18;
+    const playerX = COURSE_MAP_X + COURSE_MAP_WIDTH * 0.5 + state.player.x / 224 * (COURSE_MAP_WIDTH - 28);
+    const playerY = mapBottom - state.player.y / COURSE_LENGTH * (mapBottom - mapTop);
+    ctx.save();
+    ctx.translate(playerX, playerY);
+    ctx.rotate(lookBackView().angle);
+    ctx.fillStyle = "#f2f0d9";
+    polygon([[0, -9], [-6, 6], [6, 6]]);
+    ctx.restore();
+    drawText("YOU", playerX + 10, playerY + 4, 10, "#e7ead7", "left", true);
     const readable = gameplayReadability();
     if (readable.compact) {
       ctx.fillStyle = "#07160e";
@@ -46465,8 +46558,10 @@
       collisionContactActivelyRefreshed() &&
       state.hole.blockedEscape
     );
-    const escapeCopy =
-      state.hole.blockedEscape || "";
+    const recovery = state.hole.navigationGuide.collisionRecovery;
+    const escapeCopy = Math.abs(cameraYaw()) > 0.001 && recovery
+      ? clearanceInstruction(recovery).replace("AHEAD", "FORWARD")
+      : state.hole.blockedEscape || "";
     const footingRecovery =
       state.hole
         .footingRecoveryTimer > 0 &&
@@ -50172,11 +50267,11 @@
       hole.joe.mode === "chase" &&
       !footingRecovery;
     const visible = clamp(hole.stateBannerTimer * 2.2, 0, 1);
-    const width = dangerTheme ? 340 : 330;
-    const height = direction ? 50 : 42;
-    const bannerCenterX = WIDTH * 0.5 + 108;
+    const width = state.focusedHud ? 710 : dangerTheme ? 340 : 330;
+    const height = state.focusedHud ? 72 : direction ? 50 : 42;
+    const bannerCenterX = state.focusedHud ? 379 : WIDTH * 0.5 + 108;
     const x = bannerCenterX - width * 0.5;
-    const y = hole.zoneBannerTimer > 0 ? 128 : 42;
+    const y = state.focusedHud ? 180 : hole.zoneBannerTimer > 0 ? 128 : 42;
     ctx.save();
     ctx.globalAlpha = visible;
     ctx.fillStyle = footingRecovery
@@ -50200,10 +50295,10 @@
     drawText(
       hole.stateBanner,
       bannerCenterX,
-      y + (direction ? 21 : 27),
+      y + (state.focusedHud ? 31 : direction ? 21 : 27),
       fittedTextSize(
         hole.stateBanner,
-        13,
+        state.focusedHud ? 22 : 13,
         width - 24,
         10,
         true,
@@ -50220,8 +50315,8 @@
       drawText(
         `SOUND ${direction}`,
         bannerCenterX,
-        y + 39,
-        9,
+        y + (state.focusedHud ? 57 : 39),
+        state.focusedHud ? 18 : 9,
         mergedCaption.category ===
           "danger"
           ? "#f09a69"
@@ -50236,13 +50331,14 @@
   function tutorialBriefingViewportPresentation(
     clientWidth = canvas.clientWidth,
     clientHeight = canvas.clientHeight,
+    focused = state.focusedHud,
   ) {
     const canvasScale = Math.min(
       clientWidth / WIDTH,
       clientHeight / HEIGHT,
     );
     const compact =
-      canvasScale < 0.72;
+      focused || canvasScale < 0.72;
     return {
       compact,
       layout: compact
@@ -50283,11 +50379,11 @@
     drawText(overtime ? "OVERTIME AUDIT" : "SURVIVAL BRIEFING", WIDTH / 2, 94, 36, "#f0efd8", "center", true);
     drawText(overtime ? "2 BALLS // FASTER JOE // SCORE ×1.30" : variant.name,
       WIDTH / 2, 138, size, "#a8d5b7", "center", true);
-    drawText("Joe locked the south gate.", WIDTH / 2, 184, size, "#e4c59a", "center", true);
-    drawText("Follow mint lanterns. Stay still to file your escape.", WIDTH / 2, 217,
+    drawText("3 checks + one exit key or valve = escape.", WIDTH / 2, 184, size, "#e4c59a", "center", true);
+    drawText("Checks stay complete. Clean Breaks and reviews are bonuses.", WIDTH / 2, 217,
       size, "#e4c59a", "center", true);
     const rows = [
-      ["1. FOLLOW THE LANTERNS", "File three checks. Secure a key or valve on the way."],
+      ["1. FIND YOUR NEXT CHECK", "Follow mint lanterns. Collect a key or valve on the way."],
       ["2. DIVERT JOE WITH A BALL", inputCopy(
         `HOLD ${keyboardBindingLabel("chip")} // ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} AIM // RELEASE`,
         "HOLD X // LEFT STICK AIM // RELEASE", "HOLD CHIP // SLIDE TO AIM // RELEASE")],
@@ -50307,8 +50403,8 @@
       "LEFT STICK MOVE // RT SPRINT // A USE", "LEFT PAD MOVE // HOLD RUN // TAP USE"),
       WIDTH / 2, 566, size, "#eee6d2", "center", true);
     drawText(inputCopy(
-      `${keyboardBindingLabel("focus")} LISTEN // ${keyboardBindingLabel("look_back")} LOOK BEHIND`,
-      "LT LISTEN // R3 LOOK BEHIND", "HOLD LISTEN // HOLD REAR"),
+      "CLICK + MOUSE LOOK // ESC PAUSE",
+      "RIGHT STICK LOOK // R3 REAR", "SWIPE OPEN SCREEN TO LOOK"),
       WIDTH / 2, 606, size, "#acd4ba", "center", true);
     drawText(inputCopy(`MOVE OR PRESS ${keyboardBindingLabel("interact")} TO START`,
       "MOVE OR PRESS A TO START", "MOVE OR TAP USE TO START"),
@@ -50326,7 +50422,7 @@
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     const viewportPresentation =
       tutorialBriefingViewportPresentation();
-    if (viewportPresentation.compact) {
+    if (viewportPresentation.compact || state.focusedHud) {
       drawCompactTutorialBriefing(
         variant,
         overtime,
@@ -50576,9 +50672,9 @@
 
     drawText(
       inputCopy(
-        `${keyboardBindingLabel("look_back")} HOLD TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD`,
-        "R3 HOLD TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD",
-        "HOLD REAR TO LOOK BEHIND  •  MOVEMENT STAYS FORWARD",
+        `CLICK + MOUSE LOOK  •  ${keyboardBindingLabel("look_back")} REAR GLANCE  •  ESC PAUSE`,
+        "RIGHT STICK LOOK  •  R3 REAR GLANCE  •  START PAUSE",
+        "SWIPE OPEN SCREEN TO LOOK  •  HOLD REAR TO GLANCE BEHIND",
       ),
       WIDTH * 0.5,
       604,
@@ -50754,7 +50850,7 @@
     const joeDeltaX = state.hole.joe.x - state.player.x;
     const joeDeltaY = state.hole.joe.y - state.player.y;
     const joeDistance = worldDistance(state.hole.joe, state.player);
-    const angle = Math.atan2(joeDeltaX * 0.72, -joeDeltaY);
+    const angle = (Math.atan2(joeDeltaX * 0.72, joeDeltaY) - lookBackView().angle);
     const centerX = WIDTH * 0.5;
     const centerY = HEIGHT * 0.51;
     const radius = 116;
@@ -50882,10 +50978,7 @@
         const targetDeltaY =
           cadence.forecast.target.y -
           state.player.y;
-        const targetAngle = Math.atan2(
-          targetDeltaX * 0.72,
-          -targetDeltaY,
-        );
+        const targetAngle = (Math.atan2(targetDeltaX * 0.72, targetDeltaY) - lookBackView().angle);
         const targetX =
           centerX +
           Math.sin(targetAngle) *
@@ -51006,7 +51099,7 @@
     if (environment.nearestCover) {
       const coverDeltaX = environment.nearestCover.x - state.player.x;
       const coverDeltaY = environment.nearestCover.y - state.player.y;
-      const coverAngle = Math.atan2(coverDeltaX * 0.72, -coverDeltaY);
+      const coverAngle = (Math.atan2(coverDeltaX * 0.72, coverDeltaY) - lookBackView().angle);
       const coverX = centerX + Math.sin(coverAngle) * (radius - 27);
       const coverY = centerY - Math.cos(coverAngle) * (radius - 27);
       ctx.strokeStyle = "#86b57b";
@@ -51032,10 +51125,7 @@
       const wetDeltaY =
         environment.wetZone.y -
         state.player.y;
-      const wetAngle = Math.atan2(
-        wetDeltaX * 0.72,
-        -wetDeltaY,
-      );
+      const wetAngle = (Math.atan2(wetDeltaX * 0.72, wetDeltaY) - lookBackView().angle);
       const wetX =
         centerX +
         Math.sin(wetAngle) *
@@ -51075,10 +51165,7 @@
       const sandDeltaY =
         environment.sandZone.y -
         state.player.y;
-      const sandAngle = Math.atan2(
-        sandDeltaX * 0.72,
-        -sandDeltaY,
-      );
+      const sandAngle = (Math.atan2(sandDeltaX * 0.72, sandDeltaY) - lookBackView().angle);
       const sandX =
         centerX +
         Math.sin(sandAngle) *
@@ -51135,10 +51222,7 @@
       const requestDeltaY =
         changeRequest.y -
         state.player.y;
-      const requestAngle = Math.atan2(
-        requestDeltaX * 0.72,
-        -requestDeltaY,
-      );
+      const requestAngle = (Math.atan2(requestDeltaX * 0.72, requestDeltaY) - lookBackView().angle);
       const requestX =
         centerX +
         Math.sin(requestAngle) *
@@ -51196,10 +51280,7 @@
       const ballDeltaY =
         nearestBall.ball.y -
         state.player.y;
-      const ballAngle = Math.atan2(
-        ballDeltaX * 0.72,
-        -ballDeltaY,
-      );
+      const ballAngle = (Math.atan2(ballDeltaX * 0.72, ballDeltaY) - lookBackView().angle);
       const ballX =
         centerX +
         Math.sin(ballAngle) *
@@ -51256,10 +51337,7 @@
         track.x - state.player.x;
       const trackDeltaY =
         track.y - state.player.y;
-      const trackAngle = Math.atan2(
-        trackDeltaX * 0.72,
-        -trackDeltaY,
-      );
+      const trackAngle = (Math.atan2(trackDeltaX * 0.72, trackDeltaY) - lookBackView().angle);
       const trackX =
         centerX +
         Math.sin(trackAngle) * (radius - 48);
@@ -51301,10 +51379,7 @@
         cut.x - state.player.x;
       const cutDeltaY =
         cut.y - state.player.y;
-      const cutAngle = Math.atan2(
-        cutDeltaX * 0.72,
-        -cutDeltaY,
-      );
+      const cutAngle = (Math.atan2(cutDeltaX * 0.72, cutDeltaY) - lookBackView().angle);
       const cutRadius =
         radius - 54;
       const cutX =
@@ -51632,10 +51707,7 @@
     const deltaY =
       forecast.target.y -
       state.player.y;
-    const angle = Math.atan2(
-      deltaX * 0.72,
-      -deltaY,
-    );
+    const angle = (Math.atan2(deltaX * 0.72, deltaY) - lookBackView().angle);
     const direction =
       directionFromPlayer(
         forecast.target,
@@ -53545,7 +53617,7 @@
   /** Critical text is sized in displayed pixels, not just canvas units. */
   function gameplayReadability() {
     const scale = Math.max(0.25, Math.min(canvas.clientWidth / WIDTH, canvas.clientHeight / HEIGHT));
-    return { compact: scale < 0.86, scale, fontSize: Math.ceil(14 / scale) };
+    return { compact: scale < 0.86 || state.uiScale > 1.05, scale, fontSize: Math.ceil(14 * state.uiScale / Math.min(1, scale)) };
   }
 
   function wrapReadableText(text, size, maxWidth) {
@@ -53579,6 +53651,208 @@
       y + 12 + size + index * lineHeight, size, color, "center", true));
   }
 
+  // These reads share the same authoritative interaction and sight state as
+  // gameplay. No tutorial grants hidden invulnerability or completes a check.
+  function escapeReadiness() {
+    const checks = completedNightOrderActionCount();
+    const routes = [];
+    if (state.hole.keyCollected) routes.push("SHED");
+    if (state.hole.drainUnlocked) routes.push("DRAIN");
+    return { checks, required: 3, routes, ready: checks === 3 && routes.length > 0,
+      text: checks === 3 && routes.length ? `${routes.join(" / ")} READY` :
+        routes.length ? `${routes.join(" / ")} ACCESS SECURED` : "NEED KEY OR VALVE" };
+  }
+
+  function stationPlan(action) {
+    const hole = state.hole;
+    if (action.id === "field-log") {
+      const quiet = hole.crouched && !hole.hasLineOfSight;
+      return { tactic: "quiet_stamp", active: quiet, signalSeconds: quiet ? 3.4 : action.noiseSeconds,
+        hint: quiet ? "QUIET STAMP READY // THEN SERVICE CART" : "CROUCH OUT OF SIGHT FOR A SHORTER SIGNAL",
+        reward: quiet ? "QUIET STAMP: SHORTER SIGNAL. REACH SERVICE CART." : null };
+    }
+    if (action.id === "release-review") {
+      const baited = hole.distractionTimer > 0 && hole.distraction?.kind !== "field_action" &&
+        hole.distraction?.kind !== "status_escalation" && hole.distraction &&
+        worldDistance(hole.distraction, action) >= 35 && hole.joe.mode === "investigate" && !hole.hasLineOfSight;
+      return { tactic: "remote_diversion", active: Boolean(baited), signalSeconds: baited ? 3 : action.noiseSeconds,
+        hint: baited ? "DISTRACTION READY // THEN RANGE CART" : "LURE JOE 35m AWAY FOR A SHORTER SIGNAL",
+        reward: baited ? "GOOD DIVERSION: SHORTER SIGNAL. REACH RANGE CART." : null };
+    }
+    return { tactic: "plan_breakaway", active: true, signalSeconds: action.noiseSeconds,
+      hint: "PICK YOUR ROUTE TO HEDGE TUNNEL BEFORE RINGING", reward: null };
+  }
+
+  function survivalThreatRead(environment) {
+    const h = state.hole;
+    if (h.joe.mode === "chase") return { text: h.hasLineOfSight ? "JOE SEES YOU" : "PURSUING LAST POSITION",
+      advice: "BREAK SIGHT; CHANGE DIRECTION", color: "#ffad89", icon: "!" };
+    if (h.detection > 0.12 && h.detectionSource === "sound") return { text: "JOE HEARD YOU", advice: "WALK OR CROUCH TO QUIETEN", color: "#edc783", icon: "!" };
+    if (h.hasLineOfSight && h.detection > 0.12) return { text: "YOU ARE EXPOSED", advice: "PUT SOLID COVER BETWEEN YOU", color: "#edc783", icon: "!" };
+    if (h.detectionSource === "trail") return { text: "JOE FOUND YOUR TRACKS", advice: "LEAVE ROUGH; CHANGE YOUR ROUTE", color: "#edc783", icon: "?" };
+    if (h.detectionSource === "wake") return { text: "JOE NOTICED MOVEMENT", advice: "LEAVE THE OPEN LANE QUIETLY", color: "#edc783", icon: "?" };
+    if (h.joe.mode === "search") return { text: "SEARCHING LAST POSITION", advice: "STAY HIDDEN; RELOCATE QUIETLY", color: "#edc783", icon: "?" };
+    if (h.joe.mode === "investigate") return { text: "CHECKING A SOUND", advice: "MOVE WHILE JOE IS DISTRACTED", color: "#edc783", icon: "?" };
+    return { text: "JOE IS PATROLLING", advice: environment.blocker ? "COVER BLOCKS HIS SIGHT" : "SCOUT YOUR NEXT COVER", color: "#b7dcc7", icon: "-" };
+  }
+
+  function coverReadability(environment) {
+    if (state.hole.hasLineOfSight) return "EXPOSED // SOLID COVER BREAKS SIGHT";
+    if (environment.blocker) return state.hole.joe.mode === "chase" || state.hole.joe.mode === "search"
+      ? "SIGHT BLOCKED // JOE KNOWS LAST POSITION" : "SIGHT BLOCKED // MOVE QUIETLY";
+    if (environment.effectiveRough) return state.hole.crouched ? "ROUGH HIDES; FOOTSTEPS LEAVE A TRAIL" : "CROUCH FOR BETTER CONCEALMENT";
+    return environment.turfLabel;
+  }
+
+  function experienceCoaching(next) {
+    if (next.phase === "authorized") return "RELEASE AUTHORIZED";
+    if (next.phase === "filing") return "STAY STILL // NEW MOVEMENT CANCELS";
+    const h = state.hole;
+    if (!state.guidedHints) return "";
+    if (next.phase === "collision_recovery") return "FOLLOW THE SHORT CLEARANCE ROUTE";
+    if (next.phase === "footing_escape") return "REACH FIRM GROUND TO REGAIN SPEED";
+    if (next.phase === "field_signal_breakaway") return "CHECK SAVED // CLEAN BREAK IS A BONUS";
+    if (h.joe.mode === "chase") return "COVER FIRST; THEN CHANGE YOUR ROUTE";
+    if (h.fieldSignalBreakaway.lastOutcome?.completed && h.tensionDirector.reliefSeconds > 0)
+      return "CLEAN BREAK // RELOCATE QUIETLY";
+    const station = NIGHT_ORDER_ACTIONS.find(a => a.id === next.targetId);
+    if (station && worldDistance(state.player, station) < 36) return stationPlan(station).hint;
+    if (practiceDrillActive()) return "OPTIONAL PRACTICE // MISSED BALLS CAN BE RECLAIMED";
+    if (completedNightOrderActionCount() === 0) return "FOLLOW MINT LANTERNS TO CHECK 1";
+    if (!h.keyCollected && !h.drainUnlocked) return "ONE KEY OR VALVE OPENS AN EXIT ROUTE";
+    return "REVIEWS ARE OPTIONAL // SURVIVAL COMES FIRST";
+  }
+
+  function routeThreadVisible() {
+    return state.routeGuidance || state.hole.focus || state.hole.mapOpen ||
+      Boolean(activeFieldActionBreakaway()) || state.hole.blockedTimer > 0 || Boolean(activeFootingNavigationOverride());
+  }
+
+  function applyComfortPreset(index) {
+    const preset = [
+      {name:"STANDARD",lookSensitivity:1,freeLook:true,reducedMotion:false},
+      {name:"CALM",lookSensitivity:.65,freeLook:true,reducedMotion:true},
+      {name:"FIXED VIEW",lookSensitivity:1,freeLook:false,reducedMotion:true},
+    ][index];
+    if (!preset) return;
+    state.lookSensitivity=preset.lookSensitivity;
+    state.reducedMotion=preset.reducedMotion;
+    if (state.freeLook!==preset.freeLook) toggleSetting(SETTINGS_ROWS.find(r=>r.id==="free_look"));
+    state.settingsNotice=`${preset.name} APPLIED`;
+    savePreferences();
+  }
+
+  function replayPracticalLessons() {
+    state.learnedControls={};
+    state.learnedControlsByDevice={};
+    state.lessonInputMethod=null;
+    state.hole.lessonStartDistance=state.hole.travelDistance;
+    state.hole.lookPracticeRadians=0;
+    state.hole.practiceChips=0;
+    state.guidedHints=true;
+    state.settingsNotice="LESSONS RESET · PRACTICE ON YOUR NEXT WALK";
+    savePreferences();
+  }
+
+  function syncLessonInputDevice() {
+    const method = ["gamepad","touch"].includes(state.inputMethod) ? state.inputMethod : "keyboard";
+    if (state.lessonInputMethod === method) return;
+    state.learnedControlsByDevice ||= {};
+    state.learnedControls = state.learnedControlsByDevice[method] ||= {};
+    state.lessonInputMethod = method;
+    state.hole.lessonStartDistance = state.hole.travelDistance;
+    state.hole.lookPracticeRadians = 0;
+    state.hole.practiceChips = 0;
+  }
+
+  function practicalLessonPresentation() {
+    syncLessonInputDevice();
+    const h=state.hole, learned=state.learnedControls;
+    if (!state.guidedHints || h.tutorialVisible || h.rehearsal || h.escapeFiling.active || h.escapeFiling.sealing ||
+        h.joe.mode==="chase" || h.blockedTimer>0 || activeFieldActionBreakaway() || activeInteractionPromptOwner()) return null;
+    if (!learned.move && h.travelDistance-(h.lessonStartDistance||0)<6) return {id:"move",instruction:inputCopy("WASD: WALK TOWARD THE LANTERNS","LEFT STICK: WALK TO LANTERNS","LEFT PAD: WALK TO LANTERNS")};
+    if (!learned.look && state.freeLook && state.player.y<120) return {id:"look",instruction:inputCopy("DRAG OR CLICK: LOOK AROUND","RIGHT STICK: LOOK AROUND","SWIPE OPEN SPACE: LOOK AROUND")};
+    if (!learned.chip && practiceDrillActive()) return {id:"chip",instruction:inputCopy(`HOLD ${keyboardBindingLabel("chip")} · AIM · RELEASE`,"HOLD X · AIM · RELEASE","HOLD CHIP · SLIDE · RELEASE")};
+    if (!learned.cover && state.player.y<160) return {id:"cover",instruction:inputCopy(`HOLD ${keyboardBindingLabel("crouch")} BEHIND A HEDGE`,"HOLD LB BEHIND A HEDGE","HOLD CROUCH BEHIND A HEDGE")};
+    return null;
+  }
+
+  function updateExperienceEvidence(dt) {
+    syncLessonInputDevice();
+    const h=state.hole;
+    const evidence=h.playtestEvidence ||= {version:1,variant:activeRunVariant().id,pressure:state.pursuitIntensity,
+      seconds:{exploring:0,threatened:0,chased:0,hidden:0,waiting:0,learning:0},first:{},events:[],lastSignature:""};
+    const learned=state.learnedControls,environment=h.environment || {};
+    const skills={move:h.travelDistance-(h.lessonStartDistance||0)>=6,look:(h.lookPracticeRadians||0)>=.45,
+      chip:(h.practiceChips||0)>0,cover:h.crouched && !h.hasLineOfSight && Boolean(environment.blocker || environment.hardCover || environment.effectiveRough)};
+    let changed=false;
+    for(const [key,done] of Object.entries(skills)) if(done) {
+      if(evidence.first[key]===undefined) evidence.first[key]=Number(h.elapsed.toFixed(2));
+      if(!learned[key]&&!h.rehearsal) {learned[key]=true;changed=true;}
+    }
+    if(changed&&!h.rehearsal) savePreferences();
+    const phase=h.joe.mode==="chase"?"chased":skills.cover?"hidden":h.detection>.12&&h.detectionSource?"threatened":practicalLessonPresentation()?"learning":playerIsMoving()?"exploring":"waiting";
+    evidence.seconds[phase]+=dt;
+    const checks=completedNightOrderActionCount();
+    for(const [key,done] of Object.entries({firstCheck:checks>0,key:h.keyCollected,valve:h.drainUnlocked,allChecks:checks===3}))
+      if(done&&evidence.first[key]===undefined)evidence.first[key]=Number(h.elapsed.toFixed(2));
+    const signature=[h.joe.mode,h.detectionSource,checks,h.keyCollected,h.drainUnlocked,courseZoneAt(state.player.y).id].join("|");
+    if(signature!==evidence.lastSignature) {
+      evidence.lastSignature=signature;
+      evidence.events.push({time:Number(h.elapsed.toFixed(2)),phase,joe:h.joe.mode,cause:h.detectionSource,
+        checks,key:h.keyCollected,valve:h.drainUnlocked,x:Math.round(state.player.x),y:Math.round(state.player.y)});
+      if(evidence.events.length>240)evidence.events.shift();
+    }
+  }
+
+  window.export_rough_cut_playtest = () => JSON.stringify({
+    version:1,mode:state.mode,rehearsal:Boolean(state.hole.rehearsal),
+    evidence:state.hole.playtestEvidence || null,
+    capture:state.hole.captureReview?.counterplay || null,
+    outcome:state.hole.escapeRoute || null,
+  });
+
+  function focusedSurvivalPresentation(environment = state.hole.environment || getPlayerEnvironmentState()) {
+    const action = playerNextActionPresentation(), h = state.hole;
+    const filing = h.escapeFiling.active || h.escapeFiling.sealing;
+    const compact = gameplayReadability().compact;
+    const font = compact ? Math.min(34, gameplayReadability().fontSize) : 18 * state.uiScale;
+    const access = h.keyCollected && h.drainUnlocked ? "BOTH EXITS" : h.keyCollected ? "KEY:SHED" : h.drainUnlocked ? "VALVE:DRAIN" : "KEY/VALVE?";
+    const route = compactMapRoutePresentation();
+    const memory = h.joe.mode === "chase" || h.joe.mode === "search";
+    const cover = h.hasLineOfSight ? "EXPOSED" : environment.blocker ? filing ? "COVERED" : memory ? "COVERED; LAST SPOT KNOWN" : "COVERED; MOVE QUIETLY" : environment.effectiveRough ? h.crouched ? "CONCEALED IN ROUGH" : filing ? "IN ROUGH" : "CROUCH IN ROUGH" : "OPEN GROUND";
+    const read = survivalThreatRead(environment);
+    const threat = h.joe.mode === "chase" ? h.hasLineOfSight ? "SEES YOU" : "LAST SPOT" : h.hasLineOfSight && h.detection > .12 ? "SPOTTING YOU" : h.detectionSource === "sound" && h.detection > .12 ? "HEARD YOU" : h.detectionSource === "trail" ? "FOUND TRACKS" : h.detectionSource === "wake" ? "SAW MOVEMENT" : h.joe.mode === "search" ? "SEARCHING" : h.joe.mode === "investigate" ? "SOUND CHECK" : "PATROLLING";
+    const advice = h.escapeFiling.sealing ? "RELEASE AUTHORIZED" : filing ? h.joe.mode === "chase" || h.hasLineOfSight ? "MOVE TO CANCEL IF UNSAFE" : "HOLD STILL UNTIL FILED" : h.joe.mode === "chase" ? h.hasLineOfSight ? "BREAK SIGHT WITH COVER" : "CHANGE YOUR ROUTE" : h.detectionSource === "trail" ? "LEAVE ROUGH; CHANGE ROUTE" : h.detectionSource === "wake" ? "LEAVE THE OPEN LANE" : h.joe.mode === "search" ? "LEAVE YOUR LAST SPOT" : h.joe.mode === "investigate" ? "MOVE QUIETLY NOW" : h.hasLineOfSight ? "GET BEHIND COVER" : "SCOUT THE NEXT COVER";
+    return {compact,font,action,route,cover,threat,advice,color:read.color,access,filing,
+      progress:`${action.exitReadiness.checks}/3 CHECKS | ${access} | ${h.golfBalls} BALLS`,
+      navigation:["field_signal_breakaway","filing","authorized"].includes(action.phase) ? action.coaching : !routeThreadVisible() ? inputCopy(`HOLD ${keyboardBindingLabel("focus")} FOR ROUTE`,"HOLD LT FOR ROUTE","HOLD LISTEN FOR ROUTE") : `ROUTE: ${route.direction}`,
+      mapExpanded: Boolean(h.mapOpen || h.focus), layout: "two_shallow_cards_map_on_request", bounds:{left:{x:24,y:24,width:710,height:144},right:{x:754,y:24,width:502,height:144}}};
+  }
+
+  function drawFocusedSurvivalHud(environment) {
+    const v = focusedSurvivalPresentation(environment), h = state.hole;
+    const {left,right} = v.bounds;
+    for(const box of [left,right]) {ctx.fillStyle="rgba(3,15,11,0.94)";ctx.fillRect(box.x,box.y,box.width,box.height);strokeRect(box.x,box.y,box.width,box.height,box===left?"#9edac3":v.color,2);}
+    const font = v.compact ? v.font : 21;
+    const line = (text,box,y,size=font,color="#eef3df") => drawText(text,box.x+16,y,fittedTextSize(text,size,box.width-32,Math.max(14,size-3),true),color,"left",true);
+    const lesson = practicalLessonPresentation();
+    const basicLesson = lesson && ["move", "look"].includes(lesson.id);
+    line(basicLesson ? lesson.instruction : v.action.text,left,54,font+2);
+    line(v.action.completedNow ? `CHECK ${v.action.exitReadiness.checks}/3 SAVED | ${v.access}` : v.progress,left,88,font,"#eacb88");
+    line(v.navigation,left,122,font,"#b6dfd1");
+    const station = NIGHT_ORDER_ACTIONS.find(a=>a.id===v.action.targetId&&worldDistance(state.player,a)<36);
+    const context = v.filing ? v.cover : basicLesson ? "THEN FOLLOW THE ROUTE TO CHECK 1" : lesson ? lesson.instruction : state.guidedHints && practiceDrillActive() && h.joe.mode!=="chase"
+      ? inputCopy(`HOLD ${keyboardBindingLabel("chip")} · AIM · RELEASE`,"HOLD X · AIM · RELEASE","HOLD CHIP · SLIDE · RELEASE")
+      : station && state.guidedHints ? stationPlan(station).active && station.id!=="audit-bell" ? "PREPARED: SHORTER SIGNAL" : station.id==="field-log" ? "CROUCH UNSEEN FOR QUIET STAMP" : station.id==="release-review" ? "LURE JOE AWAY BEFORE USE" : "PLAN COVER BEFORE RINGING" : v.cover;
+    line(context,left,155,v.compact?font:17,"#b6dfd1");
+    line(`JOE ${Math.round(worldDistance(h.joe,state.player))}m // ${v.threat}`,right,54,font,v.color);
+    ctx.fillStyle="#294032";ctx.fillRect(right.x+16,68,right.width-32,7);
+    ctx.fillStyle=v.color;ctx.fillRect(right.x+16,68,(right.width-32)*clamp(h.detection,0,1),7);
+    line(v.advice,right,112,font,v.color);
+    line(h.rehearsal ? "REHEARSAL // NO RECORDS" : v.filing ? "EXIT RELEASE IN PROGRESS" : v.action.exitReadiness.ready ? "EXIT READY: FOLLOW ROUTE" : "CHECKS STAY SAVED",right,151,v.compact?font:17,"#b6dfd1");
+  }
+
   function playerNextActionPresentation() {
     const hole = state.hole;
     const next = objectiveActionHudSummary();
@@ -53597,9 +53871,14 @@
     else if (hole.joe.mode === "chase" && hole.hasLineOfSight) text = "BREAK JOE'S SIGHTLINE";
     else if (next.phase === "blocked") text = nightOrderActionsComplete() ? "SECURE KEY OR VALVE" : "FINISH FIELD CHECKS";
     else if (practiceDrillActive() && !hole.ballFlight && !hole.ballRoll) text = "TRY A PRACTICE CHIP";
-    else if (next.availability === "ready") text = next.text.replace(/\s+/g, " ");
-    else if (next.targetLabel) text = `REACH ${next.targetLabel}`;
-    return {text, progress, completedNow, phase: next.phase, targetId: next.targetId};
+    else if (next.availability === "ready") {
+      const verb = {"audit-bell":"RING BELL", "field-log":"STAMP LOG", "release-review":"SIGN RELEASE",
+        "shed-key":"COLLECT KEY", "sprinkler":"OPEN DRAIN", "maintenance-shed":"ESCAPE THROUGH SHED", "drain-exit":"ESCAPE THROUGH DRAIN"}[next.targetId];
+      text = verb ? inputCopy(`${keyboardBindingLabel("interact")}: ${verb}`, `A: ${verb}`, `USE: ${verb}`) : next.text.replace(/\s+/g, " ");
+    }
+    else if (next.targetLabel) text = {"audit-bell":"FIND BELL · CHECK 1", "field-log":"FIND LOG · CHECK 2", "release-review":"FIND RELEASE · CHECK 3",
+      "shed-key":"FIND THE SHED KEY", "sprinkler":"FIND THE DRAIN VALVE", "maintenance-shed":"REACH THE SHED EXIT", "drain-exit":"REACH THE DRAIN EXIT"}[next.targetId] || `REACH ${next.targetLabel}`;
+    return {text, progress, completedNow, phase: next.phase, targetId: next.targetId, coaching: experienceCoaching(next), exitReadiness: escapeReadiness()};
   }
 
   function drawCompactSurvivalHud(environment) {
@@ -53706,7 +53985,9 @@
             ? "#d5b25f"
             : "#9fac92";
 
-    if (readability.compact) {
+    if (state.focusedHud) {
+      drawFocusedSurvivalHud(environment);
+    } else if (readability.compact) {
       drawCompactSurvivalHud(environment);
     } else {
       if (expandedHud) {
@@ -53828,12 +54109,12 @@
         drawText(terrainStatus, 62, 249, 11, terrainColor, "left");
       } else {
         ctx.fillStyle = "rgba(2,8,5,0.82)";
-        ctx.fillRect(36, 34, 402, 130);
+        ctx.fillRect(36, 34, 402, 114);
         strokeRect(
           36,
           34,
           402,
-          130,
+          114,
           hole.joe.mode === "chase" ? "#c84627" : "#5d7349",
           2,
         );
@@ -53916,7 +54197,7 @@
           "left",
         );
         const inventoryStatus = `${golfBallInventoryLabel()}${hole.recoverableBalls.length > 0 ? ` + ${hole.recoverableBalls.length} LOST` : ""}  •  S ${activeStampCount}/${PERFORMANCE_STAMPS.length}${masteryStatus ? `  •  ${masteryStatus}` : ""}`;
-        drawText(inventoryStatus, 56, 145,
+        drawText(inventoryStatus, 56, 142,
           fittedTextSize(inventoryStatus, 12, 364, 10, false),
           "#e5ebdb", "left");
       }
@@ -54164,9 +54445,7 @@
       );
     }
     drawCourseMiniMap();
-    drawRearNavigationCue(
-      expandedHud,
-    );
+    if (!state.focusedHud || expandedHud) drawRearNavigationCue(expandedHud);
     drawCourseEchoComparison();
 
     if (expandedHud && !readability.compact) {
@@ -54488,6 +54767,7 @@
       state.inputMethod !== "touch" &&
       !golfAimOwnsSignalLane()
     ) {
+      if (!state.focusedHud || expandedHud || hole.elapsed < 12) {
       drawText(
         expandedHud && !readability.compact
           ? inputCopy(
@@ -54495,15 +54775,16 @@
               "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  R3 REAR  •  A USE  •  HOLD X AIM  •  START",
             )
           : inputCopy(
-              `${keyboardBindingLabel("controls")} CONTROLS  •  ${keyboardBindingLabel("look_back")} REAR  •  ESC PAUSE`,
-              "Y CONTROLS  •  R3 REAR  •  START PAUSE",
+              `${document.pointerLockElement === canvas ? "MOUSE LOOK" : "CLICK / DRAG TO LOOK"}  •  ${keyboardBindingLabel("controls")} MAP  •  ESC PAUSE`,
+              "RIGHT STICK LOOK  •  Y MAP  •  START PAUSE",
             ),
         28,
         HEIGHT - 25,
         readability.compact ? readability.fontSize : 11,
-        expandedHud ? "#c0c9b4" : "#829079",
+        "#c4d6c7",
         "left",
       );
+      }
       ctx.fillStyle = "rgba(2,8,5,0.78)";
       ctx.fillRect(WIDTH - 124, HEIGHT - 45, 96, 28);
       strokeRect(
@@ -54859,6 +55140,7 @@
     const fogState =
       groundFogState();
     ctx.save();
+    if(state.clearScenery) ctx.globalAlpha *= .62;
     ctx.globalCompositeOperation =
       "screen";
     for (
@@ -55336,7 +55618,7 @@
         "screen";
       ctx.globalAlpha = alpha * 0.34;
       ctx.drawImage(
-        shadowJoeArt,
+        drawableImage(shadowJoeArt),
         SHADOW_JOE_SOURCE.x,
         SHADOW_JOE_SOURCE.y,
         SHADOW_JOE_SOURCE.width,
@@ -55351,7 +55633,7 @@
       "source-over";
     ctx.globalAlpha = alpha;
     ctx.drawImage(
-      shadowJoeArt,
+      drawableImage(shadowJoeArt),
       SHADOW_JOE_SOURCE.x,
       SHADOW_JOE_SOURCE.y,
       SHADOW_JOE_SOURCE.width,
@@ -57779,18 +58061,9 @@
         paceGapSeconds,
       };
     }
-    return {
-      ...common,
-      id: "echo_exact_tie",
-      name: "ECHO TIEBREAK",
-      shortName: "BREAK TIE",
-      detail:
-        "EXACT TIE // +1 OR -0.01s",
-      hint:
-        "Add 1 score or finish at least 0.01s faster",
-      scoreGap: 0,
-      paceGapSeconds: 0,
-    };
+    // Matching a record should surface the next unearned mastery objective,
+    // rather than making a meaningless hundredth of a second the whole goal.
+    return null;
   }
 
   function resultActionPresentations(
@@ -57816,8 +58089,8 @@
         id: "rematch",
         label:
           outcome === "defeat"
-            ? "RETRY FILE"
-            : "REMATCH FILE",
+            ? "TRY AGAIN"
+            : "BEAT YOUR RUN",
         detail:
           captureReview
             ? `${captureReview.coachingMode === "recovery_drill" ? "DRILL" : captureReview.coachingMode === "guided_adjustment" ? "ADJUST" : "COUNTER"} // ${captureReview.shortLabel}`
@@ -57833,11 +58106,9 @@
       },
       {
         id: "next_order",
-        label: "NEXT ORDER",
-        detail:
-          `ORDER ${String(nextVariant.number).padStart(2, "0")} // ${nextVariant.shortName}`,
-        description:
-          `Advance to Night Order ${String(nextVariant.number).padStart(2, "0")}: ${nextVariant.name}.`,
+        label: outcome === "defeat" ? "REHEARSE" : "NEXT ORDER",
+        detail: outcome === "defeat" ? "LAST SAFE MOMENT // UNRANKED" : `ORDER ${String(nextVariant.number).padStart(2, "0")} // ${nextVariant.shortName}`,
+        description: outcome === "defeat" ? "Practice the encounter from your last safe moment. Career records and progression are protected." : `${nextVariant.name}: ${nextVariant.briefing}`,
       },
       {
         id: "clubhouse",
@@ -57853,6 +58124,7 @@
   function resultActionGeometry(
     index,
   ) {
+    if (gameplayReadability().compact) return {x:80+index*384,y:584,width:352,height:96};
     return {
       x: 260 + index * 260,
       y: 600,
@@ -58179,7 +58451,32 @@
     return generatedArtDrawn;
   }
 
+  function drawCompactResult(outcome) {
+    const h=state.hole,victory=outcome==="victory",accent=victory?"#9edac3":"#f0a071";
+    if(victory)drawVictoryTableau(h.escapeRoute==="drain",1);
+    else drawImageCover(ctx,defeatArt,0,0,1.04);
+    ctx.fillStyle="rgba(2,12,8,.95)";ctx.fillRect(48,40,1184,648);strokeRect(48,40,1184,648,accent,2);
+    const result=h.result||calculateRunResult(h.escapeRoute),review=h.captureReview;
+    drawText(victory?(result.unranked?"PRACTICE COMPLETE":"YOU ESCAPED"):"CAUGHT BY JOE",80,106,44,"#eef3df","left",true);
+    const lines=victory ? [
+      `${result.grade} · ${result.score.toLocaleString()} POINTS`,
+      `${result.route.toUpperCase()} EXIT · ${result.timeSeconds.toFixed(1)} SECONDS`,
+      result.unranked?"UNRANKED · RECORDS UNCHANGED":result.newBest?"NEW RECORD FOR THIS COURSE AND PRESSURE":"THREE CHECKS SAVED · EXIT SECURED",
+    ] : [review?.label||"CLOSE CONTACT",`${completedNightOrderActionCount()}/3 CHECKS REACHED · TRY THE ENCOUNTER AGAIN`];
+    lines.forEach((line,i)=>drawText(line,80,174+i*48,fittedTextSize(line,i===0?40:30,1120,28,true),i===0?accent:"#b6dfd1","left",true));
+    const actions=resultActionPresentations(outcome),selected=actions[state.resultIndex];
+    drawText(victory?"YOUR NEXT CHALLENGE":"NEXT TRY",80,358,30,accent,"left",true);
+    const help=!victory&&state.resultIndex===0?(review?.counterplay||"Listen before blind turns. Keep a second route available."):selected.description;
+    wrapReadableText(help,32,1120).slice(0,4).forEach((line,i)=>drawText(line,80,402+i*39,32,"#eef3df","left",true));
+    actions.forEach((action,index)=>{const b=resultActionGeometry(index),active=index===state.resultIndex;
+      ctx.fillStyle=active?"#344b29":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);strokeRect(b.x,b.y,b.width,b.height,active?accent:"#547964",2);
+      const label=index===2?"MENU":action.label;drawText(label,b.x+b.width/2,b.y+58,32,"#eef3df","center",true);
+    });
+    drawText(inputCopy("ARROWS SELECT · ENTER CONFIRM · ESC MENU","D-PAD SELECT · A CONFIRM · B MENU","TAP AN ACTION"),640,713,26,"#b6dfd1","center",true);
+  }
+
   function drawVictory() {
+    if(gameplayReadability().compact){drawCompactResult("victory");return;}
     const sceneReveal =
       smoothstep(
         state.time / 0.52,
@@ -58197,9 +58494,9 @@
       courseEchoResultAdjudication(
         result,
       );
-    const activeRecord = result.overtime
-      ? state.career.overtimeBest
-      : state.career.routes[result.route];
+    const activeRecord = [state.career.overtimeBest, state.career.routes[result.route], ...(state.career.legacyRecords || [])]
+      .filter(record => record && record.ruleset === RUN_RULESET && record.pressure === state.pursuitIntensity && record.variantId === result.variantId && record.route === result.route && record.overtime === result.overtime)
+      .sort((a,b)=>b.score-a.score || a.timeSeconds-b.timeSeconds)[0];
     const scoreReveal = smoothstep(
       (state.time - 0.74) / 0.78,
     );
@@ -58270,7 +58567,7 @@
     ctx.fillRect(panel.x + 28, panel.y + 28, 84, 3);
     ctx.fillRect(panel.x + panel.width - 112, panel.y + 28, 84, 3);
     drawText(
-      result.overtime
+      result.unranked ? "PRACTICE COMPLETE" : result.overtime
         ? "OVERTIME SURVIVED"
         : "HOLE 1 SURVIVED",
       WIDTH * 0.5,
@@ -58281,7 +58578,7 @@
       true,
     );
     drawText(
-      `AFTER-ACTION REVIEW // ${result.overtime ? "OVERTIME // " : ""}ORDER ${String(result.variantNumber).padStart(2, "0")} // ${result.variantName}`,
+      result.unranked ? "UNRANKED // CAREER AND RECORDS UNCHANGED" : `AFTER-ACTION REVIEW // ${result.overtime ? "OVERTIME // " : ""}ORDER ${String(result.variantNumber).padStart(2, "0")} // ${result.variantName}`,
       WIDTH * 0.5,
       177,
       12,
@@ -58676,7 +58973,7 @@
       );
     const gutter = 5;
     ctx.drawImage(
-      joeExpressionArt,
+      drawableImage(joeExpressionArt),
       column *
         JOE_EXPRESSION_CELL +
         gutter,
@@ -58696,6 +58993,7 @@
   }
 
   function drawDefeat() {
+    if(gameplayReadability().compact){drawCompactResult("defeat");return;}
     const impact = smoothstep(state.time / 0.48);
     const textReveal = smoothstep((state.time - 0.18) / 0.38);
     const panelY = lerp(504, 342, textReveal);
@@ -59157,7 +59455,8 @@
   function normalizeDisplayText(text) {
     if (
       typeof text !== "string" ||
-      text.length === 0
+      text.length === 0 ||
+      !/[^\x00-\x7f]/.test(text)
     ) {
       return text;
     }
@@ -59350,6 +59649,7 @@
   }
 
   function render() {
+    if (state.mode !== "first_hole" && document.pointerLockElement === canvas) document.exitPointerLock?.();
     const renderStartedAt =
       performance.now();
     renderFrameCache.cameraFrame =
@@ -59413,6 +59713,8 @@
   function update(delta) {
     const dt = Math.min(delta, 0.05);
     pollGamepad();
+    if(state.mode==="settings" && state.settingsPage!=="bindings" && settingsCategory()===1 && state.freeLook)
+      state.lookPreviewYaw=(state.lookPreviewYaw||0)+(state.gamepad.lookX||0)*2.2*delta*state.lookSensitivity*(state.invertLook?-1:1);
     state.time += dt;
     state.transitionAlpha = Math.max(0, state.transitionAlpha - dt * 2.25);
 
@@ -59759,6 +60061,7 @@
         );
       updateCourseEffects(dt);
       updateTurfMarks(dt);
+      turnCamera((state.gamepad.lookX || 0) * 2.2 * dt);
       const movement = movementInput();
       if (hole.escapeFiling.active && !filingEntryInputHeld(movement)) {
         hole.escapeFiling.entryMovement = null;
@@ -59773,6 +60076,8 @@
       const moving =
         !hole.escapeFiling.sealing &&
         playerIsMoving();
+      updateRehearsalCheckpoint();
+      updateExperienceEvidence(dt);
       hole.lastMovementRequestedDistance = 0;
       hole.lastMovementAppliedDistance = 0;
       hole.lastMovementDeltaSeconds = dt;
@@ -59924,6 +60229,9 @@
       const inputLength = Math.max(1, Math.hypot(inputX, inputY));
       inputX /= inputLength;
       inputY /= inputLength;
+      const worldMovement = cameraRelativeMovement({ x: inputX, y: inputY });
+      inputX = worldMovement.x;
+      inputY = worldMovement.y;
       if (moving) {
         state.player.heading = Math.atan2(inputY, inputX);
         const appliedMovement =
@@ -60556,6 +60864,7 @@
   }
 
   function enterMenu() {
+    restoreRankedCareer();
     clearTouchInputs(true);
     loadAssetPhase("course");
     loadAssetPhase("results");
@@ -60578,10 +60887,12 @@
     cancelGolfBallAim(false);
     clearTouchInputs(false);
     state.mode = "paused";
+    if (document.pointerLockElement === canvas) document.exitPointerLock?.();
     state.pauseIndex = 0;
     state.keys.clear();
     state.gamepad.inputX = 0;
     state.gamepad.inputY = 0;
+    state.gamepad.lookX = 0;
     state.gamepad.crouch = false;
     state.gamepad.sprint = false;
     state.gamepad.focus = false;
@@ -61112,6 +61423,9 @@
         );
       }
     }
+    const signalPriority = isCourse && (state.hole.ballAim.active || state.hole.joe.mode === "chase" ||
+      state.hole.nightOrderActivation?.timer > 0 || state.hole.escapeFiling.active);
+    const informationDuck = signalPriority ? 0.55 : 1;
     const ambienceLevel =
       isCourse && state.hole.focus
         ? 0.018
@@ -61121,7 +61435,7 @@
             ? 0.013
             : 0.018;
     if (ambienceGain) {
-      ambienceGain.gain.setTargetAtTime(ambienceLevel, now, 0.32);
+      ambienceGain.gain.setTargetAtTime(ambienceLevel * informationDuck, now, 0.18);
     }
     if (ambienceFilter) {
       ambienceFilter.frequency.setTargetAtTime(
@@ -61141,13 +61455,13 @@
                 .pressure *
                 0.007
             : 0.002;
-      ambienceDroneGain.gain.setTargetAtTime(dangerDrone, now, 0.28);
+      ambienceDroneGain.gain.setTargetAtTime(dangerDrone * informationDuck, now, 0.28);
     }
     const reactiveScore =
       reactiveScoreState();
     if (scoreGain) {
       scoreGain.gain.setTargetAtTime(
-        reactiveScore.gain,
+        reactiveScore.gain * informationDuck,
         now,
         reactiveScore.active
           ? 0.22
@@ -62445,6 +62759,7 @@
   }
 
   function menuIndexAt(point) {
+    if(gameplayReadability().compact){return MENU_ITEMS.findIndex((_,index)=>{const b=compactMenuButton(index);return point.x>=b.x&&point.x<=b.x+b.width&&point.y>=b.y&&point.y<=b.y+b.height;});}
     if (point.x < 88 || point.x > 478) {
       return -1;
     }
@@ -62491,16 +62806,7 @@
   }
 
   function pauseIndexAt(point) {
-    if (point.x < 390 || point.x > 890) {
-      return -1;
-    }
-    for (let index = 0; index < PAUSE_ITEMS.length; index += 1) {
-      const y = 250 + index * 68;
-      if (point.y >= y && point.y <= y + 50) {
-        return index;
-      }
-    }
-    return -1;
+    return PAUSE_ITEMS.findIndex((_,index)=>{const b=pauseButtonGeometry(index);return point.x>=b.x&&point.x<=b.x+b.width&&point.y>=b.y&&point.y<=b.y+b.height;});
   }
 
   function settingsIndexAt(point) {
@@ -62687,6 +62993,9 @@
     ) {
       state.touch.lookBackPointerId =
         event.pointerId;
+    } else if (!control && point.x > WIDTH * 0.38 && state.touch.lookPointerId === null) {
+      state.touch.lookPointerId = event.pointerId;
+      state.touch.lookLastX = point.x;
     }
   }
 
@@ -62696,6 +63005,10 @@
   ) {
     event.preventDefault();
     state.inputMethod = "touch";
+    if (event.pointerId === state.touch.lookPointerId) {
+      turnCamera((point.x - state.touch.lookLastX) * 0.004);
+      state.touch.lookLastX = point.x;
+    }
     if (
       event.pointerId ===
       state.touch.movePointerId
@@ -62721,10 +63034,14 @@
     event,
     cancelled = false,
   ) {
+    if (state.lookPreviewPointer?.id === event.pointerId) state.lookPreviewPointer = null;
     if (event.pointerType !== "touch") {
       return;
     }
     event.preventDefault();
+    if (event.pointerId === state.touch.lookPointerId) {
+      state.touch.lookPointerId = null;
+    }
     if (
       event.pointerId ===
       state.touch.movePointerId
@@ -62804,6 +63121,12 @@
       event.preventDefault();
     }
     canvas.focus();
+    if (touchPointer && state.mode === "settings" && state.settingsPage !== "bindings" &&
+        settingsCategory() === 1 && point.x >= 80 && point.x <= 1200 && point.y >= 508 && point.y <= 562) {
+      state.lookPreviewPointer = {id: event.pointerId, x: point.x};
+      try { canvas.setPointerCapture?.(event.pointerId); } catch { /* Synthetic events have no active contact. */ }
+      return;
+    }
     if (state.mode === "gate") {
       startIntro();
     } else if (state.mode === "intro") {
@@ -62838,15 +63161,15 @@
         if (
           point.x >= 194 &&
           point.x <= 446 &&
-          point.y >= 585 &&
-          point.y <= 621
+          point.y >= (gameplayReadability().compact?600:585) &&
+          point.y <= (gameplayReadability().compact?666:621)
         ) {
           resetKeyboardBindings();
         } else if (
           point.x >= 834 &&
           point.x <= 1086 &&
-          point.y >= 585 &&
-          point.y <= 621
+          point.y >= (gameplayReadability().compact?600:585) &&
+          point.y <= (gameplayReadability().compact?666:621)
         ) {
           returnToMixSettings();
         } else {
@@ -62867,6 +63190,10 @@
             );
           }
         }
+      } else if (state.settingsPage !== "bindings") {
+        handleCompactSettingsPointer(point);
+      } else if (point.x >= 892 && point.x <= 1096 && point.y >= 188 && point.y < 220) {
+        nextSettingsFieldPage();
       } else if (
         point.x >= 676 &&
         point.x <= 870 &&
@@ -62911,6 +63238,11 @@
         activatePause();
       }
     } else if (state.mode === "first_hole") {
+      const mapButtonX = state.hole.mapOpen ? 810 : 1078;
+      if (state.focusedHud && !state.hole.tutorialVisible && point.x>=mapButtonX && point.x<=mapButtonX+178 && point.y>=180 && point.y<=250) {
+        toggleCourseMap();
+        return;
+      }
       if (touchPointer) {
         handleTouchPointerDown(
           event,
@@ -62924,6 +63256,8 @@
         point.y >= HEIGHT - 54
       ) {
         enterPause();
+      } else {
+        requestMouseLook();
       }
     } else if (state.mode === "clocked_out") {
       enterMenu();
@@ -62939,6 +63273,16 @@
   }
 
   function handlePointerMove(event) {
+    if (event.pointerType === "touch" && state.lookPreviewPointer?.id === event.pointerId) {
+      const point = canvasPoint(event), delta = point.x - state.lookPreviewPointer.x;
+      state.lookPreviewPointer.x = point.x;
+      if (state.mode === "settings" && settingsCategory() === 1 && state.freeLook)
+        state.lookPreviewYaw = (state.lookPreviewYaw || 0) + delta * .004 * state.lookSensitivity * (state.invertLook ? -1 : 1);
+      return;
+    }
+    if(state.mode==="settings" && state.settingsPage!=="bindings" && settingsCategory()===1 && state.freeLook && (event.buttons&1)) {
+      const p=canvasPoint(event);if(p.y>=508&&p.y<=562){state.lookPreviewYaw=(state.lookPreviewYaw||0)+(event.movementX||0)*.0025*state.lookSensitivity*(state.invertLook?-1:1);return;}
+    }
     if (
       event.pointerType === "touch"
     ) {
@@ -62948,6 +63292,12 @@
           canvasPoint(event),
         );
       }
+      return;
+    }
+    if (state.mode === "first_hole" &&
+        (document.pointerLockElement === canvas || (event.buttons & 1))) {
+      state.inputMethod = "keyboard";
+      turnCamera((event.movementX || 0) * 0.0025);
       return;
     }
     if (
@@ -63055,6 +63405,7 @@
               setting.step,
           ) * setting.step
         : clampedValue;
+    if (setting.key === "pursuitIntensity" && state.settingsReturnMode === "paused" && value !== state.pursuitIntensity) state.hole.recordRulesChanged = true;
     state[setting.key] = Number(
       clamp(
         steppedValue,
@@ -63084,6 +63435,12 @@
 
   function toggleSetting(setting) {
     state[setting.key] = !state[setting.key];
+    if (setting.key === "freeLook") {
+      state.player.yaw = 0;
+      courseBackdropRenderedAt = -Infinity;
+      miniMapRenderedAt = -Infinity;
+      if (!state.freeLook && document.pointerLockElement === canvas) document.exitPointerLock?.();
+    }
     if (
       setting.key === "threatCaptions" &&
       !state.threatCaptions &&
@@ -63140,6 +63497,36 @@
       state.hole.stateBannerLockTimer = 1.2;
     }
     playUiTone(360, 0.09, 0.03);
+  }
+
+  function restoreRankedCareer() {
+    if (state.rehearsalCareer) {state.career=state.rehearsalCareer;state.rehearsalCareer=null;}
+  }
+
+  function updateRehearsalCheckpoint() {
+    const h=state.hole;
+    if(h.tutorialVisible || h.rehearsal || h.ballAim.active || h.escapeFiling.active || h.joe.mode==="chase" || h.hasLineOfSight || worldDistance(h.joe,state.player)<48) return;
+    if(h.rehearsalCheckpoint && h.elapsed-h.rehearsalCheckpoint.elapsed<5) return;
+    h.rehearsalCheckpoint={x:state.player.x,y:state.player.y,yaw:cameraYaw(),elapsed:h.elapsed,
+      joe:{x:h.joe.x,y:h.joe.y},checks:[...h.nightOrderActionsCompleted],key:h.keyCollected,drain:h.drainUnlocked,balls:h.golfBalls};
+  }
+
+  function startEncounterRehearsal() {
+    const previous=state.hole, checkpoint=previous.rehearsalCheckpoint || previous.rehearsalOrigin;
+    const variant=activeRunVariant(), review=previous.captureReview;
+    resetFirstHole(variant);
+    state.rehearsalCareer=state.career;state.career=JSON.parse(JSON.stringify(state.career));
+    const h=state.hole;h.rehearsal=true;h.rehearsalOrigin=checkpoint;h.tutorialVisible=false;h.practiceDrill.active=false;
+    h.courseEchoRecord=null;h.courseEchoSamples=[];h.controlHintTimer=0;h.zoneBannerTimer=0;
+    if(checkpoint) {
+      state.player.x=checkpoint.x;state.player.y=checkpoint.y;state.player.yaw=checkpoint.yaw;
+      h.elapsed=checkpoint.elapsed;h.joe.x=checkpoint.joe.x;h.joe.y=checkpoint.joe.y;h.joe.mode="patrol";h.joe.patrolPause=2;
+      h.nightOrderActionsCompleted=[...checkpoint.checks];h.keyCollected=checkpoint.key;h.drainUnlocked=checkpoint.drain;h.sprinklerUsed=checkpoint.drain;h.golfBalls=checkpoint.balls;
+      h.joe.effectLastX=h.joe.x;h.joe.effectLastY=h.joe.y;
+    }
+    h.message=`REHEARSAL // NO RECORDS. ${review?.counterplay || "Practice this encounter, then try a full run."}`;h.messageTimer=5;
+    state.mode="first_hole";state.time=0;state.transitionAlpha=.4;
+    courseBackdropRenderedAt=-Infinity;miniMapRenderedAt=-Infinity;
   }
 
   function retryFirstHole(
@@ -63279,7 +63666,7 @@
     } else if (
       action === "next_order"
     ) {
-      startNextNightOrder();
+      if(state.mode==="defeat") startEncounterRehearsal(); else startNextNightOrder();
     } else {
       enterMenu();
     }
@@ -63289,6 +63676,7 @@
     state.settingsIndex =
       (state.settingsIndex + direction + SETTINGS_ROWS.length) %
       SETTINGS_ROWS.length;
+    state.settingsFieldPage = settingsFieldPage();
     playUiTone(198 + state.settingsIndex * 20, 0.045, 0.016);
   }
 
@@ -63409,6 +63797,7 @@
       state.gamepad.id = "";
       state.gamepad.inputX = 0;
       state.gamepad.inputY = 0;
+      state.gamepad.lookX = 0;
       state.gamepad.crouch = false;
       state.gamepad.sprint = false;
       state.gamepad.focus = false;
@@ -63431,10 +63820,10 @@
     const axisValue = (index) => {
       const value = pad.axes?.[index] || 0;
       const magnitude = Math.abs(value);
-      if (magnitude <= 0.22) {
+      if (magnitude <= state.stickDeadzone) {
         return 0;
       }
-      return Math.sign(value) * (magnitude - 0.22) / 0.78;
+      return Math.sign(value) * clamp((magnitude - state.stickDeadzone) / (1 - state.stickDeadzone), 0, 1);
     };
     const currentButtons = [];
     for (let index = 0; index < Math.max(16, pad.buttons?.length || 0); index += 1) {
@@ -63468,16 +63857,25 @@
       !state.gamepad.previousDirections[direction];
     const meaningfulInput =
       Math.hypot(inputX, inputY) > 0.18 ||
+      Math.abs(axisValue(2)) > 0 ||
       currentButtons.some(Boolean);
 
     state.gamepad.connected = true;
     state.gamepad.id = pad.id || "Gamepad";
     state.gamepad.inputX = inputX;
     state.gamepad.inputY = inputY;
+    state.gamepad.lookX = Math.sign(axisValue(2)) * Math.pow(Math.abs(axisValue(2)), 1.35);
     state.gamepad.crouch = buttonDown(4);
     state.gamepad.focus = buttonDown(6);
     state.gamepad.sprint = buttonDown(7) || buttonDown(5);
     state.gamepad.lookBack = buttonDown(11);
+    if(state.mode==="settings" && state.settingsPage!=="bindings") {
+      if(settingsCategory()===1 && (pressed(4)||pressed(5))) {
+        const current=!state.freeLook?2:state.reducedMotion?1:0;
+        applyComfortPreset((current+(pressed(5)?1:2))%3);
+      }
+      if(settingsCategory()===2 && pressed(2)) replayPracticalLessons();
+    }
     if (meaningfulInput) {
       if (
         state.inputMethod === "touch"
@@ -63584,10 +63982,7 @@
       pressed(3) &&
       state.mode === "first_hole"
     ) {
-      state.hole.controlHintTimer =
-        MANUAL_CONTROL_HINT_SECONDS;
-      state.hole.controlHintSource =
-        "manual";
+      toggleCourseMap();
       playUiTone(220, 0.045, 0.015);
     }
     if (pressed(1)) {
@@ -63610,6 +64005,14 @@
   }
 
   window.addEventListener("keydown", (event) => {
+    if(state.mode==="settings" && state.settingsPage!=="bindings" && !event.repeat) {
+      if(settingsCategory()===1 && ["Digit1","Digit2","Digit3"].includes(event.code)) {
+        applyComfortPreset(Number(event.code.slice(-1))-1);event.preventDefault();return;
+      }
+      if(settingsCategory()===2 && event.code==="KeyT") {
+        replayPracticalLessons();event.preventDefault();return;
+      }
+    }
     if (state.inputMethod === "touch") {
       clearTouchInputs(true);
     }
@@ -63806,10 +64209,7 @@
       } else if (
         gameplayAction === "controls"
       ) {
-        state.hole.controlHintTimer =
-          MANUAL_CONTROL_HINT_SECONDS;
-        state.hole.controlHintSource =
-          "manual";
+        if (!event.repeat) toggleCourseMap();
         playUiTone(220, 0.045, 0.015);
         event.preventDefault();
       } else if (
@@ -64186,6 +64586,7 @@
       tutorialBriefingViewportPresentation(
         1209,
         673,
+        false,
       );
     addCheck(
       "compact_survival_briefing_readability",
@@ -64249,8 +64650,7 @@
           preview.text.includes(
             preview.coverLabel,
           ) &&
-          preview.gameplayTimingChanged ===
-            false,
+          preview.noiseSeconds <= NIGHT_ORDER_ACTIONS.find(a => a.breakaway.coverId === preview.coverId).noiseSeconds,
       ),
       {
         actions:
@@ -64351,7 +64751,7 @@
           .risk.groundRing.motion ===
           "watchful" &&
         highPressureCommitmentPreview
-          .text.includes("5.6s") &&
+          .text.includes(`${stationPlan(NIGHT_ORDER_ACTIONS[1]).signalSeconds.toFixed(1)}s`) &&
         highPressureCommitmentPreview
           .text.includes("SERVICE CART") &&
         criticalCommitmentPreview
@@ -65919,9 +66319,9 @@
         missedBreakawayPreview.reason ===
           "left_named_cover_before_expiry" &&
         missedBreakawayPreview.banner ===
-          "CLEAN BREAK MISSED // LEFT COVER EARLY" &&
+          "CHECK SAVED // COVER BONUS MISSED" &&
         missedBreakawayPreview.message.includes(
-          "FIELD LOG CAN STILL SCORE",
+          "CHECK SAVED.",
         ),
       {
         hud: missedHudPreview,
@@ -65951,24 +66351,9 @@
       );
     addCheck(
       "clean_break_miss_recovery_handoff_copy",
-      missedBreakawayPreview.message.includes(
-        "LEFT HEDGE TUNNEL BEFORE JOE'S FINAL CHECK",
-      ) &&
-        missedBreakawayPreview.message.includes(
-          "HOLD COVER NEXT TIME",
-        ) &&
-        movedMissPreview.message.includes(
-          "MOVED BEFORE JOE'S FINAL CHECK",
-        ) &&
-        movedMissPreview.message.includes(
-          "HOLD STILL NEXT TIME",
-        ) &&
-        incompleteMissPreview.message.includes(
-          "HOLD NEVER SET",
-        ) &&
-        incompleteMissPreview.message.includes(
-          "FIELD LOG CAN STILL SCORE",
-        ),
+      [missedBreakawayPreview,movedMissPreview,incompleteMissPreview].every(p=>p.message.startsWith("CHECK SAVED. BONUS TIP:")) &&
+        missedBreakawayPreview.message.includes("HEDGE TUNNEL") && movedMissPreview.message.includes("KEEP STILL") &&
+        incompleteMissPreview.message.includes("SETTLE BEHIND") && incompleteMissPreview.lesson.includes("quiet hold"),
       {
         leftCover:
           missedBreakawayPreview,
@@ -66421,11 +66806,12 @@
         ),
       "collision corrections own the route through physical contact and a bounded clear-lane follow-through before objective replanning",
     );
+    const leftPreviewDelta = cameraRelativeMovement({ x: -9, y: 0 });
     const collisionRecoveryRoutePreview =
       collisionRecoveryWorldRoutePresentation(
         {
-          x: state.player.x - 9,
-          y: state.player.y,
+          x: state.player.x + leftPreviewDelta.x,
+          y: state.player.y + leftPreviewDelta.y,
           direction: "LEFT",
           distance: 9,
           obstacleId:
@@ -66754,6 +67140,17 @@
           });
       }
     }
+  });
+
+  document.addEventListener("pointerlockchange", () => {
+    if (document.pointerLockElement !== canvas && state.mode === "first_hole") enterPause();
+  });
+
+  window.addEventListener("blur", () => {
+    state.keys.clear();
+    state.lookPreviewPointer = null;
+    clearTouchInputs(true);
+    if (state.mode === "first_hole") enterPause();
   });
 
   canvas.addEventListener("pointerdown", handlePointerDown);
@@ -67324,7 +67721,34 @@
           }),
         ),
     },
+    experience: {
+      lesson: state.mode === "first_hole" ? practicalLessonPresentation() : null,
+      learnedControls: {...state.learnedControls},
+      routeThreadVisible: state.mode === "first_hole" ? routeThreadVisible() : false,
+      survivalPresentation: state.mode === "first_hole" ? focusedSurvivalPresentation() : null,
+      rehearsal: Boolean(state.hole.rehearsal), ruleset: RUN_RULESET,
+      legacyRecordCount: state.career.legacyRecords?.length || 0,
+      focusedHud: state.focusedHud,
+      exit: escapeReadiness(),
+      coaching: state.mode === "first_hole" ? experienceCoaching(objectiveActionHudSummary()) : null,
+      cover: state.mode === "first_hole" ? coverReadability(state.hole.environment || getPlayerEnvironmentState()) : null,
+      threat: state.mode === "first_hole" ? survivalThreatRead(state.hole.environment || getPlayerEnvironmentState()) : null,
+      stationChoices: NIGHT_ORDER_ACTIONS.map(action => ({ id: action.id, ...stationPlan(action) })),
+      lastStationChoice: state.hole.lastStationChoice || null,
+      joeView: directionalViewIndex(state.hole.joe.effectHeading ?? Math.PI / 2, state.hole.joe),
+      shedView: directionalViewIndex(-Math.PI / 2, SHED_EXIT),
+    },
     settings: {
+      lookSensitivity: state.lookSensitivity,
+      stickDeadzone: state.stickDeadzone,
+      uiScale: state.uiScale,
+      invertLook: state.invertLook,
+      focusedHud: state.focusedHud,
+      clearScenery: state.clearScenery,
+      screenTexture: state.screenTexture,
+      guidedHints: state.guidedHints,
+      freeLook: state.freeLook,
+      routeGuidance: state.routeGuidance,
       volume: Number(state.volume.toFixed(2)),
       ambienceVolume: Number(state.ambienceVolume.toFixed(2)),
       mowerVolume: Number(state.mowerVolume.toFixed(2)),
@@ -67767,6 +68191,10 @@
           progress: Math.round(state.player.y),
           progressPercent: Math.round(state.player.y / COURSE_LENGTH * 100),
           headingRadians: Number(state.player.heading.toFixed(2)),
+          cameraYawRadians: Number(cameraYaw().toFixed(4)),
+          camera: { horizontalFreeLook: state.freeLook, pitchLocked: true,
+            mouseLocked: document.pointerLockElement === canvas,
+            movement: "relative_to_camera_yaw; rear_glance_preserves_movement_heading" },
           travelDistance: Math.round(state.hole.travelDistance),
           shedDistance: Math.max(0, Math.round(COURSE_LENGTH - state.player.y)),
           inRough: playerInRough(),
@@ -73708,7 +74136,7 @@
       gate: "Click, Enter, or Space",
       intro: "Click, Enter, Space, or Escape to skip",
       menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-      firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+      firstHole: `${keyboardMovementCopy()} moves relative to your view; click for mouse look or drag to turn horizontally; Escape releases the mouse; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
       result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       keyboard: {
@@ -73716,13 +74144,13 @@
         gate: "Click, Enter, or Space",
         intro: "Click, Enter, Space, or Escape to skip",
         menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
-        firstHole: `${keyboardMovementCopy()} move; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
+        firstHole: `${keyboardMovementCopy()} moves relative to your view; click for mouse look or drag to turn horizontally; Escape releases the mouse; ${keyboardBindingLabel("sprint")} sprints; hold ${keyboardBindingLabel("crouch")} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
         result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
       },
       gamepad: {
         menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
-        firstHole: "Left stick or D-pad moves; RT sprints; LB crouches; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
+        firstHole: "Left stick or D-pad moves relative to your view; right stick looks horizontally; RT sprints; LB crouches; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses",
         pause: "D-pad selects; A confirms; B or Start resumes",
         result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
       },
@@ -73730,7 +74158,7 @@
         gate: "Tap to begin",
         intro: "Tap to skip",
         menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
-        firstHole: "Drag the left pad to move; hold Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
+        firstHole: "Drag the left pad to move relative to your view; swipe open screen space to look horizontally; hold Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round",
         pause: "Tap a menu item directly",
         result: "Tap Rematch File, Next Order, or Clubhouse directly",
       },
@@ -73782,14 +74210,14 @@
 
   function primeHorrorOverlay(image) {
     if (
-      image.complete &&
+      preparedImageSources.has(image) &&
       image.naturalWidth > 0
     ) {
       cachedHorrorOverlay(image);
       return;
     }
     image.addEventListener(
-      "load",
+      "rasterready",
       () => cachedHorrorOverlay(image),
       { once: true },
     );
@@ -73863,13 +74291,13 @@
       scheduleNextAtlasPrime();
     };
     if (
-      image.complete &&
+      preparedImageSources.has(image) &&
       image.naturalWidth > 0
     ) {
       prime();
     } else {
       image.addEventListener(
-        "load",
+        "rasterready",
         prime,
         { once: true },
       );

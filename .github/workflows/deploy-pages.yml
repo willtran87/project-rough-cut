@@ -27,6 +27,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Verify release assets and scenario fixtures
+        run: node tools/verify-release.mjs
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

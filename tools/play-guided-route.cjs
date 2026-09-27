@@ -19,6 +19,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir
     const s = JSON.parse(window.render_game_to_text());
     return {mode:s.mode, player:s.player, checks:s.hole.fieldChecks,
       guide:s.hole.navigationReadability.firstPersonGuidance, joe:s.hole.joe,
+      environment:s.hole.environment, balls:s.hole.golfBalls,
       key:s.hole.keyCollected, drain:s.hole.drainUnlocked,
       interaction:s.hole.interactionPromptOwner, filing:s.hole.escapeFiling};
   });
@@ -31,7 +32,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir
     await page.goto('http://127.0.0.1:4187');
     await page.waitForFunction(() => typeof window.advanceTime === 'function');
     await page.locator('canvas').click(); await page.keyboard.press('Space');
-    await page.waitForFunction(() => {const s=JSON.parse(window.render_game_to_text());return s.assets.course.loaded===42&&s.assets.results.loaded===4;},null,{timeout:60000});
+    await page.waitForFunction(() => {const s=JSON.parse(window.render_game_to_text());return s.assets.course.ready && s.assets.course.failed===0&&s.assets.results.loaded===4;},null,{timeout:60000});
     await tick(180); await input(['Enter'],2); await tick(1); await input(['Enter'],2);
     let last = '', stuck = 0, old = null, s, lastChip = -100;
     for (let step=0;step<1500;step++) {
@@ -53,15 +54,19 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir
       if(!waypoint) {await tick(12);continue;}
       const dx = waypoint.x-s.player.x, dy=waypoint.y-s.player.progress;
       const keys=[];
-      if(Math.abs(dx)>1.4) keys.push(dx>0?'ArrowRight':'ArrowLeft');
-      if(Math.abs(dy)>1.4) keys.push(dy>0?'ArrowUp':'ArrowDown');
+      if(Math.abs(dx)>.35) keys.push(dx>0?'ArrowRight':'ArrowLeft');
+      if(Math.abs(dy)>.35) keys.push(dy>0?'ArrowUp':'ArrowDown');
       if(!keys.length) {if(Math.abs(dx)>Math.abs(dy)) keys.push(dx>0?'ArrowRight':'ArrowLeft');else keys.push(dy>0?'ArrowUp':'ArrowDown');}
       if(sprint || (tactical && (s.joe.distance<65 || s.checks.signalBreakaway))) keys.push('Shift');
       const movement = old ? Math.hypot(s.player.x-old.x,s.player.progress-old.y):10;
       stuck = movement<0.08 ? stuck+1:0;
       if(stuck>30) {events.push({reason:'stuck',step,...s});break;}
       old={x:s.player.x,y:s.player.progress};
-      await input(keys, 6);
+      // Slow the input burst near a waypoint. A fixed six-frame burst can
+      // oscillate across the 0.75m arrival radius and fabricate a stuck route.
+      const distance=Math.hypot(dx*.72,dy);
+      const frames=Math.max(1,Math.min(6,Math.floor(distance/(keys.includes('Shift')?38:24)*60)));
+      await input(keys, frames);
     }
     await page.screenshot({path:path.join(out,'final.png')});
     fs.writeFileSync(path.join(out,'route.json'),JSON.stringify({errors,events,final:await read()},null,2));

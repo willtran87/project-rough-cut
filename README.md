@@ -6,7 +6,15 @@ Working directory for a first-person 2.5D pixel-horror game about Joe, a softwar
 
 **Release qualification:** the automated browser gate and the required physical-device sign-off are recorded in [release acceptance gates](qa/release-acceptance-gates-2026-08-13.md).
 
-The current local gameplay pass adds earlier exit preparation, travel-aware pickup guidance, and a clearer compact objective with persistent check progress. Implementation and playthrough evidence: [exit preparation polish](qa/exit-preparation-polish-2026-09-08.md).
+The current release adds horizontal free look, equal physical movement speed, a focused survival HUD, clearer scenery, directional Joe/shed art, station tactics, saved comfort settings, and a Clean Break recovery window. The [26-item experience pass and verification record](qa/comprehensive-experience-pass-2026-09-13.md) distinguishes implemented changes, existing features, and remaining human/device validation.
+
+The [second review and acceptance record](qa/second-experience-pass-2026-09-13.md) covers the follow-up improvements: shallower HUD cards, an on-demand map, categorized settings with reset and look preview, unranked encounter rehearsal, compatible personal records, transparent shed/cart cutouts, and movement-driven directional Joe animation. Ordinary-input tests now complete all three Night Orders at Standard pressure, earning every prerequisite during play.
+
+The [A-grade implementation report](qa/a-grade-implementation-2026-09-26.md) tracks remembered practical lessons, comfort presets, optional route guidance, clearer threat causes, movement-driven bob, local playtest evidence and asset-load recovery. The [September 27 verification report](qa/a27-execution-2026-09-27.md) records 18/18 completed route tests, prepared image sources that reduce first-use stalls, and consistent exit-filing instructions. Human playtests and physical-device qualification remain open; this is not a claim that every area has earned an A.
+
+Local controls: WASD moves relative to your chosen view; click or drag to look horizontally. A controller uses the left stick to move and right stick to look; touch supports movement plus swipe look. Hold R for a rear glance, C to crouch, Q to listen, Space to aim/release a chip, and Enter to Use. Escape pauses and releases the mouse. Settings include sensitivity, dead zone, text size, scenery clarity, and an optional fixed view. Bindings remain remappable.
+
+H (controller Y, or the MAP button) toggles the map. The defeat screen offers REHEARSE from the last safe checkpoint; its progress and scores do not modify the career. Changing Joe Pressure during a run makes that run unranked. Personal comparisons use the same course, pressure and movement rules; historical records remain archived.
 
 > The course closes at dusk. Joe does not.
 
@@ -120,7 +128,7 @@ The immediately playable browser version is in `web/`. It reproduces the animate
 
 ## Release verification
 
-The browser build uses staged, bounded-concurrency asset loading: the opening becomes interactive first, course art loads behind the menu with visible progress, and result tableaus settle before play begins. Source atlases and chroma-key masters are archived under `assets/source-atlases/` rather than shipped in the GitHub Pages payload.
+The browser build uses staged, bounded-concurrency asset loading: the opening becomes interactive first, course art loads behind the menu with visible progress, and result tableaus settle before play begins. Source atlases and chroma-key masters are archived under `assets/source-atlases/` and `art-source/`. The browser loads WebP assets from `web/assets/optimized/`; original PNG masters remain in `art-source/runtime-png/`. Rebuild with `python tools/optimize-runtime-art.py`; the encoder verifies original dimensions and exact alpha channels.
 
 Run the static release contract before publishing:
 
@@ -134,7 +142,7 @@ To include a deployed-site smoke check, pass its URL:
 node tools/verify-release.mjs --url https://willtran87.github.io/project-rough-cut/
 ```
 
-The verifier checks syntax, metadata, accessibility hooks, the staged loader, referenced PNG integrity, unreferenced or source-only runtime art, bounded transient effects, per-zone performance telemetry, the callable readiness audit, and every deterministic browser action file. Runtime diagnostics are exposed through `window.render_game_to_text()` with asset progress, failures, adaptive-effects state, render/presentation percentiles, zone timings, resource high-water marks, and the settled 50-check product-readiness result.
+The verifier checks syntax, metadata, accessibility hooks, the staged loader, referenced PNG/WebP integrity, unreferenced or source-only runtime art, bounded transient effects, per-zone performance telemetry, the callable readiness audit, and every deterministic browser action file. Runtime diagnostics are exposed through `window.render_game_to_text()` with asset progress, failures, adaptive-effects state, render/presentation percentiles, zone timings, resource high-water marks, and the settled product-readiness result.
 
 ## Directory map
 

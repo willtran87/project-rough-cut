@@ -16,7 +16,7 @@ function requireCondition(condition, message) {
 }
 
 function readUtf8(relativePath) {
-  return fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+  return fs.readFileSync(path.join(repositoryRoot, relativePath), "utf8").replace(/\r\n/g, "\n");
 }
 
 function collectRuntimeAssetReferences(...sources) {
@@ -40,6 +40,16 @@ function pngDimensions(filePath) {
     width: buffer.readUInt32BE(16),
     height: buffer.readUInt32BE(20),
   };
+}
+
+function webpDimensions(filePath) {
+  const b=fs.readFileSync(filePath);
+  if(b.length<30||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')return null;
+  const kind=b.toString('ascii',12,16);
+  if(kind==='VP8X')return {width:b.readUIntLE(24,3)+1,height:b.readUIntLE(27,3)+1};
+  if(kind==='VP8 '&&b.subarray(23,26).toString('hex')==='9d012a')return {width:b.readUInt16LE(26)&0x3fff,height:b.readUInt16LE(28)&0x3fff};
+  if(kind==='VP8L'&&b[20]===0x2f){const bits=b.readUInt32LE(21);return {width:(bits&0x3fff)+1,height:((bits>>>14)&0x3fff)+1};}
+  return null;
 }
 
 function runSyntaxCheck(relativePath) {
@@ -69,8 +79,8 @@ async function verifyPublishedSite(rawUrl) {
 
   for (const asset of [
     "assets/rough-cut-opening.png",
-    "assets/rough-cut-course-ground-v4.png",
-    "assets/rough-cut-night-order-objectives-v1.png",
+    "assets/optimized/rough-cut-course-ground-v4.webp",
+    "assets/optimized/rough-cut-night-order-objectives-v1.webp",
   ]) {
     const response = await fetch(new URL(`${asset}?verify=${releaseToken}`, baseUrl));
     requireCondition(response.ok, `Published ${asset} returned ${response.status}.`);
@@ -421,6 +431,8 @@ for (const requiredGate of [
 }
 
 const runtimeReferences = collectRuntimeAssetReferences(indexHtml, gameJs, dialogueJs);
+// The preserved social preview is referenced through an absolute URL.
+if (indexHtml.includes('/assets/rough-cut-opening.png') && !runtimeReferences.includes('rough-cut-opening.png')) runtimeReferences.push('rough-cut-opening.png');
 let referencedBytes = 0;
 let largestReference = null;
 for (const reference of runtimeReferences) {
@@ -434,27 +446,27 @@ for (const reference of runtimeReferences) {
   if (!largestReference || stats.size > largestReference.bytes) {
     largestReference = { name: reference, bytes: stats.size };
   }
-  if (path.extname(assetPath).toLowerCase() === ".png") {
-    const dimensions = pngDimensions(assetPath);
-    requireCondition(Boolean(dimensions), `Invalid PNG header: web/assets/${reference}`);
+  if ([".png",".webp"].includes(path.extname(assetPath).toLowerCase())) {
+    const dimensions = reference.endsWith('.webp')?webpDimensions(assetPath):pngDimensions(assetPath);
+    requireCondition(Boolean(dimensions), `Invalid image header: web/assets/${reference}`);
     if (dimensions) {
-      requireCondition(dimensions.width > 0 && dimensions.height > 0, `Invalid PNG dimensions: web/assets/${reference}`);
+      requireCondition(dimensions.width > 0 && dimensions.height > 0, `Invalid image dimensions: web/assets/${reference}`);
     }
   }
 }
 
 const shippedSourceMasters = fs
-  .readdirSync(path.join(webRoot, "assets"), { withFileTypes: true })
+  .readdirSync(path.join(webRoot, "assets"), { withFileTypes: true, recursive: true })
   .filter((entry) => entry.isFile() && (entry.name.endsWith("-chroma.png") || entry.name.endsWith(".md")))
   .map((entry) => entry.name);
 requireCondition(shippedSourceMasters.length === 0, `Source-only files remain in the runtime bundle: ${shippedSourceMasters.join(", ")}`);
 const unreferencedRuntimeAssets = fs
-  .readdirSync(path.join(webRoot, "assets"), { withFileTypes: true })
+  .readdirSync(path.join(webRoot, "assets"), { withFileTypes: true, recursive: true })
   .filter(
     (entry) =>
       entry.isFile() &&
       /\.(?:png|webp|avif)$/iu.test(entry.name) &&
-      !runtimeReferences.includes(entry.name),
+      !runtimeReferences.includes(path.relative(path.join(webRoot,"assets"),path.join(entry.parentPath || entry.path,entry.name)).replaceAll('\\','/')),
   )
   .map((entry) => entry.name);
 requireCondition(
