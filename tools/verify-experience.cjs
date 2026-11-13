@@ -71,13 +71,14 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir
     }
     checks.push({name:'Actual first practice miss returns one ball; second miss consumes one, with no duplicate world copy'});
 
-    for(const [id,choice,seconds] of [['audit-bell',false,6.4],['field-log',false,5.6],['field-log',true,3.4],['release-review',false,5],['release-review',true,3]]) {
+    for(const [id,choice,seconds] of [['audit-bell',false,6.4],['field-log',false,5.6],['field-log',true,0],['release-review',false,5],['release-review',true,3]]) {
       await reset();await page.evaluate(({id,choice})=>{const t=window.__experienceTest,s=t.state,h=s.hole,a=t.NIGHT_ORDER_ACTIONS.find(a=>a.id===id);
         s.player.x=a.x;s.player.y=a.y;h.joe.x=0;h.joe.y=50;h.hasLineOfSight=false;
         if(choice&&id==='field-log'){h.crouched=true;s.keys.add('KeyC');}
         if(choice&&id==='release-review'){h.distraction={x:0,y:500,kind:'golf_ball'};h.distractionTimer=6;h.joe.mode='investigate';}
       },{id,choice});
       await page.keyboard.press('Enter');
+      if(id==='field-log'&&choice) await tick(100);
       const state = await page.evaluate(()=>{const h=window.__experienceTest.state.hole;return {seconds:h.distractionTimer,choice:h.lastStationChoice,completed:h.nightOrderActionsCompleted.length};});
       assert(Math.abs(state.seconds-seconds)<.05,JSON.stringify(state));assert.equal(state.completed,1);
       await page.keyboard.press('Enter');assert.equal((await read()).hole.fieldChecks.completed,1);

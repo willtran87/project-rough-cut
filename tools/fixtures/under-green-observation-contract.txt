@@ -1,0 +1,85 @@
+import {observeJoe,audibleSource} from './under-green-senses.js';
+import {CROSSINGS} from './under-green-encounters.js';
+import {recordLocal} from './local-telemetry.js';
+import {WATERS,waterState,distance,inWater} from './under-green-course.js';
+const crossingChannels=new Map(CROSSINGS.map(c=>[c.id,WATERS.filter(w=>c.id==='range'?w.id.startsWith('range-'):w.id===c.water)]));
+export function observeEncounter(r,dt){
+ const j=r.joe,gap=distance(r.player,j),previous=j.previousGap??gap;
+ j.closingRate=(j.closingRate||0)*Math.exp(-dt*4)+(previous-gap)/Math.max(dt,.001)*(1-Math.exp(-dt*4));j.previousGap=gap;
+ if(!r.telemetry?.enabled)return;
+ const t=r.telemetry;t.crossings??={};
+ const active=!r.finished&&!['absent','enter','blocked'].includes(j.phase);
+ if(active){t.metrics.minimumGap=Math.min(t.metrics.minimumGap??Infinity,gap);t.metrics.closeSeconds=(t.metrics.closeSeconds||0)+(gap<10?dt:0);}
+ if(r.mode==='playing'&&!r.player.recovery&&r.player.speed<.15)t.metrics.stationarySeconds=(t.metrics.stationarySeconds||0)+dt;
+ if(j.phase!==t.lastPhase){recordLocal(t,'joe-phase',r.time,{phase:j.phase,gap,attackSerial:j.attackSerial,blocked:!!j.recoveryBlocked});if(['windup','sweep','recover'].includes(j.phase))t.metrics[j.phase+'Entries']=(t.metrics[j.phase+'Entries']||0)+1;t.lastPhase=j.phase;}
+ if(r.waterHits!==(t.lastHits??0)){recordLocal(t,'water-hit',r.time,{count:r.waterHits,gap});t.lastHits=r.waterHits;}
+ for(const c of CROSSINGS){
+  let event=t.crossings[c.id];
+  const beforeExit=c.parent?(c.exit-r.player.y)*c.direction>0:(c.exit-r.player.y)*c.direction>=0;
+  if(!event&&(!(c.id==='range'||c.parent==='range')||r.bypass&&r.player.x>7)&&(c.id!=='bunker'||r.player.x<-13)&&(r.player.y-c.entry)*c.direction>=0&&beforeExit&&Math.abs(r.player.x-c.center)<14){
+   const water=WATERS.find(w=>w.id===c.water);
+   const channels=crossingChannels.get(c.id);
+   event=t.crossings[c.id]={id:c.id,...(c.parent?{parent:c.parent}:{}),start:r.time,arrivalPhase:waterState(water,r.time,r.bypass,r.bypassAt).phase,arrivalPhases:Object.fromEntries(channels.map(w=>[w.id,waterState(w,r.time,r.bypass,r.bypassAt).phase])),partial:!t.samples||Math.abs(r.player.y-c.entry)>1,choice:'undecided',wetVisited:false,dryVisited:false,waitSeconds:0,minimumGap:gap,waterHits:r.waterHits};
+   recordLocal(t,'crossing-enter',r.time,{id:c.id,phase:event.arrivalPhase,gap});
+  }
+  if(!event||event.finished)continue;
+  event.minimumGap=Math.min(event.minimumGap,gap);
+  const channels=crossingChannels.get(c.id);
+  if(channels.some(w=>inWater(r.player,w)))event.wetVisited=true;
+  const alongsideChannel=!c.parent||channels.some(w=>Math.abs(r.player.y-w.y)<=w.depth/2);
+  if(alongsideChannel&&(r.player.x-c.center)*c.drySide>c.dryX)event.dryVisited=true;
+  event.choice=event.wetVisited&&event.dryVisited?'mixed':event.dryVisited?'dry':event.wetVisited?'wet':'undecided';
+  if(r.player.speed<.15&&!r.player.recovery)event.waitSeconds+=dt;
+  if((r.player.y-c.exit)*c.direction>0){event.finished=true;event.seconds=r.time-event.start;event.exitGap=gap;event.waterHits=r.waterHits-event.waterHits;recordLocal(t,'crossing-exit',r.time,{...event});}
+ }
+ t.samples=(t.samples||0)+1;
+}
+// Describe only the lateral information already carried by the stereo mixer.
+// A centred source could be ahead or behind; do not infer either from hidden
+// world coordinates. The broad centre band avoids overstating weak panning.
+export function heardSide(observed){
+ if(!observed.audible||!Number.isFinite(observed.pan)||Math.abs(observed.pan)<.4)return '';
+ return observed.pan<0?'to your left':'to your right';
+}
+export function pursuitCaption(r,rearLabel,observed=observeJoe(r)){
+ const j=r.joe,gap=distance(j,r.player);
+ if(['absent','blocked'].includes(j.phase)||gap>28)return '';
+ if(!observed.visible){
+  if(!observed.audible)return '';
+  if(observed.door)return 'A MAINTENANCE DOOR RATTLES NEARBY';
+  const side=heardSide(observed),direction=side?' '+side.toUpperCase():'';
+  if(observed.rev)return `THE TRIMMER REVS NEARBY${direction} · KEEP ROOM TO MOVE`;
+  // Stereo conveys a side, not front/back. A rear-view instruction for a
+  // lateral source sends the player away from the useful audible bearing.
+  const look=side?'LOOK TOWARD THE SOUND':`${rearLabel} TO GLANCE BACK`;
+  return `THE TRIMMER IS AUDIBLE${direction} · ${look}`;
+ }
+ if(j.phase==='enter')return 'A MAINTENANCE DOOR OPENS AHEAD · JOE HAS THE TRIMMER';
+ if(j.phase==='windup')return 'JOE RAISES THE TRIMMER · STEP CLEAR OF HIS SWEEP';
+ if(j.phase==='sweep')return 'THE BLADE IS SWEEPING · KEEP MOVING';
+ if(j.phase==='recover')return j.recoveryBlocked?'THE BLADE HIT SOLID COVER · MOVE WHILE HE RECOVERS':'THE BLADE MISSED · MOVE WHILE HE RECOVERS';
+ if(j.phase==='water-wait'||j.phase==='water-recovery')return 'THE WATER IS HOLDING JOE BACK';
+ if(j.phase==='search')return j.evidence==='inspection'?'JOE IS CHECKING THE PASSAGE':'JOE IS SEARCHING THE AREA';
+ if(j.phase==='guard')return 'JOE IS WATCHING FOR AN OPENING';
+ if(gap<8)return 'JOE IS CLOSE · KEEP AN ESCAPE ROUTE OPEN';
+ if(j.closingRate>.3&&j.speed>.2)return 'THE TRIMMER IS GETTING CLOSER';
+ if(j.closingRate<-.3)return 'YOU ARE PULLING AWAY FROM JOE';
+ return `JOE IS NEARBY · ${rearLabel} TO GLANCE BACK`;
+}
+
+export function urgentThreatCaption(r,observed=observeJoe(r)){
+ if(!observed.imminent)return '';
+ if(!observed.visible){const side=heardSide(observed);return `The trimmer revs close by${side?', '+side:''}. Move sideways.`;}
+ return r.joe.phase==='windup'?'Joe raises the trimmer. Move sideways.':'The blade is sweeping. Keep moving.';
+}
+
+export function soundDescription(r,observed=observeJoe(r)){
+ if(!['playing','aftermath'].includes(r.mode))return '';
+ const warning=WATERS.some(w=>waterState(w,r.time,r.bypass,r.bypassAt).phase==='warning'&&audibleSource(r,w,{range:19,sourceHeight:.8}).gain>.15);
+ if(warning)return '[Irrigation pipes knock before the surge]';
+ if(!observed.audible)return '';
+ if(observed.door)return '[Service door rattles nearby]';
+ if(r.joe.phase==='enter')return '[A small engine sputters nearby]';
+ const side=heardSide(observed),direction=side?' '+side:'';
+ return observed.rev?`[Hedge-trimmer engine revs nearby${direction}]`:`[Hedge-trimmer motor rattles nearby${direction}]`;
+}

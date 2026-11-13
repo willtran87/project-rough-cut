@@ -1,0 +1,33 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const before=process.argv.includes('--before'),software=process.argv.includes('--software');
+const out=`output/final-cut/signage/${before?'before':software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
+const hook=`window.__signAudit={read:()=>({labels:staticSigns.map(({mesh:m,canvas:c})=>({text:m.userData.signText,layout:m.userData.signLayout,position:m.position.toArray(),size:[m.geometry.parameters?.width,m.geometry.parameters?.height],pixels:[c.width,c.height],dynamic:!!m.userData.dynamic,decal:!!m.userData.decal})),boards:[normalBoard,receiptBoard,endBoard].map(m=>({text:m.userData.signText,layout:m.userData.signLayout,visible:m.visible,size:[m.geometry.parameters.width,m.geometry.parameters.height]})),recordVisible:record.visible,atlas:scene.getObjectByName('StaticSignAtlas')?.material.type}),board:value=>{normalBoard.userData.write(value);receiptBoard.userData.write(value);}};`;
+(async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}});p.setDefaultTimeout(120000);const errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const source=fs.readFileSync(before?'output/final-cut/signage/source/final-cut-scene-before.js':'web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__signAudit&&JSON.parse(render_game_to_text()).ready);
+ const fixture=async v=>{await p.evaluate(async v=>{const {createRun}=await import('./final-cut-sim.js'),{SECTORS}=await import('./final-cut-course.js');const r=createRun(v.dark?{}:{checkpoint:1,cut:SECTORS.map(s=>s.id)});r.mode='playing';r.time=.5;Object.assign(r.player,{x:v.x,y:v.y,yaw:Math.atan2(v.tx-v.x,v.ty-v.y),pitch:v.pitch||0});if(!v.dark)Object.assign(r.rig,{x:39,y:50,phase:'disabled'});__finalCut.run=r;await advanceTime(0);},v);const state=await p.evaluate(()=>JSON.parse(render_game_to_text()));await p.screenshot({path:out+'/'+v.name+'.png'});views.push({name:v.name,player:state.player,render:[state.graphics.width,state.graphics.height],draws:state.graphics.draws,triangles:state.graphics.triangles,textures:state.graphics.textures,overflow:await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth)});};
+ const fixtures=[{name:'overlook-dark',x:-2,y:0,tx:-2,ty:90,dark:true},{name:'overlook-lit',x:-2,y:0,tx:-2,ty:90},
+ {name:'bunker',x:-10,y:5,tx:-10,ty:11,pitch:-.05},{name:'pump',x:10,y:28,tx:10,ty:34,pitch:-.1},
+ {name:'pavilion',x:-16,y:76,tx:-16,ty:82,pitch:-.12},{name:'bank',x:3,y:53,tx:-2,ty:58},
+ {name:'pump-record',x:11.5,y:35.1,tx:11.5,ty:36.5,pitch:.15},{name:'scoreboard',x:12,y:76,tx:12,ty:95,pitch:-.28},
+ {name:'receipt',x:-3.7,y:0,tx:-7.7,ty:0,pitch:.02},{name:'fork',x:14.2,y:58.4,tx:10.6,ty:58.4},
+ {name:'sponsor',x:-23,y:7,tx:-30,ty:17,pitch:-.25}];
+ for(const v of fixtures)await fixture(v);
+ const art=await p.evaluate(()=>__signAudit.read());
+ const checkLayout=art=>{for(const sign of [...art.labels,...art.boards])for(const line of sign.layout?.lines||[]){const [x0,y0,x1,y1]=line.bounds,[left,top,right,bottom]=line.available;assert(x0>=left-.01&&x1<=right+.01&&y0>=top-.01&&y1<=bottom+.01,'Clipped text: '+line.text);}};
+ if(!before){checkLayout(art);assert.equal(art.atlas,'MeshLambertMaterial');assert.equal(art.labels.filter(s=>s.text==='PUMP / BYPASS').length,1);assert(art.boards[0].size[0]<=12.4);}
+ await fixture({...fixtures[8],name:'receipt-full'});
+ await p.evaluate(async()=>{__finalCut.run.stationReceipt={version:1,route:'shed',completed:true,stations:['audit-bell','field-log','release-review']};await advanceTime(0);});
+ const fullReceipt=await p.evaluate(()=>__signAudit.read());if(!before){checkLayout(fullReceipt);for(const board of fullReceipt.boards.slice(0,2)){assert.match(board.text,/RELEASE REVIEW/);assert.equal(board.layout.lines.length,5);}}
+ await p.screenshot({path:out+'/receipt-full.png'});
+ await fixture({...fixtures[6],name:'record-before-pickup'});await p.keyboard.press('Enter');await p.evaluate(()=>advanceTime(17));assert.equal(await p.evaluate(()=>__finalCut.run.loadLimit),false,'Enter must not pick up the record');await p.keyboard.press('e');await p.evaluate(()=>advanceTime(17));assert.equal(await p.evaluate(()=>__finalCut.run.loadLimit),true,'E must pick up the record');assert.equal((await p.evaluate(()=>__signAudit.read())).recordVisible,false);await p.screenshot({path:out+'/record-collected.png'});
+ await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(0));const frozen=await p.screenshot();await p.evaluate(()=>advanceTime(500));assert((await p.screenshot()).equals(frozen),'Pause changes sign pixels');await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(0));
+ for(const [width,height]of [[1920,1080],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await fixture({...fixtures[3],name:'pump-'+width});await fixture({...fixtures[5],name:'bank-'+width});}
+ for(let i=0;i<8;i++)await p.evaluate(async i=>{__finalCut.run.player.yaw=i*Math.PI/4;await advanceTime(0);},i); const resources=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);
+ for(let i=0;i<8;i++)await p.evaluate(async i=>{__finalCut.run.player.yaw=i*Math.PI/4;await advanceTime(0);},i);
+ const final=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);assert.equal(final.textures,resources.textures);assert.equal(final.geometries,resources.geometries);assert(views.every(v=>!v.overflow));assert.deepEqual(errors,[]);
+ fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,before,software,views,art,fullReceipt,interaction:'Enter leaves the paper; E collects it and its clip; pause pixels exact',resources:{textures:final.textures,geometries:final.geometries},errors},null,2));console.log(JSON.stringify({passed:true,before,software,views:views.length,resources:{textures:final.textures,geometries:final.geometries},errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
+

@@ -1,0 +1,17 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),out='output/final-cut/unease';fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],poses=[];p.on('pageerror',e=>errors.push(e.message));
+ const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.click('#primary');
+ const setup=()=>p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1,loadLimit:true});r.mode='playing';r.player.yaw=1.1;Object.assign(r.rig,{x:-30,y:66,phase:'turn',path:[{x:30,y:66}]});__finalCut.run=r;await advanceTime(0);});
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
+  await p.setViewportSize({width,height});await setup();if(width===390){await tick(6000);assert.equal((await read()).unease.seen,false);await setup();await p.evaluate(()=>__finalCut.run.player.yaw=1.44);}await tick(5100);let s=await read();assert(s.unease.seen,JSON.stringify({width,unease:s.unease,drama:s.drama,preferences:s.preferences,player:s.player}));assert.equal(s.graphics.banner.fold,0);await p.screenshot({path:`${out}/still-${width}.png`});
+  await tick(3300);s=await read();assert(s.graphics.banner.fold>.9);assert(s.graphics.banner.hemDepth>.6);assert.equal(s.graphics.banner.pinnedDepth,0);assert.equal(s.graphics.banner.pinnedHeight,.75);assert.equal(s.mode,'final_cut_playing');await p.screenshot({path:`${out}/fold-${width}.png`});poses.push({width,height,banner:s.graphics.banner});
+ }
+ checks.push('Actual simulation triggers the wind-first cloth beat at four viewport sizes; rendered hem moves over .6m while top rail attachment stays fixed');
+ await p.keyboard.press('Escape');const paused=await read();await tick(2000);assert.deepEqual((await read()).graphics.banner,paused.graphics.banner);assert.equal((await read()).seconds,paused.seconds);await p.click('#primary');await tick(100);assert((await read()).seconds>paused.seconds);checks.push('Actual pause/resume freezes and continues the rendered cloth');
+ await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=reducedMotion]').check();await p.click('#primary');await tick(0);assert.equal((await read()).graphics.banner.hemDepth,0);assert.equal((await read()).graphics.banner.hemHeight,-.75);await p.screenshot({path:`${out}/reduced-390.png`});checks.push('Shared reduced-motion control makes cloth entirely static, including ambient flutter');
+ await p.reload();await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);assert((await read()).unease.seen);assert.equal((await read()).unease.age,null);checks.push('Automatic save and actual reload retain consumption without restoring a pending scare');
+ assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/browser.json`,JSON.stringify({passed:true,checks,poses,errors},null,2));console.log(JSON.stringify({passed:true,checks,poses,errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

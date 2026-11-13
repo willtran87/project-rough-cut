@@ -1,0 +1,23 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const software=process.argv.includes('--software'),out='output/final-cut/overview/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+const hook=`window.__overviewProbe=()=>{
+ scene.updateMatrixWorld(true);const eye=camera.position.clone(),ray=new THREE.Raycaster(),points=[];
+ for(let x=3;x<=13;x+=2)for(let y=69;y<=79;y+=2){const target=new THREE.Vector3(x,.12,-y),delta=target.clone().sub(eye);ray.set(eye,delta.clone().normalize());ray.far=delta.length()-.15;
+ const hits=ray.intersectObjects(scene.children,true).filter(h=>{for(let o=h.object;o;o=o.parent)if(!o.visible)return false;return true;});const screen=target.clone().project(camera);
+ points.push({x,y,blocked:!!hits.length,inView:Math.abs(screen.x)<1&&Math.abs(screen.y)<1,screen:screen.toArray(),first:hits[0]?{point:hits[0].point.toArray(),color:hits[0].object.material.color?.getHexString()}:null});}
+ const walls=[];for(const x of [-5,0,4,8]){ray.set(new THREE.Vector3(x,3,-58.4),new THREE.Vector3(0,-1,0));ray.far=4;const hit=ray.intersectObjects(scene.children,true)[0];walls.push({x,top:hit?.point.y});}
+ const landmarks=[];for(const [name,x,y,h]of [['bunker',-10,17.5,3.056],['pump',10,33.6,2.8],['road',0,93.9,6.5],['swale-label',8,81,3.6]]){const target=new THREE.Vector3(x,h,-y),delta=target.clone().sub(eye);ray.set(eye,delta.clone().normalize());ray.far=delta.length()-.15;const hits=ray.intersectObjects(scene.children,true).filter(hit=>{for(let o=hit.object;o;o=o.parent)if(!o.visible)return false;return true;});const screen=target.clone().project(camera);landmarks.push({name,blocked:!!hits.length,inView:Math.abs(screen.x)<1&&Math.abs(screen.y)<1});}
+ return {eye:eye.toArray(),visible:points.filter(p=>!p.blocked).length,inView:points.filter(p=>!p.blocked&&p.inView).length,walls,landmarks,points};
+};`;
+(async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+ await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('web/final-cut-scene.js','utf8').replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+ const views=[];const shot=async name=>{await p.evaluate(()=>advanceTime(0));await p.screenshot({path:out+'/'+name+'.png'});const v={name,...await p.evaluate(()=>__overviewProbe())};views.push(v);fs.writeFileSync(out+'/sightlines.json',JSON.stringify({passed:false,software,views,errors},null,2));for(const w of v.walls)assert(Math.abs(w.top-(w.x<2?2.2:1.25))<1e-5);return v;};
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});const v=await shot('arrival-'+width);assert(v.visible>=16);assert(v.inView>=12);assert(v.landmarks.every(l=>!l.blocked));if(width===2560)assert(v.landmarks.every(l=>l.inView));assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ await p.setViewportSize({width:2560,height:1600});
+ for(const [name,pose]of [['branch-overlook',{x:-2,y:-2,yaw:.16,pitch:.2}],['shared-front',{x:-2,y:2.5,yaw:.16,pitch:.2}],['bank',{x:4,y:56.8,yaw:0,pitch:.1}],['west-bank',{x:-2,y:56.8,yaw:0,pitch:.1}],['fork',{x:16,y:58,yaw:-.8,pitch:.12}],['dry-swale',{x:1,y:78,yaw:1.57,pitch:.4}]]){await p.evaluate(async pose=>{Object.assign(__finalCut.run.player,pose);await advanceTime(0)},pose);const v=await shot(name);if(name==='branch-overlook')assert(v.visible>=12);if(name==='shared-front')assert(v.visible>=16);if(name==='bank')assert(v.visible>=24);}
+ await p.evaluate(()=>{__finalCut.run.water=1;__finalCut.run.pump=true});await shot('wet-swale');assert.deepEqual(errors,[]);
+ fs.writeFileSync(out+'/sightlines.json',JSON.stringify({passed:true,software,views,errors},null,2));console.log(JSON.stringify({passed:true,software,views:views.map(({name,eye,visible,inView})=>({name,eye,visible,inView})),errors}));
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,136 @@
+{
+  "unitId": "joe-hd",
+  "unitType": "enemy",
+  "layoutStandardVersion": "1.0.0",
+  "frameSize": {
+    "w": 192,
+    "h": 192
+  },
+  "directions": [
+    "SE"
+  ],
+  "animations": [
+    {
+      "action": "push-walk-natural",
+      "direction": "SE",
+      "fps": 10,
+      "loop": true,
+      "frameCount": 12,
+      "frames": [
+        {
+          "index": 0,
+          "path": "exploration/joe-hd_push-walk-natural_SE_00.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 1,
+          "path": "exploration/joe-hd_push-walk-natural_SE_01.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 2,
+          "path": "exploration/joe-hd_push-walk-natural_SE_02.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 3,
+          "path": "exploration/joe-hd_push-walk-natural_SE_03.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 4,
+          "path": "exploration/joe-hd_push-walk-natural_SE_04.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 5,
+          "path": "exploration/joe-hd_push-walk-natural_SE_05.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 6,
+          "path": "exploration/joe-hd_push-walk-natural_SE_06.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 7,
+          "path": "exploration/joe-hd_push-walk-natural_SE_07.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 8,
+          "path": "exploration/joe-hd_push-walk-natural_SE_08.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 9,
+          "path": "exploration/joe-hd_push-walk-natural_SE_09.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 10,
+          "path": "exploration/joe-hd_push-walk-natural_SE_10.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        },
+        {
+          "index": 11,
+          "path": "exploration/joe-hd_push-walk-natural_SE_11.png",
+          "durationMs": 100,
+          "pivot": {
+            "x": 96,
+            "y": 180
+          }
+        }
+      ],
+      "spriteSheet": "sprite_sheets/joe-hd_push-walk-natural_SE_sheet.png",
+      "loopStart": 0,
+      "loopEnd": 11,
+      "hitFrames": [],
+      "eventFrames": []
+    }
+  ]
+}

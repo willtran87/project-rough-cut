@@ -1,0 +1,30 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{const software=process.argv.includes('--software'),tag=software?'software':'hardware',out='output/back-nine-experience/staff-natural';fs.mkdirSync(out,{recursive:true});
+ const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],rows=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__buffers=0;const f=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...a){__buffers++;return f.apply(this,a);};});
+ await p.route(/\/back-nine-scene\.js(?:\?.*)?$/,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__staffWorld={scene,camera,renderer,update,draw()')}));
+ await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+ const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
+ const resources=()=>p.evaluate(()=>{const s=JSON.parse(render_game_to_text());return{buffers:__buffers,programs:s.graphics.programs,textures:s.graphics.textures,voices:s.audio.voices};});
+ const initial=await resources();
+ async function fresh(checkpoint=0){await p.evaluate(async checkpoint=>{const{createRun}=await import('./back-nine-sim.js');const r=createRun(checkpoint);r.mode='driving';__backNine.run=r;__staffWorld.resetCamera();await advanceTime(0);},checkpoint);}
+ async function step(n){for(let i=0;i<n;i++)await p.evaluate(()=>advanceTime(50));}
+ async function pixels(){return p.evaluate(()=>{const w=__staffWorld,f=w.scene.getObjectByName('UnaccountedGroundskeeper');if(!f?.visible)return{count:0};const gl=w.renderer.getContext(),width=gl.drawingBufferWidth,height=gl.drawingBufferHeight,a=new Uint8Array(width*height*4),b=new Uint8Array(a.length);w.draw();gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,a);f.visible=false;w.draw();gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,b);f.visible=true;w.draw();let count=0,left=width,right=0,top=height,bottom=0;for(let i=0;i<a.length;i+=4)if(a[i]!==b[i]||a[i+1]!==b[i+1]||a[i+2]!==b[i+2]){count++;const x=i/4%width,y=height-1-Math.floor(i/4/width);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}return{count,bounds:[left,top,right,bottom]};});}
+ // Normal forward acceleration: no relocated actors, no forced director state.
+ await fresh();await p.keyboard.down('KeyW');await step(60);await p.keyboard.up('KeyW');let s=await read();const straight=await pixels();assert(straight.count>4);assert.equal(s.departure.phase,'working');assert.equal(s.cart.health,100);assert.equal(s.graphics.staffSighting.site,0);await p.screenshot({path:`${out}/${tag}-straight-2560.png`});rows.push({name:'straight',pixels:straight,state:s});
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390]]){
+  await p.setViewportSize({width,height});await fresh();await p.keyboard.down('KeyW');await step(50);await p.keyboard.down('KeyA');await step(12);await p.keyboard.up('KeyA');await step(98);await p.keyboard.up('KeyW');
+  s=await read();const viewed=await pixels();assert(viewed.count>8,JSON.stringify({width,viewed}));assert(s.graphics.staffSighting.seen>.25);assert.equal(s.cart.health,100);assert.equal(s.messages.banner,'');await p.screenshot({path:`${out}/${tag}-occupied-${width}.png`});
+  await p.keyboard.press('Escape');const paused=(await read()).graphics.staffSighting;await p.evaluate(()=>advanceTime(1200));assert.deepEqual((await read()).graphics.staffSighting,paused);await p.keyboard.press('Escape');
+  await p.keyboard.down('KeyQ');await step(20);await p.keyboard.up('KeyQ');await step(12);const empty=await read();assert.equal(empty.graphics.staffSighting.site,-1);assert.equal(empty.graphics.staffSighting.used,1);assert.equal(empty.graphics.staffSighting.visible,false);await p.screenshot({path:`${out}/${tag}-empty-${width}.png`});
+  rows.push({name:`look-away-${width}`,pixels:viewed,occupied:s,empty});
+ }
+ // Comfort uses the same quiet presence and disappearance, with no strobe or
+ // camera takeover. Real pause settings, then a fresh ordinary input approach.
+ await p.keyboard.press('Escape');await p.locator('#chase-comfort > summary').click();await p.locator('#chase-reduced').check();await p.keyboard.press('Escape');await fresh();await p.keyboard.down('KeyW');await step(50);await p.keyboard.down('KeyA');await step(12);await p.keyboard.up('KeyA');await step(98);await p.keyboard.up('KeyW');s=await read();assert(s.campaign.reducedMotion);const comfort=await pixels();assert(comfort.count>8);await p.screenshot({path:`${out}/${tag}-comfort-844.png`});await p.keyboard.down('KeyQ');await step(20);await p.keyboard.up('KeyQ');await step(12);assert.equal((await read()).graphics.staffSighting.used,1);rows.push({name:'comfort',pixels:comfort});
+ for(const checkpoint of [1,2]){await fresh(checkpoint);await step(20);s=await read();assert.equal(s.graphics.staffSighting.site,-1);assert(!s.graphics.staffSighting.opening);}
+ const final=await resources();assert.deepEqual(final,initial,'Presence, look-away, pause, comfort and checkpoint starts add no GPU/audio resources');assert.deepEqual(errors,[]);
+ fs.writeFileSync(`${out}/${tag}-opening.json`,JSON.stringify({passed:true,rows,initial,final,errors},null,2));console.log(JSON.stringify({passed:true,tag,rows:rows.map(r=>({name:r.name,pixels:r.pixels})),initial,final,errors}));
+ }finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

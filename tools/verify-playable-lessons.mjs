@@ -1,0 +1,11 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const ctx={window:{}};vm.runInNewContext(fs.readFileSync('web/quality-core.js','utf8'),ctx);const lesson=ctx.window.RCQuality.lesson;
+const h={rehearsal:false,nightOrderActionsCompleted:[],travelDistance:0,lessonStartDistance:0,rebuild:{observedJoe:true},practiceDrill:{active:true,completed:false}};
+assert.equal(lesson(h,{y:0},{}).id,'move');h.travelDistance=8;
+assert.equal(lesson(h,{y:20},{}).id,'look','Seeing Joe is not camera-input evidence');
+const learned={move:true,look:true};assert.equal(lesson(h,{y:40},learned,{welcome:true}).id,'interact');
+assert.equal(lesson(h,{y:60},learned,{cover:true}).id,'cover');
+assert.equal(lesson(h,{y:40},learned).id,'chip');assert.equal(lesson(h,{y:40},{...learned,chip:true}),null);
+h.lessonStartDistance=8;assert.equal(lesson(h,{y:40},{}).id,'move','New device measures its own travel');
+assert.equal(lesson({...h,rehearsal:true},{y:40},{}),null);assert.equal(lesson(h,{y:170},{}),null);
+console.log('Contextual lessons, genuine look evidence, per-device movement baseline and optional practice pass');

@@ -18,14 +18,21 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
     '  window.__shedTest = {state, resetFirstHole, NIGHT_ORDER_ACTIONS, SHED_EXIT, SHED_APPROACH_ROUTE, obstacleAtPosition, shedApproachReadabilityState};\n  window.advanceTime = (milliseconds) => {')}));
   const tick=n=>page.evaluate(n=>window.advanceTime(n*1000/60),n);
   const press=async(key,n=1)=>{await page.keyboard.down(key);await tick(n);await page.keyboard.up(key);await tick(1);};
+  const faceExit=async()=>{
+    const movementX=await page.evaluate(()=>{const {state:s,SHED_EXIT:t}=__shedTest,p=s.player,b=Math.atan2((t.x-p.x)*.72,t.y-p.y),d=Math.atan2(Math.sin(b-p.yaw),Math.cos(b-p.yaw));return d/(.0025*s.lookSensitivity*(s.invertLook?-1:1));});
+    await page.dispatchEvent('canvas','pointermove',{pointerType:'mouse',buttons:1,movementX,movementY:0});await tick(1);
+  };
   const read=()=>page.evaluate(()=>{const s=JSON.parse(window.render_game_to_text());return {mode:s.mode,player:s.player,prompt:s.hole.interactionPromptOwner,filing:s.hole.escapeFiling,guide:s.hole.navigationReadability.firstPersonGuidance};});
   const reset=async(x,variant=0,key=true,checks=true,y=680)=>{
     await page.evaluate(({x,variant,key,checks,y})=>{const t=window.__shedTest;t.resetFirstHole();t.state.mode='first_hole';t.state.manualTime=true;t.state.transitionAlpha=0;
       const h=t.state.hole;h.variantIndex=variant;h.tutorialVisible=false;h.practiceDrill.active=false;h.controlHintTimer=0;h.zoneBannerTimer=0;
       h.keyCollected=key;h.nightOrderActionsCompleted=checks?t.NIGHT_ORDER_ACTIONS.map(a=>a.id):[];
       h.joe.x=100;h.joe.y=80;h.joe.patrolPause=100;
-      t.state.player.x=x;t.state.player.y=y;
+      t.state.player.x=x;t.state.player.y=y;t.state.player.yaw=0;t.state.player.pitch=0;t.state.keys.clear();t.state.inputMethod='keyboard';
     },{x,variant,key,checks,y});await tick(1);
+    // Scene replacement prepares assets asynchronously and holds simulation.
+    // Input assertions start after that gate, including each run variant.
+    await page.waitForFunction(()=>!window.RCScene3D||RCScene3D.stats().ready,null,{timeout:60000});await tick(1);
   };
   try{
     await page.goto(url);await page.waitForFunction(()=>typeof window.advanceTime==='function');
@@ -35,6 +42,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
       await reset(x,variant);
       if(x===-18&&variant===0)await page.screenshot({path:path.join(out,'approach.png')});
       await press('ArrowUp',130);
+      await faceExit(); // Perspective Use requires looking at the exit.
       const reached=await read();
       if(x===-18&&variant===0)await page.screenshot({path:path.join(out,'door-ready.png')});
       await press('Enter');const filing=await read();await tick(150);const finished=await read();
@@ -48,6 +56,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
         await reset(x,variant,true,true,650);
         if(x===0&&variant===0)await page.screenshot({path:path.join(out,'open-approach.png')});
         await press('ArrowUp',200);
+        await faceExit();
         const reached=await read();assert.equal(reached.prompt?.targetId,'maintenance-shed',`Open lane ${x} must reach the shed`);
         await press('Enter');await tick(150);assert.equal((await read()).mode,'victory');
         results.push({variant,x,approachStart:{x,y:650},mode:'victory'});
@@ -58,6 +67,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'
         assert.equal(await page.evaluate(()=>Boolean(window.__shedTest.obstacleAtPosition(window.__shedTest.state.player.x,632))),false);
         let reached=false;
         for(let i=0;i<250;i++){
+          if(await page.evaluate(()=>{const {state:s,SHED_EXIT:t}=__shedTest;return Math.hypot((s.player.x-t.x)*.72,s.player.y-t.y)<t.radius;}))await faceExit();
           const s=await read();if(s.prompt?.targetId==='maintenance-shed'){reached=true;break;}
           const p=s.guide.nextWaypoint;assert.ok(p,'Route must provide a reachable waypoint');
           const keys=[];const dx=p.x-s.player.x,dy=p.y-s.player.progress;

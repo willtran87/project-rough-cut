@@ -1,0 +1,68 @@
+{
+  "unitId": "joe-hd",
+  "displayName": "Joe",
+  "unitType": "enemy",
+  "packageStatus": "animation-draft",
+  "assetRoot": "assets/enemies/joe-hd",
+  "gameplayFrameSize": {"w":192,"h":192},
+  "createdFromReferences": ["art-source/runtime-png/joe-mower-v1.png", "art-source/rough-cut-joe-directions-v1.png"],
+  "brief": {
+    "species":"human",
+    "classOrArchetype":"obsessive software Product Owner and mower pursuer",
+    "combatRole":"course antagonist",
+    "bodyType":"adult man with realistic proportions",
+    "personality":"calculating, unnervingly delighted",
+    "outfit":"charcoal V-neck sweater, pale blue collared office shirt, brown trousers and dark leather shoes",
+    "weaponOrProp":"worn red walk-behind mower with black engine and tubular handle",
+    "visualMotifs":["swept brown hair","short stubble","crooked grin","chipped red enamel"],
+    "palette":{"dominant":["charcoal","brown"],"accent":["vermilion","pale blue"],"glow":["restrained teal and amber edge light"],"forbidden":["neon body colors"]}
+  },
+  "sourcePipeline": {
+    "stage":"animation-draft",
+    "referenceSheetsApproved":false,
+    "perActionSourceSheetsApproved":false,
+    "handAuthoredFrames":false,
+    "sourceManifest":"metadata/joe-hd.package-manifest.json",
+    "sourceSheetsRoot":"source_sheets",
+    "sliceNotes":"README.md",
+    "directionKeyBoard":null,
+    "referenceSourceImage":"source_sheets/joe-hd-reference-v2.png",
+    "highQualityGeneratedArtLineage":true,
+    "sourceSheetCoverage":[{
+      "action":"push-walk",
+      "directions":["SE"],
+      "keyPoses":["left contact","weight transfer","passing","forward swing","right contact","weight transfer","passing","loop recovery"],
+      "parentSourceReferenceBoard":"source_sheets/joe-hd-reference-v1.png",
+      "parentDirectionKeyBoard":null,
+      "generationMethod":"built-in image generation; pose-expanded source drawings, then generator cleanup",
+      "sourceSheets":["source_sheets/joe-hd-push-walk-v1.png","source_sheets/joe-hd-push-walk-v2.png"],
+      "approved":false
+    },{
+      "action":"push-walk-natural",
+      "directions":["SE"],
+      "keyPoses":["contact","weight transfer","toe off","passing","low swing","heel approach"],
+      "parentSourceReferenceBoard":"source_sheets/joe-hd-reference-v2.png",
+      "parentDirectionKeyBoard":null,
+      "generationMethod":"built-in image generation; pose-expanded source drawings with two generator cleanup passes",
+      "sourceSheets":["source_sheets/joe-hd-natural-walk-v1.png","source_sheets/joe-hd-natural-walk-v2.png","source_sheets/joe-hd-natural-walk-v3.png"],
+      "approved":false
+    }]
+  },
+  "styleParameters":["gritty","painterly","retro-modern hybrid"],
+  "bespokeAnimationFrames":false,
+  "poseExpandedFrames":true,
+  "duplicatedFramesPresent":false,
+  "nativeLayeredSourcesPresent":false,
+  "projectExtensions":{
+    "scope":"One facing push-walk experiment and GIF preview; not the full game character set",
+    "nativeFrameSize":{"w":362,"h":362},
+    "sourceReferenceSize":{"w":1024,"h":1536},
+    "sourceSheetSize":{"w":1086,"h":1448},
+    "runtimeIntegration":false,
+    "userApproval":false,
+    "builtInTool":"image_gen.imagegen",
+    "gifEncoder":"FFmpeg palettegen/paletteuse, natural revision 10 fps / 12 frames, loop forever",
+    "currentPreview":"previews/joe-hd-push-walk-natural.gif",
+    "currentAnimationMetadata":"metadata/joe-hd.natural-animations.json"
+  }
+}

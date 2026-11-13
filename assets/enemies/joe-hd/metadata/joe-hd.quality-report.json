@@ -1,0 +1,14 @@
+{
+  "unitId":"joe-hd",
+  "status":"animation-draft",
+  "validationCommand":"python C:/Users/Will/.codex/skills/high-resolution-isometric-pixel-character/scripts/validate_character_package.py assets/enemies/joe-hd --id joe-hd --type enemy",
+  "validationPassed":false,
+  "previewValidationCommand":"node tools/prepare-joe-hd-draft.cjs --natural",
+  "previewValidationPassed":true,
+  "checks":{"dimensions":"pass for 362px native preview and 192px readability exports","transparency":"pass, fine edge colors need cleanup","duplicateFrames":"pass, twelve unique drawings","animationQuality":"needs-paint-pass","fullEnemyPackage":"incomplete, preview scope only"},
+  "bespokeAnimationFrames":false,
+  "poseExpandedFrames":true,
+  "duplicatedFramesPresent":false,
+  "remainingPaintPasses":["Clean colored fringes around the silhouette and handle gaps","Stabilize mower/engine shape and hand contact between frames","Correct foot contact, weight transfer and loop continuity","Create consistent full directional and behavior-state animation sources before runtime replacement"],
+  "notes":["Built-in image generation followed by FFmpeg GIF encoding; no direct GIF image-generation tool was available","Reference and action sources exist but no full direction board or user-approved per-action set","No gameplay or active runtime asset changes"]
+}

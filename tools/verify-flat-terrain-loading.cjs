@@ -1,0 +1,15 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{const hardware=process.argv.includes('--hardware'),tag=hardware?'hardware':'software',out='output/back-nine-experience/terrain-cost',rows=[];
+for(const baseline of [true,false,false,true]){
+ const b=await chromium.launch({headless:true,args:[...(hardware?['--use-angle=d3d11','--ignore-gpu-blocklist']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']),'--disable-gpu-shader-disk-cache']});try{
+ const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__terrainLoad={calls:0,ms:0,max:0,uploads:0,bytes:0,tasks:[],gaps:[]};const buffer=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...a){__terrainLoad.uploads++;__terrainLoad.bytes+=typeof a[1]==='number'?a[1]:(a[1]?.byteLength||0);return buffer.apply(this,a);};new PerformanceObserver(l=>__terrainLoad.tasks.push(...l.getEntries().map(e=>e.duration))).observe({type:'longtask',buffered:true});let last=performance.now();window.__timer=setInterval(()=>{const t=performance.now();__terrainLoad.gaps.push(t-last);last=t;},16);});
+ let source=fs.readFileSync((baseline?out+'/baseline-source':'web')+'/course-terrain.js','utf8').replace('export function contourGround(THREE,g){','function rawContourGround(THREE,g){');source+='\nexport function contourGround(T,g){const start=performance.now(),result=rawContourGround(T,g),ms=performance.now()-start;const p=window.__terrainLoad;p.calls++;p.ms+=ms;p.max=Math.max(p.max,ms);return result;}';
+ await p.route('**/course-terrain.js*',r=>r.fulfill({contentType:'application/javascript',body:source}));
+ if(baseline)for(const file of ['back-nine-scene.js','back-nine-landscape.js'])await p.route('**/'+file+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(out+'/before-yield/'+file,'utf8')}));
+ const cdp=await p.context().newCDPSession(p);await cdp.send('Network.enable');await cdp.send('Network.setCacheDisabled',{cacheDisabled:true});
+ const start=Date.now();await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
+ const row={baseline,readyMs:Date.now()-start,...await p.evaluate(()=>{clearInterval(__timer);const s=JSON.parse(render_game_to_text()),p=__terrainLoad;return {contour:{calls:p.calls,totalMs:p.ms,maxMs:p.max},uploads:p.uploads,bytes:p.bytes,maxTimerGap:Math.max(...p.gaps),longTasks:p.tasks,programs:s.graphics.programs,textures:s.graphics.textures,preparation:s.graphics.preparation};}),errors};assert.deepEqual(errors,[]);rows.push(row);fs.writeFileSync(`${out}/${tag}-loading.json`,JSON.stringify({passed:true,rows},null,2));console.log(JSON.stringify(row));
+ }finally{await b.close();}
+}
+})().catch(e=>{console.error(e);process.exitCode=1;});

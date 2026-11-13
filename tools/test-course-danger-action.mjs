@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {courseDangerAction as read} from '../web/course-danger-action.js';
+const owner={binding:'interact',availability:'ready',prompt:'E - STAMP FIELD LOG',consequence:{kind:'loud_field_check_commitment',noiseSeconds:5.6,coverLabel:'SERVICE CART'}};
+const danger={instruction:'danger',closePhase:'none'};
+assert.equal(read(owner,danger).action,owner.prompt);
+assert.match(read(owner,danger).consequence,/5\.6s signal.*Joe checks here.*SERVICE CART/);
+for(const instruction of ['aim','quiet','filing','sealing','choice','interaction'])assert.equal(read(owner,{instruction}).action,'');
+for(const closePhase of ['warning','push','recovery'])assert.equal(read(owner,{...danger,closePhase}).action,'');
+assert.equal(read(owner,{...danger,closeRemaining:1}).action,'');
+for(const availability of ['inactive','busy','blocked'])assert.equal(read({...owner,availability},danger).action,'');
+assert.equal(read({...owner,binding:null},danger).action,'');assert.equal(read(null,danger).action,'');
+const quiet={...owner,consequence:{kind:'quiet_field_check_commitment',tactic:{holdSeconds:2}}};assert.match(read(quiet,danger).consequence,/crouched and still for 2s/);
+for(const prompt of ['A - STAMP FIELD LOG','USE - STAMP FIELD LOG','Q - STAMP FIELD LOG'])assert.equal(read({...owner,prompt},danger).action,prompt);
+console.log(JSON.stringify({passed:true,checks:'Authoritative binding/consequence, busy-owner rejection, immediate evasion and commitment priority'}));

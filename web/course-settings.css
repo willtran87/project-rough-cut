@@ -1,0 +1,36 @@
+#course-settings{position:absolute;inset:0;z-index:25;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:2%;box-sizing:border-box;background:#06150e;color:#e7edd9;font:calc(clamp(15px,1.25vw,23px) * var(--settings-scale,1))/1.4 Georgia,serif;}
+#course-settings[hidden]{display:none;}
+#course-settings *{box-sizing:border-box;}
+.course-settings-card{display:flex;flex-direction:column;width:min(100%,1200px);height:100%;min-width:0;min-height:0;border:1px solid #8c9b70;background:#0b2018;}
+#course-settings header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #526b50;flex-shrink:0;}
+#course-settings header>div{flex:1;min-width:0;}
+#course-settings h1{font-size:1.7em;margin:0;color:#efe2b5;}
+#course-settings header small{font-size:.7em;color:#b2c5ae;}
+#course-settings button{min-height:44px;padding:8px 12px;font:inherit;line-height:1.3;color:#f1e6c9;border:1px solid #7e9d74;background:#173728;cursor:pointer;}
+#course-settings button:focus-visible,#course-settings input:focus-visible{outline:3px solid #ffcf82;outline-offset:2px;}
+#course-settings button[aria-current="true"],#course-settings button[aria-pressed="true"]{background:#4a492a;border-color:#f1c37f;}
+#course-settings nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid #526b50;flex-shrink:0;}
+#course-settings nav[hidden]{display:none;}
+#course-settings nav button{flex:1;font-size:.8em;}
+.course-settings-scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:16px 20px;}
+.course-settings-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.course-settings-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:12px;border:1px solid #385c42;background:#10291d;min-width:0;}
+.course-settings-row[data-selected="true"]{border-color:#edc17d;}
+.course-settings-row>span{font-size:.9em;}
+.course-settings-row output{font-size:.85em;color:#f2cd8e;}
+.course-settings-row input[type="range"]{grid-column:1/-1;width:100%;min-width:0;height:44px;margin:0;accent-color:#c4d995;cursor:pointer;}
+.course-settings-row button{min-width:75px;font-size:.85em;}
+.course-settings-presets{margin-top:24px;}.course-settings-presets[hidden]{display:none;}
+.course-settings-presets h2{font-size:1em;}.course-settings-presets>div:first-of-type{display:flex;flex-wrap:wrap;gap:8px;}
+.course-settings-presets button{flex:1;}
+.course-look-preview{position:relative;height:76px;border:1px solid #54795d;background:#091810;margin-top:12px;padding:10px;touch-action:none;user-select:none;cursor:ew-resize;overflow:hidden;font-size:.85em;}
+.course-look-preview i{position:absolute;bottom:10px;width:8px;height:20px;background:#d6e8b3;}
+.course-settings-help{font-size:.85em;color:#c2d1b7;}
+#course-settings footer{flex-shrink:0;padding:8px 16px 12px;border-top:1px solid #526b50;}
+#course-settings footer p{font-size:.8em;margin:0 0 8px;color:#f2cd8e;}
+#course-settings footer small{display:block;font-size:.65em;color:#b4c5ac;margin-top:8px;}
+.course-settings-actions{display:flex;flex-wrap:wrap;gap:8px;}
+#course-settings .course-settings-actions button{position:static;flex:1;min-height:44px;font:inherit;font-size:.8em;margin:0;}
+@media(max-width:650px){#course-settings{padding:1%;font-size:calc(15px * var(--settings-scale,1));}#course-settings header{padding:8px 12px;}#course-settings nav{padding:8px;gap:5px;}#course-settings nav button{flex:1 1 28%;padding:6px;font-size:.75em;}.course-settings-rows{grid-template-columns:1fr;gap:10px;}.course-settings-scroll{padding:12px 10px;}.course-settings-row{padding:10px;}#course-settings footer{padding:8px;}#course-settings footer small{display:none;}.course-settings-actions{gap:6px;}.course-settings-actions button{flex-basis:40%!important;}}
+@media(max-height:500px){#course-settings{padding:1%;}#course-settings header{padding:6px 12px;}#course-settings header small,#course-settings footer small{display:none;}#course-settings h1{font-size:1.2em;}#course-settings nav{padding:5px 8px;}.course-settings-scroll{padding:10px;}#course-settings footer{padding:6px 10px;}#course-settings footer p:empty{display:none;}}
+@media(max-width:650px){#course-settings nav{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior:contain;touch-action:pan-x;scrollbar-width:thin;}#course-settings nav button{flex:0 0 auto;min-width:100px;padding:8px;}}

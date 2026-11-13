@@ -1,0 +1,30 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{
+ const out='output/course-mower-craft';fs.mkdirSync(out,{recursive:true});
+ const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];
+ p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__craft={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
+ await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__craftScene=()=>({joeModel,renderer,world});\n'}));
+ const draw=()=>p.evaluate(async()=>{__craft.render();await RCScene3D.whenPresented();});
+ const read=()=>p.evaluate(()=>({model:RCScene3D.stats().joeModel,memory:{...__craftScene().renderer.info.memory},programs:__craftScene().renderer.info.programs.length}));
+ const shot=async name=>{await draw();await p.screenshot({path:out+'/'+name+'.png'});};
+ try{
+  await p.goto('http://127.0.0.1:4187');await p.waitForFunction(()=>window.__craft&&window.__craftScene);await p.locator('#game').click();
+  await p.evaluate(()=>{const t=__craft,s=t.state;t.resetFirstHole();Object.assign(s,{mode:'first_hole',manualTime:true,transitionAlpha:0,guidedHints:false,apparitions:false,flashes:0,reducedMotion:false});s.keys.clear();Object.assign(s.hole,{tutorialVisible:false,elapsed:100,messageTimer:0,zoneBannerTimer:0});s.hole.practiceDrill.active=false;s.hole.engagement.experience.arrival.phase='skipped';Object.assign(s.player,{x:0,y:176,yaw:0,pitch:-.28});Object.assign(s.hole.joe,{x:0,y:198,effectLastX:0,effectLastY:198,effectHeading:-Math.PI/2,effectSpeed:0,walkMeters:0,patrolPause:9999,mode:'patrol'});});await draw();await p.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready,null,{timeout:180000});await p.evaluate(()=>RCSpatialControls.set('resolution',.75));await shot('front-2560');
+  const initial=await read();assert(initial.model.mowerCraft.contacts.slice(0,2).every(c=>c.strength>.51&&Math.abs(c.position[1]-.009)<1e-8));assert(initial.model.handError<.005);
+  await p.evaluate(()=>{const s=__craft.state;s.player.x=18;s.player.y=186;s.player.yaw=-.82;s.player.pitch=-.3;});await shot('quarter-2560');
+  // Disable only contact material output; normal animation may reset its strength.
+  await p.evaluate(()=>__craftScene().joeModel.root.traverse(o=>{if(o.name.startsWith('MowerContact'))o.material.visible=false;}));await shot('contacts-off');
+  await p.evaluate(()=>__craftScene().joeModel.root.traverse(o=>{if(o.name.startsWith('MowerContact'))o.material.visible=true;}));await shot('contacts-on');
+  await p.evaluate(()=>{const root=__craftScene().joeModel.root.getObjectByName('CourseMowerCraft');root.visible=false;});await shot('quarter-before');await p.evaluate(()=>__craftScene().joeModel.root.getObjectByName('CourseMowerCraft').visible=true);
+  const poses=[];for(let i=0;i<24;i++){await p.evaluate(i=>{const s=__craft.state;s.hole.elapsed=101+i/24;s.hole.joe.walkMeters=i/24*(.46/.62)/.16;s.hole.joe.effectSpeed=5;},i);await draw();poses.push((await read()).model);if([6,12,18].includes(i))await shot('stride-'+i);}
+  assert(poses.every(s=>s.handError<.005));assert(poses.some(s=>s.mowerCraft.contacts.some(c=>c.strength<.4)));assert(poses.some(s=>Math.abs(s.mowerCraft.flapAngle)>.01));checks.push('Actual skinned gait keeps the grip, contact shading follows foot lift and travel rattles the discharge flap');
+  const frozen=await read();await draw();assert.deepEqual((await read()).model.mowerCraft,frozen.model.mowerCraft);await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(2000));assert.deepEqual((await read()).model.mowerCraft,frozen.model.mowerCraft);await p.keyboard.press('Escape');checks.push('Duplicate presentation and pause preserve mechanical pose');
+  await p.evaluate(()=>{__craft.state.reducedMotion=true;__craft.state.hole.elapsed+=.1;});await draw();assert.equal((await read()).model.mowerCraft.rotorAngle,0);assert.equal((await read()).model.mowerCraft.flapAngle,0);checks.push('Reduced motion stops pulley and loose-flap cosmetic motion');
+  await p.evaluate(()=>{__craft.state.reducedMotion=false;__craft.state.hole.joe.effectSpeed=0;});for(let i=0;i<6;i++){await p.evaluate(()=>__craft.state.hole.elapsed+=.1);await draw();}const warm=await read();for(let i=0;i<60;i++){await p.evaluate(()=>__craft.state.hole.elapsed+=.1);await draw();}const after=await read();assert.deepEqual(after.memory,warm.memory);assert.equal(after.programs,warm.programs);checks.push('Repeated engine animation does not grow GPU geometry, texture or program counts');
+  await p.evaluate(()=>Object.assign(__craft.state.player,{x:0,y:176,yaw:0,pitch:-.28}));for(const [width,height]of [[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await shot('front-'+width);}
+  await p.evaluate(()=>{window.__oldCraft=__craftScene().joeModel.root.getObjectByName('CourseMowerCraft');RCScene3D.reset();});await draw();await p.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready,null,{timeout:180000});await draw();assert(await p.evaluate(()=>{let count=0;__craftScene().world.traverse(o=>{if(o.name==='CourseMowerCraft')count++;});return count===1&&!__oldCraft.parent;}));checks.push('Course rebuild removes previous mechanical detail and creates exactly one replacement');
+  assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,checks,initial,poses,warm,after,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,34 @@
+# Under the Green visual upgrade pass 26 - physical scythe scenery contact
+
+Scope: V46 masonry flecks and falling root dirt, completing the local contact-response family alongside pass25 water splash. The 53 requirements and seven release gates remain intact. This is not whole-level Level 1 parity or performance acceptance.
+
+## Implementation
+
+- Rendering and scenery collision share the 49-point forged scythe outline. Navigation retains its original broad clearance capsule. Planted strikes use the physical blade, shaft, socket and grips, with angular subdivision and nine-step last-safe contact refinement. The blade's 13mm sample envelope stops about 2mm outside a surface; this is not a claim of a 2mm visible edge gap.
+- Boundary masonry comes from the same floor-wall partitions and carved keeper wall pieces as the scene. Solid masonry obstacle boxes also participate. Non-box machinery and the gate retain conservative collision and do not invent contact debris.
+- Extracted the existing root/mud authoring stage into under-green-organic-geometry.js without changing its rendering parameters. Physical root, soil and broken-mortar triangles come from that same authoring function. No root or mud artwork was replaced or simplified. Native geometry supplies the physics index; the existing software LOD remains and its actual rendered meshes are separately checked.
+- A bounded 0.4m spatial index stores 137,862 relevant triangles in 7,450 cells. Retained typed storage is 6,656,642 bytes (about 6.35 MiB), excluding JS Map/key overhead and transient construction allocations. Bounding rejection and point-cell lookup avoid all-scene triangle searches.
+- Contact captures actual surface point, outward normal and material. A cut emits six small lit, non-emissive masonry chips or brown falling soil fragments. No action banner or additional noise cue. Shaft/grip blocks do not pretend the cutting edge struck something.
+- One fixed 48-fragment instance pool; eight bounded contact records; 3,840 bytes of matrix/color/alpha attributes. Fragments expire by 0.65s or floor contact. Pause uses frozen simulation time; Reduced Motion suppresses debris; fresh runs own no contacts.
+- Blocked recovery retraces the sampled clear weapon path after the existing hold. This fixes the newly exposed case where returning directly toward the ordinary carry angle would press the blade back into the wall and stall pursuit. Normal attack timing and player-contact tests remain authoritative; movement/turning still require navigation clearance.
+
+## Evidence
+
+- New pure contact tests: masonry windup/sweep and root windup/sweep at 30/60/120Hz; physical-safe poses throughout recovery; one impact per strike; gravity/expiry; an air cut creates no debris; fresh run resets. Live simulation verifies stationary capture requires real blade contact, while ordinary retreat remains playable with no water hit.
+- Final native browser report: output/under-green/visual-upgrade/pass26-final-contact/hardware/report.json. 31 views, 63 actual rendered geometry/hand audits, no intersections or console/page errors. Native 2560x1600 plus 1280x720, 390x844, 844x390. Tests include both materials, preparation and sweep interruptions, hold/retraction, expiry, pause, Reduced Motion, fresh run, actual step-based capture and escape.
+- Software full behavior report: pass26-organic/software/report.json. 29 views and 63 actual mesh/hand audits pass, including live capture/escape. Final diffuse-color-only appearance report: pass26-final-contact/software/report.json (29 views/37 mesh audits, appearance-only run; no repeated live outcome replay). The desktop screenshot remains 2560x1600 while its actual software render target is 960x600.
+- Dry route: pass26-organic-clearance, 1,379 frames and 106 actual geometry audits, no intersections. Pure clearance retains 1,288 safe initial carries, close-wall turns and 11,093 live route frames across four completed routes. Attack frames assert physical clearance; walking/turning assert the original navigation clearance.
+- Existing scythe, root geometry and 242 attack-acting interruption tests pass. Current water contact/splash regression: pass26-water/hardware/report.json, 18 views, no errors; actual recovering steel enters the flood and produces the existing low splash.
+- Installed develop-web-game client: pass26-final-client, five screenshot/state pairs, terminal exit0, final playing at (0,8.84), actual 960x540. Initial five-second click timed out while Preparing; subsequent Enter input recovered. This is a gameplay smoke pass, not startup-gate acceptance. Final screenshot and state inspected; no error artifact.
+- Inspected native stone contact/flecks, both root contacts/falling dirt, software falling dirt, current water fan and installed-client gameplay. Pixel comparison at fixed native pose proves final root dirt contributes 235 and 395 pixels in small contact-local regions, with peak RGB about (26,30,20)/(29,31,20). It remains brown and subdued, not glowing or screen-filling.
+
+## Cost and limitations
+
+- Same-frame native debris-on/off comparisons: +1 draw and +120 triangles for six fragments; textures87 and programs132 remain constant during the comparison. Capacity maximum is 960 triangles if all48 fragments are simultaneously alive. No new texture maps or lights.
+- CPU microbenchmark (1,490 measured samples per fixture; not browser frame time): final settleWeapon median/p95 about0.284/0.585ms in open space,0.324/1.041ms at masonry,0.759/2.370ms near roots. The initial unoptimized physical sampler was rejected after an open-space p95 around15.5ms. Timing report: pass26-source/final-settle-timing.json. Root contact costs more CPU than the old padded capsule, which could not reach it.
+- Legacy verify-under-green-attack-reposition.mjs and its retained tapes start inside today's scenery (all six initial weaponClear checks fail before stepping, following prior layout changes). That old verifier was not accepted as evidence and was left unchanged. Fresh live fixtures in the new browser/pure suite prove current capture/escape behavior. Migrating old fixtures remains test maintenance, not evidence of a new runtime regression.
+- All seven full-level gates remain open: matched Level1, full-route motion/responsive, hazard states, exhaustive clearance, performance, accessibility and district identity. Broad software frame-time acceptance remains unresolved. The physics index does not replace the existing navigation model or constitute exhaustive testing of every possible pose.
+
+## Next work
+
+Continue the full plan: V30 moving Joe/scythe shadow, V34 dark-value grading, V53 camera finish, and the remaining partial environment/material requirements. Preserve the shared controls, entrance-only restart, opaque walls and existing pursuit rules. Final source hashes: pass26-source/final-hashes.json (11 runtime files). No commit/deploy or goal completion.

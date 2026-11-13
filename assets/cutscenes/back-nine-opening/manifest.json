@@ -1,0 +1,41 @@
+{
+  "generator": "Built-in image_gen",
+  "processing": "Native resolution, WebP quality 90; original PNGs retained",
+  "assets": [
+    {
+      "source": "assets\\cutscenes\\back-nine-opening\\01-other-side.png",
+      "runtime": "web\\assets\\optimized\\back-nine-opening\\01-other-side.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 558408
+    },
+    {
+      "source": "assets\\cutscenes\\back-nine-opening\\02-one-cart-side-profile.png",
+      "runtime": "web\\assets\\optimized\\back-nine-opening\\02-one-cart-side-profile.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 465746
+    },
+    {
+      "source": "assets\\cutscenes\\back-nine-opening\\03-offline.png",
+      "runtime": "web\\assets\\optimized\\back-nine-opening\\03-offline.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 539752
+    },
+    {
+      "source": "assets\\cutscenes\\back-nine-opening\\04-larger-engine.png",
+      "runtime": "web\\assets\\optimized\\back-nine-opening\\04-larger-engine.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 425820
+    },
+    {
+      "source": "assets\\cutscenes\\back-nine-opening\\05-seen-you.png",
+      "runtime": "web\\assets\\optimized\\back-nine-opening\\05-seen-you.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 568996
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+try{await import('./final-cut.js');}catch(error){console.error(error);document.getElementById('loading').textContent='The chapter could not load: '+error.message;const b=document.getElementById('primary');b.disabled=false;b.textContent='Retry loading';b.onclick=()=>location.reload();}

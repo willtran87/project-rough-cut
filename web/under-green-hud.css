@@ -1,0 +1,93 @@
+/* Level 1's DOM HUD is the reference: Courier, square panels, warm ivory,
+   muted gold and restrained translucent edges. Local layout keeps the bank
+   signal and scythe arc clear; all measurements follow the full scene. */
+#hud{
+ --hud-font:clamp(16px,1.797vw,30px);
+ --hud-gutter:clamp(12px,1.875vw,32px);
+ --hud-ink:#f3edda;
+ --hud-muted:#bdccc4;
+ --hud-gold:#d5b780;
+ font:500 var(--hud-font)/1.3 "Courier New",Courier,monospace;
+ color:var(--hud-ink);
+ text-shadow:0 2px 5px #09141c;
+}
+#objective-card{
+ left:var(--hud-gutter);top:var(--hud-gutter);
+ padding:8px 14px;max-width:min(48%,650px);
+ border-left:3px solid var(--hud-gold);
+ background:linear-gradient(90deg,#10241ddd,#10241d88 75%,transparent);
+}
+#objective-card small,#record-status{
+ font:inherit;font-size:max(11px,.63em);letter-spacing:.12em;
+ color:var(--hud-muted);
+}
+#district{display:block;margin-bottom:4px}
+#objective-card strong{font:600 1em/1.3 "Courier New",Courier,monospace;margin:0}
+#record-status{display:block;margin-top:6px;letter-spacing:.04em}
+#objective-card #focus-state{font-size:max(11px,.63em);color:#eed7a6;margin:0 0 4px}
+.hud-tools{right:var(--hud-gutter);top:var(--hud-gutter);gap:8px}
+#hud button{
+ border-radius:0;font:600 max(13px,.68em)/1.3 "Courier New",Courier,monospace;
+ min-height:44px;padding:8px 14px;text-shadow:none;
+}
+.hud-tools button{background:#10241dc7;border-color:#becab477;color:#e5e4cb}
+#water-read{
+ right:var(--hud-gutter);top:calc(var(--hud-gutter) + 60px);
+ width:clamp(260px,26vw,390px);padding:10px 14px;
+ background:#10241de0;border:1px solid #65766b88;
+}
+#water-read small{font:inherit;font-size:max(11px,.63em);letter-spacing:.12em;color:var(--hud-muted)}
+#water-read strong{font:600 max(14px,.78em)/1.35 "Courier New",Courier,monospace;margin:5px 0 7px;font-variant-numeric:tabular-nums}
+#water-read[data-danger=false] strong{color:#b8d6bc}
+#water-read[data-danger=true] strong{color:#f0c098}
+#water-read[data-danger=false][data-action=wait] strong{color:#eed7a6}
+#water-read span{font:500 max(12px,.63em)/1.4 "Courier New",Courier,monospace;color:#c1d2bf}
+#water-meter{display:block;height:5px;margin:0 0 7px;accent-color:#d8bf88}
+#bottom{bottom:var(--hud-gutter);width:min(900px,86%)}
+#caption{border-radius:0;font:500 calc(clamp(14px,1.25vw,20px) * var(--caption-scale,1))/1.4 "Courier New",Courier,monospace;max-width:100%;padding:8px 14px;color:var(--hud-ink)}
+#use{background:#11251deb;border:1px solid var(--hud-gold);border-left-width:3px;color:#eed7a6;white-space:normal}
+#hint{font:500 max(12px,.63em)/1.4 "Courier New",Courier,monospace;letter-spacing:0;color:#bdccc4}
+
+@media(max-width:700px),(max-height:500px){
+ #hud{--hud-font:17px;--hud-gutter:12px}
+ #objective-card{padding:8px 10px;max-width:calc(100% - 110px)}
+ #objective-card strong{font-size:15px}
+ #hud button{font-size:12px;padding:7px 9px}
+ #water-read{left:12px;right:12px;top:76px;width:auto;padding:7px 10px}
+ #water-read strong{font-size:13px;margin:0 0 4px}
+ #water-read small,#water-read span{display:none}
+ #water-meter{height:4px;margin:0}
+ #caption{font-size:calc(13px * var(--caption-scale,1));padding:7px 10px}
+ #bottom{width:calc(100% - 24px)}
+ body.crossing #objective,body.crossing #record-status{display:none}
+ body.at-release #objective,body.at-release #record-status,
+ body[data-mode=aftermath] #objective,body[data-mode=aftermath] #record-status{display:none}
+ /* The commitment must survive looking away from the release during closure. */
+ body.closing #objective{display:block}
+}
+@media(max-width:700px) and (min-height:501px){
+ .hud-tools{flex-direction:column;gap:5px}
+ #water-read{top:12px;right:110px}
+ #water-read[data-lesson=true] span{display:none}
+ body.crossing #objective-card{top:86px;max-width:calc(100% - 110px);background:none;border:0;padding:0}
+ body.crossing #district,body.crossing.walking-option #focus-state{display:none}
+ body.touch #bottom{bottom:216px}
+}
+@media(max-height:500px){
+ #objective-card{max-width:48%;top:10px}
+ #objective-card strong{font-size:14px}
+ .hud-tools{top:10px;flex-direction:row}
+ #water-read{top:64px;right:auto;width:min(390px,calc(100% - 24px))}
+ #water-read[data-lesson=true] span{display:none}
+ body.touch #bottom{bottom:95px;width:55%}
+}
+/* On a short, wide screen a caption stacked above Use reaches the reticle.
+   Anchor these two rows independently inside the HUD, beside the water strip
+   and above the thumb controls, without shrinking accessibility text. */
+@media(min-width:701px) and (max-height:500px){
+ #bottom,body.touch #bottom{position:static;width:auto;transform:none}
+ #caption{position:absolute;top:64px;right:12px;width:min(360px,calc(50% - 24px));margin:0}
+ #use{position:absolute;left:50%;bottom:56px;transform:translateX(-50%);max-width:55%;margin:0}
+ body.touch #use{bottom:110px}
+ #hint{position:absolute;bottom:12px;left:15%;width:70%}
+}

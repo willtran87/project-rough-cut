@@ -1,0 +1,32 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade/pass21-scythe/${software?'software':'hardware'}`;
+fs.mkdirSync(out,{recursive:true});
+(async()=>{
+ const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[];
+ try{
+  for(const before of [true,false]){
+   const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   if(before)for(const f of ['under-green-actor.js','under-green-scythe-scene.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass21-source/'+f,'utf8')}));
+   if(!before)await p.route('**/under-green-actor.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-actor.js','utf8').replace(' const scythe=buildGrassScythe(body,materials);',' const scythe=buildGrassScythe(body,materials); window.__scytheArt={body,root};')}));
+   await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
+   const fixtures=[['front','walk',0,-1.4,49],['side','walk',0,3,54],['rear','walk',0,0,58],['windup','windup',.6,-1.4,50.5],['midcut','sweep',.11,-1.4,50.5],['follow','recover',.1,-1.4,50.5],['close','walk',0,-1,51.5]];
+   async function place(f){await p.evaluate(async([name,phase,age,x,y])=>{const {createRun}=await import('./under-green-sim.js'),{settleWeapon}=await import('./under-green-clearance.js');const r=createRun();r.mode='playing';r.time=20;r.elapsed=20;r.messageTime=0;Object.assign(r.player,{x,y,yaw:Math.atan2(-x,54-y),pitch:-.1});Object.assign(r.joe,{x:0,y:54,yaw:Math.PI,phase,age,speed:0,walk:0});settleWeapon(r,1/60);__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
+   async function capture(name){const state=await p.evaluate(()=>JSON.parse(render_game_to_text())),geometry=await p.evaluate(()=>__underGreen.inspectJoeGeometry());assert.deepEqual(geometry.hits,[]);assert(state.graphics.actor.handError<.015);await p.screenshot({path:`${out}/${before?'before':'after'}-${name}-${p.viewportSize().width}.png`});views.push({before,name,viewport:p.viewportSize(),state,geometry});}
+   for(const f of fixtures){await place(f);await capture(f[0]);}
+   if(!before){
+    const audit=await p.evaluate(()=>{const result=[];__scytheArt.body.traverse(o=>{if(!o.isMesh)return;const m=o.material;result.push({name:o.name,vertices:o.geometry.attributes.position.count,triangles:o.geometry.index.count/3,emissive:m.emissive.getHex(),side:m.side,map:m.map?{size:[m.map.image.width,m.map.image.height],mag:m.map.magFilter}:null});});return result;});
+    assert.equal(audit.length,5);assert(audit.every(m=>m.emissive===0));assert.equal(audit.filter(m=>m.map).length,3);fs.writeFileSync(out+'/materials.json',JSON.stringify(audit,null,2));
+    // Render every authored cut phase at 30/60/120 Hz, including recovery.
+    const samples=await p.evaluate(async()=>{const {settleWeapon}=await import('./under-green-clearance.js');const samples=[];for(const hz of [30,60,120])for(const [phase,duration]of [['windup',.6],['sweep',.22],['recover',1.3]])for(let t=0;t<=duration;t+=1/hz){const r=__underGreen.run;r.time+=1/hz;Object.assign(r.joe,{phase,age:t});delete r.joe.weaponPose;settleWeapon(r,1/hz);advanceTime(0);const a=JSON.parse(render_game_to_text()).graphics.actor;samples.push({hz,phase,age:t,handError:a.handError,blade:a.blade,footError:a.footError});}return samples;});assert(samples.every(s=>s.handError<.015&&s.footError<.015));fs.writeFileSync(out+'/attack-samples.json',JSON.stringify(samples,null,2));
+    // Natural scheduled ghost, continuous gait and fade in the real scene.
+    await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const r=createRun();r.mode='playing';r.elapsed=10;Object.assign(r.player,{x:0,y:19,yaw:0});__underGreen.run=r;advanceTime(0);advanceTime(1800);await __underGreen.whenPresented();});await capture('ghost');assert(views.at(-1).state.graphics.ghost.visible);assert.equal(views.at(-1).state.graphics.ghost.drawCalls,1);
+    if(!software)for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});for(const f of fixtures.filter(f=>['front','midcut'].includes(f[0]))){await place(f);await capture(f[0]);}}
+    await place(fixtures[0]);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.actor);await p.evaluate(()=>advanceTime(500));assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.actor),frozen);
+   }
+   await p.close();console.log(JSON.stringify({before,software,views:views.filter(v=>v.before===before).length}));
+  }
+  for(const old of views.filter(v=>v.before)){const fresh=views.find(v=>!v.before&&v.name===old.name&&v.viewport.width===old.viewport.width);assert.deepEqual(fresh.state.graphics.resolution,old.state.graphics.resolution);assert(fresh.state.graphics.draws<=old.state.graphics.draws);assert(fresh.state.graphics.triangles<=old.state.graphics.triangles+1000);}
+  assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,errors},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,errors}));
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

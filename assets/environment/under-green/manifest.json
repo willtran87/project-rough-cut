@@ -1,0 +1,110 @@
+{
+  "generationMode": "built-in image_gen",
+  "assets": [
+    {
+      "source": "assets/environment/under-green/surfaces-v1.png",
+      "runtime": "web/assets/under-green/surfaces-v1.png",
+      "prompt": "assets/environment/under-green/surfaces-v1-prompt.json",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "quadrants": [
+        "masonry",
+        "bark",
+        "floor",
+        "mud"
+      ],
+      "activeQuadrants": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "source": "assets/environment/under-green/surfaces-industrial-v1.png",
+      "runtime": "web/assets/under-green/surfaces-industrial-v1.png",
+      "prompt": "assets/environment/under-green/surfaces-industrial-v1-prompt.json",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "quadrants": [
+        "concrete",
+        "tile",
+        "panel",
+        "sand"
+      ],
+      "activeQuadrants": [
+        2,
+        3
+      ]
+    },
+    {
+      "source": "assets/environment/under-green/surfaces-masonry-v3.png",
+      "runtime": "web/assets/under-green/surfaces-masonry-v3.png",
+      "prompt": "assets/environment/under-green/surfaces-masonry-v3-prompt.json",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "quadrants": [
+        "masonry-a",
+        "masonry-b",
+        "concrete",
+        "tile"
+      ],
+      "activeQuadrants": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "masonrySampling": {
+        "size": [
+          1254,
+          627
+        ],
+        "worldMetres": [
+          4,
+          2
+        ],
+        "texelsPerMetre": 313.5
+      },
+      "referenceCandidate": "assets/environment/under-green/surfaces-masonry-v2.png"
+    },
+    {
+      "source": "assets/environment/under-green/machinery-surfaces-v1.png",
+      "runtime": "web/assets/under-green/machinery-surfaces-v1.png",
+      "prompt": "assets/environment/under-green/machinery-surfaces-v1-prompt.json",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "quadrants": [
+        "green-enamel",
+        "bare-metal",
+        "red-enamel",
+        "rust"
+      ],
+      "activeQuadrants": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "sampling": {
+        "size": [
+          627,
+          627
+        ],
+        "worldMetres": [
+          1,
+          1
+        ],
+        "texelsPerMetre": 627
+      }
+    }
+  ],
+  "runtimeSampling": "Active architectural/organic 627px tiles span two metres; paired brick1254x627 spans4x2m. Close machinery uses627px per metre. Nearest magnification, mipmapped minification and independent wetness; albedo is not used as bump."
+}

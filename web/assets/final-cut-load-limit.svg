@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="660" viewBox="0 0 1000 660" role="img" aria-labelledby="title desc">
+ <title id="title">Nursery swale load-limit diagram</title>
+ <desc id="desc">The irrigation bypass sends water into the nursery swale. Saturated turf gives way beneath heavy machinery. The raised stone service path stays above the water.</desc>
+ <rect width="1000" height="660" fill="#ded3ae"/>
+ <rect x="18" y="18" width="964" height="624" fill="none" stroke="#233d34" stroke-width="6"/>
+ <g fill="#233d34" font-family="monospace" font-weight="bold" text-anchor="middle">
+  <text x="500" y="79" font-size="40">NURSERY / LOAD LIMIT</text>
+  <text x="500" y="126" font-size="27">KEEP HEAVY MACHINERY OFF SATURATED TURF</text>
+ </g>
+ <path d="M45 150H955" stroke="#233d34" stroke-width="4"/>
+ <!-- The pump feeds low ground. The dry stone path is drawn above its level. -->
+ <g stroke="#233d34" stroke-width="8" stroke-linejoin="round">
+  <path d="M82 254H220V337H275" fill="none"/>
+  <rect x="75" y="205" width="92" height="115" fill="#718576"/>
+  <path d="M95 205V184H145" fill="none"/>
+  <circle cx="121" cy="248" r="22" fill="#ded3ae"/>
+  <path d="M121 226V270M99 248H143"/>
+  <path d="M258 320L282 337L258 354" fill="none"/>
+  <path d="M290 358H330L350 385H650L680 358H735V435H290Z" fill="#7a8060"/>
+  <path d="M332 360H667L650 385H350Z" fill="#6b9791" stroke="none"/>
+  <path d="M340 365h60m25 0h60m30 0h60m25 0h50" stroke="#ded3ae" stroke-width="4"/>
+  <path d="M735 310H925V435H735Z" fill="#a5a28a"/>
+  <path d="M735 310H925M735 350H925M735 392H925M780 310V350M865 310V350M820 350V392M780 392V435M865 392V435" fill="none" stroke-width="4"/>
+ </g>
+ <!-- A heavy reel unit sinks at its wheels; no person is shown injured. -->
+ <g transform="translate(476 285) rotate(8)" stroke="#233d34" stroke-width="8" stroke-linejoin="round">
+  <path d="M-100 12H100V56H-100Z" fill="#ded3ae"/>
+  <path d="M-40 12V-50H32L54 12" fill="#718576"/>
+  <path d="M-21-33H17L29-3H-21Z" fill="#ded3ae" stroke-width="5"/>
+  <circle cx="-65" cy="58" r="28" fill="#233d34"/>
+  <circle cx="65" cy="58" r="28" fill="#233d34"/>
+ </g>
+ <g stroke="#9a4c35" fill="none" stroke-width="7">
+  <path d="M405 201V235m-13-13 13 13 13-13M570 215V250m-13-13 13 13 13-13"/>
+  <path d="M357 388l-10 18 22 9-12 18m251-45 12 18-22 9 12 18"/>
+ </g>
+ <g fill="#233d34" font-family="monospace" font-weight="bold" text-anchor="middle">
+  <text x="155" y="475" font-size="29">PUMP BYPASS</text>
+  <text x="504" y="475" font-size="29">SOFT SWALE</text>
+  <text x="833" y="475" font-size="29">STONE PATH</text>
+  <text x="500" y="548" font-size="30">BYPASS OPEN → WATER STAYS</text>
+  <text x="500" y="594" font-size="28">USE THE RAISED STONE PATH</text>
+ </g>
+</svg>
