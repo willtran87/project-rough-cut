@@ -1,0 +1,42 @@
+{
+  "generator": "Built-in image_gen",
+  "processing": "Native pixels preserved, lossless WebP packaging; no resize or artwork alteration",
+  "assets": [
+    {
+      "name": "search",
+      "source": "assets\\enemies\\joe\\final-cut-expressions-v1\\search.png",
+      "runtime": "web\\assets\\optimized\\joe-expressions-v1\\search.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1631568,
+      "sha256": "9b6fcdd04340b61d0c6384bcc2877a14cc9eb131bb0286b514a934b4ec1c2d7b"
+    },
+    {
+      "name": "attack",
+      "source": "assets\\enemies\\joe\\final-cut-expressions-v1\\attack.png",
+      "runtime": "web\\assets\\optimized\\joe-expressions-v1\\attack.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1559280,
+      "sha256": "3d9bb0abfee791539286c8bda4321e68cb2bdfe5b63eff7236e03bf08357ed77"
+    },
+    {
+      "name": "frustrated",
+      "source": "assets\\enemies\\joe\\final-cut-expressions-v1\\frustrated.png",
+      "runtime": "web\\assets\\optimized\\joe-expressions-v1\\frustrated.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1560302,
+      "sha256": "6029f3b12c2cdf0a2e103bfd51a2656d78915db9c796bb60448b417511874780"
+    },
+    {
+      "name": "panic",
+      "source": "assets\\enemies\\joe\\final-cut-expressions-v1\\panic.png",
+      "runtime": "web\\assets\\optimized\\joe-expressions-v1\\panic.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1645142,
+      "sha256": "b5d3c9e95fb63a69798e8442015f93dd1410c9321c908bcb6fbe136590ea89ef"
+    }
+  ]
+}

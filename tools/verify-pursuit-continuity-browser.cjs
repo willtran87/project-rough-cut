@@ -1,0 +1,15 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{const software=process.argv.includes('--software'),label=software?'software':'hardware',out='output/pursuit-continuity';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+ const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),before=await read();
+ await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js');const r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:0,y:294,speed:14,health:50});Object.assign(r.joe,{x:0,y:273,speed:18});r.joe.ram.armed=true;__backNine.run=r;});
+ await p.keyboard.down('w');await p.keyboard.down('q');await tick(1700);await p.keyboard.up('w');await p.keyboard.up('q');const shadow=await read();assert.equal(shadow.checkpoint,1);assert.equal(shadow.cart.health,70);assert.equal(shadow.cart.hits,0);assert(shadow.joe.y>295);assert.equal(shadow.joe.mode,'shadowing');assert(!shadow.joe.ram.armed);assert(shadow.player.y-shadow.joe.y>10.9);await p.screenshot({path:`${out}/${label}-shadow-2560.png`});
+ await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.stringify(__backNine.run));await tick(500);assert.equal(await p.evaluate(()=>JSON.stringify(__backNine.run)),frozen);await p.keyboard.press('Escape');
+ // Brake during the remaining protection: following is physical, damage-free
+ // and cannot run the mower into the stopped player to pin them in place.
+ await p.keyboard.down('Space');await tick(600);await p.keyboard.up('Space');const stopped=await read();assert.equal(stopped.cart.hits,0);assert(stopped.player.y-stopped.joe.y>10.9);
+ for(const [width,height]of [[1280,720],[844,390]]){await p.setViewportSize({width,height});await tick(17);await p.screenshot({path:`${out}/${label}-shadow-${width}.png`});}
+ const after=await read();assert.equal(after.graphics.programs,before.graphics.programs);assert.equal(after.graphics.textures,before.graphics.textures);assert.equal(after.audio.voices,9);assert.deepEqual(errors,[]);
+ fs.writeFileSync(`${out}/${label}-browser.json`,JSON.stringify({passed:true,software,shadow,stopped,after:after.graphics,errors},null,2));console.log(JSON.stringify({passed:true,software,checkpoint:shadow.checkpoint,joeY:shadow.joe.y,playerY:shadow.player.y,health:shadow.cart.health,programs:after.graphics.programs,textures:after.graphics.textures,errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

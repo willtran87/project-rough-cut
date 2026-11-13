@@ -1,0 +1,20 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');const out='output/final-cut/folding';fs.mkdirSync(out,{recursive:true});
+(async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],poses=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
+ for(const deployment of [0,.25,.5,.75,1])for(const yaw of [-Math.PI/2,.73]){
+  const result=await p.evaluate(async({deployment,yaw})=>{const {createRun}=await import('./final-cut-sim.js'),{wingClearanceParts,worldPart,wingPartId,RIG_WING_PARTS}=await import('./final-cut-rig.js');const r=createRun({checkpoint:1,cut:['rough-1-0','rough-1-1','rough-1-2']});r.mode='playing';Object.assign(r.rig,{x:0,y:50,yaw,phase:'turn',deployment,distance:.71,reelAngle:deployment*4.1});Object.assign(r.player,{x:7,y:56,yaw:Math.atan2(-7,-6),pitch:.1});__finalCut.run=r;await advanceTime(0);
+   const ids=new Set([-1,1].flatMap(sign=>RIG_WING_PARTS.map(part=>wingPartId(part,sign)))),geometry=__finalCut.rigGeometry().filter(g=>ids.has(g.id));let excess=0,samples=0;
+   for(const height of [1.25,2.2,2.35,5]){const parts=wingClearanceParts(r.rig,height);
+    for(const g of geometry){const points=g.points.filter(v=>v[1]<=height);for(let k=0;k<g.triangles.length;k+=3)for(let a=0;a<3;a++){const u=g.points[g.triangles[k+a]],v=g.points[g.triangles[k+(a+1)%3]];if((u[1]<height)!==(v[1]<height)){const t=(height-u[1])/(v[1]-u[1]);points.push(u.map((x,i)=>x+(v[i]-x)*t));}}
+     if(!points.length)continue;const part=parts.find(s=>s.id===g.id);if(!part)throw Error(`Missing clipped ${g.id}`);const b=worldPart(r.rig,part),s=Math.sin(b.yaw),c=Math.cos(b.yaw);for(const [x,h,y]of points){const dx=x-b.x,dy=y-b.y;excess=Math.max(excess,Math.abs(dx*c-dy*s)-part.w/2,Math.abs(dx*s+dy*c)-part.d/2);samples++;}
+    }
+   }return {deployment,yaw,excess,samples,meshes:geometry.length,identities:new Set(geometry.map(g=>g.id)).size,expectedIdentities:ids.size};},{deployment,yaw});
+  assert(result.excess<1e-5,JSON.stringify(result));assert.equal(result.identities,result.expectedIdentities);assert.equal(result.meshes,28);poses.push(result);
+ }
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(()=>{__finalCut.run.rig.deployment=.5;return advanceTime(0);});await p.screenshot({path:`${out}/half-fold-${width}.png`});}
+ await p.setViewportSize({width:2560,height:1600});await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.rig,{x:20.13,y:38.75,yaw:0,phase:'disengage',deployment:1});Object.assign(r.player,{x:22,y:34,yaw:Math.atan2(-1.87,4.75),pitch:.1});__finalCut.run=r;await advanceTime(0);});await p.screenshot({path:`${out}/corner-before.png`});
+ await p.evaluate(()=>advanceTime(300));const backing=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(backing.rig.clearanceWarning);assert.match(await p.locator('#caption').innerText(),/backing clear/);assert.match(await p.locator('#threat').innerText(),/BACKING CLEAR/);await p.screenshot({path:`${out}/corner-backing.png`});
+ await p.evaluate(()=>advanceTime(4000));const recovered=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(recovered.mode,'final_cut_playing');assert.equal(recovered.rig.deployment,0);assert(['turn','align'].includes(recovered.rig.phase));await p.screenshot({path:`${out}/corner-recovered.png`});
+ assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/browser.json`,JSON.stringify({passed:true,poses,errors},null,2));console.log(JSON.stringify({passed:true,poses,errors}));
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

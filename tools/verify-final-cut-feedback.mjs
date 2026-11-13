@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRun,step} from '../web/final-cut-sim.js';
+import {footstepSurface,createFinalCutFootsteps} from '../web/final-cut-footsteps.js';
+import {closePassFeedback,createFinalCutFeedback,feedbackPreferences,rigSurfaceDistance} from '../web/final-cut-feedback.js';
+const checks=[];
+const run=createRun();run.mode='playing';
+for(const [surface,x,y,water,cut]of [['paving',-2,2.5,0,[]],['paving',-2,10,0,[]],['paving',-18,-15,0,[]],['wet',18,-16.8,0,[]],['paving',10,38,1,[]],['paving',23,60,1,[]],['road',0,107,1,[]],['turf',0,40,0,[]],['rough',0,50,0,[]],['turf',0,50,0,['rough-1-1']],['turf',8,74,0,[]],['wet',8,74,1,[]],['paving',8,81,1,[]]]){Object.assign(run.player,{x,y});run.water=water;run.cut=cut;assert.equal(footstepSurface(run),surface,`${x},${y}`);}
+checks.push('Rendered ground footprints distinguish paving, turf, uncut rough, cut rough, road, sluice channel and flooded swale; raised paving stays dry');
+const scheduled=[],param=name=>({setValueAtTime(v,t){scheduled.push({name,v,t,method:'set'});},setTargetAtTime(){},cancelScheduledValues(t){scheduled.push({name,t,method:'cancel'});},linearRampToValueAtTime(v,t){scheduled.push({name,v,t,method:'linear'});},exponentialRampToValueAtTime(v,t){scheduled.push({name,v,t,method:'exp'});}}),ctx={currentTime:0},voice={gain:{gain:param('gain')},filter:{frequency:param('frequency'),Q:param('q')},pan:{pan:param('pan')}};
+const steps=createFinalCutFootsteps(ctx,voice);const walker=createRun();walker.mode='playing';Object.assign(walker.player,{x:-2,y:0,walk:0});steps.update(walker,true,.8);
+for(let i=0;i<60;i++){step(walker,{forward:1},1/60);ctx.currentTime+=1/60;steps.update(walker,true,.8);}
+assert.equal(steps.stats().played,2);assert.equal(steps.stats().last.surface,'paving');const before=steps.stats().played;
+for(let i=0;i<60;i++){step(walker,{},1/60);steps.update(walker,true,.8);}assert.equal(steps.stats().played,before);
+steps.update(walker,false);assert.equal(scheduled.at(-1).v,0);walker.player.walk+=8;steps.update(walker,false);steps.update(walker,true);assert.equal(steps.stats().played,before);
+steps.update(walker,true,0);assert.equal(scheduled.at(-1).v,0);const other=createRun();other.mode='playing';steps.update(other,true);assert.equal(steps.stats().played,before);
+assert(scheduled.filter(x=>'v'in x).every(x=>Number.isFinite(x.v)));
+checks.push('Actual simulated movement produces two contacts over 3.84 m; stopping, pause, zero volume, skipped distance and owner replacement never replay stale contacts');
+const cadence=[];for(const hz of [30,60,120]){const r=createRun();r.mode='playing';Object.assign(r.player,{x:-2,y:0});const f=createFinalCutFootsteps(ctx,voice);f.update(r,true);for(let i=0;i<hz;i++){step(r,{forward:1},1/hz);f.update(r,true);}cadence.push(f.stats().played);}assert.deepEqual(cadence,[2,2,2]);
+const blocked=createRun();blocked.mode='playing';Object.assign(blocked.player,{x:-2,y:19.139,yaw:0});const wallSteps=createFinalCutFootsteps(ctx,voice);wallSteps.update(blocked,true);for(let i=0;i<120;i++){step(blocked,{forward:1},1/60);wallSteps.update(blocked,true);}assert.equal(wallSteps.stats().played,0);
+checks.push('Cadence is identical at 30/60/120 Hz; two seconds pressing against the actual closed course rail produces no false footfalls');
+const near=createRun();near.mode='playing';Object.assign(near.rig,{x:0,y:26,yaw:-Math.PI/2,phase:'pass',deployment:1});Object.assign(near.player,{x:0,y:33});assert(closePassFeedback(near));assert(rigSurfaceDistance(near.player,near.rig)>0);near.player.y=45;assert.equal(closePassFeedback(near),null);near.player.y=33;near.rig.phase='turn';assert.equal(closePassFeedback(near),null);near.rig.phase='pass';near.won=true;assert.equal(closePassFeedback(near),null);near.won=false;
+checks.push('Close-pass vibration follows distance to real rig parts, excludes distant machinery, turns and won runs');
+let now=0;const commands=[],actuator={effects:['dual-rumble'],playEffect(type,params){commands.push({type,...params});return Promise.resolve('complete');},reset(){commands.push({reset:true});return Promise.resolve('complete');}},pad={connected:true,vibrationActuator:actuator};
+const feedback=createFinalCutFeedback(()=>now);feedback.update(near,pad,true,1);assert.equal(commands.length,1);
+for(let i=0;i<100;i++)feedback.update(near,pad,true,1);assert.equal(commands.length,1);now=100;feedback.update(near,pad,true,.5);assert.equal(commands.length,2);assert.equal(commands[1].weakMagnitude,commands[0].weakMagnitude*.5);
+near.mode='paused';feedback.update(near,pad,true,.5);assert(commands.at(-1).reset);near.mode='playing';now=200;feedback.update(near,pad,true,1);feedback.update(near,pad,false,1);assert(commands.at(-1).reset);
+now=400;feedback.update(near,pad,true,1);feedback.update(near,null,true,1);assert(commands.at(-1).reset);
+near.mode='aftermath';near.won=true;now=700;feedback.update(near,pad,true,1);const initial=feedback.stats().played;near.events.push({type:'manifold-rupture',time:near.time,x:17,y:26});feedback.update(near,pad,true,1);assert.equal(feedback.stats().played,initial+1);assert.equal(feedback.stats().last.kind,'manifold-rupture');feedback.update(near,pad,true,1);assert.equal(feedback.stats().played,initial+1);
+feedback.update(near,pad,true,0);assert(commands.at(-1).reset);near.events.push({type:'rig-shutdown',time:near.time});feedback.update(near,pad,true,0);now=1000;feedback.update(near,pad,true,1);assert.equal(feedback.stats().played,initial+1);
+assert(commands.filter(c=>!c.reset).every(c=>c.duration<=220&&c.startDelay===0&&c.strongMagnitude<=.3&&c.weakMagnitude<=.38));
+checks.push('Bounded dual-rumble is rate-limited, strength-scaled, canceled on pause/input loss/disconnect/zero strength; collapse events fire once and muted events never replay');
+const rejected=createFinalCutFeedback(()=>now),bad={connected:true,vibrationActuator:{effects:['dual-rumble'],playEffect(){return Promise.reject(Error('unsupported'));},reset(){return Promise.reject(Error('unavailable'));}}};near.mode='playing';near.won=false;rejected.update(near,bad,true,1);await new Promise(r=>setImmediate(r));rejected.update(near,bad,true,1);assert.equal(rejected.stats().failures,1);assert.equal(rejected.stats().supported,false);assert.equal(rejected.stats().played,1);
+const unsupported=createFinalCutFeedback(()=>now);unsupported.update(near,{connected:true,vibrationActuator:{effects:['trigger-rumble'],playEffect(){throw Error('must not call');}}},true,1);assert.equal(unsupported.stats().played,0);
+assert.deepEqual(feedbackPreferences({footsteps:NaN,vibration:2}),{footsteps:.8,vibration:1});
+checks.push('Rejected/unsupported actuator cannot throw into gameplay or repeatedly retry; malformed preferences normalize safely');
+fs.mkdirSync('output/final-cut/feedback',{recursive:true});fs.writeFileSync('output/final-cut/feedback/rules.json',JSON.stringify({passed:true,checks,footsteps:steps.stats(),haptics:feedback.stats()},null,2));console.log(JSON.stringify({passed:true,checks}));

@@ -1,0 +1,935 @@
+{
+  "source": "Four ordinary-input Range B recovery pilots retained before blocked-strike repositioning, November 12. These are geometric fixtures, not human sessions.",
+  "fixtures": [
+    {
+      "row": {
+        "channel": "range-b",
+        "phase": 3.75,
+        "stance": "walk",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.7666666666666674,
+        "recoveredAt": 1.0333333333333345,
+        "attacks": 16,
+        "minimumGap": 0.7076241962397034,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 17,
+        "maximumStep": 0.16213333333333324,
+        "maximumJoeStep": 0.03500000000000014
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 56.749999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.162375807880498,
+          "y": 28.000076361847096,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 6.2559999999999905,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": false,
+          "focus": false,
+          "eyeHeight": 1.65,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 3.84,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 16.869999999999983,
+          "y": 28,
+          "yaw": -1.5706884137986337,
+          "speed": 0,
+          "walk": 4.130000000000017,
+          "phase": "recover",
+          "age": 0,
+          "last": {
+            "x": 16.162375807880498,
+            "y": 28.000076361847096
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 56.749999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0.4499999999999992,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.162375807880498,
+            "y": 28.000076361847096,
+            "time": 56.749999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 0.006696820614716925,
+          "weaponPose": {
+            "angle": -0.6018518518518517,
+            "pitch": -0.018518518518518545,
+            "height": 1.1625925925925926,
+            "raised": 0.9259259259259258
+          },
+          "weaponBlocked": true,
+          "tightTurn": false,
+          "closingRate": 2.3485180872082448e-48,
+          "previousGap": 0.7076241962397034,
+          "recoveryFrom": {
+            "angle": -0.6018518518518517,
+            "pitch": -0.018518518518518545,
+            "height": 1.1625925925925926,
+            "raised": 0.9259259259259258,
+            "active": false
+          },
+          "recoveryBlocked": true
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe’s blade hits the masonry. Move while he recovers.",
+        "messageTime": 1.6,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    },
+    {
+      "row": {
+        "channel": "range-b",
+        "phase": 3.75,
+        "stance": "sprint",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.7666666666666674,
+        "recoveredAt": 1.183333333333334,
+        "attacks": 16,
+        "minimumGap": 0.652228464386766,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 26,
+        "maximumStep": 0.17893333333333317,
+        "maximumJoeStep": 0.03500000000000014
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 56.749999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.46277153579099,
+          "y": 28.00001522805375,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 7.777333333333317,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": false,
+          "focus": false,
+          "eyeHeight": 1.65,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 6.08,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 17.114999999999984,
+          "y": 28,
+          "yaw": -1.570772979065406,
+          "speed": 0,
+          "walk": 3.8850000000000158,
+          "phase": "recover",
+          "age": 0.11666666666666665,
+          "last": {
+            "x": 16.46277153579099,
+            "y": 28.00001522805375
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 56.749999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0.566666666666666,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.46277153579099,
+            "y": 28.00001522805375,
+            "time": 56.749999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 0.006680792452436846,
+          "weaponPose": {
+            "angle": -0.5881800878239624,
+            "pitch": -0.023776889298476,
+            "height": 1.1604892442806096,
+            "raised": 0.904892442806096
+          },
+          "weaponBlocked": false,
+          "tightTurn": false,
+          "closingRate": 1.5821012768544995e-48,
+          "previousGap": 0.652228464386766,
+          "recoveryFrom": {
+            "angle": -0.6018518518518517,
+            "pitch": -0.018518518518518545,
+            "height": 1.1625925925925926,
+            "raised": 0.9259259259259258,
+            "active": false
+          },
+          "recoveryBlocked": true
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe’s blade hits the masonry. Move while he recovers.",
+        "messageTime": 1.4833333333333338,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    },
+    {
+      "row": {
+        "channel": "range-b",
+        "phase": 4.25,
+        "stance": "crouch",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.44999999999999996,
+        "recoveredAt": 0.55,
+        "attacks": 16,
+        "minimumGap": 0.678822610907421,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 0,
+        "maximumStep": 0.15133333333333354,
+        "maximumJoeStep": 0.03500000000000014
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 57.249999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.12117739219365,
+          "y": 28.000064885892026,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 4.669999999999992,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": true,
+          "focus": false,
+          "eyeHeight": 1.1200000000000003,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 2.4,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 16.799999999999983,
+          "y": 28,
+          "yaw": -1.5707007408626035,
+          "speed": 0,
+          "walk": 4.200000000000017,
+          "phase": "windup",
+          "age": 0.4833333333333333,
+          "last": {
+            "x": 16.12117739219365,
+            "y": 28.000064885892026
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 57.249999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0.41666666666666585,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.12117739219365,
+            "y": 28.000064885892026,
+            "time": 57.249999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 0.006726822698880675,
+          "weaponPose": {
+            "angle": -0.5858303326474622,
+            "pitch": -0.024680641289437616,
+            "height": 1.160127743484225,
+            "raised": 0.9012774348422495
+          },
+          "weaponBlocked": false,
+          "tightTurn": false,
+          "closingRate": 2.70197825663549e-48,
+          "previousGap": 0.678822610907421,
+          "recoveryFrom": null,
+          "recoveryBlocked": true
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe plants his feet. Move out of the blade’s path.",
+        "messageTime": 0.7166666666666665,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    },
+    {
+      "row": {
+        "channel": "range-b",
+        "phase": 4.75,
+        "stance": "crouch",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.44999999999999996,
+        "recoveredAt": 0.55,
+        "attacks": 16,
+        "minimumGap": 0.678822610907421,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 0,
+        "maximumStep": 0.15133333333333354,
+        "maximumJoeStep": 0.03500000000000014
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 57.749999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.12117739219365,
+          "y": 28.000064885892026,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 4.669999999999992,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": true,
+          "focus": false,
+          "eyeHeight": 1.1200000000000003,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 2.4,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 16.799999999999983,
+          "y": 28,
+          "yaw": -1.5707007408626035,
+          "speed": 0,
+          "walk": 4.200000000000017,
+          "phase": "windup",
+          "age": 0.4833333333333333,
+          "last": {
+            "x": 16.12117739219365,
+            "y": 28.000064885892026
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 57.749999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0.41666666666666585,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.12117739219365,
+            "y": 28.000064885892026,
+            "time": 57.749999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 0.006726822698880675,
+          "weaponPose": {
+            "angle": -0.5858303326474622,
+            "pitch": -0.024680641289437616,
+            "height": 1.160127743484225,
+            "raised": 0.9012774348422495
+          },
+          "weaponBlocked": false,
+          "tightTurn": false,
+          "closingRate": 2.70197825663549e-48,
+          "previousGap": 0.678822610907421,
+          "recoveryFrom": null,
+          "recoveryBlocked": true
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe plants his feet. Move out of the blade’s path.",
+        "messageTime": 0.7166666666666665,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    },
+    {
+      "stage": "turn-obstructed",
+      "row": {
+        "channel": "range-b",
+        "phase": 4.25,
+        "stance": "crouch",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.44999999999999996,
+        "recoveredAt": 0.55,
+        "attacks": 7,
+        "minimumGap": 0.6544205696354711,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 0,
+        "maximumStep": 0.15133333333333354,
+        "maximumJoeStep": 0.03500000000000223
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 57.249999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.791526608732543,
+          "y": 28.00453435490985,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 29.429999999999794,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": true,
+          "focus": false,
+          "eyeHeight": 1.1200000000000003,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 2.4,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 17.18941596191735,
+          "y": 28.536625923480063,
+          "yaw": -2.6899121141431928,
+          "speed": 0,
+          "walk": 4.865000000000027,
+          "phase": "turn",
+          "age": 2.033333333333331,
+          "last": {
+            "x": 16.791526608732543,
+            "y": 28.00453435490985
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 57.249999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.791526608732543,
+            "y": 28.00453435490985,
+            "time": 57.249999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 1.2474781031419104,
+          "weaponPose": {
+            "angle": 0,
+            "pitch": -0.001083851446716258,
+            "height": 1.07,
+            "raised": 0
+          },
+          "weaponBlocked": true,
+          "tightTurn": false,
+          "closingRate": 0.0010514021192974219,
+          "previousGap": 0.6644075366229183,
+          "recoveryFrom": null,
+          "recoveryBlocked": true,
+          "attackReposition": {
+            "target": {
+              "x": 17.528813979125445,
+              "y": 28.748307254530335
+            },
+            "observed": {
+              "x": 16.3516306482625,
+              "y": 28.014102215805913
+            },
+            "started": 55.21666666666508
+          }
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe’s blade hits the masonry. Move while he recovers.",
+        "messageTime": 0,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    },
+    {
+      "stage": "turn-obstructed",
+      "row": {
+        "channel": "range-b",
+        "phase": 4.75,
+        "stance": "crouch",
+        "requestedGap": 9,
+        "policy": "recover-and-evade",
+        "actualGap": 9.00499861188218,
+        "firstAdvice": "wait",
+        "cleared": false,
+        "mode": "playing",
+        "seconds": 29.999999999999577,
+        "waterHits": 1,
+        "firstHit": 0.44999999999999996,
+        "recoveredAt": 0.55,
+        "attacks": 7,
+        "minimumGap": 0.6544205696354711,
+        "usedDry": true,
+        "protectedCapture": false,
+        "protectedFrames": 0,
+        "maximumStep": 0.15133333333333354,
+        "maximumJoeStep": 0.03500000000000223
+      },
+      "final": {
+        "version": 3,
+        "mode": "playing",
+        "checkpoint": 3,
+        "time": 57.749999999998295,
+        "elapsed": 29.999999999999577,
+        "difficulty": "standard",
+        "player": {
+          "x": 16.791526608732543,
+          "y": 28.00453435490985,
+          "yaw": 3.141592653589793,
+          "pitch": 0,
+          "speed": 0,
+          "walk": 29.429999999999794,
+          "stumble": 0,
+          "grace": 0,
+          "crouched": true,
+          "focus": false,
+          "eyeHeight": 1.1200000000000003,
+          "wasRear": false,
+          "rearAmount": 0,
+          "rearAngle": 0,
+          "crossingSpeed": 2.4,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "recovery": null
+        },
+        "joe": {
+          "x": 17.18941596191735,
+          "y": 28.536625923480063,
+          "yaw": -2.6899121141431928,
+          "speed": 0,
+          "walk": 4.865000000000027,
+          "phase": "turn",
+          "age": 2.033333333333331,
+          "last": {
+            "x": 16.791526608732543,
+            "y": 28.00453435490985
+          },
+          "seen": true,
+          "evidence": "sight",
+          "evidenceAt": 57.749999999998295,
+          "sawBunkerRoute": false,
+          "searchIndex": 0,
+          "route": [
+            {
+              "x": 16,
+              "y": 28
+            },
+            {
+              "x": 15,
+              "y": 28
+            },
+            {
+              "x": 14,
+              "y": 28
+            }
+          ],
+          "repath": 0,
+          "search": 0,
+          "attackYaw": 0,
+          "attackSerial": 0,
+          "turnRate": 0,
+          "waterEntry": {
+            "lesson": 1,
+            "spillway": -1,
+            "bunker": -1,
+            "return": -1,
+            "bypass": 1,
+            "range-a": -1,
+            "range-b": 1,
+            "sluice": 1
+          },
+          "previousSight": {
+            "x": 16.791526608732543,
+            "y": 28.00453435490985,
+            "time": 57.749999999998295
+          },
+          "searchOrigin": null,
+          "investigateAt": {
+            "x": 14,
+            "y": 28
+          },
+          "turnDistance": 1.2474781031419104,
+          "weaponPose": {
+            "angle": 0,
+            "pitch": -0.001083851446716258,
+            "height": 1.07,
+            "raised": 0
+          },
+          "weaponBlocked": true,
+          "tightTurn": false,
+          "closingRate": 0.0010514021192974219,
+          "previousGap": 0.6644075366229183,
+          "recoveryFrom": null,
+          "recoveryBlocked": true,
+          "attackReposition": {
+            "target": {
+              "x": 17.528813979125445,
+              "y": 28.748307254530335
+            },
+            "observed": {
+              "x": 16.3516306482625,
+              "y": 28.014102215805913
+            },
+            "started": 55.71666666666508
+          }
+        },
+        "bunkerRouteObserved": false,
+        "lessonCrossed": false,
+        "bypass": true,
+        "bypassAt": 0,
+        "evidence": false,
+        "gate": 0,
+        "closing": false,
+        "waterHits": 1,
+        "waterLock": 0,
+        "message": "Joe’s blade hits the masonry. Move while he recovers.",
+        "messageTime": 0,
+        "events": [],
+        "saveSerial": 1,
+        "steps": 1800,
+        "finished": false,
+        "reason": "",
+        "rear": false,
+        "lessonApproach": false,
+        "lessonEntered": false
+      }
+    }
+  ]
+}

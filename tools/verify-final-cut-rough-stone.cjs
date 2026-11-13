@@ -1,0 +1,24 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/final-cut/visual-rough-stone/accepted';
+(async()=>{fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];
+ p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
+ async function capture(name){await p.screenshot({path:`${out}/${name}.png`});const state=await p.evaluate(()=>{const s=JSON.parse(render_game_to_text());return {mode:s.mode,player:s.player,rig:{x:s.rig.x,y:s.rig.y,phase:s.rig.phase},cut:s.cut,cutAreas:s.cutAreas,rough:s.graphics.rough,masonry:s.graphics.estateDetail.masonry,width:s.graphics.width,height:s.graphics.height,draws:s.graphics.draws};});shots.push({name,state});return state;}
+ await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1});r.mode='playing';r.pump=false;r.water=0;Object.assign(r.player,{x:-16,y:20.2,yaw:0,pitch:.12});Object.assign(r.rig,{x:39,y:26,phase:'disabled'});__finalCut.run=r;await advanceTime(0);});
+ let state=await capture('rough-standing');assert.equal(state.rough.standingTufts,1944);assert.equal(state.rough.mownTufts,0);assert.equal(state.masonry.walls,73,'Each physical wall is dressed once, including the separate pavilion approach');
+ await p.keyboard.down('c');await p.keyboard.down('d');await p.evaluate(()=>advanceTime(450));await p.keyboard.up('d');state=await capture('rough-crouch-strafe');assert.equal(state.player.crouch,true);assert(state.player.x>-16);await p.keyboard.up('c');
+ await p.evaluate(async()=>{const r=__finalCut.run;Object.assign(r.player,{x:-16,y:20.2,yaw:0,pitch:.12,crouch:false});Object.assign(r.rig,{x:-30,y:26,lane:0,yaw:Math.PI/2,phase:'pass',age:0,deployment:1,speed:0,direction:1,attack:{entry:'west',from:{x:-30,y:26},to:{x:30,y:26},axis:'x',yaw:Math.PI/2}});await advanceTime(1600);});
+ state=await capture('rough-partial-pass');assert(state.rough.mownTufts>0&&state.rough.mownTufts<648);assert.equal(state.mode,'final_cut_playing');
+ const partial=state.rough;
+ await p.evaluate(async()=>{const {createRun,snapshot}=await import('./final-cut-sim.js'),r=__finalCut.run,restored=createRun(snapshot(r));restored.mode='playing';Object.assign(restored.player,r.player);Object.assign(restored.rig,{x:39,y:26,phase:'disabled'});window.__roughPass=r;__finalCut.run=restored;await advanceTime(0);});
+ state=await capture('rough-restored-partial');assert.deepEqual(state.rough,partial);
+ await p.evaluate(async()=>{__finalCut.run=__roughPass;for(let i=0;i<16&&__finalCut.run.rig.phase==='pass';i++)await advanceTime(500);__finalCut.run.rig.phase='disabled';await advanceTime(0);});
+ state=await capture('rough-mown');assert.equal(state.rough.mownTufts,648);assert.equal(state.mode,'final_cut_playing');
+ for(const [name,x,y,tx,ty,pitch]of [['bunker-masonry',-3,18,-7,17,.08],['pump-masonry',16,37,13,38,.05],['pavilion-masonry',-9,80,-12,82,.05],['approach-masonry',-8,72,-14,74.5,.08],['overlook-masonry',6,-8,3,-3,-.1],['ramp-masonry',-2,12,-4,11,.18]]){
+  await p.evaluate(async({x,y,tx,ty,pitch})=>{Object.assign(__finalCut.run.player,{x,y,yaw:Math.atan2(tx-x,ty-y),pitch,crouch:false});await advanceTime(0);},{x,y,tx,ty,pitch});await capture(name);
+ }
+ const viewports=[];for(const [width,height]of [[1920,1080],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(()=>advanceTime(0));viewports.push(await p.evaluate(()=>{const s=JSON.parse(render_game_to_text());return {viewport:[innerWidth,innerHeight],render:[s.graphics.width,s.graphics.height],overflow:document.documentElement.scrollWidth>innerWidth};}));if(width===390||width===1280)await p.screenshot({path:`${out}/viewport-${width}.png`});}
+ assert.deepEqual(errors,[]);assert(viewports.every(v=>!v.overflow));fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,errors,shots,viewports,method:'Uncut, actual simulation partial/full west pass, save-restored partial cut, real crouch/strafe input; five masonry approaches. Fixtures position camera and disable subsequent attacks to isolate materials.'},null,2));console.log(JSON.stringify({passed:true,errors,shots:shots.map(s=>[s.name,s.state.rough.mownTufts]),viewports}));
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

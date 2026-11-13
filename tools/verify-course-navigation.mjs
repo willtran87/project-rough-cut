@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import * as current from '../web/back-nine-course.js';
+const out='output/back-nine-foliage',baselineURL='data:text/javascript;base64,'+Buffer.from(fs.readFileSync(`${out}/baseline-source/back-nine-course.js`,'utf8')).toString('base64'),baseline=await import(baselineURL);
+const fallback=await import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync('web/back-nine-course.js','utf8').replace("import bakedNavigation from './assets/baked/course-navigation.js';","const bakedNavigation={signature:0,edges:[]};")).toString('base64'));
+assert(current.navigationStats().baked);assert(!fallback.navigationStats().baked);
+const pairs=[[{x:2,y:420},{x:-29,y:449}],[{x:4,y:770},{x:4,y:820}],[{x:5,y:144},{x:5,y:123}],[{x:39,y:30},{x:32,y:30}]];
+for(let i=0;i<64;i++)pairs.push([{x:Math.sin(i*7.1)*34,y:40+(i*71)%735},{x:Math.cos(i*3.8)*34,y:40+(i*71)%735+(i%3-1)*36}]);
+for(const [from,to]of pairs){const expected=baseline.planMowerRoute(from,to);assert.deepEqual(current.planMowerRoute(from,to),expected);assert.deepEqual(fallback.planMowerRoute(from,to),expected);}
+assert.equal(current.navigationStats().edgeChecks,0);assert(fallback.navigationStats().edgeChecks>0);
+const [a,b]=pairs[0],expected=current.planMowerRoute(a,b),mutable=current.planMowerRoute(a,b);mutable.points[0].x=999;assert.deepEqual(current.planMowerRoute(a,b),expected,'Callers cannot mutate cached grid points');
+const sim=await import('../web/back-nine-sim.js'),referenceSource=fs.readFileSync('web/back-nine-sim.js','utf8').replace(/from '([^']+)'/g,(_,p)=>`from '${p==='./back-nine-course.js'?baselineURL:new URL('../web/'+p,import.meta.url).href}'`),referenceSim=await import('data:text/javascript;base64,'+Buffer.from(referenceSource).toString('base64'));
+const run=sim.createRun(),referenceRun=referenceSim.createRun();run.mode=referenceRun.mode='driving';let waypoint=1,frames=0;
+for(;frames<120*60&&run.mode!=='complete';frames++){const c=run.cart,path=current.COURSE.paths[0];while(waypoint<path.length-1&&(current.distance(c,{x:path[waypoint][0],y:path[waypoint][1]})<7||c.y>path[waypoint][1]+2))waypoint++;const target=c.y>788?current.COURSE.finish:{x:path[waypoint][0],y:path[waypoint][1]},turn=current.angleDelta(Math.atan2(target.x-c.x,target.y-c.y),c.yaw),near=current.distance(c,current.COURSE.finish)<4.5,input={throttle:near?0:1,steer:current.clamp(turn*2,-1,1),brake:near||Math.abs(turn)>.7&&c.speed>8};sim.updateRun(run,input,1/60);referenceSim.updateRun(referenceRun,input,1/60);assert.deepEqual(run,referenceRun,`Full chase changed at frame ${frames}`);}
+assert.equal(run.mode,'complete');
+const timings=[];for(const [from,to]of pairs.slice(0,2)){const samples={baseline:[],optimized:[]};for(let i=0;i<32;i++)for(const name of i%2?['optimized','baseline']:['baseline','optimized']){const t=performance.now();(name==='baseline'?baseline:current).planMowerRoute(from,to);samples[name].push(performance.now()-t);}for(const name in samples)samples[name].sort((a,b)=>a-b);timings.push({from,to,baseline:{median:samples.baseline[16],p95:samples.baseline[30]},optimized:{median:samples.optimized[16],p95:samples.optimized[30]}});}
+const report={passed:true,exactRoutes:pairs.length,identicalChaseFrames:frames,fallback:true,stats:current.navigationStats(),timings};fs.writeFileSync(`${out}/navigation.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report));

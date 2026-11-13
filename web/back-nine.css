@@ -1,0 +1,90 @@
+:root{color-scheme:dark;font-family:Georgia,'Times New Roman',serif;color:#e5e4c9;background:#020807}*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse,#162620,#020807 75%)}#game-shell{position:relative;width:min(100vw,calc(100dvh * 16 / 9));aspect-ratio:16/9;overflow:hidden;border:1px solid #766346;isolation:isolate}#game{display:block;width:100%;height:100%;image-rendering:pixelated;outline:none}button,a{font:inherit;color:inherit;background:#183129;border:1px solid #8c9879;border-radius:2px;padding:.65em 1em;cursor:pointer;text-decoration:none}button:hover,a:hover,button:focus-visible,a:focus-visible{background:#355043;outline:2px solid #e6cf8f;outline-offset:2px}button:disabled{opacity:.5;cursor:wait}[hidden]{display:none!important}#panel{position:absolute;inset:5% 12%;padding:clamp(14px,2.6vw,42px);background:linear-gradient(135deg,#0c1c17f5,#06130ff5);border:1px solid #7e8866;overflow:auto;box-shadow:0 14px 60px #000b}h1{font-size:clamp(25px,4vw,56px);margin:.14em 0 .3em;letter-spacing:.03em}#eyebrow,.objective small{color:#b7bd97;letter-spacing:.1em;font-size:clamp(10px,1vw,15px)}#story{max-width:66ch;font-size:clamp(14px,1.5vw,22px);line-height:1.45}#controls,#checkpoint-note{font-size:clamp(11px,1.1vw,16px);line-height:1.5;color:#b5c9b5}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}#loading-art{height:clamp(30px,7vh,90px);position:relative;max-width:640px;background:repeating-linear-gradient(165deg,transparent 0 25px,#31422b 26px 27px,transparent 28px 45px);overflow:hidden}#loading-art i{position:absolute;left:28%;bottom:12%;width:25%;height:30%;background:#8b998b;box-shadow:0 -20px 0 -5px #788a7a}#loading-art b{position:absolute;right:15%;bottom:15%;width:20%;height:33%;background:#4b5c42;border-bottom:6px solid #8c5940}#loading-art span{position:absolute;left:12%;bottom:14%;width:75%;height:2px;background:#a49b62}.objective{position:absolute;top:4%;left:3%;max-width:66%;padding:10px 14px;background:#061510dc;border-left:3px solid #c5ac69}.objective strong,.objective span{display:block}.objective strong{font-size:clamp(14px,1.6vw,24px);margin-top:4px}.objective span{font-size:clamp(11px,1.1vw,16px);color:#b8c7b4;margin-top:5px}.tools{position:absolute;right:3%;top:4%;display:flex;gap:5px;font-size:clamp(10px,1vw,14px)}.dashboard{position:absolute;left:3%;bottom:8%;display:flex;gap:16px;background:#061510de;padding:10px 14px;font-size:clamp(12px,1.3vw,18px)}#caption{position:absolute;left:15%;right:15%;bottom:15%;margin:0;text-align:center;background:#071a15d9;padding:8px;font-size:clamp(12px,1.3vw,19px)}#caption:empty{display:none}#hint{position:absolute;left:3%;right:3%;bottom:3%;font-size:clamp(10px,1vw,14px);color:#c4d1ba;text-shadow:1px 2px #000}#touch{position:absolute;bottom:2%;left:2%;right:2%;display:flex;justify-content:space-between;gap:10px;touch-action:none}#touch div{display:flex;gap:7px}#touch button{padding:12px;min-width:44px;min-height:44px;background:#102a20df;touch-action:none;user-select:none}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}#game-shell:fullscreen{width:100vw;height:100dvh;aspect-ratio:auto}#game-shell:fullscreen #game{object-fit:fill}@media(pointer:coarse){#hint{display:none}.dashboard{bottom:20%}#caption{bottom:32%}.tools button{padding:.55em}.objective{max-width:61%}}@media(max-height:500px){#panel{inset:3% 7%;padding:12px 20px}h1{font-size:26px}#loading-art{display:none}#story{font-size:13px;margin:.5em 0}#controls{font-size:11px;margin:.4em 0}#checkpoint-note{font-size:10px;margin:.4em 0}.actions button,.actions a{padding:.5em .7em;font-size:12px}.objective{top:3%;padding:6px 9px}.dashboard{padding:6px 9px}.tools{top:3%}}
+
+#panel{top:50%;bottom:auto;transform:translateY(-50%);max-height:90%}.touch-mode #hint{display:none}.touch-mode .dashboard{bottom:20%}.touch-mode #caption{bottom:32%}.touch-mode .tools button{padding:.55em}.touch-mode .objective{max-width:61%}
+
+#dread{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 52%,rgba(32,8,3,.72) 100%);}
+.dashboard.impact{outline:2px solid #d6b16f;background:#34261bed;color:#fff0c5}
+
+#crew-count{font-size:clamp(10px,1vw,14px);color:#94aaa1}#field-log{white-space:pre-line;border-left:2px solid #9caa83;padding:10px 16px;background:#172b22;line-height:1.5;font-size:clamp(12px,1.3vw,19px);max-width:66ch}
+
+#integrity{display:inline-flex;gap:6px;align-items:center}#cart-health{appearance:none;width:clamp(70px,10vw,148px);height:12px;border:1px solid #a4b691;border-radius:0;background:#17251e;overflow:hidden}#cart-health::-webkit-progress-bar{background:#17251e}#cart-health::-webkit-progress-value{background:#a6b27f}#cart-health::-moz-progress-bar{background:#a6b27f}.low-health #cart-health::-webkit-progress-value{background:#c07851}.low-health #cart-health::-moz-progress-bar{background:#c07851}#health-value{font-variant-numeric:tabular-nums}.dashboard{flex-wrap:wrap;max-width:88%}.on-foot #integrity-label{color:#dfb57e}@media(max-width:700px){.dashboard{gap:6px;font-size:11px}#cart-health{width:62px;height:10px}}
+
+#chase-comfort{margin:12px 0;padding:10px 14px;border:1px solid #54664e;background:#0a1b14;font-size:clamp(12px,1.2vw,17px)}#chase-comfort summary{cursor:pointer;color:#d3bf8a}#chase-comfort p{max-width:70ch;line-height:1.4}#chase-comfort label{display:flex;gap:12px;align-items:center;margin:10px 0}#chase-comfort input[type=range]{max-width:45%;accent-color:#b8aa77}#game{touch-action:none}
+
+#defeat-tableau{position:absolute;inset:0;background:#060807;pointer-events:none}#defeat-image{width:100%;height:100%;object-fit:cover;object-position:50% 28%}#defeat-tableau::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 25%,#12050338 58%,#100301e8)}
+#defeat-tableau:not([hidden]){animation:defeat-reveal .45s ease-out both}#defeat-tableau[data-failed="true"]{background:radial-gradient(ellipse at 50% 25%,#472016,#050807 75%)}#defeat-tableau[data-failed="true"] img{display:none}
+#panel[data-defeat="true"]{position:absolute;inset:auto 0 0;transform:none;width:100%;max-height:51%;padding:clamp(14px,2vw,32px) 5%;border:0;border-top:2px solid #a54a32;border-radius:0;background:#100604eb;text-align:center;box-shadow:none;font-family:'Courier New',monospace;overflow:auto}
+#panel[data-defeat="true"] #eyebrow{color:#d59873;font-size:clamp(10px,.9vw,14px)}#panel[data-defeat="true"] #title{margin:.2em 0 .3em;font:700 clamp(24px,3vw,48px)/1.05 'Courier New',monospace;text-transform:uppercase;color:#f0e5cd}
+#panel[data-defeat="true"] #story{margin:.5em auto;max-width:85ch;font-size:clamp(12px,1.05vw,17px);line-height:1.4;color:#d2c2aa}#defeat-line{margin:.3em 0;color:#e1aa80;font-size:clamp(17px,1.65vw,26px);font-style:italic}#defeat-review{font-size:clamp(10px,1vw,15px);color:#acaa91;margin:.55em 0}
+#panel[data-defeat="true"] .actions{justify-content:center;gap:10px;margin-top:12px}#panel[data-defeat="true"] .actions>*{font-size:clamp(11px,1vw,16px);min-height:40px}#panel[data-defeat="true"] #primary{background:#d0b484;border-color:#ebc999;color:#20140b;font-weight:bold}#panel[data-defeat="true"] #checkpoint-note{font-size:clamp(10px,.9vw,14px);margin:.7em 0 0;color:#a7a793}
+@keyframes defeat-reveal{from{opacity:0}to{opacity:1}}#game-shell[data-reduced="true"] #defeat-tableau{animation:none}@media(prefers-reduced-motion:reduce){#defeat-tableau{animation:none!important}}
+@media(max-height:540px){#panel[data-defeat="true"]{padding:9px 4%;max-height:58%}#panel[data-defeat="true"] #title{font-size:24px}#panel[data-defeat="true"] #story{font-size:11px;margin:.35em auto}#defeat-line{font-size:16px;margin:.2em 0}#defeat-review{font-size:10px;margin:.3em 0}#panel[data-defeat="true"] .actions{margin-top:7px}#panel[data-defeat="true"] .actions>*{min-height:32px}#panel[data-defeat="true"] #checkpoint-note{font-size:10px}}
+@media(max-width:540px){#game-shell:has(#panel[data-defeat="true"]){width:100vw;height:100dvh;aspect-ratio:auto}#panel[data-defeat="true"]{max-height:54%;padding:18px 5%}#defeat-image{object-fit:cover;object-position:50% 15%;height:68%}#panel[data-defeat="true"] #title{font-size:26px}#panel[data-defeat="true"] .actions{flex-wrap:wrap}#panel[data-defeat="true"] .actions>*{min-height:44px;flex:1 1 42%}}
+
+/* The same failed-delivery review as Level 1, with chase-specific evidence. */
+#defeat-dialogue{max-width:78ch;margin:.65em auto;padding:.65em 1em;border:1px solid #8f432d;background:#1a0703eF;text-align:left;}
+#defeat-dialogue small{display:block;font-size:clamp(10px,.8vw,13px);letter-spacing:.04em;color:#dd8255;}
+#defeat-dialogue #defeat-line{white-space:pre-line;font-size:clamp(13px,1.25vw,20px);font-style:normal;line-height:1.4;margin:.4em 0 0;color:#f3e8cd;}
+#defeat-review{white-space:pre-line;line-height:1.5;}
+#panel[data-defeat="true"]{display:flex;flex-direction:column;overflow:hidden;}
+#panel[data-defeat="true"] #panel-content{min-height:0;overflow:auto;}
+#panel[data-defeat="true"] #panel-footer{flex-shrink:0;}
+@media(max-height:540px) and (min-width:541px){#panel[data-defeat="true"]{max-height:70%;}#defeat-dialogue{margin:.4em auto;padding:.4em .7em;}#defeat-dialogue #defeat-line{font-size:12px;line-height:1.3;}#defeat-review{font-size:10px;}}
+/* Keep multi-line story captions above the compact dashboard. */
+@media(max-width:540px){#caption{left:3%;right:3%;bottom:28%;padding:4px;font-size:11px;}}
+
+/* Damage remains legible without flashing or adding another overlay. */
+#integrity[data-condition="buckled"],#integrity[data-condition="battered"]{color:#dbc08b}
+#integrity[data-condition="critical"]{color:#f0a18a;font-weight:bold}
+#integrity[data-condition="critical"] #cart-health{border-color:#e4937b}
+
+/* Instruction and optional accessibility rails share layout, never overlap. */
+#message-rails{position:absolute;left:15%;right:15%;bottom:19%;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+#message-rails #caption,#sound-caption{position:static;margin:0;padding:8px;text-align:center;background:#071a15ed;font-size:clamp(12px,1.3vw,19px);line-height:1.3}
+#sound-caption{color:#c9d3c2;font-size:clamp(11px,1.1vw,16px)}#sound-caption:empty{display:none}
+.touch-mode #message-rails{bottom:32%}
+@media(pointer:coarse){#message-rails{bottom:32%}}
+@media(max-width:540px){#message-rails{left:3%;right:3%;bottom:28%}#message-rails #caption,#sound-caption{padding:4px;font-size:11px}.touch-mode #message-rails{bottom:36%}}
+
+/* Short directional impact feedback; no blur, tearing or full-frame flash. */
+#impact-edge{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:4;box-shadow:inset var(--impact-x,0px) 0 65px 4px rgba(51,10,8,.85),inset 0 0 35px rgba(16,4,3,.55)}
+
+/* Controller focus remains visible after programmatic DOM navigation. */
+#panel[data-gamepad=true] :focus{outline:3px solid #f4d38c;outline-offset:4px}
+
+.controller-menu-help{display:none;font-size:13px;line-height:1.5;color:#f4d38c}#panel[data-gamepad=true] .controller-menu-help{display:block}
+
+.keyboard-settings{min-width:0;margin:14px 0;padding:12px;border:1px solid #64776b}
+.keyboard-settings [data-keyboard-fields]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px}
+#chase-comfort .keyboard-settings label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0}
+.keyboard-settings select{min-width:90px;max-width:48%;padding:6px;background:#12251d;color:#edf0df;border:1px solid #9eac92;font:inherit}
+.keyboard-settings option:disabled{color:#819086}
+.keyboard-settings button{margin-top:12px}
+.keyboard-settings [data-keyboard-status]{min-height:1.4em;font-size:13px}
+@media(max-width:700px){.keyboard-settings [data-keyboard-fields]{grid-template-columns:1fr}}
+
+#message-rails #caption,#sound-caption{font-size:calc(clamp(12px,1.3vw,19px) * var(--caption-scale,1));background:rgba(7,26,21,var(--caption-opacity,.78))}
+#message-rails #sound-caption{font-size:calc(clamp(11px,1.1vw,16px) * var(--caption-scale,1))}
+/* Keep the fall and landing visible while showing the one-time breakdown cue. */
+#game-shell[data-ejecting=true] #message-rails{top:22%;bottom:auto}
+@media(max-height:540px){#game-shell[data-ejecting=true] #message-rails{top:34%}}
+@media(max-width:540px){#message-rails #caption,#message-rails #sound-caption{font-size:calc(11px * var(--caption-scale,1))}}
+/* In the compact stage, an instruction takes the place of the routine objective
+   detail. Keep its district marker and the sound/pause controls visible. */
+@media(max-width:540px){#game-shell[data-message=true] .objective{max-width:50%;padding:4px 8px}#game-shell[data-message=true] .objective strong,#game-shell[data-message=true] .objective span{display:none}#game-shell[data-message=true] .objective small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}}
+
+/* A quiet field record preserves the actual arrival, separate from Joe. */
+#escape-record{white-space:pre-line;padding:14px 16px;border-left:3px solid #b9ad74;background:#12251dea;color:#dbd5b5;line-height:1.6;font-size:clamp(12px,1.1vw,17px)}
+
+#panel[data-complete="true"]{display:flex;flex-direction:column;overflow:hidden}
+#panel[data-complete="true"] #panel-content{min-height:0;overflow:auto;padding-right:6px}
+#panel[data-complete="true"] #panel-footer{flex-shrink:0;border-top:1px solid #465241;padding-top:12px;background:#081714}
+@media(max-width:540px){#game-shell:has(#panel[data-complete="true"]){width:100vw;height:100dvh;aspect-ratio:auto}#panel[data-complete="true"]{inset:3% 4%;transform:none;max-height:94%;padding:16px}#panel[data-complete="true"] #title{font-size:29px}#panel[data-complete="true"] .actions>*{min-height:44px}}
+
+/* Keep resume/restart reachable when the landscape game is paused in portrait. */
+@media(max-width:540px){
+ #game-shell:has(#panel:not([hidden])[data-guide="false"][data-defeat="false"][data-complete="false"]){width:100vw;height:100dvh;aspect-ratio:auto}
+ #panel:not([hidden])[data-guide="false"][data-defeat="false"][data-complete="false"]{inset:3% 4%;transform:none;max-height:94%;padding:16px;display:flex;flex-direction:column;overflow:hidden}
+ #panel[data-guide="false"][data-defeat="false"][data-complete="false"] #panel-content{min-height:0;overflow:auto}
+ #panel[data-guide="false"][data-defeat="false"][data-complete="false"] #panel-footer{flex-shrink:0}
+}

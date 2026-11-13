@@ -1,0 +1,208 @@
+{
+  "passed": true,
+  "source": [
+    1086,
+    1448
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        92,
+        62,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7325096914013614,
+      "opaqueBorderPixels": 0,
+      "sha256": "f0c83e4fbc8086361d86026afbc25e6d955a699cba44836d864f2917a22530a0"
+    },
+    {
+      "index": 1,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        104,
+        61,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7317160648331859,
+      "opaqueBorderPixels": 0,
+      "sha256": "f885a59149fa7d0a7b0bd93c4146803c5864eddac4271204f2f1f5a52c5da2fa"
+    },
+    {
+      "index": 2,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        110,
+        62,
+        298,
+        337
+      ],
+      "transparentFraction": 0.7426436921949879,
+      "opaqueBorderPixels": 0,
+      "sha256": "5b7af90d07f2c4d5b0e48e71c207d8d724b8f6028bda496d2ec63e63d1fc6762"
+    },
+    {
+      "index": 3,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        114,
+        62,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7522053661365649,
+      "opaqueBorderPixels": 0,
+      "sha256": "001c0b852e896bc10fba485445148a8756fa881c972e71706ce2a8d182aaa4b0"
+    },
+    {
+      "index": 4,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        113,
+        62,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7345624370440462,
+      "opaqueBorderPixels": 0,
+      "sha256": "384423bad748c79718a4762c0ccc719ddfea4cf5830b4266a5c2205605ebd485"
+    },
+    {
+      "index": 5,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        100,
+        63,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7401254540459693,
+      "opaqueBorderPixels": 0,
+      "sha256": "e6ae11529c9fdccd11fcdb93520255eb09645ac05ed74ae2475a0f2b53abe0dc"
+    },
+    {
+      "index": 6,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        92,
+        62,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7321815573395195,
+      "opaqueBorderPixels": 0,
+      "sha256": "8b5ded1f2dae2f192b31a6a2d9f5b8daa92fd5f222dd7d5f20f876457ac0044b"
+    },
+    {
+      "index": 7,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        97,
+        62,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7342114099081225,
+      "opaqueBorderPixels": 0,
+      "sha256": "60fc36b784ebcb161dbdf6120eac55a67415b4a915f664f83253129f095377b3"
+    },
+    {
+      "index": 8,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        103,
+        62,
+        298,
+        337
+      ],
+      "transparentFraction": 0.7412472146759866,
+      "opaqueBorderPixels": 0,
+      "sha256": "17847825f2448e5e0863656b67efdae869e9f9fec5e3a357b571e7d770244563"
+    },
+    {
+      "index": 9,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        102,
+        63,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7416592900094625,
+      "opaqueBorderPixels": 0,
+      "sha256": "9a6057fd9f406031446d23c8ef0615c754bc986a96cf1a90c66b111b91d8636c"
+    },
+    {
+      "index": 10,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        103,
+        63,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7409572357376148,
+      "opaqueBorderPixels": 0,
+      "sha256": "1488c9297432929536dee95a3bda355cbc5989ce25e2df74551b6d55883857ed"
+    },
+    {
+      "index": 11,
+      "size": [
+        362,
+        362
+      ],
+      "alphaBounds": [
+        104,
+        63,
+        299,
+        337
+      ],
+      "transparentFraction": 0.7479090992338451,
+      "opaqueBorderPixels": 0,
+      "sha256": "ef82ac3b9e8521606dbd5719800ecc467f36d406416fa980a4dbf1ea9f1dc734"
+    }
+  ],
+  "gif": {
+    "width": 362,
+    "height": 362,
+    "duration": "1.200000",
+    "nb_read_frames": "12"
+  },
+  "scope": "Packaging checks only. Does not certify gait, pixel cleanup, or full gameplay coverage."
+}

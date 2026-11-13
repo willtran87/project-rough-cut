@@ -1,0 +1,128 @@
+{
+  "source": "Retained ordinary-input dry/crouch pump arrival offset 8.5, November 12. Diagnostic telemetry/history removed; physical, perception and attack state preserved.",
+  "run": {
+    "version": 3,
+    "mode": "playing",
+    "checkpoint": 2,
+    "time": 278.60000000007733,
+    "elapsed": 220.1000000000673,
+    "difficulty": "standard",
+    "player": {
+      "x": 14.670923859330848,
+      "y": 15.821513297959196,
+      "yaw": -3.092443114461882,
+      "pitch": 0,
+      "speed": 2.4000000000000465,
+      "walk": 389.5600000000485,
+      "stumble": 0,
+      "grace": 0,
+      "crouched": true,
+      "focus": false,
+      "eyeHeight": 1.1200000000000003,
+      "wasRear": false,
+      "rearAmount": 0,
+      "rearAngle": 0,
+      "crossingSpeed": 2.4,
+      "waterEntry": {
+        "lesson": -1,
+        "spillway": -1,
+        "bunker": -1,
+        "return": -1,
+        "bypass": 1,
+        "range-a": -1,
+        "range-b": -1,
+        "sluice": -1
+      }
+    },
+    "joe": {
+      "x": 12.865227479799954,
+      "y": 16.06367059025291,
+      "yaw": 2.1513567409648022,
+      "speed": 0,
+      "walk": 75.14499999999825,
+      "phase": "recover",
+      "age": 0.6833333333333338,
+      "last": {
+        "x": 14.670923859330848,
+        "y": 15.821513297959196
+      },
+      "seen": true,
+      "evidence": "sight",
+      "evidenceAt": 278.60000000007733,
+      "sawBunkerRoute": false,
+      "searchIndex": 0,
+      "route": [
+        {
+          "x": 14,
+          "y": 16
+        }
+      ],
+      "repath": 0.18333333333333257,
+      "search": 0,
+      "attackYaw": 2.1513567409648022,
+      "attackSerial": 64,
+      "turnRate": 0,
+      "waterEntry": {
+        "lesson": -1,
+        "spillway": -1,
+        "bunker": -1,
+        "return": -1,
+        "bypass": 1,
+        "range-a": -1,
+        "range-b": -1,
+        "sluice": -1
+      },
+      "investigateAt": {
+        "x": 14,
+        "y": 16
+      },
+      "turnDistance": 6.0797936559515575,
+      "weaponPose": {
+        "angle": 0.30002191540653034,
+        "pitch": -0.13460695561287292,
+        "height": 1.1161572177548509,
+        "raised": 0.4615721775485083
+      },
+      "weaponBlocked": false,
+      "tightTurn": false,
+      "closingRate": 1.149995500270684,
+      "previousGap": 1.821861566986363,
+      "previousSight": {
+        "x": 14.670923859330848,
+        "y": 15.821513297959196,
+        "time": 278.60000000007733
+      },
+      "searchOrigin": null,
+      "sawRangeRoute": true,
+      "rangeInspectionUsed": true,
+      "inspectionIndex": 3,
+      "recoveryFrom": {
+        "angle": 0.6499999999999998,
+        "pitch": 0,
+        "height": 1.1700000000000002,
+        "raised": 1,
+        "active": false
+      },
+      "recoveryBlocked": false
+    },
+    "bunkerRouteObserved": false,
+    "lessonCrossed": true,
+    "bypass": true,
+    "bypassAt": 40,
+    "evidence": false,
+    "gate": 0,
+    "closing": false,
+    "waterHits": 0,
+    "waterLock": 0,
+    "message": "Joe is at the threshold. Draw him back before closing the sluice.",
+    "messageTime": 3,
+    "events": [],
+    "saveSerial": 0,
+    "steps": 13206,
+    "finished": false,
+    "reason": "",
+    "rear": false,
+    "telemetry": null,
+    "useFeedbackUntil": 0
+  }
+}

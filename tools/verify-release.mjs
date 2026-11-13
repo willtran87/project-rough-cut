@@ -165,7 +165,7 @@ requireCondition(
   gameJs.includes("footing_entry_signal_role_separation") &&
     gameJs.includes("footingHazardThreatCaptionSpec") &&
     gameJs.includes("footingHazardEntrySignalState") &&
-    gameJs.includes("footing_entry_caption_tracks_joe_while_the_bottom_rail_and_world_route_track_the_safe_exit"),
+    gameJs.includes("footing_contact_or_observed_joe_bearing_complements_safe_exit"),
   "The slow-footing threat-bearing and safe-route separation contract is missing.",
 );
 requireCondition(
@@ -430,7 +430,17 @@ for (const requiredGate of [
   );
 }
 
-const runtimeReferences = collectRuntimeAssetReferences(indexHtml, gameJs, dialogueJs);
+// Chapter entry pages may own images directly (for example ending art).
+const runtimeModules=fs.readdirSync(webRoot,{recursive:true,withFileTypes:true})
+  .filter(entry=>entry.isFile()&&/\.(?:js|html)$/.test(entry.name))
+  .map(entry=>fs.readFileSync(path.join(entry.parentPath||entry.path,entry.name),'utf8'));
+const runtimeReferences = collectRuntimeAssetReferences(indexHtml, gameJs, dialogueJs,...runtimeModules);
+// Content-addressed terrain images are referenced by their checked-in manifest.
+const terrainManifest=JSON.parse(readUtf8('web/assets/baked/terrain.json'));
+for(const [key,file]of Object.entries(terrainManifest)){
+  requireCondition(/^[a-f0-9]{64}$/.test(key)&&/^terrain-[a-f0-9]{16}\.webp$/.test(file),`Invalid terrain bake reference: ${file}`);
+  if(/^terrain-[a-f0-9]{16}\.webp$/.test(file))runtimeReferences.push('baked/'+file);
+}
 // The preserved social preview is referenced through an absolute URL.
 if (indexHtml.includes('/assets/rough-cut-opening.png') && !runtimeReferences.includes('rough-cut-opening.png')) runtimeReferences.push('rough-cut-opening.png');
 let referencedBytes = 0;

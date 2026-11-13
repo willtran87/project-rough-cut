@@ -1,0 +1,48 @@
+{
+  "generator": "Built-in image_gen",
+  "processing": "Native generated pixels, lossless WebP compression; source PNGs preserved",
+  "assets": [
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\01-final-review.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\01-final-review.webp",
+      "width": 1671,
+      "height": 941,
+      "bytes": 2069274
+    },
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\02-joe-review.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\02-joe-review.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2298568
+    },
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\03-load-limit.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\03-load-limit.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2737534
+    },
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\04-caught.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\04-caught.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2199362
+    },
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\05-ground-gives.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\05-ground-gives.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2602682
+    },
+    {
+      "source": "assets\\cutscenes\\final-cut-story\\06-public-road.png",
+      "runtime": "web\\assets\\optimized\\final-cut-story\\06-public-road.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2628698
+    }
+  ]
+}

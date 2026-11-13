@@ -1,0 +1,7 @@
+[
+  {"id":"opening","text":"One final pass.","priority":90,"window":3,"essential":true},
+  {"id":"missed","text":"Stay where you're assigned.","priority":30,"window":6,"essential":false},
+  {"id":"distraction","text":"That wasn't the bell.","priority":40,"window":6,"essential":false},
+  {"id":"blocked","text":"Fine. Another pass.","priority":50,"window":6,"essential":false},
+  {"id":"bogging","text":"That wasn't in the plan.","priority":100,"window":3,"essential":true}
+]

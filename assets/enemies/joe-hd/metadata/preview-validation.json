@@ -1,0 +1,144 @@
+{
+  "passed": true,
+  "source": [
+    1448,
+    1086
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        57,
+        60,
+        338,
+        490
+      ],
+      "transparentFraction": 0.6269497268093159,
+      "opaqueBorderPixels": 0,
+      "sha256": "8810ae45e0a77f01031dad34b9a18369c5f7d14bef18620d4ba6a8d5c6bbda0f"
+    },
+    {
+      "index": 1,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        65,
+        60,
+        338,
+        490
+      ],
+      "transparentFraction": 0.6275398593856516,
+      "opaqueBorderPixels": 0,
+      "sha256": "229dc86353bd1d829dd49d77129b0a2200df1ceb4f932d692949896fcbf859df"
+    },
+    {
+      "index": 2,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        69,
+        60,
+        338,
+        490
+      ],
+      "transparentFraction": 0.6434225654487551,
+      "opaqueBorderPixels": 0,
+      "sha256": "935b4932725a917fd3559b1afa7787296b73483f966dd8a95a386529fd8deb64"
+    },
+    {
+      "index": 3,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        76,
+        60,
+        338,
+        490
+      ],
+      "transparentFraction": 0.6465156741247214,
+      "opaqueBorderPixels": 0,
+      "sha256": "a372c190ef5d3407fdf12acccb8b299288f3a5067e1397cd54640fc11eeb40b3"
+    },
+    {
+      "index": 4,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        67,
+        62,
+        337,
+        492
+      ],
+      "transparentFraction": 0.6424864930862916,
+      "opaqueBorderPixels": 0,
+      "sha256": "30c57f95b31bb112345c723eeeaa2f627b6a19e2d07317334e1a2d4e08f7ba54"
+    },
+    {
+      "index": 5,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        68,
+        62,
+        338,
+        492
+      ],
+      "transparentFraction": 0.6353794654212834,
+      "opaqueBorderPixels": 0,
+      "sha256": "07fb37088e0eff0411f388d550c7c95debdd985e13f31e87659c60d34ff1ca68"
+    },
+    {
+      "index": 6,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        60,
+        62,
+        338,
+        492
+      ],
+      "transparentFraction": 0.6309839951975418,
+      "opaqueBorderPixels": 0,
+      "sha256": "4bb7b62d8542cfb940e850499d1c12fab6edd04be5e4e27f847e8c856b853f44"
+    },
+    {
+      "index": 7,
+      "size": [
+        362,
+        543
+      ],
+      "alphaBounds": [
+        58,
+        62,
+        338,
+        492
+      ],
+      "transparentFraction": 0.6254082598211288,
+      "opaqueBorderPixels": 0,
+      "sha256": "d9494c05e2b4973fc440549c7b93ab8e53d5742cfa0ae77524bfabf40d5479c5"
+    }
+  ],
+  "gif": {
+    "width": 362,
+    "height": 543,
+    "duration": "1.010000",
+    "nb_read_frames": "8"
+  },
+  "scope": "Packaging checks only. Does not certify gait, pixel cleanup, or full gameplay coverage."
+}

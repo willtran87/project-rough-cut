@@ -1028,3 +1028,44 @@ Original prompt: can you wrap the game in a frontend and then launch it so I can
 
 - Human-playtest a full escape through Release Corridor at normal speed and tune Joe's late patrol holds only if the last 90 units consistently collapse into an unavoidable chase.
 - Evaluate a dedicated Night Range prop atlas after the reused obstacle kit has been tested for recognition during live pursuit.
+
+## Under the Green implementation — November 11, 2026
+
+- User request: implement the approved drain chapter with slow hedge-trimmer Joe and timed water crossings.
+- Added a separate chapter simulation, first-person Three.js scene with existing pixel materials and Joe's authored rig, trimmer geometry, seven water outlets, dry route loops, pump bypass, evidence, closing sluice, checkpoints, and keyboard/mouse/controller/touch controls.
+- Connected drain victory to the chapter and added menu chapter links for previous saves. The shed continues to The Back Nine.
+- First simulation/browser passes covered route completion, physical hits/dodges, water recovery, pause, saves, completion, and responsive UI. Visual review drove vaulted roofs, smaller physical signs, shader water and pooled spray. Fixed Joe's entry position to lie on the actual side-gallery floor; tests now require measurable enemy travel.
+- In progress: end-to-end transition regression, final hardware/software visual passes, ordinary-input full chapter runs, packaging and documentation.
+
+### Under the Green verification complete — November 11, 2026
+
+- Final simulation suite passes: seven complete live-Joe routes across fresh/checkpoint starts and all pressure settings; actual navigation/capture, physical dodges, obstruction, water recovery, warned rear bypass flow, save parsing and invalid gate completion are covered.
+- Hardware and SwiftShader browser passes cover real controls, touch movement/drag, gamepad, pause, mute, reduced motion, checkpoint reload, defeat/retry and persistent completion without page/console errors. Screenshots inspected at 2560x1600, 1280x720, 844x390 and 390x844.
+- Both actual Level 1 result handoffs pass: drain -> Under the Green, shed -> Back Nine. Updated legacy transition test to invoke both-branch coverage. Existing release validation passes 90 fixtures / 67 images with no warnings.
+- Installed standard web-game client run and latest smoke screenshot inspected. Evidence: output/under-green/. Implementation and limitations: qa/under-the-green-2026-11-11.md.
+- Follow-up: unfamiliar-player and physical-device playtests for water-window clarity, route preference, audio balance and tension. Fast scripted clears are ~75-83 seconds, not proof of the design's provisional 6-9-minute first-clear estimate. No hidden catch-up was introduced. The Final Cut remains planned; this task implements the drain chapter.
+
+### Under the Green movement parity — November 11, 2026
+
+- User follow-up: keep vertical mouse look non-inverted and movement consistent with Level 1.
+- Matched Level 1's world-space speeds (walk 3.84 m/s, run 6.08 m/s, crouch/listen 2.4 m/s), camera-relative WASD/arrows with normalized diagonals and immediate stopping, Shift run, C crouch, Q slow/listen, R rear glance, E use. Rear glance preserves heading, eases in/out and ignores look input while held.
+- Reused mouse-look.js and the foundation stick filter; inherited keyboard movement remaps, device sensitivities, FOV, motion preferences and hold/toggle options. Matched crouch eye-height transition, default no camera bob, controller RT/RB run and LB crouch. Added touch Run and cleared portrait caption overlap.
+- Validation: verify-under-green.mjs (all seven live-Joe routes complete), verify-under-green-browser.cjs, new verify-under-green-controls.cjs and the standard web-game Playwright client pass. Real pointer-locked mouse tested in both vertical directions, rear-glance recovery, movement speeds checked against actual Level 1 contracts, controller deadzone/proportional speed, touch sprint and saved preferences covered. No browser errors. Inspected 2560x1600, 1280x720, 844x390 and 390x844 screenshots. Current scripted fresh walk clears are ~72 seconds; human pacing/balance playtesting remains necessary.
+
+### Under the Green clipping and encounter redesign — November 11, 2026
+
+- User feedback: pervasive clipping; water felt like a slowdown with no clear challenge.
+- Replaced overlapping/rounded floor and wall construction with a partition of the exact collision footprint. Raised ceiling ribs, roots, lamps, pipes and signage above the player; removed sand/flag/rail intrusions into walkable space; gave the record stand and sluice console matching collision. The keeper gate now covers the complete room width. Signs read correctly from both sides, with reversed arrows on the return face.
+- Rebuilt water encounters around 8 m channels, 3 seconds of green plus 1.5 seconds of warning (the safe first lesson keeps its longer opening), physical surge barriers, striped banks, three-state signals and visible cross-jets. Active water blocks every movement substep even during shove cooldown; a surge returns a mid-crossing player to their entry bank. Water no longer grants enough repeated trimmer immunity to erase the threat.
+- Marked three dry loops with distinct paving, continuous amber lines and approach signs. Corrected Joe's route fallback: when a crossing closes, he advances to its reachable bank rather than freezing because no complete route exists. Joe's surge recovery also respects his entry bank. Added concise crossing-window guidance and nearby-trimmer feedback. Level 1 controls and speeds remain intact.
+- Checks passing: new verify-under-green-design.mjs proves sprint-blocking, entry-bank recovery, walking-window success, Joe catching a player who forces a closed crossing, bank approach, exact floor/wall agreement and full-width gate closure. New verify-under-green-layout.cjs raycasts standing/crouched camera clearance at 1,230 floor samples and drives the side route and a real keyboard failed crossing. Existing simulation (seven full routes), controls, hardware browser and SwiftShader browser checks pass without browser errors.
+- Visual review at 2560x1600, 1280x720, 844x390 and 390x844; standard web-game client captures reviewed. Evidence is under output/under-green/redesign-*, encounter-design.json, layout-redesign.json. Human tension/pacing playtesting remains useful; scripted route completion is not a first-player timing estimate.
+- Final readability correction: the water panel now selects the viewed crossing (or the channel currently occupied), rather than the nearest outlet behind the player. Browser assertions cover the alternating range outlets facing forward and backward, with screenshot redesign-range-forward-2560.png.
+
+### Under the Green comprehensive review — November 11, 2026
+
+- User requested a review and comprehensive improvement list. Created design/under-the-green-review-2026-11-11.md with 44 prioritized findings, evidence labels, proposed changes and acceptance checks; machine-readable backlog in output/under-green/review/improvement-backlog.json. Runtime game files were not changed during this review.
+- New probes reproduced lost bypass progress after reload, a 99-second warning with one second remaining, crossing advice that ignores approach distance, stale prompts after remapping, gate activation far from the console, and completion after retreating outside the gate. Also traversed to the keeper room without operating the required pump, leaving no exit action.
+- Scripted route measurements: walk completion 71.35 s, active-Joe minimum gap 17.21 m, no attacks, final gap 118.50 m; sprint completion 46.68 s, final gap 159.02 m. Routes use a phase-aware planner and are not human playtest times. These findings motivate route/pacing redesign without hidden catch-up or changed Level 1 movement.
+- Captured current entrance, warning, completion and mobile states. Joe's off-axis entrance includes a floating descent pose with tool/ladder intersection; roof transitions still show unfinished openings. Prior static clearance coverage does not cover these dynamic presentation issues.
+- Evidence: simulation-findings.json, browser-findings.json and browser-probes.cjs under output/under-green/review/. Browser probes reported no page/console errors; this does not negate gameplay defects. Audio findings are from source review, not a listening session.

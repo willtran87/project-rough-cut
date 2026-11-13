@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {freshAuditResponse,advanceAuditResponse,auditResponseHush,auditResponseBellPose} from '../web/audit-response.js';
+const r=freshAuditResponse(),source={x:86,y:148};
+assert.equal(advanceAuditResponse(r,10,{ready:false}),null);assert.equal(r.phase,'waiting');
+assert.equal(advanceAuditResponse(r,0,{ready:true,source}),'quiet');source.x=0;assert.equal(r.source.x,86);
+advanceAuditResponse(r,.5);assert.equal(auditResponseHush(r),.040000000000000036);
+const held=JSON.stringify(r);advanceAuditResponse(r,9,{active:false});assert.equal(JSON.stringify(r),held);
+advanceAuditResponse(r,2);assert.equal(r.phase,'quiet');assert.equal(advanceAuditResponse(r,.11),'answer');
+advanceAuditResponse(r,.15);assert(Math.abs(auditResponseBellPose(r))>.01);assert.equal(auditResponseBellPose(r,true),0);
+advanceAuditResponse(r,2);assert.equal(r.phase,'complete');assert.equal(auditResponseHush(r),1);assert.equal(advanceAuditResponse(r,10,{ready:true,source}),null);
+const c=freshAuditResponse();advanceAuditResponse(c,0,{ready:true,source});assert.equal(advanceAuditResponse(c,.1,{interrupted:true}),'cancelled');assert.equal(auditResponseHush(c),1);assert.equal(advanceAuditResponse(c,5,{ready:true,source}),null);
+console.log('Audit response: deferred one-shot source, hush, pause, answer pose, comfort, restore and interruption passed');

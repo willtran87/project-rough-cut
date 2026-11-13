@@ -1,0 +1,41 @@
+{
+  "generator": "Built-in image_gen",
+  "processing": "Native resolution, WebP quality 90; original PNGs retained",
+  "assets": [
+    {
+      "source": "assets\\cutscenes\\level-one-opening\\01-last-shift.png",
+      "runtime": "web\\assets\\optimized\\level-one-opening\\01-last-shift.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 488660
+    },
+    {
+      "source": "assets\\cutscenes\\level-one-opening\\02-instructions.png",
+      "runtime": "web\\assets\\optimized\\level-one-opening\\02-instructions.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 570514
+    },
+    {
+      "source": "assets\\cutscenes\\level-one-opening\\03-still-working.png",
+      "runtime": "web\\assets\\optimized\\level-one-opening\\03-still-working.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 464286
+    },
+    {
+      "source": "assets\\cutscenes\\level-one-opening\\04-gate-closed.png",
+      "runtime": "web\\assets\\optimized\\level-one-opening\\04-gate-closed.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 518742
+    },
+    {
+      "source": "assets\\cutscenes\\level-one-opening\\05-engine-stops.png",
+      "runtime": "web\\assets\\optimized\\level-one-opening\\05-engine-stops.webp",
+      "width": 1672,
+      "height": 941,
+      "bytes": 414982
+    }
+  ]
+}

@@ -7,7 +7,7 @@
   <meta name="color-scheme" content="dark">
   <meta
     name="description"
-    content="Rough Cut is a high-detail pixel-art golf-course horror game starring Joe and his relentless mower."
+    content="Rough Cut is a stylized first-person golf-course horror game starring Joe and his relentless mower."
   >
   <meta property="og:type" content="website">
   <meta property="og:title" content="Rough Cut — A Joe Horror Game">
@@ -23,12 +23,16 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050b07'/%3E%3Cpath d='M4 4h24v24H4z' fill='%23142618' stroke='%23d87532' stroke-width='2'/%3E%3Cpath d='M8 22L23 7l2 3L10 25z' fill='%23e9dfb7'/%3E%3C/svg%3E">
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-opening.webp" fetchpriority="high">
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-grass-curtain.webp" fetchpriority="high">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20261112-course-results">
+  <link rel="stylesheet" href="./quality-ui.css?v=20261112-danger-action-resize">
+  <link rel="stylesheet" href="./course-settings.css?v=20261112-course-settings">
+  <link rel="stylesheet" href="./course-menu.css?v=20261112-course-menu">
+  <link rel="stylesheet" href="./opening-story.css?v=20261111-opening">
 </head>
 <body>
   <main id="game-shell">
     <p id="game-instructions" class="visually-hidden">
-      Move with WASD relative to your view. Click the game to look horizontally with the mouse, or drag to look. Escape pauses and releases the mouse. On a gamepad, the left stick moves and the right stick looks. On touch, use the movement pad and swipe open screen space to look. Press F to toggle fullscreen.
+      Movement is relative to your view. Your saved controls will appear here when the game is ready. Escape pauses and releases the mouse. F toggles fullscreen.
     </p>
     <canvas
       id="game"
@@ -41,9 +45,76 @@
     <p id="game-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
       Rough Cut is preparing the opening incident.
     </p>
+    <button id="study-launch" hidden>Field journal &amp; playtest</button>
+    <div id="course-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <img class="course-loading-art" src="./assets/optimized/rough-cut-opening.webp" width="1672" height="941" alt="" decoding="async">
+      <div class="course-loading-copy">
+        <span class="course-loading-kicker">ROUGH CUT · NIGHT SHIFT</span>
+        <p class="course-loading-title"><span class="course-loading-mark" aria-hidden="true">▪▪▪</span> Preparing the golf course…</p>
+        <p class="course-loading-hint">Keep to the lanterns. Listen for the mower.</p>
+      </div>
+    </div>
   </main>
+  <dialog id="study-dialog" aria-labelledby="study-title">
+    <div class="study-heading"><h1 id="study-title">After the shift</h1><button id="study-close" type="button" aria-label="Close field journal">Close</button></div>
+    <p>Your game stays paused. Notes and feedback stay in this browser. Download a report when you want to share it.</p>
+    <nav class="study-tabs" aria-label="Journal sections">
+      <button type="button" data-section="journal" aria-pressed="true">Field journal</button>
+      <button type="button" data-section="feedback" aria-pressed="false">Run feedback</button>
+      <button type="button" data-section="setup" aria-pressed="false">Comfort &amp; test guide</button>
+    </nav>
+    <section id="study-journal"><h2>Course discoveries</h2><div id="study-notes"></div></section>
+    <section id="study-feedback" hidden>
+      <h2>How was that run?</h2>
+      <form id="study-form">
+        <div class="study-grid">
+          <label>Fun<select name="fun" required><option value="">Choose a rating</option><option value="1">1 — Not fun</option><option value="2">2 — Mostly dull</option><option value="3">3 — Mixed</option><option value="4">4 — Fun</option><option value="5">5 — Want another run</option></select></label>
+          <label>Clarity<select name="clarity" required><option value="">Choose a rating</option><option value="1">1 — Lost</option><option value="2">2 — Often confused</option><option value="3">3 — Some confusion</option><option value="4">4 — Mostly clear</option><option value="5">5 — Always understood</option></select></label>
+          <label>Tension<select name="tension" required><option value="">Choose a rating</option><option value="1">1 — Too little</option><option value="2">2 — Mild</option><option value="3">3 — Just right</option><option value="4">4 — Intense</option><option value="5">5 — Overwhelming</option></select></label>
+          <label>Physical comfort<select name="comfort" required><option value="">Choose a rating</option><option value="1">1 — Had to stop</option><option value="2">2 — Uncomfortable</option><option value="3">3 — Some discomfort</option><option value="4">4 — Mostly comfortable</option><option value="5">5 — Comfortable</option></select></label>
+          <label>Device used<select name="device"><option>Keyboard and mouse</option><option>Controller</option><option>Touchscreen</option></select></label>
+          <label>Would you play again?<select name="replay" required><option value="">Choose an answer</option><option>Yes</option><option>Maybe</option><option>No</option></select></label>
+        </div>
+        <label>Why did you choose quiet or loud filing, a ball or blackout, and your final retreat?<textarea name="choices" maxlength="1600" rows="3" placeholder="Skipped or did not notice a choice? That is useful feedback too."></textarea></label>
+        <label>Best moment, frustrating moment, and any audio or movement discomfort<textarea name="notes" maxlength="2400" rows="3"></textarea></label>
+        <div class="study-actions"><button type="submit">Save feedback locally</button><button id="study-download" type="button">Download reports + current run</button></div>
+        <p id="study-save-status" role="status"></p>
+        <p class="study-small">Keeps the latest 20 reports on this device. No names needed. Rehearsals are marked separately.</p>
+      </form>
+    </section>
+    <section id="study-setup" hidden>
+      <h2>Before your next run</h2>
+      <p>Compare one setting at a time. Stop if movement or sound feels uncomfortable.</p>
+      <div class="study-actions"><button type="button" data-comfort="0">Standard view</button><button type="button" data-comfort="1">Calm view</button><button type="button" data-comfort="2">Fixed view</button></div>
+      <p id="study-comfort-status" role="status">Presets change camera sensitivity, free look, and reduced motion. Audio uses your saved volume settings.</p>
+      <div class="study-actions"><button type="button" data-audio="-1">Hear left cue</button><button type="button" data-audio="0">Hear center cue</button><button type="button" data-audio="1">Hear right cue</button></div>
+      <p id="study-audio-status" role="status">With headphones, check direction and comfortable volume. These short reference tones do not replace listening to a chase.</p>
+      <h2>Later playtest · about 20 minutes</h2>
+      <ol>
+        <li>Play a fresh Standard Review run without a walkthrough. Note where you first feel lost or excited.</li>
+        <li>Try quiet or loud Field Log filing, one optional review reward, and a final retreat. Explain your choices afterwards.</li>
+        <li>Record whether Joe visibly checked the bait, the blackout helped a crossing, and the final filing felt fair.</li>
+        <li>Try a second Night Order. Did the lighting change your route? Find a note or recognizable landmark.</li>
+        <li>Compare a short walk, turn, and chase with your preferred comfort preset. Then save feedback and download the report.</li>
+      </ol>
+      <p>Rehearsal is useful for practising a choice. Mark it separately from a fresh full run. There are no completed human test results yet.</p>
+    </section>
+  </dialog>
   <noscript>Rough Cut requires JavaScript to run.</noscript>
+  <script type="module" src="./chapter-links.js?v=20261112-course-menu"></script>
   <script src="./joe-dialogue.js"></script>
-  <script src="./game.js?v=20260927-qa"></script>
+  <script src="./foundation.js?v=20261106-quality-reset"></script>
+  <script src="./course-renderer.js?v=20261105-foundation"></script>
+  <script src="./quality-core.js?v=20261113-audit-restored"></script>
+  <script src="./joe-navigation.js?v=20261113-pursuit"></script>
+  <script src="./quality-ui.js?v=20261113-audit-restored"></script>
+  <script src="./course-settings-ui.js?v=20261112-course-settings"></script>
+  <script src="./course-menu-ui.js?v=20261113-audit-restored"></script>
+  <script src="./spatial-preferences.js"></script>
+  <script src="./spatial-controls.js?v=20261106-illustrated-props"></script>
+  <script type="module" src="./scene-3d.js?v=20261113-visual-pass"></script>
+  <script type="module" src="./game.js?v=20261113-symmetric-28"></script>
+  <script type="module" src="./playtest.js?v=20261106-quality-reset"></script>
+  <script type="module" src="./rebuild-ui.js?v=20261113-audit-restored"></script>
 </body>
 </html>
