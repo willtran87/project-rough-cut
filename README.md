@@ -1,5 +1,7 @@
 # Rough Cut
 
+**November 13 campaign release:** this snapshot includes the current Level 1, Back Nine, Under the Green and Final Cut implementations. See the [release verification and remaining limitations](qa/campaign-publication-2026-11-13.md). Historical local-only notes below describe earlier milestones; the visual and performance backlogs remain open.
+
 **The Final Cut has a local playable encounter foundation.** Both completed second-act routes now offer continuation. Cross committed mowing strips, prepare the irrigation swale, lure the rig and reach the road. This is the first implementation of the [72-item finale backlog](design/final-cut-build-list-2026-11-12.md), with substantial authored encounter, art, sound and ending work still outstanding. See the [implementation ledger and test limits](qa/final-cut-implementation-2026-11-12.md). Direct local entry is `web/final-cut.html` (or `final-cut.html` when serving `web/`). It has not been deployed.
 
 **Under the Green is now playable locally.** The Level 1 drain result continues into a first-person irrigation chapter: time the water crossings, evade Joe's slow hedge-trimmer pursuit, redirect the pump bypass and close the keeper's sluice. Chapter links support direct entry and older saves. See [implementation and verification](qa/under-the-green-2026-11-11.md).
