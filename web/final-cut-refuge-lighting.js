@@ -35,7 +35,7 @@ export function createRefugeLighting(scene,{box,software=false}){
   light.shadow.bias=-.0001;light.shadow.normalBias=.018;light.shadow.autoUpdate=false;
   scene.add(light,light.target);lights.push(light);
   const animatedReeds=AMBUSH_REEDS.some(p=>Math.hypot(Math.max(0,Math.abs(x-p.x)-p.w/2),Math.max(0,Math.abs(refuge.y-p.y)-p.d/2))<light.distance+3);
-  records.push({id:refuge.id,x,y:refuge.y,animatedReeds,previous:null,updates:0});
+  records.push({id:refuge.id,x,y:refuge.y,animatedReeds,previous:null,updates:0,inView:true});
  }
  return {lights,update(r,camera){
   if(camera)frustum.setFromProjectionMatrix(projection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
@@ -43,8 +43,13 @@ export function createRefugeLighting(scene,{box,software=false}){
    const light=lights[i];bounds.center.copy(light.position);bounds.radius=light.distance;
    // The complete finite influence sphere must miss the camera frustum.
    // Never select only the nearest lamp: multiple visible refuges stay lit.
-   light.visible=!camera||frustum.intersectsSphere(bounds);
-   if(!light.visible){record.previous=null;return;}
+   // The lamp itself stays enabled: its range cutoff already contributes
+   // nothing outside that sphere, whereas hiding it changes the scene's light
+   // count and makes every lit material recompile for each new count (a
+   // multi-second stall on the first frame that sees it). Only the shadow
+   // refresh below is skipped while the lamp is out of view.
+   record.inView=!camera||frustum.intersectsSphere(bounds);
+   if(!record.inView){record.previous=null;return;}
    // Cache static architecture, but nearby wind-driven reeds and the complete
    // moving rig envelope invalidate their own light's map. The reed margin
    // includes the authored blade width, wind, and contact displacement.
@@ -52,5 +57,5 @@ export function createRefugeLighting(scene,{box,software=false}){
    const key=near?[r.time,r.rig.x,r.rig.y,r.rig.yaw,r.rig.deployment,r.arrival.age,r.ending.age].join('|'):record.animatedReeds?String(r.time):'static';
    if(key!==record.previous){lights[i].shadow.needsUpdate=true;record.previous=key;record.updates++;}
   });
- },stats:()=>({parts,lights:lights.map((l,i)=>({id:records[i].id,intensity:l.intensity,visible:l.visible,animatedReeds:records[i].animatedReeds,origin:l.position.toArray(),target:l.target.position.toArray(),range:l.distance,shadowSize:l.shadow.mapSize.x,updates:records[i].updates})),textureAssets:0}),dispose(){for(const l of lights){l.shadow.map?.dispose();l.shadow.mapPass?.dispose();scene.remove(l,l.target);}}};
+ },stats:()=>({parts,lights:lights.map((l,i)=>({id:records[i].id,intensity:l.intensity,visible:records[i].inView,animatedReeds:records[i].animatedReeds,origin:l.position.toArray(),target:l.target.position.toArray(),range:l.distance,shadowSize:l.shadow.mapSize.x,updates:records[i].updates})),textureAssets:0}),dispose(){for(const l of lights){l.shadow.map?.dispose();l.shadow.mapPass?.dispose();scene.remove(l,l.target);}}};
 }
