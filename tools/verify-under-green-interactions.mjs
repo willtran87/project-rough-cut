@@ -14,8 +14,8 @@ step(r,{use:true});assert(!r.bypass);assert.match(interactionFeedback(r).text,/c
 for(let i=0;i<12;i++)step(r,{forward:1});assert.equal(nearbyAction(r)?.id,'bypass');assert.match(interactionFeedback(r).text,/Drain the onward channel/);
 step(r,{use:true});const saves=r.saveSerial;assert(r.bypass);assert.equal(r.events.filter(e=>e.type==='bypass').length,1);
 step(r,{use:true});assert.equal(r.saveSerial,saves);assert.equal(r.events.filter(e=>e.type==='bypass').length,1);assert.match(interactionFeedback(r).text,/already open/);
-const saved=readSave(JSON.stringify(snapshot(r))),loaded=createRun(saved.checkpoint,saved.evidence,saved.difficulty,saved);assert(loaded.bypass);assert(!('useFeedbackUntil' in snapshot(r)));assert.equal(interactionFeedback(loaded),null);
-checks.push('Out-of-reach Use explains the visible pump; ordinary approach immediately replaces stale advice; accepted/repeated Use stays irreversible and saves without transient feedback');
+const saved=readSave(JSON.stringify(snapshot(r))),loaded=createRun(saved.checkpoint,saved.evidence,saved.difficulty,saved);assert(!loaded.bypass);assert.equal(loaded.checkpoint,0);assert.deepEqual(loaded.player,createRun().player);assert(!('useFeedbackUntil' in snapshot(r)));assert.equal(interactionFeedback(loaded),null);
+checks.push('Out-of-reach Use explains the visible pump; ordinary approach immediately replaces stale advice; accepted/repeated Use is applied once within a run; retry resets the bypass and player to the entrance without transient feedback');
 
 for(const pose of [{yaw:-Math.PI/2},{pitch:.85},{x:LEVER.x+20}]){
  const denied=fixture(LEVER,1,1.7);Object.assign(denied.player,pose);step(denied,{use:true});assert(!denied.bypass);assert.equal(nearbyAction(denied),null);assert.equal(interactionFeedback(denied).text,'Face a control and move within reach.');

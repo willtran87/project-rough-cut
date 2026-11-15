@@ -15,7 +15,7 @@ export function createNightShadows(scene,trees,moon){
  for(let n=0;n<7;n++){const z=2+n*1.25,w=2.6-n*.27;triangle([0,z-1],[-w,z+1.3],[0,z+.8]);triangle([0,z-.7],[0,z+1],[w,z+1.5]);}
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();
  const material=new THREE.MeshBasicMaterial({color:0x020609,transparent:true,opacity:.23,depthWrite:false,forceSinglePass:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,fog:true});
- const mesh=new THREE.InstancedMesh(geometry,material,8),dummy=new THREE.Object3D();mesh.name='CourseMoonShadows';mesh.frustumCulled=false;mesh.count=0;scene.add(mesh);
+ const mesh=new THREE.InstancedMesh(geometry,material,8),dummy=new THREE.Object3D();mesh.userData.rigidInstanceBounds=true;mesh.name='CourseMoonShadows';mesh.frustumCulled=false;mesh.count=0;scene.add(mesh);
  const source=new THREE.Vector3(),target=new THREE.Vector3(),selected=new Int32Array(8),distances=new Float64Array(8);
  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
  let previous='',count=0,uploads=0;

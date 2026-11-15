@@ -1,6 +1,8 @@
 # Rough Cut — Godot opening prototype
 
-This Godot 4 project implements the beginning of **Rough Cut**:
+This separate Godot 4.3 prototype implements the beginning of **Rough Cut**. The current four-chapter browser game lives in [`../web/`](../web/README.md); this prototype does not contain those chapters. Documentation checked against source on November 15, 2026; Godot runtime was not rerun for this documentation update.
+
+Opening sequence:
 
 1. Fade into a dense wall of animated golf-course rough.
 2. A procedural weed-whacker sound starts and a ragged opening is cut through the grass.
@@ -13,9 +15,9 @@ This Godot 4 project implements the beginning of **Rough Cut**:
 
 1. Install Godot 4.3 or newer.
 2. Import `project.godot` from this directory.
-3. Run the project with **F6/F5**.
+3. Run the project with **F5** (the configured opening scene). **F6** runs the currently selected scene.
 
-The intro can be skipped with Space, Enter, Escape, or a mouse click.
+The opening animation cannot be skipped. It finishes automatically after its timed reveal and opens the menu; Reduced Motion remains available.
 
 ## Implemented menu actions
 

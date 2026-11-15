@@ -6,6 +6,7 @@ import { createCourseMowerCraft } from './course-mower-craft.js?v=20261113-large
 import { COURSE_MOWER_SIZE, enlargeMowerBody } from './course-mower-size.js';
 import { createCoursePushPose } from './course-push-pose.js';
 import {createCourseFootwork} from './course-footwork.js?v=20261112-first-step';
+import {mowerSurfaceKind,mowerSurfaceLight,finishMowerSurface} from './course-mower-finish.js';
 
 // One real skinned actor. Its pose follows travel and turning, never the viewer.
 export function createJoeModel(parent, invalidate=()=>{}, prepare=async()=>{}) {
@@ -64,8 +65,10 @@ export function createJoeModel(parent, invalidate=()=>{}, prepare=async()=>{}) {
           if(m.map){m.map.magFilter=THREE.NearestFilter;m.map.minFilter=THREE.NearestMipmapLinearFilter;m.map.generateMipmaps=true;m.map.needsUpdate=true;}
           const clothTint=m.name==='Collar'?'float clothLuma=dot(diffuseColor.rgb,vec3(.299,.587,.114)); diffuseColor.rgb=vec3(.24,.34,.43)*(.62+clothLuma*.85);':'';
           const faceBlend=m.name==='Face'&&!!o.geometry.attributes.color&&!!skinMap;
-          const metal=o.parent?.name==='MowerRigidBody'||/MowerRigidBody|Handle|Metal/i.test(o.name);
-          const p=metal?new THREE.MeshPhongMaterial({map:m.map,color:m.color,side:THREE.DoubleSide,specular:0x879da5,shininess:44}):new THREE.MeshLambertMaterial({map:m.map,color:m.color,side:THREE.DoubleSide});
+          let machine=false;for(let ancestor=o;ancestor&&ancestor!==asset;ancestor=ancestor.parent)if(ancestor.name==='MowerRigidBody'||/^Wheel/.test(ancestor.name))machine=true;
+          const finish=machine?mowerSurfaceKind(m.name):null,light=finish&&mowerSurfaceLight(finish);
+          const p=light?new THREE.MeshPhongMaterial({map:m.map,color:m.color,side:THREE.DoubleSide,...light}):new THREE.MeshLambertMaterial({map:m.map,color:m.color,side:THREE.DoubleSide});
+          p.name=machine?'CourseMower:'+m.name:m.name;
           p.onBeforeCompile=s=>{
             if(faceBlend){
               s.uniforms.joeSkinMap={value:skinMap};
@@ -75,8 +78,9 @@ export function createJoeModel(parent, invalidate=()=>{}, prepare=async()=>{}) {
             }
             s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n'+clothTint+(faceBlend?'\ndiffuseColor.rgb=mix(texture2D(joeSkinMap,fract(joeSkinUv)).rgb,diffuseColor.rgb,clamp(joeFaceWeight,0.0,1.0));':'')+'\ndiffuseColor.rgb = pow(max(diffuseColor.rgb,vec3(0.0)),vec3(.78));');
             s.fragmentShader=s.fragmentShader.replace('#include <opaque_fragment>','float joeRim=pow(1.0-abs(dot(normal,normalize(vViewPosition))),3.0); outgoingLight+=min(vec3(.14),reflectedLight.directDiffuse*1.4)*joeRim; vec3 pixelShade = floor(sqrt(max(outgoingLight, vec3(0.0))) * 48.0 + .5) / 48.0; outgoingLight = pixelShade * pixelShade;\n#include <opaque_fragment>');
+            if(finish)finishMowerSurface(s,finish);
           };
-          p.customProgramCacheKey=()=> 'joe-pixel-light-v4-'+(metal?'metal-':'')+(faceBlend?'face':m.name==='Collar'?'cloth':'surface');m.dispose();return p;
+          p.customProgramCacheKey=()=> 'joe-pixel-light-v5-'+(finish||'actor')+'-'+(faceBlend?'face':m.name==='Collar'?'cloth':'surface');m.dispose();return p;
         });o.material=Array.isArray(o.material)?mats:mats[0];
       }
     });

@@ -1,12 +1,14 @@
+import {createDroppedPaper} from './course-dropped-paper.js';
 import * as THREE from './vendor/three/three.module.js';
 import { exitCueState } from './objective-cues.js?v=20261108-clue-refinement';
 import { practiceStatus } from './station-feedback.js';
 import {stationFacing} from './station-facing.js';
 
-// Small physical details, all opaque and depth tested. One batch, no texture,
-// point light, transparency, timer or navigation/AI input. Only state changes
-// upload colors/positions; ordinary frames do no geometry work.
-export function createEnvironmentGuidance(parent,data,{scale,xScale}){
+// Small physical details, all opaque and depth tested. Existing markers share
+// one batch; the pixel-volume mode adds one source-lit printed-paper batch.
+// No new light, transparency, timer or navigation/AI input. Only state changes
+// upload marker colors/positions; ordinary frames do no geometry work.
+export function createEnvironmentGuidance(parent,data,{scale,xScale,craftedPaper=false}){
  const positions=[],colors=[],pieces=[],unit=new THREE.BoxGeometry(1,1,1).toNonIndexed(),tint=new THREE.Color();
  function box(x,y,z,w,h,d,hex,role='scenery'){
   const start=positions.length/3;tint.setHex(hex);
@@ -29,7 +31,9 @@ export function createEnvironmentGuidance(parent,data,{scale,xScale}){
  }
  // Irregular scuffed stone and exposed earth connect the final few steps to
  // the actual objects. They stop short of paths and are never arrow shaped.
- for(const [index,a] of [...data.actions,data.key,data.valve,data.shed,data.drain].entries()){
+ // Pixel-volume approaches are painted into the lit terrain atlas. Keep the
+ // original geometry only for legacy art modes.
+ if(!craftedPaper)for(const [index,a] of [...data.actions,data.key,data.valve,data.shed,data.drain].entries()){
   const x=a.x*xScale,z=-a.y*scale,angle=index<5?stationFacing(a):0,sn=Math.sin(angle),cs=Math.cos(angle);
   for(let i=0;i<9;i++){
    const reach=.8+i*.27,jitter=Math.sin(i*4.7+index)*.36;
@@ -38,9 +42,11 @@ export function createEnvironmentGuidance(parent,data,{scale,xScale}){
  }
  // Dropped forms belong to the paperwork stations. Place two small clusters
  // on each existing approach, following bends rather than a line through cover.
- // Folded silhouettes and tiny ruled ink reuse this single opaque batch.
+ // The original folded silhouettes remain; pixel-volume forms use printed,
+ // source-lit stock while the legacy mode keeps its original ruled batch.
  const paperClues=[];
  function paper(x,z,angle,seed){
+  if(craftedPaper){paperClues.push({x,z,angle,route:seed,vertices:48});return;}
   const start=positions.length,cs=Math.cos(angle),sn=Math.sin(angle);
   const corners=[[-.13,.038,-.18],[.10,.038,-.18],[.13,.065,.09],[.06,.087,.18],[-.13,.038,.15]];
   for(let i=1;i<4;i++)for(const n of [0,i+1,i]){
@@ -67,6 +73,7 @@ export function createEnvironmentGuidance(parent,data,{scale,xScale}){
    if(paperClues.every(p=>Math.hypot(p.x-x,p.z-z)>.8))paper(x,z,route*.47+distance,route);
   }
  }
+ const droppedPaper=craftedPaper&&paperClues.length?createDroppedPaper(paperClues):null;if(droppedPaper)parent.add(droppedPaper);
  const sx=data.shed.x*xScale,sz=-data.shed.y*scale;
  // Light leaks through the existing door sill, not through walls. The small
  // filing-box lens changes amber -> pale green; a bolt also slides clear so
@@ -105,5 +112,5 @@ export function createEnvironmentGuidance(parent,data,{scale,xScale}){
   geometry.attributes.color.needsUpdate=true;geometry.attributes.position.needsUpdate=true;
  }
  update({completed:[]});
- return {update,stats:()=>({batches:1,triangles:positions.length/9,paperClues,updates,exits,practice,depthTest:mesh.material.depthTest,depthWrite:mesh.material.depthWrite})};
+ return {update,stats:()=>({batches:droppedPaper?2:1,triangles:positions.length/9+(droppedPaper?.geometry.attributes.position.count||0)/3,paperClues,updates,exits,practice,depthTest:mesh.material.depthTest,depthWrite:mesh.material.depthWrite})};
 }

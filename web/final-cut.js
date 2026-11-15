@@ -1,3 +1,5 @@
+import {createDefeatPicker} from './defeat-dialogue.js';
+const defeatQuote=createDefeatPicker({chapter:'final-cut'});
 import {VISUAL_KEY,visualTier} from './final-cut-visual-settings.js';
 import {createRun,readSave,snapshot,step,objective,threat,nearbyAction,diagnostics} from './final-cut-sim.js';
 import {finaleEntry,recordFinaleCompletion,FINAL_CAREER_KEY} from './final-cut-campaign.js';
@@ -15,15 +17,15 @@ import {createMouseLook} from './mouse-look.js';
 import {createTouchRunControl} from './touch-run-control.js';
 import {finalCutMessages} from './final-cut-messages.js';
 import {freshAim} from './final-cut-balls.js';
-import {CUT_PLANS,cutPlan} from './final-cut-schedule.js';
-import {createFinalCutStory,FINAL_CUT_ART} from './final-cut-story.js';
+import {cutPlan} from './final-cut-schedule.js';
+import {createFinalCutStory} from './final-cut-story.js?v=20261114-launch-theme';
 const $=id=>document.getElementById(id),canvas=$('game'),query=new URLSearchParams(location.search),keys=new Set(),touch=new Set();
 const preferences=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce)').matches),spatialStore=RCSpatialPreferences.create();let spatial=spatialStore.get();
 const feel=RCFoundation.readComfort(),touchRun=createTouchRunControl();let toggleCrouch=false,toggleSprint=false,dirty=true;
 const bindings=actionBindings('onFoot',preferences.keyboardBindings,preferences.keyboardBindingsVersion||0),label=id=>keyLabel(bindings[id]);
 let raw=null;try{raw=localStorage.getItem(SAVE_KEY);}catch{}
-const entry=finaleEntry(query.get('from')),saved=readSave(raw),initial=saved&&(!query.has('from')||saved.route===entry.route)?{...entry,...saved,priorEvidence:Math.max(entry.priorEvidence,saved.priorEvidence),groundskeeper:entry.groundskeeper||saved.groundskeeper,crewLogs:entry.crewLogs|saved.crewLogs}:entry;
-let resultView='summary',replayRunId=null,replaySeed=0,story=null,introRunId=null,winStoryRunId=null;
+const entry=finaleEntry(query.get('from')||RCProgression.state().finalRoute),saved=query.has('replay')?null:readSave(raw),initial=saved&&(!query.has('from')||saved.route===entry.route)?{...entry,...saved,priorEvidence:Math.max(entry.priorEvidence,saved.priorEvidence),groundskeeper:entry.groundskeeper||saved.groundskeeper,crewLogs:entry.crewLogs|saved.crewLogs}:entry;
+let resultView='summary',story=null,winStoryRunId=null;
 let run=createRun(initial,entry.route),world=null,ready=false,manual=false,last=performance.now(),savedSerial=-1,device=matchMedia('(pointer:coarse)').matches?'touch':'keyboard',usePressed=false,chipPressed=false,chipReleased=false,chipOwner=null,lookX=0,lookY=0,drag=null,padButtons=[],panelMode='';
 const feedbackPrefs=feedbackPreferences(readRecord(FEEDBACK_KEY)),saveFeedback=preferenceWriter(FEEDBACK_KEY,feedbackPrefs),feedback=createFinalCutFeedback();let activePad=null;
 const audio=createFinalCutAudio(()=>({...preferences,footsteps:feedbackPrefs.footsteps}),run),mouse=createMouseLook(),live=()=>!story?.active&&['playing','aftermath'].includes(run.mode);
@@ -31,19 +33,17 @@ const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
 function clearInput(){feedback.update(run,null,false,0);keys.clear();touch.clear();touchRun.reset();toggleCrouch=toggleSprint=false;usePressed=chipPressed=chipReleased=false;chipOwner=null;run.ballAim=freshAim();lookX=lookY=0;drag=null;mouse.reset();dirty=true;}
 function beginChip(source){if(!live())return;if(chipOwner!==source)run.ballAim=freshAim();chipOwner=source;chipPressed=true;chipReleased=false;}
 function releaseChip(source){if(chipOwner===source&&live())chipReleased=true;}
-function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed)recordFinaleCompletion(run);text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
-function enterRound(){audio.start();if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}else if(run.mode==='complete'){run=createRun({route:run.route,stationReceipt:run.stationReceipt,...evidenceFields(run),priorEvidence:run.priorEvidence,seed:replaySeed});savedSerial=-1;}run.mode=run.won?'aftermath':'playing';clearInput();canvas.focus();paint();persist();}
-function primary(){if(!ready||story?.active)return;if(run.mode==='briefing'&&run.checkpoint===0&&introRunId!==run.runId&&!story.shouldSkip()){introRunId=run.runId;story.open('intro',enterRound);return;}enterRound();}
+function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed){recordFinaleCompletion(run);RCProgression.complete('final-cut');}text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
+function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}run.mode=run.won?'aftermath':'playing';clearInput();canvas.focus();paint();persist();}
+function primary(){if(!ready||story?.active)return;enterRound();}
 function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();persist();if(document.pointerLockElement)document.exitPointerLock();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}paint();audio.update(run);}
 function showResultView(view){if(run.mode!=='complete')return;resultView=view;panelMode='';clearInput();paint();$('panel').scrollTop=0;$(view==='credits'?'credits-back':view==='notice'?'notice-back':'show-credits').focus({preventScroll:true});}
 const menu=createDOMGamepadMenu({root:$('panel'),onStart:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();},onBack:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else if(run.mode==='paused')pause();},onDisconnect:()=>{if(device==='gamepad'&&live())pause();}});
 story=createFinalCutStory({root:$('shell'),reduced:()=>preferences.reducedMotion,onGesture:()=>audio.start(),fullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},onOpen:()=>{clearInput();if(document.pointerLockElement)document.exitPointerLock();},onClose:()=>{clearInput();dirty=true;paint();$('primary').focus({preventScroll:true});}});
 if(run.completed)winStoryRunId=run.runId;
-$('splash-image').src=FINAL_CUT_ART.splash;$('defeat-image').src=FINAL_CUT_ART.loss;
+$('splash-image').src='./assets/menu/final-cut-scene.webp';$('defeat-image').src='./assets/optimized/final-cut-loss-v2.webp';$('defeat-image').alt='From your fallen viewpoint, Joe grins above the tournament mower as its cutting reels close in under the championship lights.';$('defeat-image').decode().catch(()=>{});
 $('story-replay').onclick=()=>story.open(run.completed?'win':'intro');
 $('show-credits').onclick=()=>showResultView('credits');$('credits-back').onclick=()=>showResultView('summary');$('show-notice').onclick=()=>showResultView('notice');$('notice-back').onclick=$('notice-skip').onclick=()=>showResultView('summary');
-for(const plan of CUT_PLANS){const option=document.createElement('option');option.value=String(plan.seed);option.textContent=plan.name;$('replay-plan').append(option);}
-$('replay-plan').onchange=()=>{replaySeed=Number($('replay-plan').value);text('replay-description',CUT_PLANS[replaySeed].description+' The bell and golf balls can still call his next pass away.');};
 $('primary').onclick=primary;$('pause').onclick=pause;$('restart').onclick=()=>{run=createRun({route:run.route,stationReceipt:run.stationReceipt,...evidenceFields(run),priorEvidence:run.priorEvidence,seed:run.seed});savedSerial=-1;primary();};$('use').onclick=()=>usePressed=true;
 const campaignUI=bindCampaignSettings($('comfort'),preferences,()=>{dirty=true;audio.update(run);});$('sound').onclick=()=>campaignUI.set('muted',!preferences.muted);
 const keyboard=bindKeyboardSettings($('keyboard'),{profile:'onFoot',stored:bindings,storageField:'keyboardBindings',labels:{move_up:'Forward',move_down:'Backward',move_left:'Left',move_right:'Right',sprint:'Run',crouch:'Crouch',focus:'Listen',look_back:'Rear glance',interact:'Use',chip:'Chip ball',controls:'Map / guide'},onChange:b=>{Object.assign(bindings,b);clearInput();paint();}});
@@ -98,7 +98,8 @@ function input(dt){
  if(chipReleased)chipOwner=null;usePressed=chipPressed=chipReleased=false;lookX=lookY=0;return i;
 }
 function paint(){
- const active=live(),action=nearbyAction(run);document.body.classList.toggle('touch',device==='touch');$('hud').hidden=!active;$('touch').hidden=!active||device!=='touch';$('panel').hidden=active;$('loading').hidden=ready&&run.mode!=='briefing';
+ window.RCChapterLaunch.update(run.mode,ready);
+ const active=live(),action=nearbyAction(run);const arrival=active&&!!run.arrival.reached&&!run.arrival.requested;if(document.body.dataset.themeArrival!==String(arrival))document.body.dataset.themeArrival=String(arrival);document.body.classList.toggle('touch',device==='touch');$('hud').hidden=!active;$('touch').hidden=!active||device!=='touch';$('panel').hidden=active;$('loading').hidden=ready&&run.mode!=='briefing';
  text('objective',objective(run));text('checkpoint',`${['ARRIVAL','PUMP PREPARED','MACHINE DISABLED'][run.checkpoint]}${run.evidence?' · RECORD SECURED':''}`);
  const messages=finalCutMessages(run,preferences);
  const aim=run.ballAim,chipKey=device==='gamepad'?'X':device==='touch'?'Chip':label('chip'),useKey=device==='gamepad'?'A':device==='touch'?'Use':label('interact');
@@ -111,37 +112,52 @@ function paint(){
  text('sound',preferences.muted?'Sound off':'Sound on');$('journal').hidden=!(run.loadLimit||run.groundskeeper)||run.mode==='complete';
  text('control-guide',`${movementKeyLabel(bindings)} / arrows move; mouse or drag looks. ${onFootActionVerb('sprint','keyboard',feel)} ${label('sprint')} to run; ${onFootActionVerb('crouch','keyboard',feel)} ${label('crouch')} to crouch; ${label('focus')} listens; ${label('look_back')} glances behind; ${label('interact')} uses. Hold ${label('chip')} to charge a ball, look to aim, then release to chip; Use cancels. The dotted arc shows its path. Blocked shots keep the ball. Recover landed balls with Use or refill at a practice-ball basket. ${label('controls')} opens the guide. Controller: left stick move, right stick look, ${onFootActionVerb('sprint','gamepad',feel)} RT to run, ${onFootActionVerb('crouch','gamepad',feel)} LB to crouch, LT listen, R3 rear, A use/cancel, hold/release X chip, Start pause. Touch: ${onFootActionVerb('sprint','touch',feel)} Run to sprint, hold Crouch to crouch. Hold Chip and drag the scene to aim, then release.`);
  if(panelMode!==run.mode){dirty=true;panelMode=run.mode;const caught=run.mode==='caught',complete=run.mode==='complete',paused=run.mode==='paused';
-  if(!complete)resultView='summary';$('panel').classList.toggle('completed',complete);$('panel').classList.toggle('caught',caught);$('panel').dataset.contact=caught?run.failure?.kind||'chassis':'';const outcome=complete?finaleOutcome(run):null,extra=complete&&resultView!=='summary';
+  if(!complete)resultView='summary';$('panel').classList.toggle('completed',complete);$('panel').classList.toggle('caught',caught);$('panel').dataset.contact=caught?run.failure?.kind||'chassis':'';const outcome=complete?finaleOutcome(run):null,extra=complete&&resultView!=='summary';window.RCGameTheme.closing($('panel'),extra?resultView:'');
   $('panel').classList.toggle('briefing',run.mode==='briefing');$('chapter-splash').hidden=run.mode!=='briefing';$('defeat-backdrop').hidden=!caught;$('loss-quote').hidden=!caught;$('loss-story').hidden=!caught;
-  $('story-replay').hidden=caught||extra;text('story-replay',complete?'Replay ending scene':'Watch opening story');
-  text('loss-quote','“There. That’s the part we needed to correct.”');text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
+  $('story-replay').hidden=caught||complete;text('story-replay',complete?'Replay ending scene':'Replay story');
+  if(caught)text('loss-quote','“'+defeatQuote(run).lines.join(' ')+'”');text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
   if(caught){clearInput();$('panel').scrollTop=0;if(document.pointerLockElement)document.exitPointerLock();}
   text('title',caught?run.failure?.title||'A cut too close':complete?(resultView==='credits'?'Credits':resultView==='notice'?'One last notice':outcome.title):paused?'Round suspended':'The Final Cut');
   $('round-plan').hidden=!paused||run.seed===0;text('round-plan',cutPlan(run).name+' · '+cutPlan(run).description);
   $('tagline').hidden=caught||complete||paused;$('guide').hidden=caught||complete;$('arrival').hidden=caught||complete||paused;
   text('arrival',run.route==='garage'?'The garage shutter holds. A pedestrian service walk leads to the championship overlook.':run.route==='drain'?'The keeper’s sluice holds. Follow the wet passage to the championship overlook; applause rises beyond the clubhouse.':'The public road lies beyond the championship hole. The overlook is safe. Use the final-round control below it when you are ready.');
   $('ending-art').hidden=!complete||extra;$('result').hidden=(!caught&&!complete)||extra;$('advice').hidden=!caught;$('retained').hidden=!caught;
-  $('completion-details').hidden=!complete||extra;$('final-credits').hidden=!complete||resultView!=='credits';$('post-credits').hidden=!complete||resultView!=='notice';$('primary').hidden=extra;$('comfort').hidden=extra;
+  $('completion-details').hidden=!complete||extra;$('final-credits').hidden=!complete||resultView!=='credits';$('post-credits').hidden=!complete||resultView!=='notice';$('primary').hidden=extra;$('comfort').hidden=complete;document.querySelector('.actions a[href="./index.html"]').hidden=complete;
   text('result',caught?run.failure?.cause||'The machine reached you.':complete?outcome.survival+' '+outcome.aftermath:'');
   if(complete){text('aftermath-report',outcome.report);text('outcome-route',outcome.route);text('outcome-record-count',outcome.records.length?`${outcome.records.length} recovered record group${outcome.records.length===1?'':'s'}`:'Your statement. No documents were recovered.');
    text('outcome-plan',cutPlan(run).name);
-   if(replayRunId!==run.runId){replayRunId=run.runId;replaySeed=(run.seed+1)%CUT_PLANS.length;}
-   $('replay-plan').value=String(replaySeed);$('replay-plan').onchange();
    const img=$('ending-image');if(img.getAttribute('src')!==outcome.art)img.src=outcome.art;img.alt=outcome.alt;
    $('outcome-records').replaceChildren(...outcome.records.map(r=>{const li=document.createElement('li'),strong=document.createElement('strong');strong.textContent=r.title;li.append(strong,document.createTextNode(r.meaning));return li;}));
-   const storedMastery=readRecord(FINAL_CAREER_KEY).mastery,earned=new Set([...(Array.isArray(storedMastery)?storedMastery:[]),...earnedMastery(run)]);$('mastery-list').replaceChildren(...MASTERY.map(m=>{const li=document.createElement('li'),strong=document.createElement('strong');strong.textContent=`${earned.has(m.id)?'Earned · ':''}${m.title}`;li.append(strong,document.createTextNode(m.description));return li;}));
+   const storedMastery=readRecord(FINAL_CAREER_KEY).mastery,earned=new Set([...(Array.isArray(storedMastery)?storedMastery:[]),...earnedMastery(run)]);$('mastery').hidden=!earned.size;$('mastery-list').replaceChildren(...MASTERY.filter(m=>earned.has(m.id)).map(m=>{const li=document.createElement('li'),strong=document.createElement('strong');strong.textContent=`${earned.has(m.id)?'Earned · ':''}${m.title}`;li.append(strong,document.createTextNode(m.description));return li;}));
   }
-  text('advice',run.failure?.advice||'');text('retained',`Retry from ${['the protected overlook','the pump shelter; the bypass stays open','the secured pavilion'][run.checkpoint]}.`);
-  text('primary',caught?'Retry checkpoint':complete?'Replay the Final Cut':paused?'Resume':run.checkpoint?'Continue chapter':'Enter the final round');$('restart').hidden=!paused;
+  text('advice',run.failure?.advice||(caught?'Move across his cutting line and use solid refuge before the next pass.':''));text('retained',`Retry from ${['the protected overlook','the pump shelter; the bypass stays open','the secured pavilion'][run.checkpoint]}.`);
+  text('primary',caught?'Retry checkpoint':complete?'Return to main menu':paused?'Resume':!ready?'Preparing the course…':run.checkpoint?'Continue chapter':'Begin chapter');$('restart').hidden=!paused;
   if(!active&&ready&&!story.active)$('primary').focus({preventScroll:true});
   if(complete&&ready&&winStoryRunId!==run.runId){winStoryRunId=run.runId;queueMicrotask(()=>{if(run.mode==='complete'&&!story.active)story.open('win');});}
  }
 }
 function update(dt){const controls=input(dt);controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.saveSerial!==savedSerial)persist();audio.update(run);feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,feedbackPrefs.vibration);paint();}
-function draw(){world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion});}
-function frame(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;if(ready&&!manual&&!document.hidden){update(dt);if(live()||dirty){draw();dirty=false;}}requestAnimationFrame(frame);}
+function draw(){return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,manual});}
+import {createMenuFrameGate} from './menu-frame-gate.js';
+const menuFrameDue=createMenuFrameGate();
+let nextGameplayFrame=0;
+function frame(now){
+ if(ready&&!manual){
+  const active=live(),due=active?now+.25>=nextGameplayFrame:menuFrameDue(now,false);
+  if(due){
+   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+   // Schedule at 60 Hz even on high-refresh displays; never catch up by
+   // submitting a burst of expensive scenes after a delayed frame.
+   if(active){const interval=1000/60;nextGameplayFrame=now+interval-Math.max(0,(now-nextGameplayFrame)%interval);update(dt);}
+   else{nextGameplayFrame=now;const previous=device;input(.05);if(previous!==device)dirty=true;if(dirty&&!story.active)paint();}
+   if(!story.active&&(live()||dirty)&&draw()!==false)dirty=false;
+  }
+  if(!active){last=now;nextGameplayFrame=now;world.poll();}
+ }
+ requestAnimationFrame(frame);
+}
 new ResizeObserver(()=>{dirty=true;if(manual)draw();}).observe(canvas);
 window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
-window.advanceTime=async ms=>{manual=true;const n=Math.ceil(Math.max(0,ms)/(1000/60));for(let k=0;k<n;k++)update(Math.min(1/60,ms/1000-k/60));paint();draw();await new Promise(resolve=>requestAnimationFrame(resolve));};
+window.advanceTime=async ms=>{manual=true;await world?.whenPresented();const n=Math.ceil(Math.max(0,ms)/(1000/60));for(let k=0;k<n;k++)update(Math.min(1/60,ms/1000-k/60));paint();draw();await new Promise(resolve=>requestAnimationFrame(resolve));};
 if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,preferences,spatialStore};
-paint();world=await createFinalCutScene(canvas,message=>text('loading',message));ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);
+paint();if(run.mode==='briefing'&&run.checkpoint===0&&!story.shouldSkip()){story.open('intro');}world=await createFinalCutScene(canvas,message=>text('loading',message));ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);

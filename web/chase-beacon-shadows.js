@@ -12,8 +12,9 @@ export function skipUnlitBeaconLookups(material){
  material.customProgramCacheKey=()=>key+'-beacon-facing-v1';
 }
 // Shadow-only copies retain the actual authored opaque geometry, independent
-// of camera culling. No detailed needle cards, skinned meshes or shadow maps
-// for the moon/headlights. Six 128px depth faces use one nearest lookup.
+// of camera culling. No detailed needle cards or skinned meshes in this cover
+// set. Six 128px depth faces use one nearest lookup. Narrow headlights can
+// reuse the immutable positions while owning their own filtered index lists.
 export function createChaseBeaconShadows(scene){
  const cells=new Map(),meshes=[],moving=[],covers=[],faces=[],material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
  // This Three renderer samples a native cube depth texture. Its default point
@@ -34,8 +35,12 @@ export function createChaseBeaconShadows(scene){
   // octahedron, never an oversized box that shadows an open passage.
   let copy;
   if(g.attributes.position.count>96){
-   if(g.type!=='IcosahedronGeometry')return;
-   copy=new THREE.OctahedronGeometry(1,0);copy.scale(width*.43,height*.43,depth*.43);copy.translate((b.min.x+b.max.x)*.5,(b.min.y+b.max.y)*.5,(b.min.z+b.max.z)*.5);
+   // Sculpted windbreak cores remain opaque cover even when their long
+   // edge has extra segments. Keep their real silhouette and open ends.
+   if(g.type==='BoxGeometry')copy=g.clone();
+   else if(g.type==='IcosahedronGeometry'){
+    copy=new THREE.OctahedronGeometry(1,0);copy.scale(width*.43,height*.43,depth*.43);copy.translate((b.min.x+b.max.x)*.5,(b.min.y+b.max.y)*.5,(b.min.z+b.max.z)*.5);
+   }else return;
   }else copy=g.clone();
   // Group immutable world-space shapes by position before merging, so nearby
   // cover occupies contiguous index runs for the finite-volume compactor.
@@ -94,5 +99,7 @@ export function createChaseBeaconShadows(scene){
   try{renderer.setViewport(0,0,1,1);renderer.setScissor(0,0,1,1);renderer.setScissorTest(true);light.shadow.needsUpdate=true;renderer.render(scene,camera);}finally{renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(test);}
  }
  function addCaster(object){object.traverse(o=>{if(o.isMesh){o.layers.enable(LAYER);o.castShadow=true;o.customDistanceMaterial=depthMaterial;}});moving.push({object,matrix:new THREE.Matrix4()});}
- return {collect,build,update,warm,addCaster,stats:()=>({parts,triangles,submittedTriangles:faces.reduce((n,f)=>n+f.geometry.drawRange.count/3,0),indexValuesUploaded:uploaded,batches:meshes.length,size:128,updates,faceTests,faceDraws,moving:moving.length}),dispose(){for(const m of meshes){m.geometry.dispose();m.removeFromParent();}for(const pieces of cells.values())for(const g of pieces)g.dispose();cells.clear();material.dispose();depthMaterial.dispose();light?.shadow.dispose();}};
+ // Immutable positions and original index runs can also feed a narrow lamp
+ // shadow. Consumers own their index buffers, not these shared positions.
+ return {collect,build,update,warm,addCaster,coverGeometry:()=>({position:faces[0].geometry.getAttribute('position'),indices:sourceIndices,parts:covers}),stats:()=>({parts,triangles,submittedTriangles:faces.reduce((n,f)=>n+f.geometry.drawRange.count/3,0),indexValuesUploaded:uploaded,batches:meshes.length,size:128,updates,faceTests,faceDraws,moving:moving.length}),dispose(){for(const m of meshes){m.geometry.dispose();m.removeFromParent();}for(const pieces of cells.values())for(const g of pieces)g.dispose();cells.clear();material.dispose();depthMaterial.dispose();light?.shadow.dispose();}};
 }

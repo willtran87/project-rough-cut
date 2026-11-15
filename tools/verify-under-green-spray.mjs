@@ -39,3 +39,23 @@ for(const height of [240,390,600,844,1600])for(const fov of [45,58,85])for(const
  const near=sprayFootprint(p.width,p.length,depth+.001,projection,height);assert(Math.abs(near-scale)<.02,'No step change on camera movement');
 }
 console.log(JSON.stringify({passed:true,footprints,checks:['bounded world footprint','resolution-aware scale','continuous distance response']}));
+
+// Droplet orientation follows the actual curved flight, including packet sway.
+// Repeated lifetimes must change launch spread without a visible reset.
+let tangents=0,varied=0,cycles=0,maxTangentError=0;
+for(const w of WATERS)for(const jet of channelJets(w))for(let i=0;i<64;i++){
+ const seed=spraySeed(i),dt=1e-6,time=1.234,p=sprayDrop(jet,seed,time,.38),q=sprayDrop(jet,seed,time+dt,.38);
+ if(q.t>p.t){
+  for(const [position,velocity]of [['x','vx'],['y','vy'],['height','vh']]){
+   const error=Math.abs((q[position]-p[position])/(dt*seed.rate)-p[velocity]);
+   assert(error<.001,'Billboard tangent diverges from particle travel');maxTangentError=Math.max(maxTangentError,error);tangents++;
+  }
+ }
+ const first=(.5-seed.phase)/seed.rate+4/seed.rate,next=first+1/seed.rate;
+ const a=sprayDrop(jet,seed,first,.105),b=sprayDrop(jet,seed,next,.105);
+ if(Math.hypot(a.x-b.x,a.y-b.y)>.002)varied++;cycles++;
+ const wrap=(5-seed.phase)/seed.rate;
+ for(const t of [wrap-dt,wrap+dt])assert(sprayDrop(jet,seed,t,.105).alpha<.001,'Packet respawn is visible');
+}
+assert(varied>cycles*.9,'Successive emissions repeat the same narrow path');
+console.log(JSON.stringify({passed:true,tangents,maxTangentError,varied,cycles,checks:['flight-aligned billboards','varied consecutive emissions','invisible lifetime transitions']}));

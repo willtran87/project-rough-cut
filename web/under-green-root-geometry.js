@@ -17,7 +17,7 @@ export function drainRootProfile(curve,radius,{taper=.83,branchPoints=[]}={}){
  return {seed,phase,collars,burl,scar,widthAt};
 }
 
-export function drainRootGeometry(curve,radius,wall,{taper=.83,branchPoints=[],lowDetail=false}={}){
+export function drainRootGeometry(curve,radius,wall,{taper=.83,branchPoints=[],lowDetail=false,buriedStart=false}={}){
  const profile=drainRootProfile(curve,radius,{taper,branchPoints});
  const segments=lowDetail?(radius>=.13?13:7):(radius>=.13?22:10),sides=lowDetail?(radius>=.13?7:5):(radius>=.13?10:6);
  const geometry=new THREE.TubeGeometry(curve,segments,radius,sides,false),positions=geometry.attributes.position,uv=geometry.attributes.uv,colors=[];
@@ -33,6 +33,15 @@ export function drainRootGeometry(curve,radius,wall,{taper=.83,branchPoints=[],l
    let x=centre.x+(positions.getX(n)-centre.x)*scale,y=centre.y+(positions.getY(n)-centre.y)*scale,z=centre.z+(positions.getZ(n)-centre.z)*scale;
    const upper=wall?.maxIntrusion?THREE.MathUtils.smoothstep(y,2.3,3.1):0,flatten=.23+upper*.27;
    if(wall){if(wall.vertical)x=wall.face+(x-wall.face)*flatten;else z=-wall.face+(z+wall.face)*flatten;}
+   if(wall&&buriedStart){
+    // Keep the first section inside the physical wall thickness, retaining a
+    // thin elliptical section instead of crushing a whole ring onto a clamp.
+    // Its full depth emerges gradually; ordinary hanging roots are unchanged.
+    const n=((wall.vertical?x:-z)-wall.boundary)*wall.side;
+    const weight=THREE.MathUtils.smoothstep(t,.04,.16),buried=-.035+(n-.125)*.08;
+    const depth=THREE.MathUtils.lerp(buried,n,weight);
+    if(wall.vertical)x=wall.boundary+wall.side*depth;else z=-(wall.boundary+wall.side*depth);
+   }
    if(wall?.maxIntrusion){
     const intrusion=wall.maxIntrusion+upper*.12;
     if(wall.vertical)x=wall.boundary+wall.side*clamp((x-wall.boundary)*wall.side,-.15,intrusion);

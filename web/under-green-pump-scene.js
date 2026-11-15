@@ -79,7 +79,13 @@ export function createPumpControl({scene,box,put,cyl,materials,makeSign}){
   if(!parts.has(mesh.material))parts.set(mesh.material,[]);parts.get(mesh.material).push(geometry);original.push(mesh);
  });
  for(const mesh of original)mesh.removeFromParent();
- for(const [material,geometries]of parts){root.add(new THREE.Mesh(mergeIndexedGeometries(geometries),material));geometries.forEach(g=>g.dispose());}
+ for(const [material,geometries]of parts){
+  const mesh=new THREE.Mesh(mergeIndexedGeometries(geometries),material);
+  // These baked pieces stay fixed. Lever, needles, latch and diverter were
+  // excluded above, so their moving bounds still receive the full light set.
+  mesh.name='Pump control housing';mesh.userData.drainStaticLight=true;
+  root.add(mesh);geometries.forEach(g=>g.dispose());
+ }
  let state={};
  return {root,update(run){
   const progress=pumpProgress(run);lever.rotation.x=-progress;latch.position.y=.93+(1-progress)*.08;diverter.rotation.y=progress*Math.PI/2;

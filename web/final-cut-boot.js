@@ -1,1 +1,2 @@
-try{await import('./final-cut.js');}catch(error){console.error(error);document.getElementById('loading').textContent='The chapter could not load: '+error.message;const b=document.getElementById('primary');b.disabled=false;b.textContent='Retry loading';b.onclick=()=>location.reload();}
+window.RCChapterLaunch=RCLaunchScreens.mount(document.getElementById('panel'),'final-cut');
+if(RCProgression.admit('final-cut'))try{await import('./final-cut.js?v=20261115-progression');}catch(error){console.error(error);document.getElementById('loading').textContent='The chapter could not load: '+error.message;const b=document.getElementById('primary');b.disabled=false;b.textContent='Retry loading';b.onclick=()=>location.reload();}

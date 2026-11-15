@@ -14,5 +14,9 @@ export function updateFloodlight(light,power){
   const lens=light.fixture.material;
   if(lens.emissive){lens.color.copy(unpowered);lens.emissive.copy(light.tint);lens.emissiveIntensity=1.6*p;}
   else lens.color.copy(unpowered).lerp(light.tint,p);
-  light.pool.material.color.copy(light.tint);light.pool.material.opacity=.14*p;
+  // A real local source already lights the terrain. Its old unlit floor disc
+  // flattened albedo and painted over contact shade; retain it only for the
+  // illustrated fallback, which has no physical point light.
+  light.pool.material.color.copy(light.tint);light.pool.material.opacity=(light.source?0:.14)*p;
+  light.pool.visible=!light.source&&p>0;
 }

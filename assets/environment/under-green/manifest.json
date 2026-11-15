@@ -17,8 +17,7 @@
       ],
       "activeQuadrants": [
         1,
-        2,
-        3
+        2
       ]
     },
     {
@@ -55,12 +54,11 @@
         "tile"
       ],
       "activeQuadrants": [
-        0,
-        1,
         2,
         3
       ],
-      "masonrySampling": {
+      "referenceCandidate": "assets/environment/under-green/surfaces-masonry-v2.png",
+      "supersededMasonrySampling": {
         "size": [
           1254,
           627
@@ -70,8 +68,7 @@
           2
         ],
         "texelsPerMetre": 313.5
-      },
-      "referenceCandidate": "assets/environment/under-green/surfaces-masonry-v2.png"
+      }
     },
     {
       "source": "assets/environment/under-green/machinery-surfaces-v1.png",
@@ -104,7 +101,61 @@
         ],
         "texelsPerMetre": 627
       }
+    },
+    {
+      "source": "assets/environment/under-green/masonry-field-v4.png",
+      "runtime": "web/assets/under-green/masonry-field-v4.png",
+      "prompt": "assets/environment/under-green/masonry-field-v4.prompt.md",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "materials": [
+        "masonry"
+      ],
+      "sampling": {
+        "worldMetres": [
+          4,
+          4
+        ],
+        "texelsPerMetre": 313.5
+      },
+      "referenceCandidate": "assets/environment/under-green/surfaces-masonry-v3.png"
+    },
+    {
+      "source": "assets/environment/under-green/keeper-timber-v1.png",
+      "runtime": "web/assets/under-green/keeper-timber-v1.png",
+      "prompt": "assets/environment/under-green/keeper-timber-v1.prompt.md",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "material": "keeper timber",
+      "worldMetres": [
+        4,
+        4
+      ],
+      "texelsPerMetre": 313.5,
+      "sha256": "8677215f84029e069823fd62936774c117b12b7af07a7d05c27f5cba204f5839",
+      "encodedBytes": 2686964,
+      "processing": "Native generated pixels copied unchanged; no resampling or edits"
+    },
+    {
+      "source": "assets/environment/under-green/sediment-field-v1.png",
+      "runtime": "web/assets/under-green/sediment-field-v1.png",
+      "prompt": "assets/environment/under-green/sediment-field-v1.prompt.md",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "worldMetres": [
+        4,
+        4
+      ],
+      "texelsPerMetre": 313.5,
+      "role": "Dedicated compacted sediment albedo; replaces surfaces-v1 mud quadrant; independent wetness mask, no albedo-derived bump.",
+      "sha256": "a2d19ce8f527586367ab5648a3f87984bb74a9f05516b8563cb675215978be73"
     }
   ],
-  "runtimeSampling": "Active architectural/organic 627px tiles span two metres; paired brick1254x627 spans4x2m. Close machinery uses627px per metre. Nearest magnification, mipmapped minification and independent wetness; albedo is not used as bump."
+  "runtimeSampling": "Architectural/organic materials preserve313.5source texels/metre. Masonry1254x1254 spans4x4m;627px tiles span2x2m. Close machinery uses627px/metre. Nearest magnification, mipmapped minification and independent wetness; albedo is not bump."
 }

@@ -6,10 +6,10 @@ import {crossingAdvice,runningCrossingOption} from '../web/under-green-guidance.
 import {createLocalTelemetry,telemetrySnapshot} from '../web/local-telemetry.js';
 import {observeJoe} from '../web/under-green-senses.js';
 
-export function traverse({cp=0,pressure='standard',sprint=false,crouch=false,shortcut=false,optional=false,wet=false,rangeRoute=null,timedKeeper=false,adaptiveRun=false,adaptiveStance=false,rearChecks=false,smoothPaths=false,decisionPause=0,dodge=false,timeOffset=0,durable={},inspect,inputTape}={}){
- const r=createRun(cp,false,pressure,durable);r.mode='playing';r.time+=timeOffset;r.telemetry=createLocalTelemetry();
+export function traverse({cp=0,pressure='standard',sprint=false,crouch=false,shortcut=false,optional=false,wet=false,rangeRoute=null,timedKeeper=false,adaptiveRun=false,adaptiveStance=false,rearChecks=false,smoothPaths=false,decisionPause=0,dodge=false,timeOffset=0,durable={},inspect,inputTape,view}={}){
+ const r=createRun(cp,false,pressure,durable);r.mode='playing';r.time+=timeOffset;r.telemetry=createLocalTelemetry();if(view)r.view={...view};
  let activeCrouch=crouch,escapeUntil=0,lookUntil=0,nextLook=0;
- const advance=input=>{input={crouch:activeCrouch,rear:rearChecks&&r.elapsed<lookUntil,...input};inputTape?.push({yaw:r.player.yaw,input:{...input}});step(r,input);};
+ const advance=input=>{input={crouch:activeCrouch,rear:rearChecks&&r.elapsed<lookUntil,...input,...(view?{view}: {})};inputTape?.push({yaw:r.player.yaw,input:{...input}});step(r,input);};
  let targets=MAIN_ROUTE.slice();
  const crossing=id=>{const w=WATERS.find(w=>w.id===id),sign=w.forward||1;return [waterPoint(w,0,-sign*(w.depth/2+.65)),{...waterPoint(w,0,sign*(w.depth/2+.9)),crossing:id}];};
  if(wet)targets=[{x:0,y:55},...crossing('spillway'),{x:0,y:73},{x:-20,y:73},...crossing('bunker'),{x:-20,y:54},LEVER,{x:-16,y:40},{x:0,y:40},{x:12,y:38},...crossing('range-a'),{x:12,y:rangeY(23.5)},...crossing('range-b'),{x:12,y:rangeY(13)},SLUICE];
@@ -50,7 +50,7 @@ export function traverse({cp=0,pressure='standard',sprint=false,crouch=false,sho
    if(takeWet&&adaptiveStance&&crouch)stanceChoices.push({reason:'stand-for-crossing',channel:goal.decision,time:r.time,position:{x:r.player.x,y:r.player.y}});
    targets.splice(index,1,...branch);route=[];repath=0;continue;
   }
-  const observed=adaptiveStance?observeJoe(r):null;
+  const observed=adaptiveStance?observeJoe(r,view):null;
   if(rearChecks&&observed?.audible&&r.elapsed>=nextLook){lookUntil=r.elapsed+.45;nextLook=r.elapsed+3;}
   // The ordinary caption recommends a rear glance when the engine is heard.
   // React to a close Joe only after the actual camera sees him, not to an
@@ -61,7 +61,7 @@ export function traverse({cp=0,pressure='standard',sprint=false,crouch=false,sho
   activeCrouch=crouch&&!goal.stand&&!escapeRun;
   // Explicit QA pilot: respond to the visible committed preparation with
   // ordinary lateral input, then walk past. The naive pilot remains available.
-  if(dodge&&!evade.length&&r.joe.phase==='windup'&&observeJoe(r).imminent){
+  if(dodge&&!evade.length&&r.joe.phase==='windup'&&observeJoe(r,view).imminent){
    // Pass the visible attacker, not a navigation waypoint that may be beside
    // the player. Try a tighter ordinary sidestep in the 4m service corridor.
    const direction=r.joe;

@@ -77,7 +77,9 @@
  #objective-card{max-width:48%;top:10px}
  #objective-card strong{font-size:14px}
  .hud-tools{top:10px;flex-direction:row}
- #water-read{top:64px;right:auto;width:min(390px,calc(100% - 24px))}
+ /* Reserve the central sightline for bank symbols, including crouched FOV45.
+    Longer state text wraps in the side panel at the existing readable size. */
+ #water-read{top:64px;right:auto;width:min(320px,calc(50% - 48px))}
  #water-read[data-lesson=true] span{display:none}
  body.touch #bottom{bottom:95px;width:55%}
 }

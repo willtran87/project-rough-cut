@@ -1,3 +1,5 @@
+import {applyHorizontalWaterNormal} from './under-green-water-normal.js';
+import {channelShoreMeshData,channelSurfaceHeight} from './under-green-channel-shore.js';
 import {waterPoint,distance} from './under-green-course.js';
 import {channelJets} from './under-green-flow.js';
 import {spraySeed,sprayDrop,impactCloud,sprayFootprint} from './under-green-spray.js';
@@ -5,47 +7,118 @@ import {floodState} from './under-green-flood.js';
 import {createDrainWaterContacts,DRAIN_DRIPS,drainDripSample,waterContactHeight} from './under-green-water-contacts.js';
 import {waterEffectTexture,fadingWaterInstances} from './under-green-water-particles.js';
 import {CONTACT_SPLASH_DROPS,contactSplashSample} from './under-green-contact-splash.js';
+import {SHALLOW_WATER_HEIGHT,shallowWaterHeight} from './under-green-wet-ground.js';
 import * as THREE from './vendor/three/three.module.js';
 
 // Opaque silty beds and separate ballistic droplets. Every water material is
 // lit by the scene: a failing lamp dims water as well as the surrounding stone.
-export function createDrainWater(scene,waters,camera,{software=false,renderHeight=()=>600}={}){
+export function createDrainWater(scene,waters,camera,{software=false,renderHeight=()=>600,sediment}={}){
  const time={value:0},surfaces=[],plumeFrustum=new THREE.Frustum(),plumeProjection=new THREE.Matrix4();
  for(const w of waters){
   const group=new THREE.Group();group.position.set(w.x,0,-w.y);group.rotation.y=w.axis==='x'?-Math.PI/2:0;scene.add(group);
-  const energy={value:0},material=new THREE.MeshPhongMaterial({color:0xffffff,specular:0x647461,shininess:58,side:THREE.DoubleSide});
+  const energy={value:0},material=new THREE.MeshPhongMaterial({color:0xffffff,specular:0x7a8576,shininess:240,side:THREE.DoubleSide});
   material.userData.drainColorRole='water';
   material.onBeforeCompile=shader=>{
    shader.uniforms.drainTime=time;shader.uniforms.drainEnergy=energy;shader.uniforms.drainSize={value:new THREE.Vector2(w.width,w.depth)};
-   shader.vertexShader='uniform float drainTime;uniform float drainEnergy;varying vec2 drainPoint;\n'+shader.vertexShader;
+   shader.uniforms.drainSedimentMap={value:sediment.map};shader.uniforms.drainSedimentScale={value:new THREE.Vector2(...sediment.worldTileMetres.map(m=>1/m))};
+   shader.vertexShader='attribute float drainShore;attribute float drainShoreDistance;attribute vec2 drainShoreGradient;varying float drainShoreWeight;varying float drainEdgeDistance;varying vec2 drainShoreSlope;uniform float drainTime;uniform float drainEnergy;varying vec2 drainPoint;varying vec3 drainBedWorld;\n'+shader.vertexShader;
    shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
     drainPoint=vec2(position.x,-position.z);
-    transformed.y+=sin(position.x*5.+drainTime*1.3)*cos(position.z*4.-drainTime*.9)*.008*drainEnergy;`);
-   shader.fragmentShader='uniform float drainTime;uniform float drainEnergy;uniform vec2 drainSize;varying vec2 drainPoint;\n'+shader.fragmentShader;
+    drainShoreWeight=drainShore;
+    drainEdgeDistance=drainShoreDistance;
+    drainShoreSlope=drainShoreGradient*(.025+drainEnergy*.08-.0018);
+    transformed.y-=(1.-drainShore)*(.025+drainEnergy*.08-.0018);
+    transformed.y+=sin(position.x*5.+drainTime*1.3)*cos(position.z*4.-drainTime*.9)*.008*drainEnergy*drainShore;
+    drainBedWorld=(modelMatrix*vec4(transformed,1.)).xyz;`);
+   shader.fragmentShader='varying float drainShoreWeight;varying float drainEdgeDistance;varying vec2 drainShoreSlope;uniform float drainTime;uniform float drainEnergy;uniform vec2 drainSize;uniform sampler2D drainSedimentMap;uniform vec2 drainSedimentScale;varying vec2 drainPoint;varying vec3 drainBedWorld;\n'+shader.fragmentShader;
+   shader.fragmentShader=`
+    float drainRippleHash(vec2 cell){
+     vec3 q=fract(vec3(cell.xyx)*.1031);
+     q+=dot(q,q.yzx+33.33);
+     return fract((q.x+q.y)*q.z);
+    }
+    vec2 drainRippleGradient(vec2 point){
+     vec2 cell=floor(point),f=fract(point),u=f*f*(3.-2.*f),du=6.*f*(1.-f);
+     float a=drainRippleHash(cell),b=drainRippleHash(cell+vec2(1.,0.));
+     float c=drainRippleHash(cell+vec2(0.,1.)),d=drainRippleHash(cell+vec2(1.,1.));
+     return vec2(mix(b-a,d-c,u.y)*du.x,mix(c-a,d-b,u.x)*du.y);
+    }
+   `+shader.fragmentShader;
    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-    vec2 p=floor(drainPoint*96.)/96.;
+    vec2 p=floor(drainPoint*160.)/160.;
     float curl=sin(p.x*2.3+sin(p.y*1.8-drainTime*.3)*1.2);
     float silt=.5+.5*sin(p.x*3.1+p.y*1.7+curl-drainTime*.19);
-    float bank=smoothstep(.62,1.,abs(p.x)/(drainSize.x*.5));
-    vec2 drift=p+vec2(sin(p.y*.9+curl)*.24,sin(p.x*1.7-drainTime*.13)*.19);
-    float wave=sin(drift.y*29.+sin(drift.x*6.3)*2.1+curl-drainTime*(.7+drainEnergy*1.7));
-    float broken=smoothstep(.48,.86,sin(p.x*17.+p.y*4.1)*sin(p.y*7.3-p.x*3.7));
-    float glint=smoothstep(.93,.995,wave)*broken;
-    vec3 murk=mix(vec3(.013,.022,.016),vec3(.029,.035,.020),silt);
-    murk=mix(murk,vec3(.038,.033,.019),bank*.7);
-    diffuseColor.rgb=murk+glint*vec3(.008,.012,.008)*(1.-bank*.7);`);
+    // Sediment collects at the retaining sides and both real catch grates.
+    // Narrow contact shade sits inside the existing water footprint; broken
+    // deposits leave quiet stretches rather than a uniform bright foam rim.
+    float sideDistance=drainSize.x*.5-abs(p.x);
+    float endDistance=drainEdgeDistance;
+    float shoreDistance=max(0.,min(sideDistance,endDistance));
+    float shoreVariation=.5+.5*sin(p.x*11.7+sin(p.y*8.3)*2.);
+    float bank=1.-smoothstep(.025,.12+shoreVariation*.13,shoreDistance);
+    float contact=1.-smoothstep(.005,.045,shoreDistance);
+    // Phase stays continuous across pressure changes; only amplitude changes.
+    // Two crossing wave families create a softly broken reflected source.
+    // Slopes are the derivatives of small 12 mm / 4 mm height fields, in
+    // channel-local coordinates. The existing normal transform rotates an
+    // east-west channel and its reflection together; the camera cannot drag it.
+    float waveA=cos(p.x*5.2+p.y*2.6-drainTime*.9);
+    float waveB=cos(p.y*10.8-p.x*1.7-drainTime*.6);
+    float slopeEnergy=.3+.7*drainEnergy;
+    // Millimetre capillary ripples break the reflected lamp across the broad
+    // sheet. Their short wavelengths add surface structure without changing
+    // the collision height or inventing a glowing diffuse stripe.
+    // Two drifting irregular ripple fields avoid repeated parallel stripes.
+    // The gradient is analytic, so light follows the same continuous height
+    // field as the camera moves; world-local pixel sampling remains fixed.
+    vec2 rippleA=drainRippleGradient(vec2(p.x*23.+p.y*7.,p.y*19.-p.x*5.)+vec2(drainTime*.19,-drainTime*.31));
+    vec2 rippleB=drainRippleGradient(vec2(p.x*41.-p.y*17.,p.y*31.+p.x*11.)+vec2(-drainTime*.27,drainTime*.13));
+    vec2 capillarySlope=vec2(-.004*(23.*rippleA.x-5.*rippleA.y)-.0018*(41.*rippleB.x+11.*rippleB.y),
+      .004*(7.*rippleA.x+19.*rippleA.y)+.0018*(-17.*rippleB.x+31.*rippleB.y));
+    float capillaryEnergy=.65+.35*drainEnergy;
+    vec3 murk=mix(vec3(.013,.018,.014),vec3(.027,.030,.020),silt);
+    murk=mix(murk,vec3(.031,.027,.015),bank*(.35+shoreVariation*.4));
+    // The shallow channels cover a sediment-coated walking floor. Reuse its
+    // authored grain at physical pixel density; it does not drift with waves.
+    // Optical path length conceals that bed as pressure raises the water and
+    // as the view approaches grazing. This stays in the opaque, lit pass:
+    // submerged actors keep their existing depth occlusion, without sorting.
+    // Refract the view onto the real walking-floor height. Grain therefore
+    // sits beneath the moving surface instead of looking painted onto it.
+    vec3 bedView=normalize(cameraPosition-drainBedWorld);
+    vec3 bedRay=refract(-bedView,vec3(0.,1.,0.),.7502);
+    float opticalDepth=max(0.,drainBedWorld.y)/max(.12,-bedRay.y);
+    vec3 bedHit=drainBedWorld+bedRay*opticalDepth;
+    vec2 bedPoint=floor(vec2(bedHit.x,-bedHit.z)*313.5)/313.5;
+    vec3 bedColor=texture2D(drainSedimentMap,bedPoint*drainSedimentScale).rgb*vec3(.65,.60,.50);
+    // Dielectric water reflects more at grazing angles. Keep that response
+    // in source lighting, not in the pigment: the water cannot glow when a
+    // practical goes out. A low floor preserves broken highlights overhead.
+    float waterFresnel=pow(1.-max(0.,bedView.y),5.);
+    float surfaceTransmission=1.-waterFresnel;
+    float bedVisibility=exp(-opticalDepth*14.)*surfaceTransmission*(1.-bank*.35);
+    diffuseColor.rgb=mix(murk,bedColor,bedVisibility)*(1.-contact*.55);`);
    shader.fragmentShader=shader.fragmentShader.replace('#include <specularmap_fragment>',`#include <specularmap_fragment>
-    specularStrength*=.025+glint*.65;`);
-   shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',`#include <normal_fragment_begin>
-    normal=normalize(normal+vec3(sin(drainPoint.x*17.+drainTime*.8)*.035,0.,sin(drainPoint.y*21.-drainTime)*.035));`);
+    // Broad dark water is interrupted by reflected sources and moving crests.
+    // Deposit margins mute the reflection but retain a thin wet transition.
+    specularStrength*=(.18+waterFresnel*.34)*(1.-bank*.35);`);
+   applyHorizontalWaterNormal(shader,'((-.0624*waveA+.0068*waveB)*slopeEnergy+capillarySlope.x*capillaryEnergy)*drainShoreWeight+drainShoreSlope.x','((.0312*waveA+.0432*waveB)*slopeEnergy+capillarySlope.y*capillaryEnergy)*drainShoreWeight+drainShoreSlope.y');
 
   };
-  material.customProgramCacheKey=()=> 'drain-silt-lit-v1';
-  const bed=new THREE.PlaneGeometry(w.width,w.depth-.4,12,8);bed.rotateX(-Math.PI/2);
+  material.customProgramCacheKey=()=> 'drain-silt-bed-depth-v9-irregular-reflection';
+  const shore=channelShoreMeshData(w),bed=new THREE.BufferGeometry();
+  bed.setAttribute('position',new THREE.Float32BufferAttribute(shore.positions,3));
+  bed.setAttribute('uv',new THREE.Float32BufferAttribute(shore.uv,2));
+  bed.setAttribute('drainShoreDistance',new THREE.Float32BufferAttribute(shore.distances,1));
+  bed.setAttribute('drainShore',new THREE.Float32BufferAttribute(shore.weights,1));
+  bed.setAttribute('drainShoreGradient',new THREE.Float32BufferAttribute(shore.gradients,2));
+  bed.setIndex(shore.indices);bed.computeVertexNormals();
+  bed.computeBoundingSphere();bed.boundingSphere.radius+=.11;
   const surface=new THREE.Mesh(bed,material);surface.position.y=.025;surface.userData.drainStaticLight=true;surface.userData.drainLightPadding=.10;group.add(surface);
   const extentX=(w.axis==='x'?w.depth:w.width)/2,extentY=(w.axis==='x'?w.width:w.depth)/2;
   const plumeBounds=new THREE.Box3(new THREE.Vector3(w.x-extentX,0,-w.y-extentY),new THREE.Vector3(w.x+extentX,1.8,-w.y+extentY));
-  surfaces.push({w,group,surface,material,energy,jets:channelJets(w),plumeBounds,flowing:false});
+  const jets=channelJets(w),jetLandings=jets.map(jet=>waterPoint(w,jet.end.x,jet.end.y));
+  surfaces.push({w,group,surface,material,energy,jets,jetLandings,impactHeights:new Float64Array(jets.length),plumeBounds,flowing:false});
  }
  const streamCount=software?384:768,splashCount=software?96:192,perChannel=streamCount+splashCount;
  const dropTexture=waterEffectTexture('drop'),ringTexture=waterEffectTexture('ripple');
@@ -71,21 +144,23 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
     const v=surfaces[k],s=states[k],channelDistance=distance(r.player,v.w),near=channelDistance<48;
     v.flowing=s.danger;v.group.visible=near;if(!near)continue;visibleChannels++;
     v.energy.value=s.level;v.surface.position.y=.025+s.level*.08;
-    const impactHeight=Math.max(v.surface.position.y,floodDepth);
     // Visibility affects only this frame's drawing. Phase remains analytic,
     // so a Q rear glance reveals an already-moving plume without restarting it.
     if(!s.danger||channelDistance>32||!plumeFrustum.intersectsBox(v.plumeBounds))continue;
+    for(let j=0;j<v.jets.length;j++)v.impactHeights[j]=waterContactHeight(v.jetLandings[j],waters,states,floodDepth)??Math.max(floodDepth,channelSurfaceHeight(v.w,v.jets[j].end.x,v.jets[j].end.y,s.level));
     const density=THREE.MathUtils.clamp(1.1-(channelDistance-12)/24,.25,1.1);
     for(let i=0;i<perChannel;i++){
      const seed=seeds[i];if(seed.lod>=density)continue;
-     const lodFade=Math.min(1,(density-seed.lod)*10),jet=v.jets[i%v.jets.length];
-     const sample=sprayDrop(jet,seed,time.value,impactHeight,i>=streamCount);
+     const lodFade=Math.min(1,(density-seed.lod)*10),jetIndex=i%v.jets.length,jet=v.jets[jetIndex],impactHeight=v.impactHeights[jetIndex];
+     const sample=sprayDrop(jet,seed,time.value+k*.713,impactHeight,i>=streamCount);
      let {x,y,height:h}=sample;
      if(i>=streamCount)splashes++;
      velocity.set(v.w.axis==='x'?sample.vy:sample.vx,sample.vh,v.w.axis==='x'?sample.vx:-sample.vy).normalize();
      x=THREE.MathUtils.clamp(x,-v.w.width/2+.03,v.w.width/2-.03);y=THREE.MathUtils.clamp(y,-v.w.depth/2+.22,v.w.depth/2-.22);
      const point=waterPoint(v.w,x,y);
-     dummy.position.set(point.x,Math.max(impactHeight+.004,h),-point.y);
+     let localHeight=Math.max(floodDepth,channelSurfaceHeight(v.w,x,y,s.level));
+     if(localHeight<SHALLOW_WATER_HEIGHT)localHeight=Math.max(localHeight,shallowWaterHeight(point)??0);
+     dummy.position.set(point.x,Math.max(localHeight+.004,h),-point.y);
      // Camera-facing droplets align to projected travel, preserving a small
      // rounded silhouette from front, side and rear instead of a diamond.
      viewVelocity.copy(velocity).applyQuaternion(inverseCamera);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(-Math.atan2(viewVelocity.x,viewVelocity.y));
@@ -95,14 +170,14 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
      dummy.scale.set(sample.width*footprint,sample.length*footprint,1);dummy.updateMatrix();drops.setMatrixAt(count,dummy.matrix);dropPool.alphas.setX(count++,sample.alpha*lodFade);
     }
     for(let i=0;i<12;i++){
-     const jet=v.jets[i%v.jets.length],t=(time.value*.9+i*.371)%1,point=waterPoint(v.w,jet.end.x,jet.end.y);
+     const jetIndex=i%v.jets.length,jet=v.jets[jetIndex],impactHeight=v.impactHeights[jetIndex],t=(time.value*.9+i*.371)%1,point=v.jetLandings[jetIndex];
      dummy.position.set(point.x,impactHeight+.004+i*.0001,-point.y);dummy.rotation.set(-Math.PI/2,0,i*2.399);
      const diameter=.05+t*.52;dummy.scale.set(diameter,diameter*(.72+random(i)*.28),1);dummy.updateMatrix();rings.setMatrixAt(ringCount,dummy.matrix);ringPool.alphas.setX(ringCount++,(1-t)*(1-t));
     }
     for(let i=0;i<v.jets.length*2;i++){
-     const cloud=impactCloud(v.jets[i%v.jets.length],i,time.value,impactHeight);
+     const jetIndex=i%v.jets.length,cloud=impactCloud(v.jets[jetIndex],i,time.value,v.impactHeights[jetIndex]);
      const point=waterPoint(v.w,cloud.x,cloud.y);
-     dummy.position.set(point.x,cloud.height,-point.y);dummy.quaternion.copy(camera.quaternion);
+     dummy.position.set(point.x,cloud.height,-point.y);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(i*2.399+v.jets[jetIndex].start.x);
      dummy.scale.set(cloud.width,cloud.tall,1);dummy.updateMatrix();mist.setMatrixAt(mistCount,dummy.matrix);mistPool.alphas.setX(mistCount++,cloud.alpha);
     }
    }

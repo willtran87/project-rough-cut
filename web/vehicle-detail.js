@@ -1,6 +1,6 @@
 // Small silhouette and surface details use the existing pixel maps and join
 // each vehicle's material batches. No extra lights, textures or update loop.
-export function addVehicleDetail({THREE,mower,body,parts,box,put,cylinder,rail}){
+export function addVehicleDetail({THREE,mower,body,parts,box,put,cylinder,rail,openMouth=false}){
  if(mower){
   // A heavy divided brow shields the lamps; the lower jaw remains visible.
   for(const side of [-1,1]){
@@ -19,9 +19,9 @@ export function addVehicleDetail({THREE,mower,body,parts,box,put,cylinder,rail})
    for(let n=0;n<4;n++)box('iron',side*1.16,1.29,-.88+n*.09,.035,.035,.04,0,body);
   }
   // Dark belt recess and exposed cooling ribs behind the tooth-like grille.
-  box('rubber',0,1.09,-1.74,1.62,.36,.07,0,body);
-  for(let n=0;n<13;n++)box('iron',-.72+n*.12,1.08,-1.787,.035,.28,.025,0,body);
-  rail(body,[[-1,.68,-1.8],[-.55,.57,-1.89],[0,.6,-1.9],[.58,.57,-1.89],[1,.68,-1.8]],.075,'rust');
+  box('rubber',0,openMouth?1.20:1.09,-1.74,1.62,openMouth?.20:.36,.07,0,body);
+  for(let n=0;n<13;n++)box('iron',-.72+n*.12,openMouth?1.20:1.08,-1.787,.035,openMouth?.20:.28,.025,0,body);
+  if(!openMouth)rail(body,[[-1,.68,-1.8],[-.55,.57,-1.89],[0,.6,-1.9],[.58,.57,-1.89],[1,.68,-1.8]],.075,'rust');
   // Perforated exhaust heat shield and a second shorter, soot-blackened stack.
   put(cylinder,'rust',.93,2.17,.77,.14,.8,.14,0,body);
   for(let n=0;n<6;n++)box('rubber',.93,1.86+n*.12,.916,.14,.035,.012,0,body);

@@ -1,52 +1,57 @@
 import * as THREE from './vendor/three/three.module.js';
 
 // Dedicated illustrated material art, sampled at its native pixel resolution.
-// World-facing surfaces map two metres to a source tile. The paired masonry
-// strip spans four metres at the same pixel density. No diffuse image is used as
+// World-facing surfaces preserve 313.5 source pixels per metre. The masonry
+// field spans four metres in both directions. No diffuse image is used as
 // a bump map: structural relief is geometry, gloss is separately authored.
 export async function createCraftedDrainSurfaces(){
  const sets={},owned=[],sources=[];
  const texture=(canvas,color=true)=>{const t=new THREE.CanvasTexture(canvas);t.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=color?THREE.NearestFilter:THREE.LinearFilter;t.minFilter=color?THREE.NearestMipmapLinearFilter:THREE.LinearMipmapLinearFilter;owned.push(t);return t;};
  const hash=n=>{const v=Math.sin(n*127.1+43.71)*43758.5453;return v-Math.floor(v);};
- const definitions=[['./assets/under-green/surfaces-v1.png',[null,'bark','floor','mud']],['./assets/under-green/surfaces-industrial-v1.png',[null,null,'panel','sand']],['./assets/under-green/surfaces-masonry-v3.png',['masonry',null,'concrete','tile']]];
- const images=await Promise.all(definitions.map(async([url])=>{const img=new Image();img.src=url;await img.decode();return img;}));
+ const definitions=[['surfaces-v1.png',[null,'bark',null,null]],['surfaces-industrial-v1.png',[null,null,null,'sand']],['surfaces-masonry-v3.png',[null,null,'concrete','tile']],['masonry-field-v4.png',['masonry'],1],['sediment-field-v1.png',['mud'],1],['paving-field-v3.png',['floor'],1]];
+ definitions.push(['bunker-earth-sand-v1.png',['bankSoil','bankSand'],2,1]);
+ // A full four-metre painted-steel field replaces the two-metre repeating
+ // peel strip. Quiet coating between unequal corrosion islands lets the
+ // physical range ribs and folded lining explain the construction.
+ definitions.push(['range-painted-steel-v2.png',['panel'],1]);
+ const images=await Promise.all(definitions.map(async([name])=>{const img=new Image();img.src='./assets/under-green/'+name;await img.decode();return img;}));
  for(let a=0;a<images.length;a++){
-  const atlas=images[a],width=Math.floor(atlas.naturalWidth/2),height=Math.floor(atlas.naturalHeight/2);
-  sources.push({asset:definitions[a][0].split('/').pop(),size:[atlas.naturalWidth,atlas.naturalHeight],tileSize:[width,height],texelsPerMetre:width/2,materials:definitions[a][1].filter(Boolean)});
+  const atlas=images[a],columns=definitions[a][2]||2,rows=definitions[a][3]||columns,width=Math.floor(atlas.naturalWidth/columns),height=Math.floor(atlas.naturalHeight/rows);
+  sources.push({asset:definitions[a][0],size:[atlas.naturalWidth,atlas.naturalHeight],tileSize:[width,height],texelsPerMetre:313.5,materials:definitions[a][1].filter(Boolean)});
   for(let i=0;i<4;i++){
    const name=definitions[a][1][i];if(!name)continue;
-   const paired=name==='masonry',canvas=document.createElement('canvas');canvas.width=width*(paired?2:1);canvas.height=height;
-   // Keep both coordinated brick variants in one texture/sample. A four-metre
-   // repeat breaks the former two-metre stain cadence without changing texel
-   // scale, per-frame shader work, batch count or the physical wall geometry.
-   canvas.getContext('2d').drawImage(atlas,i%2*width,Math.floor(i/2)*height,canvas.width,height,0,0,canvas.width,height);
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+   // The full masonry field contains distinct repairs and quieter intact faces
+   // across the wall height, instead of repeating an eight-course strip twice.
+   canvas.getContext('2d').drawImage(atlas,i%columns*width,Math.floor(i/columns)*height,width,height,0,0,width,height);
    const mask=document.createElement('canvas');mask.width=mask.height=256;const c=mask.getContext('2d');c.fillStyle='#080808';c.fillRect(0,0,256,256);
    const horizontal=name==='floor'||name==='mud',bark=name==='bark';
-   // Separate runoff or puddle masks; large dry areas remain matte. Their
-   // placement is deterministic and independent from bright albedo pigments.
+   // Puddle masks retain their existing independent shapes. Vertical seep
+   // films have narrow, interrupted highlights within a dim broader margin.
+   // This avoids glossy capsule-like bars when practical light catches a wall.
    for(let n=0;n<(horizontal?18:24);n++){
     const x=Math.floor(hash(n+31)*256),y=Math.floor(hash(n+71)*256),w=horizontal?8+hash(n)*38:bark?1+hash(n)*2:1+hash(n)*4,h=horizontal?2+hash(n+8)*9:15+hash(n+9)*88;
-    c.fillStyle=horizontal?(n%3?'#303030':'#626262'):(n%3?'#242424':'#474747');
-    c.beginPath();
     if(horizontal){
+     c.fillStyle=n%3?'#303030':'#626262';c.beginPath();
      for(let i=0;i<14;i++){const a=i/14*Math.PI*2,r=.65+hash(n*19+i)*.35,px=Math.round(x+Math.cos(a)*w*r),py=Math.round(y+Math.sin(a)*h*r);if(i)c.lineTo(px,py);else c.moveTo(px,py);}
+     c.closePath();c.filter='blur(1px)';c.fill();c.filter='none';
     }else{
-     // Narrow irregular seep paths replace the visibly rectangular glossy
-     // strips. Taper and broken edges follow gravity at a fixed world position.
-     for(const side of [-1,1])for(let k=0;k<=12;k++){
-      const t=(side===-1?k:12-k)/12,drift=Math.sin(t*4.3+n)*2+Math.sin(t*11+n)*.6;
-      const radius=w*(.15+.7*Math.sin(t*Math.PI))*(.7+hash(n*13+Math.floor(t*12))*.3);
-      const px=Math.round(x+drift+side*radius),py=Math.round(y+t*h);
-      if(side===-1&&k===0)c.moveTo(px,py);else c.lineTo(px,py);
+     for(let k=0;k<h;k+=3){
+      const t=k/h,drift=Math.sin(t*4.3+n)*2+Math.sin(t*11+n)*.6,px=Math.round(x+drift),py=y+k;
+      // A restrained damp margin remains below the sharp reflection threshold.
+      c.fillStyle='#101010';c.fillRect(px-1,py,3,3);
+      const broken=hash(n*131+Math.floor(k/3));
+      if(broken<.34||t>.92)continue;
+      const value=Math.round(25+broken*37);c.fillStyle=`rgb(${value},${value},${value})`;
+      c.fillRect(px,py,1,broken>.76?3:2);
      }
     }
-    // Wetness is a lighting mask, not diffuse art. A soft seep margin prevents
-    // the specular lobe from turning a damp patch into a luminous pixel bar;
-    // the illustrated color texture retains crisp nearest magnification.
-    c.closePath();c.filter=horizontal?'blur(1px)':'blur(2px)';c.fill();c.filter='none';
    }
-   const map=texture(canvas);if(paired)map.repeat.x=.5;
-   sets[name]={map,bump:null,wet:texture(mask,false),worldTileMetres:paired?[4,2]:[2,2],texelsPerMetre:[width/2,height/2]};
+   const map=texture(canvas);map.repeat.set(627/width,627/height);
+   // Reflection preserves texel density and joins the generated bank fields
+   // without an albedo step at the opposite edges of the source square.
+   if(name==='bankSoil'||name==='bankSand'||name==='panel')map.wrapS=map.wrapT=THREE.MirroredRepeatWrapping;
+   sets[name]={map,bump:null,wet:texture(mask,false),worldTileMetres:[width/313.5,height/313.5],texelsPerMetre:[313.5,313.5]};
   }
  }
  return {sets,stats:()=>({sources,materials:Object.keys(sets),sampling:Object.fromEntries(Object.entries(sets).map(([name,set])=>[name,{worldTileMetres:set.worldTileMetres,texelsPerMetre:set.texelsPerMetre,size:[set.map.image.width,set.map.image.height]}])),separateRelief:true,separateWetness:true}),dispose(){owned.forEach(t=>t.dispose());}};

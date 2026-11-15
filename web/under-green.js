@@ -1,5 +1,7 @@
+import {createDefeatPicker} from './defeat-dialogue.js';
+const defeatQuote=createDefeatPicker({chapter:'under-green'});
 import {floodPace,floodCrossingScale} from './under-green-flood.js';
-import {createOpeningStory} from './opening-story.js';
+import {createOpeningStory} from './opening-story.js?v=20261114-launch-theme';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
 import {observeJoe} from './under-green-senses.js';
 import {mountFinalCutLink} from './final-cut-campaign.js';
@@ -44,6 +46,9 @@ const legacyComfort=settings('rough-cut.under-green-comfort.v1');
 let legacyMuted=typeof settings(CAMPAIGN_KEY).muted!=='boolean'&&legacyComfort.muted===true;
 let legacyReduced=typeof settings(CAMPAIGN_KEY).reducedMotion!=='boolean'&&legacyComfort.reduced===true;
 let prefs={...legacyComfort,reduced:shared.reducedMotion||legacyReduced,muted:shared.muted||legacyMuted};
+// Physical signals, pipe sounds and the bank markings carry normal play.
+// Numerical timing/coaching is available only when explicitly requested.
+prefs.crossingAssist=legacyComfort.crossingAssist===true;
 // Use Level 1's mouse response and device preference; vertical look stays normal.
 prefs.sensitivity=.0025*deviceGain('mouse')**2;prefs.fov=clamp(Number(spatial.fov)||58,45,85);
 // This chapter's panic motion has its own default; don't change Level 1 comfort.
@@ -56,6 +61,7 @@ const saved=readSave(stored(SAVE_KEY));let run=createRun(0,false,saved?.difficul
 if(new URLSearchParams(location.search).has('telemetry'))run.telemetry=createLocalTelemetry();
 const playtest=new URLSearchParams(location.search).has('playtest')?mountUnderGreenPlaytest(document.querySelector('#panel .panel-body'),()=>({viewport:{width:innerWidth,height:innerHeight},inputMethod,settings:{muted:prefs.muted,reducedMotion:prefs.reduced,fov:prefs.fov,resolution:prefs.resolution,threatCaptions:shared.threatCaptions,soundCaptions:shared.soundCaptions},bindings:{...bindings}})):null;
 function persist(){
+ if(run.mode==='complete')RCProgression.complete('under-green');
  const record=snapshot(run),previous=readSave(stored(SAVE_KEY));
  // Completed chapter credit survives replay, but never restores live progress.
  record.completed=record.completed||previous?.completed===true;
@@ -68,16 +74,16 @@ function clearInput(){keys.clear();touch.clear();touchPointers.clear();touchRun.
 function release(){if(document.pointerLockElement===canvas)document.exitPointerLock();}
 const live=()=>['playing','aftermath'].includes(run.mode);
 const presentationWake=createFrameWake(()=>draw(),()=>ready&&!manual&&!document.hidden&&live());
-function beginEscape(){audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught'||run.mode==='complete')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
-let storyStartsRun=false,storyReturnMode='briefing';
-const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:'Replay from Controls & comfort. E continues; Esc skips.',advanceKeys:['KeyE','Enter','Space'],finalLabel:'Enter the drain →',
+function beginEscape(){if(run.mode==='complete'){location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
+let storyReturnMode='briefing';
+const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:'Replay from Controls & comfort. E continues; Esc skips.',advanceKeys:['KeyE','Enter','Space'],finalLabel:'Review chapter →',
  reducedMotion:()=>prefs.reduced,captions:()=>shared.soundCaptions,toggleFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},
  onGesture:()=>audio.start(),onSlide:(_,index)=>audio.setStory(index,run),
- finish:()=>{run.mode=storyReturnMode;audio.setStory(-1,run);clearInput();if(storyStartsRun)beginEscape();else{dirty=true;paint();$('replay-intro').focus();}}
+ finish:()=>{run.mode=storyReturnMode;audio.setStory(-1,run);clearInput();dirty=true;paint();(run.mode==='briefing'?$('primary'):$('replay-intro')).focus({preventScroll:true});}
 });
 const storyMenu=createDOMGamepadMenu({root:$('opening-story'),onBack:()=>opening.action('skip'),onStart:()=>opening.action('skip')});
-function showIntro(start=false){storyStartsRun=start;storyReturnMode=run.mode;run.mode='intro';clearInput();release();opening.open();dirty=true;}
-function primary(){if(!ready||opening.snapshot().active)return;if(run.mode==='briefing'&&!opening.shouldSkip())showIntro(true);else beginEscape();}
+function showIntro(){storyReturnMode=run.mode;run.mode='intro';clearInput();release();opening.open();dirty=true;}
+function primary(){if(!ready||opening.snapshot().active)return;beginEscape();}
 $('replay-intro').onclick=()=>showIntro(false);
 document.addEventListener('visibilitychange',()=>{if(opening.snapshot().active)audio.update(run);});
 function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();release();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}dirty=true;paint();audio.update(run);}
@@ -128,6 +134,8 @@ $('camera-bob').value=prefs.cameraBob;
 $('camera-bob-value').textContent=Math.round(prefs.cameraBob*100)+'%';
 $('camera-bob').addEventListener('input',e=>{clearInput();prefs.cameraBob=clamp(Number(e.target.value),0,.6);$('camera-bob-value').textContent=Math.round(prefs.cameraBob*100)+'%';savePrefs();});
 $('touch-run-toggle').checked=feel.touchSprintToggle;$('touch-run-toggle').onchange=e=>{feel.touchSprintToggle=e.target.checked;saveFeel();};
+$('crossing-assist').checked=prefs.crossingAssist;
+$('crossing-assist').onchange=e=>{prefs.crossingAssist=e.target.checked;preferenceStatus('crossing',patchRecord('rough-cut.under-green-comfort.v1',{crossingAssist:prefs.crossingAssist}));dirty=true;paint();};
 $('sound').onclick=()=>campaignUI.set('muted',!prefs.muted);$('sound').setAttribute('aria-label','Toggle sound for all chapters');audio.setMuted(prefs.muted);
 $('pressure').value=run.difficulty;$('pressure').onchange=e=>{run.difficulty=e.target.value;persist();};
 document.addEventListener('keydown',e=>{if(!live()&&e.code==='Tab'){const list=[...$('panel').querySelectorAll('button:not(:disabled),a,summary,input,select,textarea')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]')),index=list.indexOf(document.activeElement);if((e.shiftKey&&index<=0)||(!e.shiftKey&&index===list.length-1)){e.preventDefault();list[e.shiftKey?list.length-1:0]?.focus();}return;}if(e.target.matches('input,select,textarea,summary')&&e.code!=='Escape')return;if(!live()&&e.target.matches('button,a')&&!['Escape','KeyF','KeyE'].includes(e.code))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(inputMethod==='touch')clearInput();inputMethod='keyboard';if(e.code==='Escape'){e.preventDefault();pause();return;}if(e.code==='KeyF'){if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}if(['Enter','KeyE'].includes(e.code)&&!live()){e.preventDefault();primary();return;}if(!e.repeat&&e.code===bindings.interact)usePressed=true;if(!e.repeat&&e.code===bindings.crouch&&feel.crouchToggle)toggleCrouch=!toggleCrouch;if(!e.repeat&&e.code===bindings.sprint&&feel.sprintToggle)toggleSprint=!toggleSprint;keys.add(e.code);});
@@ -188,7 +196,7 @@ function input(dt=1/60){
  lookX=lookY=0;usePressed=false;return i;
 }
 const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
-function paint(){playtest?.observe(run,inputMethod);playtest?.refresh();const mode=run.mode,playing=live();finalCutLink.update(mode==='complete');document.body.dataset.mode=mode;document.body.classList.toggle('touch',inputMethod==='touch');$('hud').hidden=!playing;$('touch').hidden=!playing||inputMethod!=='touch';$('panel').hidden=playing;
+function paint(){window.RCChapterLaunch.update(run.mode,ready);playtest?.observe(run,inputMethod);playtest?.refresh();const mode=run.mode,playing=live();finalCutLink.update(mode==='complete');document.body.dataset.mode=mode;document.body.classList.toggle('touch',inputMethod==='touch');$('hud').hidden=!playing;$('touch').hidden=!playing||inputMethod!=='touch';$('panel').hidden=playing;
  const runButton=document.querySelector('[data-key=sprint]');runButton.textContent=touchRun.active?'Run on':feel.touchSprintToggle?'Tap Run':'Run';runButton.setAttribute('aria-pressed',String(touchRun.active));
  const listening=playing&&run.player.focus===true;$('focus-state').hidden=!listening;document.querySelector('[data-key=focus]').setAttribute('aria-pressed',String(listening));
  text('control-guide',`${movementKeyLabel(bindings)} or arrows move relative to your view. Mouse or drag to look. ${onFootActionVerb('sprint','keyboard',feel)} ${label('sprint')} to run; ${onFootActionVerb('crouch','keyboard',feel)} ${label('crouch')} to crouch; ${label('focus')} listens; ${label('look_back')} glances behind; ${label('interact')} uses. F fullscreen. Controller: left stick move, right stick look, ${onFootActionVerb('sprint','gamepad',feel)} RT to run (RB also runs while held), ${onFootActionVerb('crouch','gamepad',feel)} LB to crouch, LT listen, A use, R3 rear, Start pause. Touch: movement pad and drag to look; ${onFootActionVerb('sprint','touch',feel)} Run to sprint, hold Crouch to crouch and Listen to focus. Listening Focus slows your movement, quiets water and brings Joe’s breathing and steps forward. It does not hide you from sight.`);
@@ -201,7 +209,7 @@ function paint(){playtest?.observe(run,inputMethod);playtest?.refresh();const mo
  const caption=shared.soundCaptions?(gratingCue.caption(run)||soundDescription(run,observedJoe)):'';
  text('caption',caption);$('caption').dataset.kind=caption?'sound':'';text('pursuit','');
  $('hint').hidden=run.elapsed>12||imminent;document.body.classList.toggle('imminent',imminent);
- const viewYaw=run.player.yaw+(run.player.rearAngle||0),viewCos=Math.cos(Math.atan(Math.tan(prefs.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight))+.04),water=run.closing?null:WATERS.filter(w=>{const dx=w.x-run.player.x,dy=w.y-run.player.y,forward=dx*Math.sin(viewYaw)+dy*Math.cos(viewYaw);return Math.hypot(dx,dy)<18&&lineClear(run.player,w,.02)&&(inWater(run.player,w,.5)||forward/Math.max(.01,Math.hypot(dx,dy))>viewCos);}).sort((a,b)=>distance(a,run.player)-distance(b,run.player))[0];$('water-read').hidden=!water||run.finished;
+ const viewYaw=run.player.yaw+(run.player.rearAngle||0),viewCos=Math.cos(Math.atan(Math.tan(prefs.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight))+.04),water=!prefs.crossingAssist||run.closing?null:WATERS.filter(w=>{const dx=w.x-run.player.x,dy=w.y-run.player.y,forward=dx*Math.sin(viewYaw)+dy*Math.cos(viewYaw);return Math.hypot(dx,dy)<18&&lineClear(run.player,w,.02)&&(inWater(run.player,w,.5)||forward/Math.max(.01,Math.hypot(dx,dy))>viewCos);}).sort((a,b)=>distance(a,run.player)-distance(b,run.player))[0];$('water-read').hidden=!water||run.finished;
  if(water){const state=waterState(water,run.time,run.bypass,run.bypassAt),floodScale=floodCrossingScale(run.elapsed),speed=(run.player.crossingSpeed||movementPace(run.player))*floodScale/floodPace(run.player.floodDepth),advice=crossingAdvice(run.player,water,state,speed);
   const runOption=runningCrossingOption(run.player,water,state,speed,MOVEMENT.sprint*floodScale);
   const walkOption=walkingCrossingOption(run.player,water,state,speed,MOVEMENT.walk*floodScale);
@@ -220,16 +228,16 @@ function paint(){playtest?.observe(run,inputMethod);playtest?.refresh();const mo
  document.body.classList.toggle('crossing',!!water&&!run.finished);
  text('paused-objective',objective(run));$('paused-objective').hidden=mode!=='paused';
  document.body.classList.toggle('water-hit',!prefs.reduced&&run.waterLock>1.3);
- if(mode!==uiMode){uiMode=mode;if(!playing&&mode!=='intro'){release();clearInput();$('primary').focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}dirty=true;}
- $('journal').hidden=!run.evidence;$('restart').hidden=mode==='briefing';$('guide').hidden=mode==='caught'||mode==='complete';$('result').hidden=mode!=='caught'&&mode!=='complete';
+ if(mode!==uiMode){uiMode=mode;$('joe-loss-quote').hidden=mode!=='caught';if(mode==='caught')text('joe-loss-quote','“'+defeatQuote(run).lines.join(' ')+'”');if(!playing&&mode!=='intro'){release();clearInput();(mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}dirty=true;}
+ $('journal').hidden=!run.evidence;$('restart').hidden=mode!=='paused';$('primary').hidden=mode==='complete';$('comfort').hidden=mode==='complete';document.querySelector('.chapters').hidden=true;$('guide').hidden=mode==='caught'||mode==='complete';$('result').hidden=mode!=='caught'&&mode!=='complete';
  $('defeat-art').hidden=mode!=='caught';if(mode==='caught')$('restart').hidden=true;
  text('title',mode==='caught'?'Caught below the green':mode==='complete'?'Beyond his reach':mode==='paused'?'Take a breath.':'Under the Green');
  text('tagline',mode==='caught'?'The scythe found its mark. Start again at the drain entrance.':mode==='complete'?'The sluice holds. The course continues above.':mode==='paused'?'Water, Joe and the clock are paused.':'You escaped the mower. He brought something smaller.');
- text('result',mode==='caught'?run.reason:'You sealed Joe out. Applause drifts down from the empty championship grounds.'+(run.evidence?' The groundskeeper’s record is with you: the 18th’s saturated turf cannot support heavy machinery.':' The maintenance record remains below. You can return for it on another escape.'));
+ text('result',mode==='caught'?run.reason:'You sealed Joe out. Applause drifts down from the empty championship grounds.'+(run.evidence?' The groundskeeper’s record is with you: the 18th’s saturated turf cannot support heavy machinery.':' The maintenance record remains below. The way forward is above.'));
  $('retry-advice').hidden=mode!=='caught';$('retry-progress').hidden=mode!=='caught';
  text('retry-advice',run.failure?'Next try: '+run.failure.advice:'Next try: move sideways when Joe plants his feet, or get behind solid cover.');
  text('retry-progress',retryProgress(run));
- text('primary',!ready?'Preparing…':mode==='caught'?'Retry from the start':mode==='complete'?'Replay Under the Green':mode==='paused'?'Resume escape':'Enter the drain');
+ text('primary',!ready?'Preparing…':mode==='caught'?'Retry from the start':mode==='complete'?'Continue to the Final Cut':mode==='paused'?'Resume escape':'Begin chapter');
  if(run.saveSerial!==lastSave&&ready){lastSave=run.saveSerial;persist();}
 }
 function update(dt){playtest?.observe(run,inputMethod);const i=input(dt);i.view={fov:prefs.fov,aspect:canvas.clientWidth/Math.max(1,canvas.clientHeight)};step(run,i,dt);playtest?.observe(run,inputMethod);audio.update(run);if(run.events.length>50)run.events.splice(0,run.events.length-50);}
@@ -238,5 +246,11 @@ window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,opening
 window.advanceTime=ms=>{manual=true;presentationWake.cancel();const n=Math.max(0,Math.ceil(ms/(1000/60)));for(let i=0;i<n;i++)update(1/60);draw();};
 if(test)window.__underGreen={get run(){return run;},set run(v){run=v;uiMode='';dirty=true;},render:draw,async whenPresented(){await world.whenPresented();},setInput(v){for(const k of v)keys.add(k);},inspectClearance:points=>world.inspectClearance(points),inspectCameraClearance:poses=>world.inspectCameraClearance(poses),inspectGateTravel:()=>world.inspectGateTravel(),inspectJoeGeometry:()=>world.inspectJoeGeometry(),inspectCastShadow:()=>world.inspectCastShadow(),inspectJoeFooting:()=>world.inspectJoeFooting(),inspectView:points=>world.inspectView(points),inspectOverhead:points=>world.inspectOverhead(points),enableTelemetry(){run.telemetry=createLocalTelemetry();return run.telemetry;},clearInput};
 new ResizeObserver(()=>{dirty=true;}).observe(canvas);
-function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;if(ready&&!manual){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();}else{input();if(dirty)draw();}}requestAnimationFrame(frame);}
-requestAnimationFrame(frame);world=await createUnderGreenScene(canvas,m=>text('loading',m),{captureBuffer:test});ready=true;opening.preloadFirst();$('primary').disabled=false;text('loading','');paint();draw();
+import {createMenuFrameGate} from './menu-frame-gate.js';
+const menuFrameDue=createMenuFrameGate();
+function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;if(ready&&!manual&&menuFrameDue(t,live())){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();}else{accumulator=0;const previous=inputMethod;input(.05);if(inputMethod!==previous)dirty=true;if(dirty&&run.mode!=='intro')draw();}}requestAnimationFrame(frame);}
+requestAnimationFrame(frame);if(!opening.shouldSkip())showIntro(false);world=await createUnderGreenScene(canvas,m=>text('loading',m),{captureBuffer:test,initialRun:run,reduced:prefs.reduced});
+// Driver pipelines may defer work until the first real raster. Keep simulation
+// and Begin chapter gated until that frame has actually completed as well.
+world.draw(run,prefs,true);await world.whenPresented();
+ready=true;opening.preloadFirst();$('primary').disabled=false;text('loading','');paint();draw();

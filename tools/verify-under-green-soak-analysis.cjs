@@ -14,15 +14,19 @@ const cases=[
  ['caught',r=>r.result.completed[0].mode='caught',false,true],
  ['invalid-expected-time',r=>delete r.result.completed[0].expected.seconds,false,true],
  ['slow-rendering',r=>{for(const s of r.samples)s.graphics.frames=Math.round(s.wall*10);},true,false],
+ ['current-resolution-policy',r=>{r.renderPolicy={hardwareWidthCap:2560,softwareWidthCap:960};for(const s of r.samples)s.graphics.resolution=[2560,1600];},true,true,true],
+ ['resolution-above-policy',r=>{r.renderPolicy={hardwareWidthCap:2560,softwareWidthCap:960};for(const s of r.samples)s.graphics.resolution=[3200,2000];},true,true,false],
+ ['legacy-resolution-mismatch',r=>{delete r.renderPolicy;for(const s of r.samples)s.graphics.resolution=[2560,1600];},true,true,false],
 ];
 const rows=[];
-for(const [name,mutate,routeOutcomes,budgetMet]of cases){
+for(const [name,mutate,routeOutcomes,budgetMet,resolutionPolicy=true]of cases){
  const r=structuredClone(original);mutate(r);const dir=path.join(out,name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'hardware.json'),JSON.stringify(r));
  const run=spawnSync(process.execPath,['tools/analyze-under-green-soak.cjs',`--output=${dir}`],{encoding:'utf8'});
  const report=JSON.parse(fs.readFileSync(path.join(dir,'hardware-analysis.json'),'utf8'));
  assert.equal(report.checks.routeOutcomes,routeOutcomes,name);assert.equal(report.performance.budgetMet,budgetMet,name);
- assert.equal(run.status,routeOutcomes&&budgetMet?0:1,name);
- rows.push({name,routeOutcomes:report.checks.routeOutcomes,budgetMet:report.performance.budgetMet,exitCode:run.status});
+ assert.equal(report.checks.resolutionPolicy,resolutionPolicy,name);
+ assert.equal(run.status,routeOutcomes&&budgetMet&&resolutionPolicy?0:1,name);
+ rows.push({name,routeOutcomes:report.checks.routeOutcomes,budgetMet:report.performance.budgetMet,resolutionPolicy:report.checks.resolutionPolicy,exitCode:run.status});
 }
 fs.writeFileSync(path.join(out,'verified.json'),JSON.stringify({passed:true,source,method:'Deliberately mutated reports test rejection; fixture numbers are not measured outcomes.',rows},null,2));
 console.log(JSON.stringify({passed:true,cases:rows.length,rows}));

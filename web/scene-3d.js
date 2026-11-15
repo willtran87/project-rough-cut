@@ -1,8 +1,18 @@
+import {COURSE_MOON_OFFSET} from './course-moon-direction.js';
+import {createCourseLanternLightField} from './course-lantern-light-field.js';
+import {createCourseLanternLightField as createPackedLanternLightField} from './course-lantern-light-field-packed.js';
+import {createCourseGroundLighting} from './course-ground-lighting.js';
+import {courseHabitatTint,tintCourseHabitatGround} from './course-habitat-palette.js';
+let groundLighting=null;
+let practicalLighting=null;
 import {createVegetationContact,VEGETATION_PADDING} from './course-vegetation-contact.js';
-import {createCourseVisualDetail} from './course-visual-detail.js';
+import {createCourseVergeSurface} from './course-verge-material.js';
+import {createCourseVisualDetail} from './course-visual-detail.js?v=20261114-landmark-light';
+import {createCourseWind} from './course-wind.js';
+let courseWind=null;
 let courseVisualDetail=null;
 let vegetationContact=null;
-import {courseRenderSize} from './course-viewport.js';
+import {courseRenderSize} from './course-viewport.js?v=20261113-hd-foundation';
 import {courseBallFlightPosition} from './course-ball-motion.js';
 import {createCourseBallPresentation} from './course-ball-presentation.js';
 let ballPresentation=null;
@@ -10,7 +20,7 @@ import {DRAIN_LAYOUT} from './drain-collision.js';
 import {createCourseExitMechanisms} from './course-exit-mechanisms.js';
 import {courseExitRelease} from './course-exit-release.js?v=20261113-audit-restored';
 let exitMechanisms=null;
-import {createCoursePlayerCraft} from './course-player-craft.js';
+import {createCoursePlayerCraft} from './course-player-craft.js?v=20261114-hand-finish';
 let playerCraft=null;
 import {auditResponseBellPose} from './audit-response.js';
 import {createNoiseHazardScene} from './noise-hazard-scene.js';
@@ -22,7 +32,7 @@ let sprinklerSpray=null;
 import { practiceStatus, stationImpulse, stationMechanismPose } from './station-feedback.js?v=20261112-station-replies';
 import { createCourseEntryGate } from './course-entry-gate.js';
 let courseEntryGate=null;
-import { createArrivalPhone } from './course-arrival-phone.js';
+import { createArrivalPhone } from './course-arrival-phone.js?v=20261114-hand-finish';
 let arrivalPhone=null;
 import {onDeadGreen} from './dead-green-refuge.js';
 import {createDeadGreenRefuge} from './dead-green-refuge-scene.js';
@@ -34,24 +44,25 @@ let deadGreenScene=null,deadGreenRefuge=null;
 import { createTeeAnomaly } from './course-tee-anomaly.js';
 let teeAnomaly=null;
 import { createObjectiveCues } from './objective-cues.js?v=20261113-audit-restored';
-import { createEnvironmentGuidance } from './environment-guidance.js?v=20261111-station-facing';
+import { createEnvironmentGuidance } from './environment-guidance.js?v=20261114-approach-wear';
 let objectiveCues=null,environmentGuidance=null;
 import { createSoftwareFrameBudget } from './software-frame-budget.js?v=20261112-stable-budget';
 import { courseLanternPairs, lanternPhase, lanternFlicker } from './lantern-layout.js?v=20261113-symmetric-28';
 import * as THREE from './vendor/three/three.module.js';
 import {stationFacing} from './station-facing.js';
 import * as PixelArt from './pixel-art.js';
-import { createParallax } from './parallax-scene.js?v=20261108-course-lanterns';
+import { createParallax } from './parallax-scene.js?v=20261114-moon-direction';
 import { createIllustratedProps } from './illustrated-props.js';
-import { detailedGroundMaterial, finishPaths } from './terrain-finish.js';
-import { createPixelWorld } from './pixel-world-props.js?v=20261112-station-replies';
+import { detailedGroundMaterial, finishPaths, paintApproachWear } from './terrain-finish.js?v=20261114-approach-wear';
+import { createPixelWorld } from './pixel-world-props.js?v=20261114-hedge-surface';
 import { woodlandHeight } from './pixel-landscape.js';
-import { createJoeModel } from './joe-model.js?v=20261113-visual-pass';
+import {courseWoodlandPose} from './course-woodland-composition.js';
+import { createJoeModel } from './joe-model.js?v=20261113-mower-finish';
 import { prepareRendering, yieldPreparation, waitForGPU, preparationStats, prepareStaticBuffers } from './render-preparation.js';
-import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261113-visual-pass';
-import { createPixelWater } from './pixel-water.js';
-import { updateFloodlight } from './floodlight-response.js?v=20261113-visual-pass';
-import { loadBakedTerrain } from './baked-terrain.js';
+import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261113-light-haze';
+import { createPixelWater } from './pixel-water.js?v=20261113-runoff-contact';
+import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-light';
+import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
 import { bitmapDecodeStats } from './bitmap-decoder.js';
 import { createScreenFracture, drawCopyFracture } from './screen-fracture.js';
 let screenFracture=null;
@@ -199,7 +210,7 @@ function buildUnderstory(data){
   understoryCulling=softwareRenderer?createStaticInstanceCulling():null;
   vegetationContact=createVegetationContact({scale:SCALE,xScale:X_SCALE});
   const placements=[[],[],[],[],[],[]];
-  const put=(x,z,h,seed)=>{if(onDeadGreen(x,z))return;const wet=z<-25&&z>-43,kind=z<-76?(rand(seed)>.4?5:4):wet?1:rand(seed)>.78?0:2;placements[kind].push({x,z,h,angle:rand(seed+9)*Math.PI});};
+  const put=(x,z,h,seed)=>{if(onDeadGreen(x,z)||(pixelWorld&&!pixelWorld.groundDetailClearance(x,z,h*.44+.08)))return;const wet=z<-25&&z>-43,kind=z<-76?(rand(seed)>.4?5:4):wet?1:rand(seed)>.78?0:2;placements[kind].push({x,z,h,angle:rand(seed+9)*Math.PI});};
   // Low detail stays inside solid cover or beyond course bounds. No new hulls.
   for(const o of data.obstacles.filter(o=>o.blocks&&o.kind!=='drain-solid'&&!o.id.includes('cart')&&!o.id.startsWith('shed'))){const p=point(o),rx=(o.radiusX||o.radius)*SCALE,rz=(o.radiusY||o.radius)*SCALE;for(let i=0;i<5;i++){const a=i*Math.PI*.4+rand(o.y);put(p.x+Math.cos(a)*Math.max(0,rx-.35),p.z+Math.sin(a)*Math.max(0,rz-.35),.35+rand(i+o.y)*.45,i+o.y);}}
   for(let i=0;i<85;i++)for(const side of [-1,1])if(rand(i+side*67)>.3)put(side*(13.7+rand(i+8)*.7),3-i*1.45+rand(i+4)*.65,.22+rand(i+side)*.36,i*7+side);
@@ -217,8 +228,11 @@ function buildUnderstory(data){
   for(const path of data.paths)for(let i=1;i<path.length;i++){const a=point(path[i-1]),b=point(path[i]),length=a.distanceTo(b),dx=(b.z-a.z)/length,dz=(a.x-b.x)/length;if(!length)continue;for(let d=.7;d<length;d+=1.1+rand(d+i*19)*2.4){const p=a.clone().lerp(b,d/length),side=Math.floor(d*3+i)%2?1:-1;put(p.x+dx*side*1.24,p.z+dz*side*1.24,.18+rand(d+i)*.16,d+i*71);}}
   const crops=[[0,100,420,475],[420,90,415,485],[835,100,419,475],[0,665,420,480],[420,665,415,480],[835,665,419,480]];
   for(let k=0;k<placements.length;k++){
-    const mesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),PixelArt.paintedMaterial('rough-cut-verge-atlas-v1',crops[k],null,{color:0x9eaba0,alphaTest:.2}),placements[k].length*2);
-    let index=0;for(const p of placements[k])for(const turn of [0,Math.PI/2]){quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),p.angle+turn);matrix.compose(new THREE.Vector3(p.x,p.h/2,p.z),quaternion,new THREE.Vector3(p.h*.88,p.h,1));mesh.setMatrixAt(index++,matrix);}vegetationContact.attach(mesh.material);mesh.computeBoundingSphere();mesh.boundingSphere.radius+=VEGETATION_PADDING;mesh.name='CourseUnderstory-'+k;staticRoot.add(mesh);understoryCulling?.register(mesh,VEGETATION_PADDING);
+    // The verge is scenery, so its original illustrated detail receives the
+    // same practical lights and darkness as the adjacent turf and woodland.
+    const foliage=createCourseVergeSurface(PixelArt.texture('rough-cut-verge-atlas-v1',crops[k]));
+    const mesh=new THREE.InstancedMesh(foliage.geometry,foliage.material,placements[k].length*2);mesh.receiveShadow=true;
+    let index=0;for(const p of placements[k])for(const turn of [0,Math.PI/2]){quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),p.angle+turn);matrix.compose(new THREE.Vector3(p.x,p.h/2,p.z),quaternion,new THREE.Vector3(p.h*.88,p.h,1));mesh.setMatrixAt(index,matrix);mesh.setColorAt(index++,courseHabitatTint(p.x,p.z,'verge',particleColor));}vegetationContact.attach(mesh.material);courseWind?.bindGeometry(mesh.geometry,placements[k].flatMap(p=>[p,p]));courseWind?.attach(mesh.material,.08);mesh.computeBoundingSphere();mesh.boundingSphere.radius+=VEGETATION_PADDING;mesh.name='CourseUnderstory-'+k;staticRoot.add(mesh);understoryCulling?.register(mesh,VEGETATION_PADDING,['courseWindShelter','courseWindPhase','courseWindSide']);
   }
 }
 function hedge(o,neutral=false){
@@ -238,8 +252,11 @@ function hedge(o,neutral=false){
   for(let i=0;i<count;i++){const a=i/count*Math.PI*2,seed=i+o.y*3;const y=.25+rand(seed)*1.55;const r=.08+rand(seed+17)*.10;baked('sprig',[0x355b3a,0x436543,0x31523b][i%3],p.x+Math.cos(a)*(rx-.1),y,p.z+Math.sin(a)*(rz-.1),r*1.3,r*.6,r,0,rand(seed)*6,0);}
   for(let i=0;i<10;i++){const a=i*Math.PI*.2;baked('sprig',0x52714b,p.x+Math.cos(a)*rx*.65,h-.06,p.z+Math.sin(a)*rz*.65,.35,.14,.3);}
 }
-function tree(x,z,height=6,radius=.75,clearance=null){
-    if(pixelVolume){const trunk=pixelWorld.tree(x,z,height,radius);trunk.parent.position.y=woodlandHeight(x,z);if(clearance)trunk.parent.userData.courseCanopyClearance=clearance;return;}
+function tree(x,z,height=6,radius=.75,clearance=null,composeWoodland=false){
+    if(pixelVolume){const trunk=pixelWorld.tree(x,z,height,radius),root=trunk.parent;
+      if(composeWoodland){const pose=courseWoodlandPose(x,z);root.position.set(pose.x,woodlandHeight(pose.x,pose.z),pose.z);root.scale.setScalar(pose.scale);root.userData.courseWoodland={...pose,original:[x,z]};}
+      else root.position.y=woodlandHeight(x,z);
+      if(clearance)root.userData.courseCanopyClearance=clearance;return;}
   if(pixelStyle){
     // A complete isolated tree preserves transparent branch gaps. Cropping the
     // distant forest here also brought its rectangular mist/background forward.
@@ -276,7 +293,7 @@ function cart(parent,x,z,width=2.7,depth=1.55,dynamic=false){
   return parent;
 }
 async function buildTerrain(data,calibration,cancelled=()=>false){
-  const baked=pixelStyle&&!calibration?await loadBakedTerrain(data,SCALE,X_SCALE):null;
+  const baked=pixelStyle&&!calibration?await loadBakedTerrain(data,SCALE,X_SCALE,pixelVolume):null;
   if(cancelled())return;
   stats.terrainBaked=!!baked;
   if(baked){const t=new THREE.Texture(baked);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;t.generateMipmaps=true;t.anisotropy=softwareRenderer?1:Math.min(4,renderer.capabilities.getMaxAnisotropy());t.needsUpdate=true;addTerrain(t,calibration,data);return;}
@@ -288,7 +305,12 @@ async function buildTerrain(data,calibration,cancelled=()=>false){
   if(!calibration){
     for(let y=0;y<720;y+=10){const z=data.zones.find(z=>y>=z.start&&y<z.end)||data.zones[0],half=(z?.fairwayHalfWidth||70)*X_SCALE;g.fillStyle=pixelStyle?(y%20?'#435449':'#48594b'):(y%20?'#4b6351':'#506756');g.fillRect(tx(-half),ty(-y*SCALE),tx(half)-tx(-half),-10*SCALE/130*c.height);}
     for(let i=0;i<65000;i++){const x=rand(i)*c.width,y=rand(i+70001)*c.height;g.fillStyle=i%2?'rgba(184,193,119,.045)':'rgba(10,25,17,.065)';g.fillRect(x,y,2,2);if(i%4096===4095){await yieldPreparation(cancelled);if(cancelled())return;}}
-    for(const path of data.paths){g.strokeStyle='#6d7660';g.lineWidth=2.0/48*c.width;g.lineJoin='round';g.lineCap='round';g.beginPath();path.forEach((p,i)=>i?g.lineTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)):g.moveTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)));g.stroke();g.strokeStyle='#a49a7d';g.lineWidth=1.25/48*c.width;g.stroke();}
+    for(const path of data.paths){
+      g.strokeStyle='#6d7660';g.lineJoin='round';g.lineCap='round';g.beginPath();path.forEach((p,i)=>i?g.lineTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)):g.moveTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)));
+      if(pixelStyle){g.globalAlpha=.20;g.lineWidth=2.4/48*c.width;g.stroke();g.globalAlpha=.60;}
+      g.lineWidth=2.0/48*c.width;g.stroke();g.globalAlpha=1;
+      g.strokeStyle='#a49a7d';g.lineWidth=1.25/48*c.width;g.stroke();
+    }
     for(const [zones,color]of [[data.sand,'#a3936f'],[data.footing,'#554d3a']])for(const z of zones){g.fillStyle=color;g.beginPath();g.ellipse(tx(z.x*X_SCALE),ty(-z.y*SCALE),(z.radiusX||16)*X_SCALE/48*c.width,(z.radiusY||16)*SCALE/130*c.height,0,0,Math.PI*2);g.fill();}
   }else{g.strokeStyle='#7b8d81';g.lineWidth=1;for(let x=-24;x<24;x+=2){g.beginPath();g.moveTo(tx(x),0);g.lineTo(tx(x),c.height);g.stroke();}for(let z=-120;z<10;z+=2){g.beginPath();g.moveTo(0,ty(z));g.lineTo(c.width,ty(z));g.stroke();}}
   // Grounded soft footprints are part of the terrain, not camera-facing discs.
@@ -308,13 +330,14 @@ async function buildTerrain(data,calibration,cancelled=()=>false){
       // Dust/gravel edges and warm center tones keep the route readable at night.
       for(const path of data.paths){g.lineJoin='round';g.lineCap='round';g.strokeStyle='#8c8970';g.lineWidth=1.05/48*c.width;g.globalAlpha=.30;g.beginPath();path.forEach((p,i)=>i?g.lineTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)):g.moveTo(tx(p.x*X_SCALE),ty(-p.y*SCALE)));g.stroke();}g.globalAlpha=1;
       if(!calibration)await finishPaths(g,data,tx,ty,X_SCALE,SCALE,c.width/48,cancelled);if(cancelled())return;
+      if(pixelVolume&&!calibration)paintApproachWear(g,data,tx,ty,X_SCALE,SCALE);
       t.needsUpdate=true;frozenFrame='';
     }
   }
   addTerrain(t,calibration,data);
 }
 function addTerrain(t,calibration,data){
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(48,130),pixelStyle&&!calibration?detailedGroundMaterial(t):new THREE.MeshLambertMaterial({map:t}));if(pixelStyle&&!calibration)wetGround=createWetGround(ground.material,data,SCALE,X_SCALE);ground.receiveShadow=pixelVolume;ground.rotation.x=-Math.PI/2;ground.position.z=-55;staticRoot.add(ground);const outer=new THREE.Mesh(new THREE.PlaneGeometry(300,300),material(0x3c5147));outer.rotation.x=-Math.PI/2;outer.position.set(0,-.025,-55);staticRoot.add(outer);
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(48,130),pixelStyle&&!calibration?detailedGroundMaterial(t):new THREE.MeshLambertMaterial({map:t}));if(pixelStyle&&!calibration)wetGround=createWetGround(ground.material,data,SCALE,X_SCALE);ground.userData.lanternGround=pixelVolume;ground.receiveShadow=pixelVolume;ground.rotation.x=-Math.PI/2;ground.position.z=-55;staticRoot.add(ground);const outer=new THREE.Mesh(new THREE.PlaneGeometry(300,300),material(0x3c5147));outer.rotation.x=-Math.PI/2;outer.position.set(0,-.025,-55);staticRoot.add(outer);
 }
 function buildObstacle(o,calibration){
   // These footprints belong to separately constructed art, not generic cover.
@@ -331,7 +354,7 @@ function buildObstacle(o,calibration){
     const fixture=piece(dynamicRoot,'box',0xd8c48e,p.x,3.12,p.z,.9,.22,.3);fixture.material=new THREE.MeshBasicMaterial({color:0xd8c48e});
     const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d',{willReadFrequently:true}),gradient=g.createRadialGradient(64,64,0,64,64,64);gradient.addColorStop(0,'rgba(255,255,255,1)');gradient.addColorStop(.5,'rgba(255,255,255,.5)');gradient.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gradient;g.fillRect(0,0,128,128);
     const radius=o.lightRadius*SCALE,pool=new THREE.Mesh(new THREE.PlaneGeometry(radius*2,radius*2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),color:0xf2d38a,transparent:true,opacity:.42,depthWrite:false}));pool.rotation.x=-Math.PI/2;pool.position.set(p.x,.018,p.z);world.add(pool);wetGround?.applyToLightPool(pool);lights.push({o,pool,fixture});return;}
-  if(o.id.includes('pond')){if(pixelVolume){waterSurfaces.push(createPixelWater(staticRoot,p.x,p.z,rx,rz,currentData.obstacles.filter(l=>l.lightRadius).map(l=>({...point(l),source:l}))));pixelWorld.reeds(p.x,p.z,rx,rz);}else{baked('cylinder',0x2f4d43,p.x,.04,p.z,rx,.08,rz);if(pixelStyle){illustrated.add(staticRoot,'rough-cut-expanded-course-kit-v1',[1110,125,550,335],p.x,p.z,rx*2,2.05,{kind:'pond-reeds',ellipse:{rx,rz},color:0xb8c4b2});}else{for(let i=0;i<25;i++){const a=i/25*Math.PI*2;baked('cone',0x4b6846,p.x+Math.cos(a)*rx*.85,1,p.z+Math.sin(a)*rz*.85,.13,2,.13);}hedge({...o,radiusX:(o.radiusX||25)*.64,radiusY:(o.radiusY||11)*.64});}}return;}
+  if(o.id.includes('pond')){if(pixelVolume){waterSurfaces.push(createPixelWater(staticRoot,p.x,p.z,rx,rz,currentData.obstacles.filter(l=>l.lightRadius).map(l=>({...point(l),source:l})),{runoff:o.id==='pond-east'}));pixelWorld.reeds(p.x,p.z,rx,rz,{runoff:o.id==='pond-east'});if(o.id==='pond-east')pixelWorld.pondRunoff(p.x,p.z,rx,rz);}else{baked('cylinder',0x2f4d43,p.x,.04,p.z,rx,.08,rz);if(pixelStyle){illustrated.add(staticRoot,'rough-cut-expanded-course-kit-v1',[1110,125,550,335],p.x,p.z,rx*2,2.05,{kind:'pond-reeds',ellipse:{rx,rz},color:0xb8c4b2});}else{for(let i=0;i<25;i++){const a=i/25*Math.PI*2;baked('cone',0x4b6846,p.x+Math.cos(a)*rx*.85,1,p.z+Math.sin(a)*rz*.85,.13,2,.13);}hedge({...o,radiusX:(o.radiusX||25)*.64,radiusY:(o.radiusY||11)*.64});}}return;}
   if(pixelVolume&&(o.id.includes('board')||o.id.includes('sign'))){pixelWorld.board(p.x,p.z,rx*2);return;}
   if(pixelStyle&&(o.id.includes('board')||o.id.includes('sign'))){illustrated.add(staticRoot,'rough-cut-expanded-course-kit-v1',[640,510,420,365],p.x,p.z,rx*2,2.1,{kind:'notice-board'});return;}
   if(o.id.includes('board')||o.id.includes('sign')){baked('cylinder',0x5e654a,p.x,.3,p.z,rx,.6,rz);baked('box',0x5e4e36,p.x,1.1,p.z,.18,2.2,.18);baked('box',0x32483d,p.x,1.7,p.z,rx*1.6,.8,.2);return;}
@@ -477,7 +500,7 @@ async function buildLandmarks(data,cancelled=()=>false){
       const zz=3-i*3.2+(rand(i+13)-.5)*2.0,xx=side*(18+rand(i+side*43)*9);
       // Keep the service yard and clubhouse legible through natural clearings.
       if(pixelVolume&&((side<0&&Math.abs(zz+37)<4)||(side>0&&Math.abs(zz+52)<6)))continue;
-      tree(xx,zz,4.2+rand(i*7)*5.0,.85+rand(i)*1.2);
+      tree(xx,zz,4.2+rand(i*7)*5.0,.85+rand(i)*1.2,null,true);
     }
     if(pixelVolume){
       for(const side of [-1,1])for(let i=0;i<15;i++)tree(side*(27+rand(i+side*31)*13),4-i*9+rand(i+4)*3,4.5+rand(i+9)*5,1.2+rand(i)*1.0);
@@ -490,22 +513,23 @@ async function buildLandmarks(data,cancelled=()=>false){
   stats.entryGate=courseEntryGate.stats();
   if(pixelVolume)for(const side of [-1,1])for(let i=0;i<44;i++){pixelWorld.boundaryRope(side*13.1,1-i*2.7);if(i%8===7){await yieldPreparation(cancelled);if(cancelled())return;}}
 }
-function disposeWorld(){courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
+function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
 function build(data){
   courseEntryGate=null;stats.entryGate=null;
   arrivalPhone=null;
   teeAnomaly=null;deadGreenScene=null;deadGreenRefuge=null;
   disposeWorld();frozenFrame='';currentData=data;world=new THREE.Scene();world.background=new THREE.Color(pixelStyle?0x142c36:0x334b5a);world.fog=new THREE.Fog(pixelStyle?0x0b151b:0x334b5a,24,70);
   staticRoot=new THREE.Group();dynamicRoot=new THREE.Group();world.add(staticRoot,dynamicRoot);stations=new Map();lights=[];pickups={};joe=null;joeIllustration=null;illustrated=createIllustratedProps();
-  pixelWorld=pixelVolume?createPixelWorld(staticRoot,{label,glow:lanternGlow,economy:softwareRenderer}):null;
+  courseWind=createCourseWind(data,{scale:SCALE,xScale:X_SCALE});
+  pixelWorld=pixelVolume?createPixelWorld(staticRoot,{label,glow:lanternGlow,economy:softwareRenderer,wind:courseWind}):null;
   camera.far=softwareRenderer?36:78;
   if(softwareRenderer)world.fog=new THREE.Fog(0x0b151b,18,34);
   const skyGeometry=new THREE.SphereGeometry(72,32,20),skyColors=[];
   for(let i=0;i<skyGeometry.attributes.position.count;i++){const y=skyGeometry.attributes.position.getY(i)/72,t=clamp(y*1.6,0,1),color=new THREE.Color(0x526b75).lerp(new THREE.Color(0x101e35),t);skyColors.push(color.r,color.g,color.b);}
   skyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(skyColors,3));sky=new THREE.Mesh(skyGeometry,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));sky.renderOrder=-1;world.add(sky);
-  if(pixelStyle){sky.visible=false;world.background=null;parallax=createParallax();}
-  world.add(new THREE.HemisphereLight(0xc1d8df,0x657459,pixelVolume?.035:pixelStyle?.12:.18));world.add(new THREE.AmbientLight(0x9ba995,pixelVolume?.005:pixelStyle?.025:.035));const moon=new THREE.DirectionalLight(0xa9c7d9,pixelVolume?.14:pixelStyle?.18:.27);moon.position.set(-20,40,10);world.add(moon);
-  moonShadow=null;nearLamp=null;if(pixelVolume){moonShadow=moon;moon.castShadow=!softwareRenderer;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:100});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;world.add(moon.target);nearLamp=new THREE.PointLight(0xffcb82,0,4,2);world.add(nearLamp);}
+  if(pixelStyle){sky.visible=false;world.background=null;parallax=createParallax({courseSky:pixelVolume});}
+  world.add(new THREE.HemisphereLight(0xc1d8df,0x657459,pixelVolume?.48:pixelStyle?.12:.18));world.add(new THREE.AmbientLight(0x9ba995,pixelVolume?.28:pixelStyle?.025:.035));const moon=new THREE.DirectionalLight(0xa9c7d9,pixelVolume?.14:pixelStyle?.18:.27);moon.position.fromArray(pixelVolume?COURSE_MOON_OFFSET:[-20,40,10]);world.add(moon);
+  moonShadow=null;nearLamp=null;if(pixelVolume){moonShadow=moon;moon.castShadow=!softwareRenderer;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:100});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;world.add(moon.target);}
   lastShadowTime=-Infinity;lastShadowX=lastShadowZ=Infinity;lastShadowMechanisms="";
   if(!data.calibration)pixelEffects=createPixelEffects(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,moon,drain:data.drain?{x:data.drain.x*X_SCALE,z:-data.drain.y*SCALE}:null,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE})),ponds:data.obstacles.filter(o=>o.id.includes('pond')).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE}))});
   stats.ready=false;stats.preparing=true;currentKey=data.keyId;
@@ -541,12 +565,12 @@ function build(data){
     pickups.key=station({...data.key,label:'SHED KEY'},'key',data);pickups.valve=station({...data.valve,label:'DRAIN VALVE'},'valve',data);
     noiseHazardScene=createNoiseHazardScene(staticRoot,data.noiseHazards||[],{scale:SCALE,xScale:X_SCALE});
     objectiveCues=createObjectiveCues(world,data,{scale:SCALE,xScale:X_SCALE});
-    environmentGuidance=createEnvironmentGuidance(world,data,{scale:SCALE,xScale:X_SCALE});
+    environmentGuidance=createEnvironmentGuidance(world,data,{scale:SCALE,xScale:X_SCALE,craftedPaper:pixelVolume});
     const irrigation=sprinklerLayout(data,SCALE,X_SCALE);
     if(pixelVolume)for(const head of irrigation)pixelWorld.irrigationHead(head);
     sprinklerSpray=createSprinklerSpray(world,irrigation,{software:softwareRenderer});
     buildJoe();
-    if(pixelVolume)courseVisualDetail=createCourseVisualDetail(world,data,{scale:SCALE,xScale:X_SCALE,software:softwareRenderer});
+    if(pixelVolume)courseVisualDetail=createCourseVisualDetail(world,data,{scale:SCALE,xScale:X_SCALE,software:softwareRenderer,wind:courseWind});
     const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(3,16,10),new THREE.MeshBasicMaterial({color:0xc9d7d1}));moonMesh.scale.setScalar(.5);moonMesh.position.set(-30,38,-48);sky.add(moonMesh);
   }else pickups.marker=station({...data.marker,label:'FINISH'},'bell');
   const buildingWorld=world,geometryReady=pixelWorld?.finish(()=>world!==buildingWorld);flush();
@@ -578,10 +602,21 @@ function build(data){
     await pixelEffects?.ready;if(cancelled())return;
     while(PixelArt.stats().pending&&world===scene)await yieldPreparation(cancelled);
     if(world!==scene)return;
-    // Include authored building lamps as well as the nearest path lantern.
-    // Omitting any point light here would incorrectly remove its contribution
-    // from static scenery. Rebuild this inventory with each course scene.
+    // The floor and static-scene culling both need the complete inventory.
+    // Lantern anchors are separate; these are the building and floodlight sources.
     coursePointLights=[];scene.traverse(object=>{if(object.isPointLight)coursePointLights.push(object);});
+    // Fixed lantern lighting reaches every nearby surface, independently of
+    // the camera. Attach after actor construction so its lit materials agree.
+    if(pixelVolume){
+      // Software rasterizers benefit from fetching source values directly;
+      // retain the uniform field on hardware, where measurements are mixed.
+      practicalLighting=(softwareRenderer?createPackedLanternLightField:createCourseLanternLightField)(glowAnchors);
+      let groundMaterial=null;
+      scene.traverse(o=>{if(o.userData.lanternGround){groundLighting=createCourseGroundLighting(o,glowAnchors,coursePointLights,{...practicalLighting.stats(),maxVaryings:renderer.capabilities.maxVaryings-1});tintCourseHabitatGround(o);if(groundLighting)groundMaterial=o.material;}});
+      scene.traverse(o=>{for(const m of Array.isArray(o.material)?o.material:[o.material])if(m!==groundMaterial)practicalLighting.apply(m);});
+      for(const m of pixelWorld?.localLighting?.allMaterials()||[])practicalLighting.apply(m);
+      for(const texture of practicalLighting.textures)renderer.initTexture(texture);
+    }
     pixelWorld?.updateCulling(camera);updateGlows();
     const backdrop=parallax,target=direct?sceneTarget:null;
     if(backdrop)await prepareRendering(renderer,backdrop.scene,backdrop.camera,backdrop.scene,target,cancelled);
@@ -610,7 +645,13 @@ function build(data){
 function initialize(canvas){
   try{renderer=new THREE.WebGLRenderer({...(canvas?{canvas}:{}),antialias:false,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});renderer.shadowMap.enabled=pixelVolume;renderer.shadowMap.type=THREE.BasicShadowMap;renderer.setSize(canvas?1280:960,canvas?720:540,false);renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;camera=new THREE.PerspectiveCamera(58,16/9,.055,78);document.getElementById('game').style.imageRendering=pixelStyle?'pixelated':'auto';const gl=renderer.getContext(),info=gl.getExtension('WEBGL_debug_renderer_info');stats.gpu=info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);}
   catch(e){failure=e.message;stats.error=failure;}
-  if(renderer&&!failure){softwareRenderer=/swiftshader|llvmpipe|software|microsoft basic render/i.test(stats.gpu);renderer.shadowMap.enabled=pixelVolume;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;stats.quality={softwareRenderer,shadows:renderer.shadowMap.enabled,moonShadows:pixelVolume&&!softwareRenderer,beaconShadows:false,textureDetail:'original',resolutionCap:softwareRenderer?.75:1};}
+  if(renderer&&!failure){softwareRenderer=/swiftshader|llvmpipe|software|microsoft basic render/i.test(stats.gpu);
+    // A 44 m moon map has ~2 cm texels. Unfiltered comparisons turn timber
+    // and sign edges into large jagged bands on nearby pale surfaces. Native
+    // depth comparison filtering keeps the same casters, map size and bias.
+    // Software keeps its existing practical-shadow path and rendering budget.
+    renderer.shadowMap.type=softwareRenderer?THREE.BasicShadowMap:THREE.PCFShadowMap;
+    renderer.shadowMap.enabled=pixelVolume;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;stats.quality={softwareRenderer,shadowFiltering:softwareRenderer?'nearest':'pcf',shadows:renderer.shadowMap.enabled,moonShadows:pixelVolume&&!softwareRenderer,beaconShadows:false,textureDetail:'original',resolutionCap:softwareRenderer?.75:1};}
   if(renderer&&softwareRenderer)renderer.setOpaqueSort(stableLightMaterialSort);
 }
 function createSurface(canvas){
@@ -634,10 +675,9 @@ function present(uiKey=null){
   if(!direct)return;
   if(skipPresentation)return;
   if(softwareRenderer&&presentationBusy()){deferPresentation();return;}
-  // The software scene already has its final pixel grid. Let CSS nearest
-  // sampling enlarge it instead of shading a second 1280x720 image. DOM HUD
-  // stays full-size; canvas menus/maps restore their original backing size.
-  const nativePixels=softwareRenderer&&pixelStyle&&worldDrawn&&useDomHud;
+  // Preserve hardware scene detail through the last pass. Software keeps its
+  // explicit pixel budget; canvas-only menus restore their logical resolution.
+  const nativePixels=worldDrawn&&(!softwareRenderer||pixelStyle&&useDomHud);
   const portrait=renderer.domElement.parentElement?.dataset.coursePortrait==='true';
   const outputWidth=nativePixels||portrait?sceneTarget.width:1280,outputHeight=nativePixels||portrait?sceneTarget.height:720;
   if(renderer.domElement.width!==outputWidth||renderer.domElement.height!==outputHeight)renderer.setSize(outputWidth,outputHeight,false);
@@ -651,20 +691,22 @@ function render(ctx,data,frame){
   if(currentKey!==data.keyId){build(data);lastTime=frame.time;}
   const portrait=direct&&renderer.domElement.parentElement?.dataset.coursePortrait==='true';
   const aspect=portrait?renderer.domElement.clientWidth/renderer.domElement.clientHeight:16/9;
-  const frozenSignature=[aspect,data.keyId,frame.time,frame.player.x,frame.player.y,frame.yaw,frame.pitch,frame.fov,frame.resolution,frame.eyeHeight,frame.fx?.flashes,frame.reducedMotion].join(':');
+  const display=direct&&!softwareRenderer?{width:renderer.domElement.clientWidth,height:renderer.domElement.clientHeight,pixelRatio:window.devicePixelRatio||1,maxDimension:Math.min(2560,renderer.capabilities.maxTextureSize)}:null;
+  const renderScale=Math.min(frame.resolution||.75,softwareRenderer?softwareBudget.scale():1,stats.quality?.resolutionCap||1),{width,height}=courseRenderSize(aspect,renderScale,display);
+  const frozenSignature=[aspect,width,height,data.keyId,frame.time,frame.player.x,frame.player.y,frame.yaw,frame.pitch,frame.fov,frame.resolution,frame.eyeHeight,frame.fx?.flashes,frame.reducedMotion].join(':');
   if(!stats.preparing&&frame.paused&&frozenFrame===frozenSignature){worldDrawn=true;stats.worldSubmitMs=0;stats.copyMs=0;if(!direct){const start=performance.now();ctx.drawImage(renderer.domElement,0,0,1280,720);stats.copyMs=performance.now()-start;}return true;}
   // Simulation and DOM feedback still update on every input frame. Defer costly
   // scene culling, poses and buffer edits until this latest image can be drawn.
   pixelEffects?.screen(frame);
   if(!stats.preparing&&direct&&softwareRenderer&&presentationBusy()){skipPresentation=true;worldDrawn=true;deferPresentation();return true;}
   const dt=clamp(frame.time-lastTime,0,.1);lastTime=frame.time;
-  const renderScale=Math.min(frame.resolution||.75,softwareRenderer?softwareBudget.scale():1,stats.quality?.resolutionCap||1),{width,height}=courseRenderSize(aspect,renderScale);if(direct){sceneTarget=(!portrait&&softwareTargets.get(width))||customTarget;if(sceneTarget.width!==width||sceneTarget.height!==height)sceneTarget.setSize(width,height);sceneQuad.material.map=sceneTarget.texture;}else if(renderer.domElement.width!==width)renderer.setSize(width,height,false);stats.resolution=[width,height];
+  if(direct){sceneTarget=(!portrait&&softwareTargets.get(width))||customTarget;if(sceneTarget.width!==width||sceneTarget.height!==height)sceneTarget.setSize(width,height);sceneQuad.material.map=sceneTarget.texture;}else if(renderer.domElement.width!==width)renderer.setSize(width,height,false);stats.resolution=[width,height];stats.quality.displayMatched=!!display;stats.quality.maxSceneDimension=display?display.maxDimension:1280;
   const p=point(frame.player),yaw=frame.yaw,eye=frame.eyeHeight??(frame.crouched?1.12:1.65);
   camera.aspect=aspect;camera.fov=frame.fov||58;camera.updateProjectionMatrix();stats.cameraAspect=aspect;camera.position.set(p.x,eye+(frame.bob||0),p.z);
   camera.rotation.set(frame.pitch||0,-yaw,frame.roll||0,'YXZ');camera.updateMatrixWorld();
   if(stats.preparing){const loading=document.getElementById('course-loading');if(loading)loading.hidden=frame.paused;skipPresentation=!frame.paused;if(!skipPresentation){renderer.setRenderTarget(direct?sceneTarget:null);renderer.setClearColor(0x081318);renderer.clear();}worldDrawn=true;return true;}
-  const pitch=frame.pitch||0;camera.rotation.set(pitch,-yaw,frame.roll||0,'YXZ');camera.updateMatrixWorld();vegetationContact?.update(frame);understoryCulling?.update(camera);pixelWorld?.updateCulling(camera);pixelWorld?.updateReeds(frame);updateGlows(frame);for(const water of waterSurfaces)water.update(frame,camera);sky.position.copy(camera.position);parallax?.update(camera,frame.time,frame.reducedMotion,frame.paused,frame.fx?.nightfall);illustrated?.update(camera);
-  if(moonShadow){const step=44/2048,x=Math.round(p.x/step)*step,z=Math.round(p.z/step)*step;moonShadow.target.position.set(x,0,z);moonShadow.position.set(x-20,40,z+10);let nearest=null,distance=4;for(const anchor of glowAnchors){const d=anchor.position.distanceTo(camera.position);if(d<distance){nearest=anchor;distance=d;}}nearLamp.intensity=nearest?4*(1-THREE.MathUtils.smoothstep(distance,1.1,4))*nearest.intensity:0;if(nearest)nearLamp.position.copy(nearest.position);}
+  const pitch=frame.pitch||0;camera.rotation.set(pitch,-yaw,frame.roll||0,'YXZ');camera.updateMatrixWorld();courseWind?.update(frame);stats.wind=courseWind?.stats();vegetationContact?.update(frame);understoryCulling?.update(camera);pixelWorld?.updateCulling(camera);pixelWorld?.updateReeds(frame);updateGlows(frame);for(const water of waterSurfaces)water.update(frame,camera);sky.position.copy(camera.position);parallax?.update(camera,frame.time,frame.reducedMotion,frame.paused,frame.fx?.nightfall);illustrated?.update(camera);
+  if(moonShadow){const step=44/2048,x=Math.round(p.x/step)*step,z=Math.round(p.z/step)*step;moonShadow.target.position.set(x,0,z);moonShadow.position.set(x+COURSE_MOON_OFFSET[0],COURSE_MOON_OFFSET[1],z+COURSE_MOON_OFFSET[2]);}
   // Pose the door before the warning lamp checks moving shadow casters.
   // Sealing advances independently of the stopped course clock.
   const exitPose=courseExitRelease(frame);
@@ -742,10 +784,11 @@ function render(ctx,data,frame){
   }
   screenFracture?.update(frame,pixelEffects?.interference(),width,height);
   stats.screenFracture=screenFracture?.stats();
+  practicalLighting?.update();groundLighting?.update();
   const submit=performance.now();renderer.setRenderTarget(direct?sceneTarget:null);if(parallax){renderer.autoClear=false;renderer.clear();renderer.render(parallax.scene,parallax.camera);stats.backgroundDrawCalls=renderer.info.render.calls;renderer.clearDepth();renderer.render(world,camera);renderer.autoClear=true;}else renderer.render(world,camera);stats.worldSubmitMs=performance.now()-submit;worldDrawn=true;
   if(!direct){const copy=performance.now();ctx.imageSmoothingEnabled=!pixelStyle;ctx.drawImage(renderer.domElement,0,0,1280,720);ctx.imageSmoothingEnabled=false;const fracture=drawCopyFracture(ctx,frame,pixelEffects?.interference(),width,height);stats.screenFracture={mode:'scene-self-blit',shiftPixels:fracture?.shiftPixels||0,extraPasses:0,readbacks:0};stats.copyMs=performance.now()-copy;stats.presentation='copy';}else stats.copyMs=0;
   lastWorldSubmitStarted=submit;frozenFrame=frozenSignature;
   stats.drawCalls=renderer.info.render.calls+(parallax?stats.backgroundDrawCalls:0);stats.triangles=renderer.info.render.triangles;stats.frames++;return true;
 }
 function project(p,height=0){if(!camera)return null;const q=point(p);q.y=height;q.project(camera);return {x:(q.x+1)*640,y:(1-q.y)*360,visible:q.z>-1&&q.z<1&&Math.abs(q.x)<1&&Math.abs(q.y)<1};}
-window.RCScene3D={ready:true,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};
+window.RCScene3D={ready:true,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,practicals:practicalLighting?{...practicalLighting.stats(),ground:groundLighting?.stats()}:undefined,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};

@@ -3,30 +3,21 @@ import {onFloor} from './under-green-course.js';
 import {roofAt} from './under-green-layout.js';
 import {buildDrainRootCompositions,reservedRootWall} from './under-green-root-compositions.js';
 
-// Broad sediment pockets separated by almost bare, smeared masonry. A
-// continuous world-space profile keeps neighboring wall partitions joined.
-export function mudDepositProfile(along,boundary){
- const field=.42+.38*Math.sin(along*.67+boundary*.9)+.18*Math.sin(along*1.71-boundary*.37);
- const accumulation=THREE.MathUtils.smoothstep(field,.14,.9);
- const ripple=.5+.5*Math.sin(along*3.7+boundary);
- return {height:.018+accumulation*accumulation*(.43+ripple*.10),foot:.119+accumulation*.078,accumulation};
-}
+import {mudDepositProfile,mudWallSpans} from './under-green-mud-profile.js';
+export {mudDepositProfile} from './under-green-mud-profile.js';
 
 export function buildDrainOrganicGeometry({layout,root,put,materials,lowDetail=false,growth=null}){
  let wallRoots=0,hangingRoots=0,mudBanks=0,ceilingHairs=0;
- const noise=n=>{const v=Math.sin(n*127.1+19.73)*43758.5453;return v-Math.floor(v);};
- for(let i=0;i<layout.walls.length;i++){
-  const w=layout.walls[i],vertical=w.w<w.d,length=vertical?w.d:w.w;
-  if(length<.55)continue;
-  const side=vertical?(onFloor(w.x+.3,w.y)?1:-1):(onFloor(w.x,w.y+.3)?1:-1);
-  const boundary=vertical?w.x:w.y,center=vertical?w.y:w.x,face=boundary+side*.125;
-  const point=(t,h,n=.125)=>new THREE.Vector3(vertical?boundary+side*n:t,h,-(vertical?t:boundary+side*n));
+ // Rounded banks share normals across the original layout partitions.
+ for(const {vertical,boundary,side,start,end} of mudWallSpans(layout)){
+  const length=end-start;
+  const point=(t,h,n)=>new THREE.Vector3(vertical?boundary+side*n:t,h,-(vertical?t:boundary+side*n));
   // Round slumps taper into thin films, with a low wet toe, a compacted
   // middle layer and a lighter drying margin. No extra walking obstruction.
   const steps=Math.max(5,Math.ceil(length/.18)),positions=[],uv=[],colors=[],indices=[];
   for(let k=0;k<=steps;k++){
-   const t=center-length/2+length*k/steps,{height:h,foot,accumulation}=mudDepositProfile(t,boundary);
-   const rows=[point(t,-.025,foot),point(t,h*.12,foot),point(t,h*.36,.115+(foot-.115)*.8),point(t,h*.72,.115+(foot-.115)*.3),point(t,h,.1135)];
+   const t=start+length*k/steps,{height:h,foot,accumulation,shelf}=mudDepositProfile(t,boundary,start,end,vertical);
+   const rows=[point(t,-.025,foot),point(t,h*.08,foot),point(t,h*(.36+shelf*.12),.113+(foot-.113)*.79),point(t,h*.81,.113+(foot-.113)*.37),point(t,h,.1115)];
    const tones=[[.49,.53,.45],[.62,.64,.52],[.82,.78,.61],[.96,.88,.69],[.79,.76,.59]];
    for(let row=0;row<rows.length;row++){const v=rows[row];positions.push(v.x,v.y,v.z);uv.push(t/2,v.y/2);const tone=tones[row],variation=.9+accumulation*.1;colors.push(...tone.map(c=>c*variation));}
    if(k<steps)for(let row=0;row<4;row++){const a=k*5+row,b=a+5;indices.push(a,b,a+1,b,b+1,a+1);}
@@ -35,7 +26,26 @@ export function buildDrainOrganicGeometry({layout,root,put,materials,lowDetail=f
   // Orient the deposit front into the actual corridor, irrespective of axis.
   const expected=new THREE.Vector3(vertical?side:0,0,vertical?0:-side),n=g.attributes.normal;
   if(new THREE.Vector3(n.getX(1),0,n.getZ(1)).dot(expected)<0){for(let j=0;j<indices.length;j+=3)[indices[j+1],indices[j+2]]=[indices[j+2],indices[j+1]];g.setIndex(indices);g.computeVertexNormals();}
-  g.translate(-w.x,0,w.y);put(g,'mudBank',w.x,0,-w.y);g.dispose();mudBanks++;
+  // Keep lighting/culling local, but copy the continuous bank's normals so
+  // renderer chunk boundaries cannot become visible seams in the sediment.
+  for(let first=0;first<steps;first+=32){
+   const last=Math.min(steps,first+32),part=new THREE.BufferGeometry();
+   for(const name of ['position','normal','uv','color']){
+    const a=g.attributes[name];part.setAttribute(name,new THREE.Float32BufferAttribute(a.array.slice(first*5*a.itemSize,(last+1)*5*a.itemSize),a.itemSize));
+   }
+   part.setIndex(indices.slice(first*24,last*24).map(i=>i-first*5));
+   const anchor=point(start+length*(first+last)/2/steps,0,0);
+   part.translate(-anchor.x,0,-anchor.z);put(part,'mudBank',anchor.x,0,anchor.z);part.dispose();mudBanks++;
+  }
+  g.dispose();
+ }
+ const noise=n=>{const v=Math.sin(n*127.1+19.73)*43758.5453;return v-Math.floor(v);};
+ for(let i=0;i<layout.walls.length;i++){
+  const w=layout.walls[i],vertical=w.w<w.d,length=vertical?w.d:w.w;
+  if(length<.55)continue;
+  const side=vertical?(onFloor(w.x+.3,w.y)?1:-1):(onFloor(w.x,w.y+.3)?1:-1);
+  const boundary=vertical?w.x:w.y,center=vertical?w.y:w.x,face=boundary+side*.125;
+  const point=(t,h,n=.125)=>new THREE.Vector3(vertical?boundary+side*n:t,h,-(vertical?t:boundary+side*n));
   // Leave quiet stretches between dense, asymmetrical tangles.
   if(reservedRootWall(w)||noise(i+7)<.67)continue;
   const top=w.covered?4.14:1.76,spread=Math.min(length*.34,1.05),count=1+Math.floor(noise(i*3)*2);
@@ -58,7 +68,9 @@ export function buildDrainOrganicGeometry({layout,root,put,materials,lowDetail=f
  // Select clusters in world space, not once per floor partition, which made
  // the previous scene read as identical bundles on a regular grid.
  const authoredRoots=buildDrainRootCompositions({root,put,materials,lowDetail,growth});
- const clusters=[[.6,18.7,1.45],[-.5,29,2.05],[1.1,47,1.2],[-.8,57,1.4],[-19.2,46,1.2]];
+ // The first knot grips the east rim of the maintenance shaft, framing the
+ // teaching plate instead of trailing through its lettering in perspective.
+ const clusters=[[2.1,18.7,.85],[-.5,29,2.05],[1.1,47,1.2],[-.8,57,1.4],[-19.2,46,1.2]];
  for(let j=0;j<clusters.length;j++){
   const [cx,cy,span]=clusters[j];if(!roofAt(cx,cy))continue;
   for(let branch=0;branch<3;branch++){

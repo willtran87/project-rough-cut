@@ -23,7 +23,7 @@ import {createChaseScene} from './back-nine-scene.js';
 import {createChaseAudio} from './back-nine-audio.js';
 import {createSoftwareFrameBudget} from './software-frame-budget.js';
 import {createFrameWake} from './frame-wake.js';
-import {createOpeningStory} from './opening-story.js?v=20261111-back-nine';
+import {createOpeningStory} from './opening-story.js?v=20261114-launch-theme';
 import {BACK_NINE_SLIDES,paintBackNineBrief,backNineHint,backNineControls,backNineInstruction} from './back-nine-opening.js';
 
 const playtestMode=new URLSearchParams(location.search).has('playtest');
@@ -44,9 +44,9 @@ const saved=read(SAVE),settings=campaignPreferences(reducedMotion.matches),prefs
 if(!validVariationSeed(saved.variationSeed)){saved.variationSeed=nextVariationSeed();writeRecord(SAVE,{...saved,variationSeed:saved.variationSeed});}
 let run=createRun(0,0,saved.variationSeed),world=null,ready=false,manual=false,last=performance.now(),accumulator=0,fence=null,events=0,needsDraw=true;
 const chaseControls=createChaseControls($('game'),()=>run,settings);
-if(saved.completed)restoreEscape(run,saved.escape);
+if(saved.completed&&!new URLSearchParams(location.search).has('replay'))restoreEscape(run,saved.escape);
 const driveButtons=new Map([...document.querySelectorAll('[data-drive]')].map(b=>[b.dataset.drive,b]));
-const keys=new Set(),touch=new Set(),audio=createChaseAudio(settings.volume??.72,settings),budget=createSoftwareFrameBudget(),times=[];
+const keys=new Set(),touch=new Set(),audio=createChaseAudio(settings.volume??.72,settings),budget=createSoftwareFrameBudget({responsiveDownshift:true}),times=[];
 const {bindings}=bindKeyboardSettings($('chase-keyboard'),{profile:'chase',stored:settings.chaseKeyboardBindings,storageField:'chaseKeyboardBindings',
  labels:{move_up:'Forward / accelerate',move_down:'Back / reverse',move_left:'Steer left',move_right:'Steer right',brake:'Brake / use',interact:'Alternate brake / use',look_back:'Rear glance'},
  onChange(value){settings.chaseKeyboardBindings={...value};keys.clear();touch.clear();briefSignature='';needsDraw=true;paintUI();}});
@@ -59,7 +59,7 @@ let pendingFootContacts=[],renderStarted=0,frames=0,gamepadButtons=[],uiMode='',
 const presentationWake=createFrameWake(()=>render(false),()=>software&&!manual&&foreground&&!document.hidden&&ready&&!openingActive&&(['driving','sealing','dying'].includes(run.mode)||needsDraw));
 let openingActive=false,openingSlide=0,preparePromise=null,inputMethod=coarsePointer.matches?'touch':'keyboard',briefSignature='';
 let guideReview=false,briefArtRequested=false;
-function prepareBriefArt(){if(briefArtRequested)return;briefArtRequested=true;const image=$('brief-image');image.src=BACK_NINE_SLIDES[4].src;image.decode().catch(()=>{$('brief-art').dataset.failed='true';});}
+function prepareBriefArt(){if(briefArtRequested)return;briefArtRequested=true;const image=$('brief-image');image.src='./assets/menu/back-nine-scene.webp';image.decode().catch(()=>{$('brief-art').dataset.failed='true';});}
  let defeatArtRequested=false;
  function prepareDefeatArt(){if(defeatArtRequested)return;defeatArtRequested=true;const image=$('defeat-image');image.src='./assets/optimized/back-nine-run-down-v1.webp';image.decode().catch(()=>{$('defeat-tableau').dataset.failed='true';});}
 const opening=createOpeningStory({slides:BACK_NINE_SLIDES,storageKey:'rough-cut.back-nine-opening.v1',header:'THE BACK NINE',replayHint:'Replay it from the chase guide or pause menu.',
@@ -71,7 +71,7 @@ const opening=createOpeningStory({slides:BACK_NINE_SLIDES,storageKey:'rough-cut.
 });
 function showOpening(){if(openingActive)return;openingActive=true;keys.clear();touch.clear();setHidden('panel',true);setHidden('defeat-tableau',true);$('panel').dataset.defeat='false';setHidden('hud',true);setHidden('touch',true);$('dread').style.opacity='0';opening.open();}
 function freshRound(){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;save();world?.resetCamera();uiMode='';needsDraw=true;if(!opening.shouldSkip())showOpening();else{paintUI();prepareCourse();}}
-function save(){if(!writeRecord(SAVE,{version:2,variationSeed:run.variation.seed,completed:run.mode==='complete',unlocked:true,escape:run.mode==='complete'?run.escape:null})){run.message='Browser storage is unavailable. This attempt can still be played.';run.messageTime=4;}}
+function save(){if(run.mode==='complete')RCProgression.complete('back-nine');if(!writeRecord(SAVE,{version:2,variationSeed:run.variation.seed,completed:run.mode==='complete',unlocked:true,escape:run.mode==='complete'?run.escape:null})){run.message='Browser storage is unavailable. This attempt can still be played.';run.messageTime=4;}}
 function input(){
  const pad=navigator.getGamepads?.()?.find?.(p=>p?.connected),pressed=i=>!!pad?.buttons[i]?.pressed;
  const deadzone=chaseDeadzone(settings.stickDeadzone),stickX=chaseStickAxis(pad?.axes[0],deadzone),stickY=chaseStickAxis(pad?.axes[1],deadzone);
@@ -88,7 +88,7 @@ function input(){
  if(wasMenu||menuConsumed)return {};
  return {steer:clamp(steer+stickX,-1,1),throttle:clamp(Number(gas)-Number(reverse)+(pad?.buttons[7]?.value||0)-(pad?.buttons[6]?.value||0)+(run.foot?-stickY:0),-1,1),brake:down('brake')||down('interact')||touch.has('brake')||pressed(1),rear:down('look_back')||touch.has('rear')||pressed(11)};
 }
-function primary(){if(openingActive||!ready||run.mode==='sealing'||run.mode==='dying')return;audio.start();if(run.mode==='caught'){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;world.resetCamera();}if(run.mode==='complete'){freshRound();return;}run.mode=run.mode==='paused'?pausedMode:'driving';keys.clear();touch.clear();chaseControls.reset();save();uiMode='';$('game').focus();paintUI();}
+function primary(){if(openingActive||!ready||run.mode==='sealing'||run.mode==='dying')return;audio.start();if(run.mode==='caught'){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;world.resetCamera();}if(run.mode==='complete'){location.assign(finalCutLink.link.href);return;}run.mode=run.mode==='paused'?pausedMode:'driving';keys.clear();touch.clear();chaseControls.reset();save();uiMode='';$('game').focus();paintUI();}
 function togglePause(){if(!ready)return;if(['driving','sealing','dying'].includes(run.mode)){pausedMode=run.mode;run.mode='paused';keys.clear();touch.clear();chaseControls.reset();}else if(run.mode==='paused')run.mode=pausedMode;audio.update(run,run.mode==='driving'||run.mode==='sealing'||run.mode==='dying'||run.mode==='complete'&&run.finale.tail>0);uiMode='';paintUI();}
 const gamepadMenu=createDOMGamepadMenu({root:$('panel'),onStart:()=>{if(!openingActive)togglePause();},onBack:()=>{if(run.mode==='paused')togglePause();},onDisconnect:()=>{if(inputMethod==='gamepad'&&['driving','sealing','dying'].includes(run.mode))togglePause();}});
 $('primary').addEventListener('click',primary);$('pause').addEventListener('click',togglePause);$('restart').addEventListener('click',freshRound);$('replay-story').addEventListener('click',showOpening);
@@ -101,6 +101,7 @@ window.addEventListener('keydown',e=>{if(openingActive||e.code!=='Escape'&&e.tar
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('focus',()=>{foreground=true;if(openingActive)audio.intro(openingSlide,true,settings);});window.addEventListener('blur',()=>{foreground=false;if(openingActive)audio.intro(openingSlide,false,settings);else audio.update(run,false);keys.clear();touch.clear();if(['driving','sealing','dying'].includes(run.mode))togglePause();});document.addEventListener('visibilitychange',()=>{if(openingActive)audio.intro(openingSlide,!document.hidden,settings);else if(document.hidden)audio.update(run,false);if(document.hidden&&['driving','sealing','dying'].includes(run.mode))togglePause();last=performance.now();accumulator=0;});
 function simulate(dt){if(openingActive){input();return;}if(!ready||document.hidden||!foreground)return;const controls={...input(),...chaseControls.sample(dt)};updateRun(run,controls,dt);joeReactions.observe(run);if(events<run.events.length){for(const event of run.events.slice(events))if(event.type==='checkpoint'||event.type==='complete'||event.type==='crew-log'||event.type==='utility-choice')save();events=run.events.length;}audio.update(run,run.mode==='driving'||run.mode==='sealing'||run.mode==='dying'||run.mode==='complete'&&run.finale.tail>0);}
 function paintUI(){
+ window.RCChapterLaunch.update(run.mode,ready);
  if(openingActive)return;
  setText('sound',settings.muted?'Sound off':'Sound on');
  $('replay-story').disabled=!ready;
@@ -113,7 +114,7 @@ function paintUI(){
  const defeated=run.mode==='caught';
  if(run.mode==='dying'||defeated)prepareDefeatArt();
  setData($('panel'),'defeat',defeated);setData($('panel'),'complete',run.mode==='complete');setData($('game-shell'),'reduced',settings.reducedMotion??reducedMotion.matches);
- setHidden('defeat-tableau',!defeated);setHidden('defeat-dialogue',!defeated);setHidden('defeat-review',!defeated);setHidden('chase-comfort',defeated||run.mode==='complete');setHidden('replay-story',defeated);
+ setHidden('defeat-tableau',!defeated);setHidden('defeat-dialogue',!defeated);setHidden('defeat-tip',!defeated);setHidden('defeat-review',!defeated);setHidden('chase-comfort',defeated||run.mode==='complete');setHidden('replay-story',defeated||run.mode==='complete');
  const briefKey=run.mode+':'+run.checkpoint+':'+inputMethod+':'+guideReview+':'+!!run.foot;
  if(briefKey!==briefSignature){briefSignature=briefKey;paintBackNineBrief(run,inputMethod,guideReview,bindings);setText('comfort-controls',backNineHint(inputMethod,!!run.foot,bindings)+'. The camera follows your heading.');}
  setHidden('story',run.mode==='briefing');setHidden('controls',true);
@@ -142,29 +143,42 @@ function paintUI(){
  setData($('game-shell'),'ejecting',run.mode==='driving'&&!!run.foot?.ejection&&run.time-run.foot.ejection.at<1.18);
  if(run.mode==='driving'&&run.joe.ram.phase==='lineup'){const key=run.joe.ram.cycles;if(key!==announcedRam){announcedRam=key;setText('status',messages.banner);}}
  if(run.death){setText('status','Run down by Joe.');setText('hint','');setText('speed','RUN DOWN');setText('surface','');}
- finalCutLink.update(run.mode==='complete');if(uiMode===run.mode)return;uiMode=run.mode;setHidden('loading',true);setHidden('loading-art',run.mode!=='briefing');setHidden('restart',!['paused','caught'].includes(run.mode));$('panel-content').scrollTop=0;$('panel').scrollTop=0;
+ finalCutLink.update(run.mode==='complete');setHidden('primary',run.mode==='complete');if(uiMode===run.mode)return;uiMode=run.mode;setHidden('loading',true);setHidden('loading-art',run.mode!=='briefing');setHidden('restart',run.mode!=='paused');$('panel-content').scrollTop=0;$('panel').scrollTop=0;
  const ending=escapeCopy(run.escape);
  setHidden('escape-record',run.mode!=='complete');if(run.mode==='complete')setText('escape-record',ending.detail);
- const copy={briefing:['ROUGH CUT · CHAPTER 02','The Back Nine',chaseBrief(run),'Start the cart'],sealing:['INSIDE THE GARAGE','Closing the shutter','You are inside. The engine is still outside.','Closing…'],paused:['CHASE PAUSED','Chase paused','You and Joe are stopped. Continue when you are ready.','Resume escape'],caught:['THE BACK NINE · DELIVERY BLOCKED','Sprint terminated','Run down by Joe’s industrial mower.','Restart from the shed'],complete:['THE BACK NINE · SURVIVED',ending.title,ending.story,'Drive again']}[run.mode];
- setText('field-log',journalText(run));setHidden('field-log',!['paused','complete'].includes(run.mode)||!run.story.collected);
- setText('checkpoint-note',defeated?'No checkpoints. Retry starts at the shed with a fresh cart and both relays offline. Enter / R also retries.':run.mode==='complete'?'Escape recorded on this device. Drive again starts a new run.':'Time waits until you begin. Relays power the exit; death restarts the whole run.');
+ const copy={briefing:['ROUGH CUT · CHAPTER 02','The Back Nine',chaseBrief(run),'Begin chapter'],sealing:['INSIDE THE GARAGE','Closing the shutter','You are inside. The engine is still outside.','Closing…'],paused:['CHASE PAUSED','Chase paused','You and Joe are stopped. Continue when you are ready.','Resume escape'],caught:['THE BACK NINE · DELIVERY BLOCKED','Sprint terminated','Run down by Joe’s industrial mower.','Restart from the shed'],complete:['THE BACK NINE · SURVIVED',ending.title,ending.story,'Continue to the Final Cut']}[run.mode];
+ window.RCGameTheme.recordText($('field-log'),journalText(run));setHidden('field-log',!['paused','complete'].includes(run.mode)||!run.story.collected);
+ setText('checkpoint-note',defeated?'No checkpoints. Retry starts at the shed with a fresh cart and both relays offline. Enter / R also retries.':run.mode==='complete'?'The garage is secure. Continue to the championship grounds.':run.mode==='paused'?'The chase is paused. Resume when ready. Restart begins again at the shed.':'Time waits until you begin. Relays power the exit; death restarts the whole run.');
  if(defeated){
   const review=pickDefeat(run,{nearExit:distance(player,COURSE.finish)<60,onFoot:!!run.foot,shortcut:!!run.hunt.choiceMask||run.events.some(e=>e.type==='shortcut'),damage:run.cart.hits>0,objectives:run.checkpoint>0});
   setText('defeat-line',`“${review.lines[0]}\n${review.lines[1]}”`);
-  const failure=run.failure||captureFailure(run);setText('story',failure.cause);copy[2]=failure.cause;
+  const failure=run.failure||captureFailure(run);setText('defeat-tip',failure.advice);setText('story',failure.cause);copy[2]=failure.cause;
   setText('defeat-review',`NEXT ACTION // ${failure.advice}\nRESTART FROM THE SHED // ${run.checkpoint}/2 relays reached this attempt · ${Math.ceil(distance(chaseActor(run),COURSE.finish))} m from the garage`);keys.clear();touch.clear();chaseControls.reset();$('primary').focus({preventScroll:true});}
- if(copy){setText('eyebrow',copy[0]);setText('title',copy[1]);setText('story',copy[2]);setText('primary',copy[3]);setText('status',copy[1]+'. '+copy[2]);if(['briefing','paused','complete'].includes(run.mode))$('primary').focus({preventScroll:true});}
+ if(copy){setText('eyebrow',copy[0]);setText('title',copy[1]);setText('story',copy[2]);setText('primary',copy[3]);setText('status',copy[1]+'. '+copy[2]);if(['briefing','paused','complete'].includes(run.mode))(run.mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}
 }
 function busy(){if(!fence)return false;const status=gl.clientWaitSync(fence,0,0);if(status===gl.TIMEOUT_EXPIRED)return true;gl.deleteSync(fence);fence=null;const ms=performance.now()-renderStarted;audio.presentRunner(run,pendingFootContacts,foreground&&!document.hidden&&!openingActive);pendingFootContacts=[];if(software)budget.observe(ms);times.push(ms);if(times.length>120)times.shift();return false;}
 async function whenPresented(){while(busy())await new Promise(r=>setTimeout(r,8));}
-function render(paint=true){if(openingActive)return;if(paint)paintUI();if(!ready||document.hidden||!foreground||(run.mode!=='driving'&&run.mode!=='sealing'&&run.mode!=='dying'&&!needsDraw)){if(ready&&!document.hidden&&foreground)busy();presentationWake.cancel();return;}
- // RAF still owns input, fixed-step simulation and UI. A software frame that
+function render(paint=true){const frameStarted=performance.now();if(openingActive)return;
+ // Keep HUD effects in step with presented software frames. Updating opacity
+ // while the GPU is busy queues full-stage compositor work ahead of the next
+ // world frame. Menu/mode changes still paint immediately, including pause.
+ const deferUI=software&&ready&&['driving','sealing','dying'].includes(run.mode)&&uiMode===run.mode;
+ if(paint&&!deferUI)paintUI();if(!ready||document.hidden||!foreground||(run.mode!=='driving'&&run.mode!=='sealing'&&run.mode!=='dying'&&!needsDraw)){if(ready&&!document.hidden&&foreground)busy();presentationWake.cancel();return;}
+ // RAF still owns input and fixed-step simulation. A software frame that
  // finishes between display ticks can present promptly instead of idling for
  // another whole tick. Keep one GPU frame in flight and the existing 60 Hz cap.
  if(software&&!manual){const wait=1000/60-(performance.now()-renderStarted);if(wait>0){presentationWake.request(wait);return;}}
- if(busy()){presentationWake.request();return;}presentationWake.cancel();needsDraw=false;const scale=software?Math.min(budget.scale(),prefs.resolution||1):Math.min(1,prefs.resolution||1),w=Math.round(1280*scale),h=Math.round(720*scale);if($('game').width!==w||$('game').height!==h)renderer.setSize(w,h,false);
+ if(busy()){presentationWake.request();return;}presentationWake.cancel();if(deferUI)paintUI();needsDraw=false;
+ // Native desktop rendering follows the displayed stage up to 1440p. Pixel
+ // artwork stays nearest-filtered; a large monitor no longer enlarges a 720p
+ // scene. Keep the measured software budget and explicit quality preference.
+ const displayScale=software?1:Math.min(2,Math.max(1,Math.ceil($('game-shell').clientWidth/16)*16/1280));
+ const scale=software?Math.min(budget.scale(),prefs.resolution||1):displayScale*Math.min(1,prefs.resolution||1),w=Math.round(1280*scale),h=Math.round(720*scale);if($('game').width!==w||$('game').height!==h)renderer.setSize(w,h,false);
  if(world.camera.aspect!==canvasAspect){world.camera.aspect=canvasAspect;world.camera.updateProjectionMatrix();}
- world.update(run,{rear:run.lookBack,reducedMotion:settings.reducedMotion??reducedMotion.matches,shake:chaseControls.prefs.shake,flash:chaseControls.prefs.flash});pendingFootContacts=world.drainRunnerContacts();renderStarted=performance.now();world.draw();frames++;fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
+ // The existing quality budget covers the complete presented frame. Starting
+ // after update hid culling, animation and UI costs from the 60 ms target.
+ renderStarted=frameStarted;
+ world.update(run,{rear:run.lookBack,reducedMotion:settings.reducedMotion??reducedMotion.matches,shake:chaseControls.prefs.shake,flash:chaseControls.prefs.flash});pendingFootContacts=world.drainRunnerContacts();world.draw();frames++;fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
 window.addEventListener('resize',()=>{needsDraw=true;});
 window.addEventListener('fullscreenchange',()=>{needsDraw=true;});
 window.advanceTime=async milliseconds=>{manual=true;presentationWake.cancel();const n=Math.max(1,Math.round(milliseconds/(1000/60)));for(let i=0;i<n;i++)simulate(1/60);await whenPresented();render();await whenPresented();};
@@ -172,7 +186,19 @@ window.render_game_to_text=()=>JSON.stringify({mode:openingActive?'back_nine_ope
 // Explicit development hook used only when the URL asks for it; normal runs
 // expose observation/time stepping but no teleport or completion command.
 if(new URLSearchParams(location.search).has('test'))window.__backNine={get run(){return run;},set run(v){run=v;events=v.events.length;world?.resetCamera();uiMode='';needsDraw=true;},simulate,render,whenPresented,COURSE};
-function frame(now){const delta=Math.min(.1,(now-last)/1000);last=now;if(!manual&&(ready||openingActive)&&!document.hidden){accumulator+=delta;let steps=0;while(accumulator>=1/60&&steps++<6){simulate(1/60);accumulator-=1/60;}render();}requestAnimationFrame(frame);}requestAnimationFrame(frame);
+import {createMenuFrameGate} from './menu-frame-gate.js';
+const menuFrameDue=createMenuFrameGate();let idleUIKey='';
+function frame(now){
+ const delta=Math.min(.1,(now-last)/1000);last=now;
+ const active=!openingActive&&(['driving','sealing','dying'].includes(run.mode)||run.mode==='complete'&&run.finale.tail>0);
+ if(!manual&&(ready||openingActive)&&menuFrameDue(now,active)){
+  if(active){idleUIKey='';accumulator+=delta;let steps=0;while(accumulator>=1/60&&steps++<6){simulate(1/60);accumulator-=1/60;}render();}
+  else{accumulator=0;input();const key=JSON.stringify([run.mode,run.checkpoint,inputMethod,guideReview,ready,settings,chaseControls.prefs]);
+   if(!openingActive&&(needsDraw||key!==idleUIKey)){idleUIKey=key;render();}else if(!openingActive)busy();
+  }
+ }
+ requestAnimationFrame(frame);
+}requestAnimationFrame(frame);
 async function prepareCourse(){if(ready||preparePromise)return preparePromise;preparePromise=(async()=>{try{world=await createChaseScene(renderer,software,message=>setText('loading',message));renderer.setSize(software?960:1280,software?540:720,false);world.draw();fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();renderStarted=performance.now();await whenPresented();ready=true;$('primary').disabled=false;paintUI();render();}catch(error){setText('loading',error.message);setText('title','Could not prepare the chase');setText('primary','Reload level');$('primary').disabled=false;$('primary').onclick=()=>location.reload();console.error(error);}})();return preparePromise;}
 paintUI();if(run.mode==='briefing'&&run.checkpoint===0&&!opening.shouldSkip())showOpening();else prepareCourse();
 window.addEventListener('pointerdown',e=>{inputMethod=e.pointerType==='touch'?'touch':'keyboard';});

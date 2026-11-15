@@ -6,7 +6,18 @@ import {createStableSearchQueue} from './stable-search-queue.js';
 // position. Plan whole bank-to-bank crossings; a temporarily green first metre
 // is not sufficient reason to walk into a discharge he cannot clear.
 const directions=[[0,1],[1,0],[0,-1],[-1,0]],clearance=.6,reserve=.25;
-let graph;
+let graph,search;
+
+// The graph and search workspace belong to the fixed course, not an encounter.
+// Build them behind the loading gate; subsequent retries reuse the same data.
+export function prepareJoeNavigation(){
+ const nodes=courseGraph();
+ if(!search){
+  const count=nodes.length*4;
+  search={queue:createStableSearchQueue(count),cost:new Float64Array(count),previous:new Int32Array(count),edges:new Array(count),heuristic:new Float64Array(nodes.length),gateBlocked:Uint8Array.from(nodes,n=>Number(solid(n,.8,true)))};
+ }
+ return nodes.length;
+}
 
 // A dry shortcut must not bypass a planned crossing, even during low flow.
 // Segment/rectangle clipping catches a water bed between distant endpoints.
@@ -100,23 +111,26 @@ export function planJoeRoute(from,to,time,{speed=2.1,bypass=false,bypassAt=-99,g
  const nodes=courseGraph();
  const nearest=p=>{let best=0,least=Infinity;nodes.forEach((n,i)=>{const d=distance(p,n);if(d<least){best=i;least=d;}});return best;};
  const start=nearest(from),goal=nearest(to),heading=((Math.round((from.yaw||0)/(Math.PI/2))%4)+4)%4;
- const count=nodes.length*4,queue=createStableSearchQueue(count),cost=new Float64Array(count).fill(Infinity),previous=new Map();
+ if(!search)prepareJoeNavigation();
+ const {queue,cost,previous,edges,heuristic,gateBlocked}=search;
+ queue.clear();cost.fill(Infinity);previous.fill(-1);
+ for(let i=0;i<nodes.length;i++)heuristic[i]=distance(nodes[i],nodes[goal]);
  const startKey=start*4+heading;cost[startKey]=time;queue.set(startKey,time);
  let end=startKey,best=distance(nodes[start],nodes[goal]);
  while(queue.length){
-  const key=queue.pop(),index=Math.floor(key/4),node=nodes[index],d=distance(node,nodes[goal]);
+  const key=queue.pop(),index=Math.floor(key/4),node=nodes[index],d=heuristic[index];
   if(d<best){best=d;end=key;}if(index===goal){end=key;break;}
   for(const edge of node.edges){
-   const target=nodes[edge.target];if(gate&&solid(target,.8,true))continue;
+   if(gate&&gateBlocked[edge.target])continue;
    const turn=Math.abs(wrap((edge.heading-key%4)*Math.PI/2))/2.4;
    const duration=edge.length/speed,arrival=cost[key]+turn;
    const wait=edge.water?crossingWait(edge.water,arrival,duration,bypass,bypassAt):0;
    const total=arrival+wait+duration,nextKey=edge.target*4+edge.heading;
    if(total>=cost[nextKey])continue;
-   cost[nextKey]=total;previous.set(nextKey,{key,edge});queue.set(nextKey,total+distance(target,nodes[goal])/speed);
+   cost[nextKey]=total;previous[nextKey]=key;edges[nextKey]=edge;queue.set(nextKey,total+heuristic[edge.target]/speed);
   }
  }
  const route=[];
- for(let key=end;key!==startKey;){const link=previous.get(key);if(!link)break;const point=nodes[Math.floor(key/4)];route.push({x:point.x,y:point.y,...(link.edge.water?{crossing:link.edge.water.id}:{} )});key=link.key;}
+ for(let key=end;key!==startKey;){if(previous[key]<0)break;const point=nodes[Math.floor(key/4)],edge=edges[key];route.push({x:point.x,y:point.y,...(edge.water?{crossing:edge.water.id}:{} )});key=previous[key];}
  route.reverse();route.destination={x:nodes[Math.floor(end/4)].x,y:nodes[Math.floor(end/4)].y};return smoothJoeRoute(from,route,gate);
 }

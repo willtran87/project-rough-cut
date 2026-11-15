@@ -36,7 +36,7 @@ export function createKeeperRelease({scene,box,put,cyl,materials}){
  }
  for(const [material,pieces]of parts){
   const geometry=mergeIndexedGeometries(pieces),mesh=new THREE.Mesh(geometry,material);
-  mesh.name='keeper-release-housing';fixed.add(mesh);pieces.forEach(g=>g.dispose());
+  mesh.name='keeper-release-housing';mesh.userData.drainStaticLight=true;fixed.add(mesh);pieces.forEach(g=>g.dispose());
  }
  const housingBounds=new THREE.Box3().setFromObject(fixed);
  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=512;

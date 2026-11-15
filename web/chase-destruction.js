@@ -32,7 +32,7 @@ export function constrainMaintenanceProps(run,actor,from,kind){
   if(incoming<.4){Object.assign(actor,probe);hit=true;continue;}
   Object.assign(run.destruction.props[i],{brokenAt:run.time,dx:Math.sin(actor.yaw),dy:Math.cos(actor.yaw),power:clamp(incoming/15,.3,1)});
   run.destruction.serial++;run.events.push({type:'joe-destruction',id:prop.id,time:run.time});
-  emitCourseCue(run.courseFX,'timber',prop,clamp(incoming/15,.4,1));
+  emitCourseCue(run.courseFX,['crates','bench'].includes(prop.kind)?'timber':'metal',prop,clamp(incoming/15,.4,1));
   actor.speed*=.91;
  }
  return hit;

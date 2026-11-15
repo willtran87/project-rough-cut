@@ -1,5 +1,16 @@
 import * as THREE from './vendor/three/three.module.js';
 
+// A shallow pressed-glass crown sits behind the physical cage. The perimeter
+// remains exactly on the old box so the lens still seats in its gasket.
+export function drainLampLensGeometry(){
+ const geometry=new THREE.BoxGeometry(1,1,1,4,4,1),p=geometry.attributes.position,n=geometry.attributes.normal;
+ for(let i=0;i<p.count;i++)if(Math.abs(n.getZ(i))>.5){
+  const crown=Math.max(0,1-4*p.getX(i)**2)*Math.max(0,1-4*p.getY(i)**2);
+  p.setZ(i,p.getZ(i)+Math.sign(p.getZ(i))*.08*crown);
+ }
+ geometry.computeVertexNormals();geometry.computeBoundingBox();geometry.computeBoundingSphere();return geometry;
+}
+
 // Four small, native pixel panes share one atlas and one instanced draw. Dirt
 // obscures the bulb rather than glowing itself; ribs catch only a thin line.
 export function createDrainLampGlass(){
@@ -53,5 +64,5 @@ export function createDrainLampGlass(){
   const offsets=new Float32Array(count*2);
   for(let i=0;i<count;i++){offsets[i*2]=(i%2)*.5;offsets[i*2+1]=Math.floor(i%4/2)*.5;}
   geometry.setAttribute('lampPane',new THREE.InstancedBufferAttribute(offsets,2));
- },stats:{variants:4,atlas:[256,256],pane:[128,128],additionalDraws:0},dispose(){texture.dispose();material.dispose();}};
+ },stats:{variants:4,atlas:[256,256],pane:[128,128],additionalDraws:0,lensProfile:'pressed-crown',crownFraction:.08},dispose(){texture.dispose();material.dispose();}};
 }

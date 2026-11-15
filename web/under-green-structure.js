@@ -1,5 +1,7 @@
 import {GATE_ROOF_SLOT} from './under-green-layout.js';
 import {isExposedBunkerEdge} from './under-green-bunker-layout.js';
+import {bunkerSoilBands} from './under-green-bunker-shoring.js';
+export const RETAINING_CAP_TOP=4.10;
 function gateOwnsRoofEdge(edge){
  return edge.kind==='roof-edge'&&edge.axis==='y'&&Math.abs(edge.line-GATE_ROOF_SLOT.y)<GATE_ROOF_SLOT.d/2&&
   edge.start>=GATE_ROOF_SLOT.x-GATE_ROOF_SLOT.w/2&&edge.end<=GATE_ROOF_SLOT.x+GATE_ROOF_SLOT.w/2;
@@ -61,9 +63,9 @@ export function buildUnderGreenStructure({layout,box}) {
   const bunker=x<-12;
   // Existing 1.8m masonry is the foundation; upper banks sit directly on it.
   piece(bunker?'sand':'rangeStone',2.91,2.06);
-  piece(bunker?'soil':'iron',4.02,.16,.28);
+  piece(bunker?'soil':'iron',RETAINING_CAP_TOP-.08,.16,.28);
   piece('grass',5.05,.18,.46,edge.side*.10);
-  if(bunker)piece('soil',3.43,.12,.235);
+  if(bunker)for(const band of bunkerSoilBands(edge))box('soil',axis==='x'?line:band.at,band.height,-(axis==='y'?line:band.at),axis==='x'?.235:band.length,band.tall,axis==='y'?.235:band.length);
   // Timber shoring in sand; painted ribs at the abandoned range. Bases remain
   // within the existing wall clearance and nothing crosses a walking opening.
   const count=Math.max(1,Math.ceil(length/3));

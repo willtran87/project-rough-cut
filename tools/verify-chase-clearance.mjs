@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {runnerCameraFraction,cameraObstacleHeight} from '../web/runner-camera.js';
+import {COURSE} from '../web/back-nine-course.js';
+import {createRun} from '../web/back-nine-sim.js';
+const r=createRun(0,0,713),checks=[];
+const sweep=(a,b,h)=>runnerCameraFraction(a,b,r,h);
+assert(sweep({x:-14.5,y:790},{x:-8,y:790},{from:2.45,to:4.2})<.4);checks.push('clubhouse wall clips high cart boom');
+assert(sweep({x:-31.5,y:806},{x:-25,y:806},{from:2.45,to:3.15})<.4);checks.push('garage side wall clips cart boom');
+assert.equal(sweep({x:24,y:246},{x:24,y:252.5},{from:2.45,to:4.2}),1);checks.push('low basin does not shorten elevated view');
+assert(sweep({x:9,y:335.5},{x:9,y:342},{from:2.45,to:3.5})<1);checks.push('awning above range basin retains height');
+assert.equal(sweep({x:-14.5,y:790},{x:-8,y:790},{from:15,to:16}),1);checks.push('view above building stays clear');
+assert(sweep({x:-14.5,y:790},{x:-8,y:790},{from:15,to:4})<1);checks.push('descending eye clips building roof');
+const feature=COURSE.features.find(f=>f.id==='reservoir-trailer');
+const a={x:feature.x,y:feature.y-5},b={x:feature.x,y:feature.y+1};
+assert(sweep(a,b,{from:1.5,to:2})<1);r.destruction.features[feature.id].brokenAt=0;assert.equal(sweep(a,b,{from:1.5,to:2}),1);checks.push('destroyed fixture releases camera');
+r.destruction.features[feature.id].brokenAt=null;r.destruction.features[feature.id].x=feature.x+10;assert.equal(sweep(a,b,{from:1.5,to:2}),1);checks.push('displaced fixture follows run-local position');
+assert.equal(sweep({x:0,y:100},{x:0,y:100},{from:2,to:3}),1);checks.push('zero boom stays finite');
+const post=COURSE.obstacles.find(o=>o.kind==='post');assert.equal(sweep(post,{x:post.x+2,y:post.y}),0);checks.push('sweep beginning within circular obstacle stays constrained');
+let sampled=0;for(const o of COURSE.obstacles){assert(cameraObstacleHeight(o)>0);for(let n=0;n<16;n++){const angle=n*Math.PI/8,rx=o.rx||o.r,ry=o.ry||o.r,a={x:o.x+Math.cos(angle)*(rx+3),y:o.y+Math.sin(angle)*(ry+3)},b={x:o.x,y:o.y};const f=sweep(a,b,{from:2.45,to:3.5});assert(Number.isFinite(f)&&f>=0&&f<=1);sampled++;}}
+const report={passed:true,checks,sampled};fs.writeFileSync('output/back-nine-visual-upgrade/camera-clearance/rules.json',JSON.stringify(report,null,2));console.log(report);

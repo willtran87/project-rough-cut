@@ -1,9 +1,12 @@
 import * as THREE from './vendor/three/three.module.js';
 import * as Art from './pixel-art.js';
+import {SKY_MOON_POSITION} from './course-moon-direction.js';
+import {createBackNineStormSky} from './back-nine-storm-sky.js';
+import {createBackNineHorizon} from './back-nine-horizon.js';
 
 // A separate far scene keeps decorative depth independent of gameplay collision,
 // target projection and the near scene's draw distance.
-export function createParallax({travelScale=1,showEstate=true,storm=0,night=0}={}) {
+export function createParallax({travelScale=1,showEstate=true,storm=0,night=0,stormCanopy=false,estateHorizon=false,courseSky=false}={}) {
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(58, 16 / 9, .1, 1200);
   const layers = [], clouds = [];
   let motionTime = 0, lastTime = null,coverage=0,nightfallProgress=0;
@@ -18,16 +21,32 @@ export function createParallax({travelScale=1,showEstate=true,storm=0,night=0}={
   const skyMap=Art.texture('rough-cut-night-sky-v2');skyMap.wrapS=THREE.RepeatWrapping;skyMap.repeat.x=2;
   const dome = new THREE.Mesh(domeGeometry, new THREE.MeshBasicMaterial({ map: skyMap, color: 0x6d7a8b, side: THREE.BackSide, depthWrite: false, fog: false }));
   dome.renderOrder = -10; sky.root.add(dome);
+  // Keep the horizon's silhouette separation while lowering high-altitude
+  // stars. This is attached to the dome, never to the camera or world exposure.
+  if(courseSky){
+    const colors=new Float32Array(positions.count*3);
+    for(let i=0;i<positions.count;i++){
+      const t=THREE.MathUtils.smoothstep(positions.getY(i)/1000,.08,.65),value=1-.45*t;
+      colors.fill(value,i*3,i*3+3);
+    }
+    domeGeometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+    dome.material.vertexColors=true;
+  }
   dome.material.color.multiplyScalar((1-storm*.16)*(1-night*.5));
   const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: Art.texture('rough-cut-moon-v1', [225, 195, 815, 835]), color: 0xc7d8cc, depthWrite: false }));
-  moon.position.set(-280, 280, -720); moon.scale.set(58, 58, 1); sky.root.add(moon);
+  moon.position.fromArray(SKY_MOON_POSITION); moon.scale.set(58, 58, 1); sky.root.add(moon);
   moon.material.color.multiplyScalar(1-night*.4);
+  if(courseSky)moon.material.color.multiplyScalar(.48);
 
   const domeColor=dome.material.color.clone(),moonColor=moon.material.color.clone();
+  const canopy=stormCanopy?createBackNineStormSky(moon.position):null;
+  if(canopy){sky.root.add(canopy.mesh);moon.renderOrder=-4;}
   const cloudLayer = layer('clouds', .025);
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < (canopy?0:9); i++) {
     const cloud = Art.card('rough-cut-cloud-atlas-v2', [(i % 3) * 512, i % 2 ? 512 : 0, 512, 512], 210 + i % 3 * 45, 145, { transparent: true, opacity: .48, alphaTest: .025, color: 0x8eabb8, depthWrite: false });
     cloud.material.opacity+=storm*.18;cloud.scale.set(1+storm*.35,1+storm*.12,1);cloud.material.color.multiplyScalar((1-storm*.15)*(1-night*.3));
+    // Colour only: opacity, cloud coverage and physical moonlight stay intact.
+    if(courseSky)cloud.material.color.multiplyScalar(.5);
     cloudLayer.root.add(cloud); clouds.push({ mesh: cloud, baseScale:cloud.scale.clone(),baseOpacity:cloud.material.opacity, angle: i * Math.PI * 2 / 9 + .2, height: 145 + (i % 3) * 60 });
   }
   const ring = (entry, name, crop, radius, height, bottom, repeat, color) => {
@@ -35,8 +54,11 @@ export function createParallax({travelScale=1,showEstate=true,storm=0,night=0}={
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 96, 1, true), new THREE.MeshBasicMaterial({ map, color, side: THREE.BackSide, alphaTest: .12 }));
     mesh.position.y = bottom + height / 2; entry.root.add(mesh); entry.anchor.set(0, height + bottom, -radius);
   };
-  ring(layer('ridge', .08), 'rough-cut-far-ridge-v1', [0, 620, 1672, 321], 360, 57, -17, 3, 0x62737b);
-  ring(layer('distant-trees', .30), 'rough-cut-distant-treeline-v1', [0, 350, 1672, 385], 180, 27, -8, 4, 0x41575e);
+  const horizon=estateHorizon?createBackNineHorizon(layer):null;
+  if(!horizon){
+    ring(layer('ridge', .08), 'rough-cut-far-ridge-v1', [0, 620, 1672, 321], 360, 57, -17, 3, 0x62737b);
+    ring(layer('distant-trees', .30), 'rough-cut-distant-treeline-v1', [0, 350, 1672, 385], 180, 27, -8, 4, 0x41575e);
+  }
   const estate = layer('estate', .65);
   for (const [x, z, turn] of (showEstate?[[-60, -128, .25], [105, 32, -1.8]]:[])) {
     const house = Art.card('rough-cut-distant-clubhouse-v1', [80, 280, 1525, 465], 62, 18.9, { color: 0x899789 });
@@ -48,6 +70,7 @@ export function createParallax({travelScale=1,showEstate=true,storm=0,night=0}={
     nightfallProgress=nightfall?.progress||0;
     dome.material.color.copy(domeColor).multiplyScalar(nightfall?.skyScale??1);
     moon.material.color.copy(moonColor).multiplyScalar(nightfall?.moonScale??1);
+    if(canopy&&lastTime!==null&&time<lastTime)motionTime=0;
     const dt = lastTime === null ? 0 : Math.max(0, Math.min(.1, time - lastTime)); lastTime = time;
     if (!reducedMotion && !paused) motionTime += dt;
     camera.position.copy(view.position);camera.position.x*=travelScale;camera.position.z*=travelScale; camera.quaternion.copy(view.quaternion); camera.fov = view.fov; camera.aspect = view.aspect;
@@ -66,16 +89,18 @@ export function createParallax({travelScale=1,showEstate=true,storm=0,night=0}={
     coverage=0;const moonAngle=Math.atan2(moon.position.x,-moon.position.z),moonElevation=Math.atan2(moon.position.y,Math.hypot(moon.position.x,moon.position.z));
     for(const cloud of clouds){const a=Math.atan2(cloud.mesh.position.x,-cloud.mesh.position.z),delta=Math.atan2(Math.sin(a-moonAngle),Math.cos(a-moonAngle)),elevation=Math.atan2(cloud.height,720),width=cloud.mesh.geometry.parameters.width/1440*(nightfall?cloud.mesh.scale.x:1);coverage+=Math.max(0,1-Math.abs(delta)/width)*Math.max(0,1-Math.abs(elevation-moonElevation)/.14)*(nightfall?cloud.mesh.material.opacity:.48);}
     coverage=Math.min(.85,coverage);
+    if(canopy){canopy.update(motionTime);coverage=canopy.coverage();}
     scene.updateMatrixWorld(true);
   }
   function stats() {
-    return { motionTime, moonCoverage:coverage, nightfall:nightfallProgress,clouds:clouds.length,cloudWidth:clouds[0].mesh.scale.x,cloudOpacity:clouds[0].mesh.material.opacity,skyColor:dome.material.color.getHex(), layers: layers.map(({ name, influence, root, anchor }) => {
+    return { motionTime, moonCoverage:coverage, nightfall:nightfallProgress,courseSky,clouds:clouds.length,stormCanopy:canopy?.stats(),horizon:horizon?.stats(),cloudWidth:clouds[0]?.mesh.scale.x??0,cloudOpacity:clouds[0]?.mesh.material.opacity??0,skyColor:dome.material.color.getHex(), layers: layers.map(({ name, influence, root, anchor }) => {
       const point = anchor.clone().add(root.position).project(camera);
       return { name, influence, origin: [root.position.x, root.position.z], screen: [point.x, point.y] };
     }) };
   }
   function dispose() {
+    if(canopy){sky.root.remove(canopy.mesh);canopy.dispose();}
     scene.traverse(o => { o.geometry?.dispose(); if (o.material) o.material.dispose(); });
   }
-  return { scene, camera, update, stats, moonCoverage:()=>coverage, dispose };
+  return { scene, camera, update, stats, textures:canopy?[canopy.map]:[],moonCoverage:()=>coverage, dispose };
 }

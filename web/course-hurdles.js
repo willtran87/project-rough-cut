@@ -4,7 +4,7 @@ import {barrierPiecePose} from './chase-barriers.js';
 
 export function createCourseHurdles(scene,gates,geometry,material){
  const mesh=new THREE.InstancedMesh(geometry,material,gates.length*6),dummy=new THREE.Object3D(),pose={};
- mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;scene.add(mesh);
+ mesh.userData.rigidInstanceBounds=true;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;scene.add(mesh);
  const ages=new Float64Array(gates.length).fill(NaN),directions=new Float64Array(gates.length).fill(NaN),swings=new Float64Array(gates.length).fill(NaN);
  let uploads=0;
  function update(run,reduced=false){

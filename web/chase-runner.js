@@ -1,27 +1,31 @@
+import {createRunnerBalance} from './runner-balance.js';
+import {createRunnerGearCraft} from './runner-gear-craft.js';
+import {runnerSoleSupport} from './runner-sole.js';
 import {createFootContactEvents} from './foot-contact-events.js';
 import {createRunnerGait} from './runner-gait.js';
 import {ejectionPose,ejectionBalance} from './runner-drama.js';
 import * as THREE from './vendor/three/three.module.js';
 import {mergeIndexedGeometries} from './indexed-geometry.js';
 import {runnerMaterials} from './runner-materials.js';
+import {createRunnerGarmentCraft} from './runner-garment-craft.js';
+import {createRunnerHead,createRunnerHair} from './runner-head-craft.js';
 const smooth=t=>t*t*(3-2*t);
 function soleHeight(hip,knee,side,lean,roll,ankle=0){
  const a=hip+knee+ankle,ca=Math.cos(a),sa=Math.sin(a),cl=Math.cos(lean),sl=Math.sin(lean),cr=Math.cos(roll),sr=Math.sin(roll),hy=.88-.4*Math.cos(hip)-.37*Math.cos(hip+knee),hz=-.4*Math.sin(hip)-.37*Math.sin(hip+knee);
  const cy=cr*Math.cos(a+lean),cz=-cr*Math.sin(a+lean);
  const center=(y,z)=>side*.112*sr+cr*((hy+y*ca-z*sa)*cl-(hz+y*sa+z*ca)*sl);
- // Support bounds of the rounded boot and its rectangular sole under the
- // complete hip/knee/torso rotation, including the toe and heel corners.
- const boot=center(0,-.055)-Math.hypot(.087*sr,.075*cy,.16*cz);
- const sole=center(-.055,-.04)-Math.abs(.075*sr)-Math.abs(.0125*cy)-Math.abs(.125*cz);
- return Math.min(boot,sole);
+ // Same shaped outsole as terrain IK, transformed through hip/knee/torso.
+ return center(0,0)+runnerSoleSupport(sr,cy,cz);
 }
 
 // Shares the cart driver's palette and prepared materials. Rigid limb batches
 // keep the escape readable without another model download or skeleton shader.
-export function createChaseRunner(scene,materials,groundHeight=null){
- const finish=runnerMaterials(materials);materials=finish.materials;
+export function createChaseRunner(scene,materials,groundHeight=null,clothMap,faceMap,hairMap,gearMap){
+ const finish=runnerMaterials(materials,clothMap,faceMap,hairMap,gearMap);materials=finish.materials;
  const root=new THREE.Group(),body=new THREE.Group();root.add(body);scene.add(root);
  const round=new THREE.IcosahedronGeometry(1,2),fine=new THREE.IcosahedronGeometry(1,1),box=new THREE.BoxGeometry(1,1,1);
+ const garmentCraft=createRunnerGarmentCraft(THREE);
+ const gearCraft=createRunnerGearCraft(THREE);
  // Tapered connected sleeves/trousers replace the stacked oval segments.
  const garment=(rings,depth)=>{const g=new THREE.LatheGeometry(rings.map(([r,y])=>new THREE.Vector2(r,y)),12);g.scale(1,1,depth);const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i),a=Math.atan2(p.getZ(i)/depth,p.getX(i)),r=Math.hypot(p.getX(i),p.getZ(i)/depth);if(r>.02){const fold=1+.025*Math.sin(y*53+a*2);p.setX(i,p.getX(i)*fold);p.setZ(i,p.getZ(i)*fold);}}g.computeVertexNormals();return g;};
  const sleeve=garment([[0,-.31],[.066,-.31],[.076,-.25],[.079,-.14],[.09,-.055],[.092,.015],[.06,.055],[0,.055]],1.05);
@@ -31,7 +35,7 @@ export function createChaseRunner(scene,materials,groundHeight=null){
  function part(parent,x,y,z,shapes,name=''){
   const group=new THREE.Group();group.position.set(x,y,z);parent.add(group);const batches=new Map(),transform=new THREE.Object3D();
   group.name=name;
-  for(const [type,geometry,px,py,pz,sx,sy,sz,rx=0,ry=0,rz=0]of shapes){const g=geometry.clone();transform.position.set(px,py,pz);transform.scale.set(sx,sy,sz);transform.rotation.set(rx,ry,rz);transform.updateMatrix();g.applyMatrix4(transform.matrix);if(!batches.has(type))batches.set(type,[]);batches.get(type).push(g);}
+  for(const [type,geometry,px,py,pz,sx,sy,sz,rx=0,ry=0,rz=0]of shapes){const g=geometry.clone();transform.position.set(px,py,pz);transform.scale.set(sx,sy,sz);transform.rotation.set(rx,ry,rz);transform.updateMatrix();g.applyMatrix4(transform.matrix);if(type==='skin'&&g.attributes.uv){const uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,.012+uv.getX(i)*.025,.10+uv.getY(i)*.8);}if(!batches.has(type))batches.set(type,[]);batches.get(type).push(g);}
   for(const [type,list]of batches){group.add(new THREE.Mesh(mergeIndexedGeometries(list),materials[type]));list.forEach(g=>g.dispose());}return group;
  }
  const shirtProfile=[[0,-.23],[.17,-.23],[.18,-.2],[.185,-.17],[.181,-.12],[.178,-.07],[.18,-.04],[.187,.0],[.2,.05],[.21,.10],[.219,.16],[.23,.23],[.22,.26],[.202,.29],[.15,.32],[.085,.34],[0,.34]];
@@ -44,30 +48,23 @@ export function createChaseRunner(scene,materials,groundHeight=null){
  }
  torsoShapes.push(['cloth',box,0,.04,-.143,.018,.36,.013]);
  for(const y of [-.11,-.02,.07,.16,.25])torsoShapes.push(['iron',fine,0,y,-.155,.006,.006,.005]);
+ torsoShapes.push(...garmentCraft.torso(shirtProfile));
  const torso=part(body,0,1.08,0,torsoShapes,'work-shirt');
  const collar=new THREE.BufferGeometry();collar.setAttribute('position',new THREE.Float32BufferAttribute([-.11,.035,0,-.02,.01,-.025,-.05,-.07,-.025,.11,.035,0,.05,-.07,-.025,.02,.01,-.025],3));collar.setAttribute('uv',new THREE.Float32BufferAttribute([0,1,1,1,1,0,0,1,1,0,1,1],2));collar.setIndex([0,1,2,3,4,5]);collar.computeVertexNormals();
  part(torso,0,.29,-.14,[['paint',collar,0,0,0,1,1,1],['cloth',box,0,-.15,-.035,.018,.3,.012]]);
- const portrait=new THREE.PlaneGeometry(.205,.235,6,8);portrait.rotateY(Math.PI);
- // Let the painted features follow the cheek/forehead volume rather than
- // hovering on a flat rectangular plate across the face.
- const facePositions=portrait.attributes.position;for(let i=0;i<facePositions.count;i++){const x=facePositions.getX(i),y=facePositions.getY(i)-.035;facePositions.setZ(i,.137-.142*Math.sqrt(Math.max(.04,1-(x/.146)**2-(y/.194)**2))-.003);}portrait.computeVertexNormals();
- const headShapes=[['skin',round,0,.008,.012,.14,.182,.131],['skin',round,0,-.1,-.028,.105,.077,.102],['skin',round,0,-.127,-.065,.074,.027,.052],['face',portrait,0,-.035,-.137,1,1,1],['skin',round,0,-.014,-.139,.015,.034,.019],['skin',fine,0,-.042,-.157,.019,.016,.018],['hair',round,0,.104,.035,.145,.112,.13],['hair',round,0,.025,.102,.124,.113,.048]];
+ const portrait=createRunnerHead(THREE),scalp=createRunnerHair(THREE);
+ const headShapes=[['face',portrait,0,0,0,1,1,1],['hair',scalp,0,0,0,1,1,1]];
  for(const side of [-1,1]){
-  headShapes.push(['skin',round,side*.139,-.018,.008,.024,.047,.027],['skin',fine,side*.151,-.016,-.012,.009,.028,.012],['hair',fine,side*.122,.033,.025,.023,.071,.08],['hair',fine,side*.129,-.015,-.021,.012,.04,.02]);
+  headShapes.push(['skin',round,side*.139,-.018,.008,.024,.047,.027],['skin',fine,side*.151,-.016,-.012,.009,.028,.012]);
  }
- // Overlapping, swept locks and a broken hairline replace a smooth cap.
- for(let i=0;i<7;i++){const x=-.106+i*.034;headShapes.push(['hair',round,x,.116+(i<3?.018:0),-.037,.043,.046,.077,0,.18,-.27],['hair',fine,x,.079+Math.sin(i)*.008,-.106,.022,.025,.013,0,0,-.24]);}
  const head=part(body,0,1.61,0,headShapes,'head');
  const arms=[],legs=[],elbows=[],knees=[],ankles=[];
  for(const side of [-1,1]){
   const arm=part(body,side*.224,1.32,0,[['cloth',sleeve,0,0,0,1,1,1],['cloth',round,0,-.015,.008,.086,.082,.089]],'upper-sleeve');arms.push(arm);
-  const hand=[['cloth',forearm,0,0,0,1,1,1],['cloth',round,0,-.24,0,.066,.023,.065],['skin',round,0,-.295,-.008,.045,.064,.043],['skin',round,-side*.043,-.285,-.025,.022,.039,.025,0,0,-side*.3]];
-  for(let f=0;f<4;f++)hand.push(['skin',fine,-.028+f*.018,-.334,-.028,.011,.027,.016],['skin',fine,-.028+f*.018,-.307,-.047,.011,.014,.01]);
-  elbows.push(part(arm,0,-.28,0,hand,'cuff-hand'));
-  const leg=part(body,side*.112,.88,0,[['trousers',thigh,0,0,0,1,1,1],['trousers',box,side*.077,-.15,-.025,.017,.135,.085],['trousers',fine,side*.083,-.08,-.025,.018,.023,.052]],'trousers');legs.push(leg);
-  const boot=[['trousers',shin,0,0,.005,1,1,1],['rubber',round,0,-.37,-.055,.087,.075,.16],['rubber',round,0,-.3,0,.072,.067,.07],['rubber',box,0,-.425,-.04,.15,.025,.25],['rubber',fine,0,-.38,-.163,.072,.042,.039]];
-  for(let n=0;n<4;n++)boot.push(['iron',box,0,-.322-n*.007,-.043-n*.025,.065,.004,.007,0,0,(n%2?1:-1)*.11]);
-  for(const x of [-.065,.065])for(let n=0;n<4;n++)boot.push(['rubber',box,x,-.422,.037-n*.05,.024,.021,.024]);
+  const hand=[['cloth',forearm,0,0,0,1,1,1],['cloth',round,0,-.24,0,.066,.023,.065],...gearCraft.glove(round,fine,box,side)];
+  hand.push(...garmentCraft.cuff());elbows.push(part(arm,0,-.28,0,hand,'cuff-hand'));
+  const leg=part(body,side*.112,.88,0,[['trousers',thigh,0,0,0,1,1,1],['trousers',box,side*.077,-.15,-.025,.017,.135,.085],['trousers',fine,side*.083,-.08,-.025,.018,.023,.052],...garmentCraft.trousers()],'trousers');legs.push(leg);
+  const boot=[['trousers',shin,0,0,.005,1,1,1],...gearCraft.boot(round,box)];
   const knee=part(leg,0,-.4,0,boot.filter(shape=>shape[0]==='trousers'),'boot-shin');knees.push(knee);
   ankles.push(part(knee,0,-.37,0,boot.filter(shape=>shape[0]!=='trousers').map(shape=>{const copy=shape.slice();copy[3]+=.37;return copy;}),'boot'));
  }
@@ -78,17 +75,25 @@ export function createChaseRunner(scene,materials,groundHeight=null){
  root.updateMatrixWorld(true);root.traverse(m=>{if(!m.isMesh)return;const g=m.geometry.clone().applyMatrix4(m.matrixWorld);if(!seatBatches.has(m.material))seatBatches.set(m.material,[]);seatBatches.get(m.material).push(g);});
  for(const [material,list]of seatBatches){seatedRoot.add(new THREE.Mesh(mergeIndexedGeometries(list),material));list.forEach(g=>g.dispose());}scene.add(seatedRoot);seatedRoot.visible=false;
  root.position.set(0,0,0);body.rotation.set(0,0,0);head.rotation.set(0,0,0);for(const limb of [...legs,...knees,...arms,...elbows])limb.rotation.set(0,0,0);
+ const upperBody=new THREE.Group();upperBody.name='runner-upper-body';upperBody.position.y=.88;body.add(upperBody);for(const part of [torso,head,...arms]){part.position.y-=.88;upperBody.add(part);}
+ const balance=createRunnerBalance();
  const footContacts=createFootContactEvents(),contactFeet=[{x:0,y:0,height:0},{x:0,y:0,height:0}];
  const gait=createRunnerGait(groundHeight),target=new THREE.Vector3(),inverseBody=new THREE.Quaternion(),soleRotation=new THREE.Quaternion(),pitchRotation=new THREE.Quaternion(),soleEuler=new THREE.Euler();
  const deathParts=[];root.traverse(m=>{if(m.isMesh)deathParts.push({mesh:m,positions:m.geometry.attributes.position.array});});
  const deathAxis=new THREE.Vector3(),ejectPose={},ejectBalance={};
  let supportedDeath=null,supportAge=-1,supportLift=0,supportChecks=0;let phase=0,blend=0,facing=null,ejectionPhase='none',posedFoot=null,poseTurn=0;root.visible=false;
- return {root,body,seated(parent,cart,reduced,time){
+ return {root,body,contactAnchors:{feet:ankles,body:torso},attachUpperBody(object){
+  // Accessories follow breathing/braking and participate in the same defeat
+  // support calculation as the body. Called during scene preparation only.
+  object.position.y-=.88;upperBody.add(object);
+  object.traverse(m=>{if(m.isMesh)deathParts.push({mesh:m,positions:m.geometry.attributes.position.array});});
+  supportedDeath=null;
+ },seated(parent,cart,reduced,time){
   if(seatedRoot.parent!==parent)parent.add(seatedRoot);seatedRoot.visible=true;seatedRoot.rotation.z=reduced?0:-(cart.steer||0)*.012;root.visible=false;
- },drainContacts:()=>footContacts.drain(),stats:()=>({footsteps:footContacts.stats(),phase:ejectionPhase,facing,strideBlend:blend,knees:knees.map(k=>k.rotation.x),elbows:elbows.map(e=>e.rotation.x),footing:gait.pose.feet.map(f=>({...f})),gaitPhase:phase,deathSupportChecks:supportChecks}),update(foot,dt,reduced,death=null,time=0){
-  ejectionPhase='none';
+ },drainContacts:()=>footContacts.drain(),stats:()=>({balance:{...balance.pose},footsteps:footContacts.stats(),phase:ejectionPhase,facing,strideBlend:blend,knees:knees.map(k=>k.rotation.x),elbows:elbows.map(e=>e.rotation.x),footing:gait.pose.feet.map(f=>({...f})),gaitPhase:phase,deathSupportChecks:supportChecks}),update(foot,dt,reduced,death=null,time=0){
+  ejectionPhase='none';upperBody.position.set(0,.88,0);upperBody.rotation.set(0,0,0);torso.scale.set(1,1,1);
   seatedRoot.visible=false;
-  root.visible=!!foot;if(!foot){phase=0;blend=0;facing=null;gait.reset();footContacts.reset();return;}
+  root.visible=!!foot;if(!foot){phase=0;blend=0;facing=null;gait.reset();balance.reset();footContacts.reset();return;}
   if(root.parent!==scene)scene.add(root);
   if(posedFoot!==foot){facing=null;posedFoot=foot;poseTurn=0;}
   const heading=foot.moveYaw??foot.yaw,turn=facing===null?0:Math.atan2(Math.sin(heading-facing),Math.cos(heading-facing));facing=facing===null?heading:facing+turn*(1-Math.exp(-dt*24));
@@ -99,7 +104,7 @@ export function createChaseRunner(scene,materials,groundHeight=null){
   root.position.set(foot.x,0,-foot.y);root.rotation.set(0,-facing,0);body.position.set(0,0,0);body.rotation.set(0,0,0);head.rotation.set(0,0,0);torso.rotation.y=0;
   for(let i=0;i<2;i++){ankles[i].rotation.set(0,0,0);knees[i].rotation.set(0,0,0);elbows[i].rotation.set(.18,0,0);}
   if(death){
-   footContacts.reset();
+   balance.reset();footContacts.reset();
    const age=reduced?1.2:death.age,t=Math.max(0,Math.min(1,(age-.06)/.6)),fall=t*t*(3-2*t),slide=Math.min(.55,Math.max(0,age)*.7);
    // Preserve the runner's facing. A frontal strike knocks them backward;
    // a side strike tips them sideways instead of swivelling their whole body
@@ -148,6 +153,10 @@ export function createChaseRunner(scene,materials,groundHeight=null){
    const armSwing=Math.max(-1,Math.min(1,f.z/.39))*blend;
    arms[i].rotation.set(armSwing*.5+.12*blend,0,sign*.035);elbows[i].rotation.x=.18+blend*.85+Math.max(0,armSwing)*.12;
   }
+  const balancePose=balance.update(foot,time,facing,reduced),balanceAge=foot.ejection?Math.max(0,time-foot.ejection.at):99,balanceWeight=Math.max(0,Math.min(1,(balanceAge-1.05)/.4));
+  upperBody.rotation.set(balancePose.pitch*balanceWeight,0,balancePose.roll*balanceWeight);upperBody.position.y+=balancePose.shoulderLift*balanceWeight;
+  torso.scale.z=1+balancePose.breath*.006*balanceWeight;head.rotation.x-=balancePose.pitch*.5*balanceWeight;
+  for(let i=0;i<2;i++){arms[i].rotation.x+=balancePose.armBrace*balanceWeight;elbows[i].rotation.x+=Math.abs(balancePose.armBrace)*.4*balanceWeight;}
   const strideHeight=body.position.y;
   const e=foot.ejection,age=e?Math.max(0,time-e.at):99;
   if(e&&!reduced&&age<1.18){
@@ -181,5 +190,5 @@ export function createChaseRunner(scene,materials,groundHeight=null){
   for(let i=0;i<2;i++){const f=gaitPose.feet[i],c=contactFeet[i];c.x=foot.x+cos*f.x-sin*f.z;c.y=foot.y-sin*f.x-cos*f.z;c.height=f.lift;}
   footContacts.update({owner:foot,time,body:foot,feet:contactFeet,enabled:age>=1.18,phase:foot.speed>.05?'run':gaitPose.turning>.1?'turn':'settle'});
 
- },dispose(){round.dispose();fine.dispose();box.dispose();portrait.dispose();shirt.dispose();collar.dispose();for(const g of [sleeve,forearm,thigh,shin])g.dispose();finish.dispose();root.traverse(o=>o.geometry?.dispose());seatedRoot.traverse(o=>o.geometry?.dispose());seatedRoot.removeFromParent();root.removeFromParent();}};
+ },dispose(){gearCraft.dispose();garmentCraft.dispose();round.dispose();fine.dispose();box.dispose();portrait.dispose();scalp.dispose();shirt.dispose();collar.dispose();for(const g of [sleeve,forearm,thigh,shin])g.dispose();finish.dispose();root.traverse(o=>o.geometry?.dispose());seatedRoot.traverse(o=>o.geometry?.dispose());seatedRoot.removeFromParent();root.removeFromParent();}};
 }

@@ -1,6 +1,10 @@
 import {FLOORS,GATE_ROOF_SLOT} from './under-green-layout.js';
 import {covered,waterPoint,GATE} from './under-green-course.js';
 
+// Separate the teaching plate from the projecting signal hood in perspective,
+// including the lower sightline of a crouched player approaching either face.
+export const LESSON_PLATE=Object.freeze({height:3.3,scale:.6});
+
 // Mount from the real floor union. A bank may widen into a dry detour, so the
 // water bed's edge is not necessarily a wall or a safe place for a solid post.
 export function bankSignalMount(w,end){

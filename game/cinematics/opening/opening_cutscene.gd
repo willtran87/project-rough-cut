@@ -20,7 +20,6 @@ var _head_layer: TextureRect
 var _head_base_position: Vector2
 var _grass_curtain: RoughCutGrassCurtain
 var _subtitle: Label
-var _skip_label: Label
 var _flash: ColorRect
 var _main_menu: RoughCutMainMenu
 var _audio_player: AudioStreamPlayer
@@ -48,18 +47,6 @@ func _process(delta: float) -> void:
 		_elapsed += delta
 		_update_menu_ambience(delta)
 	_fill_audio_buffer()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if _intro_finished:
-		return
-	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ESCAPE or event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
-			_finish_intro()
-			get_viewport().set_input_as_handled()
-	elif event is InputEventMouseButton and event.pressed:
-		_finish_intro()
-		get_viewport().set_input_as_handled()
 
 
 func _build_visual_layers() -> void:
@@ -148,18 +135,6 @@ func _build_caption_layers() -> void:
 	_subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_subtitle)
 
-	_skip_label = Label.new()
-	_skip_label.name = "SkipHint"
-	_skip_label.anchor_left = 0.72
-	_skip_label.anchor_top = 0.92
-	_skip_label.anchor_right = 0.97
-	_skip_label.anchor_bottom = 0.98
-	_skip_label.text = "SPACE / CLICK TO SKIP"
-	_skip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_skip_label.add_theme_font_size_override("font_size", 13)
-	_skip_label.add_theme_color_override("font_color", Color(0.75, 0.79, 0.70, 0.72))
-	_skip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_skip_label)
 
 
 func _build_menu() -> void:
@@ -283,7 +258,6 @@ func _finish_intro() -> void:
 	_head_layer.position = _head_base_position
 	_head_layer.rotation = 0.0
 	_subtitle.modulate.a = 0.0
-	_skip_label.visible = false
 	_flash.color.a = 0.0
 	_main_menu.reveal()
 
@@ -293,7 +267,6 @@ func _replay_intro() -> void:
 	_elapsed = 0.0
 	_audio_sample_clock = 0
 	_main_menu.visible = false
-	_skip_label.visible = true
 	_scene_image.modulate.a = 0.0
 	_head_layer.modulate.a = 0.0
 	_grass_curtain.cut_progress = 0.0

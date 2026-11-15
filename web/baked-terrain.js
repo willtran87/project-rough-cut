@@ -1,16 +1,16 @@
 // Exact authored canvas bake. Unknown/edited layouts keep the procedural builder.
 import { decodeBitmapOffThread } from './bitmap-decoder.js';
-const version='terrain-v1';
 let manifest;
 const images=new Map();
-export async function terrainBakeKey(data,scale,xScale){
-  const paint={version,scale,xScale,zones:data.zones,paths:data.paths,sand:data.sand,footing:data.footing,obstacles:data.obstacles.filter(o=>o.blocks),actions:data.actions,reviews:data.reviews,practice:data.practice,key:data.key,valve:data.valve};
+export async function terrainBakeKey(data,scale,xScale,approachWear=true){
+  const version=approachWear?'terrain-v3-approach-wear':'terrain-v2-path-wear';
+  const paint={version,scale,xScale,zones:data.zones,paths:data.paths,sand:data.sand,footing:data.footing,obstacles:data.obstacles.filter(o=>o.blocks),actions:data.actions,reviews:data.reviews,practice:data.practice,key:data.key,valve:data.valve,...(approachWear?{shed:data.shed,drain:data.drain}:{})};
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(paint)));
   return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
 }
-export async function loadBakedTerrain(data,scale,xScale){
+export async function loadBakedTerrain(data,scale,xScale,approachWear=true){
   try{
-    const key=await terrainBakeKey(data,scale,xScale);
+    const key=await terrainBakeKey(data,scale,xScale,approachWear);
     manifest??=fetch(new URL('./assets/baked/terrain.json',import.meta.url)).then(r=>r.ok?r.json():{}).catch(()=>({}));
     const entry=(await manifest)[key];if(!entry)return null;
     if(!images.has(key))images.set(key,(async()=>{

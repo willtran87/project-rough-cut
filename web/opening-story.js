@@ -18,18 +18,19 @@ export const OPENING_SLIDES = [
     alt:'Fresh mower tracks lead through low mist to Joe. His mower is still, and he has turned to face you.',sound:'The engine cuts out. Only the wind remains.',motor:0,hz:42,wind:.007,hum:0},
 ];
 export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,captions,toggleFullscreen,
-  slides=OPENING_SLIDES,storageKey='rough-cut.opening-story.v1',header='BEFORE THE ROUND',replayHint='Replay it from the clubhouse menu.',mount=document.getElementById('game-shell'),advanceKeys=['Enter','Space'],finalLabel='Open game guide →'}){
+  slides=OPENING_SLIDES,storageKey='rough-cut.opening-story.v1',header='NIGHT ORDER',replayHint='Replay it from the clubhouse menu.',mount=document.getElementById('game-shell'),advanceKeys=['Enter','Space'],finalLabel='Review chapter →'}){
   const saved=()=>{try{return JSON.parse(localStorage.getItem(storageKey))||{};}catch{return {};}};
   const dialog=document.createElement('dialog');dialog.id='opening-story';dialog.tabIndex=-1;
   dialog.setAttribute('aria-labelledby','opening-title');dialog.setAttribute('aria-describedby','opening-copy');
   dialog.innerHTML=`<div class="opening-layout">
-    <header class="opening-header"><span>ROUGH CUT <i>/</i> BEFORE THE ROUND</span><button type="button" data-opening="skip">Skip intro</button></header>
+    <header class="opening-header"><span>ROUGH CUT <i>/</i> BEFORE THE ROUND</span><button type="button" data-opening="skip">Skip story</button></header>
     <div class="opening-art"><div class="opening-image"></div><div class="opening-mist" aria-hidden="true"></div><div class="opening-lamp" aria-hidden="true"></div><p class="opening-loading" role="status">Loading illustration…</p><button type="button" class="opening-retry" hidden>Retry illustration</button></div>
     <section class="opening-caption" aria-live="polite" aria-atomic="true"><div class="opening-heading"><small data-opening-kicker></small><h1 id="opening-title"></h1></div><div id="opening-copy"><p></p><p></p></div><p class="opening-sound"></p></section>
-    <footer class="opening-footer"><div class="opening-preference"><label><input type="checkbox"> Skip intro on future rounds</label><small>Replay it from the clubhouse menu.</small></div><nav aria-label="Story controls"><button type="button" data-opening="back">Back</button><span class="opening-count" aria-label="Slide"></span><button type="button" data-opening="next">Next →</button></nav></footer>
+    <footer class="opening-footer"><div class="opening-preference"><label><input type="checkbox"> Skip story on future rounds</label><small>Replay it from the clubhouse menu.</small></div><nav aria-label="Story controls"><button type="button" data-opening="back">Back</button><span class="opening-count" aria-label="Slide"></span><button type="button" data-opening="next">Next →</button></nav></footer>
   </div>`;
   mount.append(dialog);
   dialog.querySelector('.opening-header span').lastChild.textContent=' '+header;
+  window.RCLaunchScreens?.story(dialog,storageKey.includes('under-green')?'under-green':storageKey.includes('back-nine')?'back-nine':'night-order');
   dialog.querySelector('.opening-preference small').textContent=replayHint;
   const art=dialog.querySelector('.opening-image'),loading=dialog.querySelector('.opening-loading'),retry=dialog.querySelector('.opening-retry'),next=dialog.querySelector('[data-opening="next"]'),back=dialog.querySelector('[data-opening="back"]'),check=dialog.querySelector('input'),sound=dialog.querySelector('.opening-sound');
   const images=new Map();let index=0,token=0,ready=false,seen=Boolean(saved().seen),lastOutcome=null;
@@ -92,7 +93,10 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
     else if(e.code==='KeyF'){e.preventDefault();toggleFullscreen();}
     else if(advanceKeys.includes(e.code)&&(e.code==='KeyE'||!e.target.closest('button,input'))){e.preventDefault();action('next');}
   });
-  document.addEventListener('visibilitychange',()=>{dialog.dataset.paused=String(document.hidden);});
+  const pausePresentation=()=>{dialog.dataset.paused=String(document.hidden||!document.hasFocus());};
+  document.addEventListener('visibilitychange',pausePresentation);
+  window.addEventListener('blur',()=>{dialog.dataset.paused='true';});
+  window.addEventListener('focus',pausePresentation);
   return {
     preloadFirst(){if(!images.size)load(0).catch(()=>{});},
     release(){if(!dialog.open)images.clear();},

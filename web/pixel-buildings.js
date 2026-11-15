@@ -1,10 +1,12 @@
-import {createClubhouseWindows} from './clubhouse-windows.js';
+import {createClubhouseWindows} from './clubhouse-windows.js?v=20261114-landmark-light';
 import * as THREE from './vendor/three/three.module.js';
+import {buildBuildingDrainage,drainageFootprints,clearDrainageFootprints} from './course-building-drainage.js?v=20261114-drainage-ground';
 
 // Architectural parts use the same world-sized pixel surfaces and static
 // batching as the course props. Only the exit door remains articulated.
 export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,label}) {
   let clubhouseWindows=null,addingClubhouseWindows=false;
+  const workshopWindows=[];
   const noise=n=>{const v=Math.sin(n*127.1+33.7)*43758.5453;return v-Math.floor(v);};
   function surfaceOffset(m,x,y,z){const p=m.geometry.attributes.surfacePosition;for(let i=0;i<p.count;i++)p.setXYZ(i,p.getX(i)+x,p.getY(i)+y,p.getZ(i)+z);return m;}
   function box(r,type,x,y,z,w,h,d,color=0xffffff,bevel=.035){
@@ -81,10 +83,16 @@ export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,
     const frame=new THREE.Group();frame.position.set(x,y,z);frame.rotation.y=turn;r.add(frame);
     box(frame,'iron',0,0,-.025,w+.12,h+.12,.12,0x1c292b,.012);
     if(lit&&addingClubhouseWindows)clubhouseWindows.add(frame,w-.08,h-.08);
-    else {
-    const pane=box(frame,lit?'window-glass':'glass',0,0,.04,w-.08,h-.08,.025,lit?0xe6c58a:0x5c8190,.003);
-    // Shared emission avoids a light per window. Mullions remain real geometry.
-    if(lit){pane.material.emissive.setHex(0xc17d29);pane.material.emissiveIntensity=.30;}
+    else if(lit){
+      const room=createClubhouseWindows(r,{roomKind:'workshop',name:'ServiceWindowRoom',depth:.95});
+      room.add(frame,w-.08,h-.08);room.finish();workshopWindows.push(room);
+      // Jamb returns give the aperture physical thickness in oblique views.
+      for(const side of [-1,1]){
+        box(frame,'wood',side*(w/2-.035),0,.075,.025,h-.07,.13,0x6f725e,.004);
+        box(frame,'wood',0,side*(h/2-.035),.075,w-.07,.025,.13,0x6f725e,.004);
+      }
+    }else {
+      box(frame,'glass',0,0,.04,w-.08,h-.08,.025,0x5c8190,.003);
     }
     for(const side of [-1,1]){box(frame,'wood',side*w/2,0,.095,.065,h+.12,.12,0x8d8a70,.008);box(frame,'wood',0,side*h/2,.095,w+.12,.065,.12,0x8d8a70,.008);}
     box(frame,'wood',0,0,.11,.045,h,.08,0x858572,.005);
@@ -121,7 +129,9 @@ export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,
     for(let xx=-w/2+.25;xx<w/2;xx+=.69)for(const side of [-1,1])box(r,'wood',xx,2.53,side*(front+.12),.085,.15,.44,0x8e9683,.01);
     // Low asymmetric moss tufts knit the footings into the ground.
     for(let i=0;i<18;i++){
-      const side=i<9?-1:1,xx=side*(1.85+noise(i+8)*(w/2-1.92)),g=new THREE.SphereGeometry(1,7,4);
+      const side=i<9?-1:1,xx=side*(1.85+noise(i+8)*(w/2-1.92));
+      if(!clearDrainageFootprints(drainageFootprints(w,front),xx,front+.095,.26))continue;
+      const g=new THREE.SphereGeometry(1,7,4);
       g.scale(.10+noise(i)*.16,.045+noise(i+1)*.08,.09);mesh(r,g,'leaf',0x8b9b6b,xx,.12,front+.095);
     }
   }
@@ -147,10 +157,7 @@ export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,
     box(r,'wood',0,2.48,front+.10,w,.18,.22,0x9faba0,.02);
     box(r,'stone',0,.045,front-.05,2.0,.09,.45,0xb0b9a5,.02);
     const roofRoot=exit?root('shed-roof',x,z):r;await roof(roofRoot,w+.42,d+.48,2.61,1.0,{metal:true,cancelled});if(cancelled())return null;
-    // Gutter and downpipe are mounted on the outer wall, with a curved elbow.
-    const gutter=cylinder(r,'iron',0,2.59,front+.25,.065,w+.32,0x879b9c);gutter.rotation.z=Math.PI/2;
-    cylinder(r,'iron',w/2-.1,1.38,front+.19,.048,2.40,0x829593);
-    beam(r,'iron',[w/2-.1,.2,front+.19],[w/2-.1,.11,front+.35],.075,0x829593);
+    buildBuildingDrainage(r,w,front,{mesh,box,cylinder});
     // A small maintenance plaque belongs to the building; optional wayfinding
     // boards are handled separately and never replace the physical door.
     if(exit){const name=label('SERVICE EXIT',.96);name.position.set(.0,2.43,front+.22);r.add(name);name.userData.keepDynamic=true;
@@ -179,7 +186,18 @@ export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,
   }
   async function clubhouse(x,z,cancelled=()=>false){
     const r=root('clubhouse',x,z,{shape:'building',width:11.8,depth:5.2});
-    clubhouseWindows=createClubhouseWindows(r);addingClubhouseWindows=true;
+    clubhouseWindows=createClubhouseWindows(r,{roomLight:(p,n)=>{
+      // The west crossing sees one occupied upstairs room, a dim room below,
+      // and quieter neighbours. Front-door glazing remains the other focal point.
+      if(n.x<-.9&&p.x<-5){
+        if(Math.abs(p.z-.5)<.2)return p.y>2?1:.32;
+        return p.z>.5?.22:.045;
+      }
+      if(n.z>.9&&Math.abs(p.x)<.35&&p.y<2)return 1;
+      // Lit groups follow rooms/floors rather than alternating every pane.
+      if(p.y>3.8)return .12;
+      return Math.abs(p.x)<2.5?(p.y>2?.32:.55):(p.y>2?.12:.055);
+    }});addingClubhouseWindows=true;
     try {
     // Connected Tudor volumes, with a raised central hall and cross-gabled wings.
     stoneBase(r,11.8,4.6,.42);
@@ -231,5 +249,5 @@ export function createBuildings({root,mesh,box:softBox,cylinder,torus,lanternAt,
       if(cancelled())clubhouseWindows.dispose();
     }
   }
-  return {shed,clubhouse,clubhouseWindowStats:()=>clubhouseWindows?.stats(),disposeClubhouseWindows:()=>clubhouseWindows?.dispose()};
+  return {shed,clubhouse,clubhouseWindowStats:()=>clubhouseWindows?.stats(),workshopWindowStats:()=>workshopWindows.map(room=>room.stats()),disposeClubhouseWindows:()=>{clubhouseWindows?.dispose();for(const room of workshopWindows)room.dispose();workshopWindows.length=0;}};
 }

@@ -1,7 +1,32 @@
 import * as THREE from './vendor/three/three.module.js';
 
+// Selected fixtures carry different histories; most retain their sound hood.
+// These indices belong to the fixed route's lamp list, not a repeating pattern.
+export const DRAIN_LAMP_HOOD_WEAR=Object.freeze({2:'chipped',4:'patched',5:'bent',7:'chipped',10:'bent',11:'patched',13:'chipped',15:'bent'});
+
+export function drainLampHoodGeometry(width,wear){
+ if(!wear)return new THREE.BoxGeometry(width,.035,.24);
+ const half=width/2,shape=new THREE.Shape();
+ const edge=wear==='chipped'
+  ?[[-half,-.12],[half,-.12],[half,.068],[half-.026,.086],[half-.060,.079],[half-.077,.12],[-half,.12]]
+  :[[-half,-.12],[half,-.12],[half,.12],[half*.46,.12],[0,.12],[-half,.12]];
+ edge.forEach(([x,z],i)=>i?shape.lineTo(x,z):shape.moveTo(x,z));shape.closePath();
+ const g=new THREE.ExtrudeGeometry(shape,{depth:.021,steps:1,bevelEnabled:false});
+ g.rotateX(Math.PI/2);g.translate(0,.0105,0);
+ if(wear==='bent'){
+  const p=g.attributes.position;
+  for(let i=0;i<p.count;i++){
+   const edgeWeight=Math.max(0,(p.getZ(i)-.025)/.095),side=Math.max(0,p.getX(i)/half);
+   p.setY(i,p.getY(i)-.031*edgeWeight*side);
+  }
+  g.computeVertexNormals();
+ }
+ g.computeBoundingBox();return g;
+}
+
 export function finishDrainLamps({lamps,box,put,cyl}){
- for(const lamp of lamps){
+ const wearCounts={chipped:0,bent:0,patched:0};
+ for(const [index,lamp] of lamps.entries()){
   const x=lamp.x,h=lamp.height||2.8,z=-lamp.y+(lamp.lensOffset??.18),face=lamp.facing??1,wide=lamp.height?.38:.19,tall=lamp.height?.25:.32;
   // A deep gasket, riveted hood and bars sit in front of the existing lit lens.
   for(const side of [-1,1]){
@@ -11,10 +36,31 @@ export function finishDrainLamps({lamps,box,put,cyl}){
   }
   for(const side of [-1,0,1])box('iron',x+side*wide*.36,h,z+face*.13,.012,tall+.10,.015);
   box('iron',x,h,z+face*.13,wide+.08,.012,.015);
-  box('rust',x,h+tall/2+.08,z+face*.05,wide+.18,.035,.24);
+  const wear=DRAIN_LAMP_HOOD_WEAR[index],hoodY=h+tall/2+.08;
+  const hood=drainLampHoodGeometry(wide+.18,wear);
+  put(hood,'rust',x,hoodY,z+face*.05,1,1,1,0,face<0?Math.PI:0);hood.dispose();
+  if(wear)wearCounts[wear]++;
   box('white',x,h-tall/2-.09,z-face*.035,.08,.06,.08);
+  // A slack insulated lead joins the ceramic fitting to the top housing.
+  // Its loop stays behind the cage and inside the existing hood/base bounds.
+  const baseY=h-tall/2-.09,topY=h+tall/2+.025;
+  put(cyl,'rubber',x,baseY,z+face*.01,.022,.025,.022,Math.PI/2);
+  put(cyl,'rubber',x+wide/2+.02,topY,z+face*.02,.019,.03,.019);
+  const cable=new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+   new THREE.Vector3(x,baseY,z+face*.0225),
+   new THREE.Vector3(x+wide*.30,baseY-.004,z+face*.065),
+   new THREE.Vector3(x+wide/2+.058,h-.04,z+face*.065),
+   new THREE.Vector3(x+wide/2+.02,topY-.015,z+face*.02),
+  ]),10,.008,5,false);
+  cable.translate(-x,-h,-z);put(cable,'rubber',x,h,z);cable.dispose();
+  if(wear==='patched'){
+   // A riveted replacement strip folds over the front lip, above the glass.
+   // Existing iron/brass batches retain the worn pixel material and lamp light.
+   box('iron',x+wide*.20,hoodY-.013,z+face*.164,.105,.06,.006);
+   for(const end of [-1,1])put(cyl,'brass',x+wide*.20+end*.033,hoodY-.013,z+face*.168,.009,.003,.009,Math.PI/2);
+  }
  }
- return {finishedLamps:lamps.length};
+ return {finishedLamps:lamps.length,cableLoops:lamps.length,cableGlands:lamps.length*2,hoodWear:wearCounts};
 }
 
 export function finishSignalHousing({signal,box,put,cyl}){

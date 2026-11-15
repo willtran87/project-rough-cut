@@ -1,7 +1,7 @@
 // Completed GPU frames drive this budget; fast JavaScript submissions must not
 // disguise slow software rasterization. Discrete, sustained changes avoid
 // resolution pumping when an effect or a newly visited area costs one frame.
-export function createSoftwareFrameBudget({slowMs=60,recoverMs=48,scales:requestedScales=[.75,.625,.5]}={}){
+export function createSoftwareFrameBudget({slowMs=60,recoverMs=48,scales:requestedScales=[.75,.625,.5],responsiveDownshift=false}={}){
   if(!Number.isFinite(slowMs)||!Number.isFinite(recoverMs)||recoverMs<=0||recoverMs>=slowMs)throw new Error('Invalid software frame budget thresholds');
   if(!Array.isArray(requestedScales)||!requestedScales.length||requestedScales.some((s,i)=>!Number.isFinite(s)||s<=0||s>1||i>0&&s>=requestedScales[i-1]))throw new Error('Invalid software resolution steps');
   const scales=[...requestedScales];
@@ -10,7 +10,8 @@ export function createSoftwareFrameBudget({slowMs=60,recoverMs=48,scales:request
     observe(ms){
       if(!Number.isFinite(ms)||ms<=0)return;
       if(++samples<=6)return;
-      if(cooldown>0){cooldown--;return;}
+      const recovering=cooldown===0;
+      if(cooldown>0){cooldown--;if(!responsiveDownshift)return;}
       // One lighter frame should not erase a sustained overload. Isolated
       // stalls still cancel out against normal frames instead of lowering art
       // quality. Keep the same eight-frame evidence requirement; the chapter
@@ -22,11 +23,16 @@ export function createSoftwareFrameBudget({slowMs=60,recoverMs=48,scales:request
       // The old fixed 42 ms threshold could promote 640x360 -> 800x450
       // at ~40 ms, producing ~62.5 ms frames and repeated down/up resizes.
       const nextCost=level>0?ms*(scales[level-1]/scales[level])**2:ms;
-      fast=nextCost<recoverMs?fast+1:0;
+      // A newly heavier chase view can exceed the budget at the next step too.
+      // Keep the eight-frame proof, but do not force it to render 24 additional
+      // slow frames before considering a further downshift. Recovery still
+      // waits for cooldown and sustained, predicted headroom; other scenes
+      // retain their established policy unless they opt in.
+      fast=recovering&&nextCost<recoverMs?fast+1:0;
       if(slow>=8&&level<scales.length-1){level++;changes++;cooldown=24;slow=fast=0;}
       else if(fast>=60&&level>0){level--;changes++;cooldown=60;slow=fast=0;}
     },
     scale:()=>scales[level],
-    stats:()=>({scale:scales[level],changes,samples,minScale:scales.at(-1),maxScale:scales[0],slowMs,recoverMs})
+    stats:()=>({scale:scales[level],changes,samples,minScale:scales.at(-1),maxScale:scales[0],slowMs,recoverMs,responsiveDownshift})
   };
 }

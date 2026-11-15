@@ -48,7 +48,7 @@ export function createJoeCastShadow({scene,joe,lamps}){
    const {bay,weight}=selected,index=lamps.findIndex(l=>Math.abs(l.x-bay.lamp.x)<.001&&Math.abs(l.y-bay.lamp.y)<.001);
    if(index<0){root.visible=false;opacity=0;return;}
    const lamp=lamps[index],distance=Math.hypot(run.joe.x-lamp.x,run.joe.y-lamp.y);
-   opacity=.48*weight*exposure*dampLampLevel(run.time,index,reduced)*Math.max(0,1-distance/10);
+   opacity=.48*(lamp.power??1)*weight*exposure*dampLampLevel(run.time,index,reduced)*Math.max(0,1-distance/10);
    material.opacity=opacity;root.visible=enabled&&opacity>.003&&joe.root.visible;
    uniforms.castLight.value.set(lamp.x,lamp.height??2.8,-lamp.y);
    uniforms.castBounds.value.set(bay.receiver.minX,bay.receiver.maxX,-bay.receiver.maxY,-bay.receiver.minY);

@@ -1,0 +1,13 @@
+Built-in image_gen. Accepted cutout assets only; transparent alpha preserved in runtime WebP encoding.
+
+1. Grin cutout, reference web/assets/optimized/rough-cut-intro-mower-v2.webp:
+Precise background extraction for a game sprite. Keep Joe and his entire push lawn mower only, on genuine transparent alpha. Preserve the input's exact 1672x941 canvas, positions, scale, face, open-mouth grin, hands, sweater, mower and original pixel-art shading. Remove ALL scenery, sky, grass around the outer silhouette, trees, gates, lamps, walls, ground. Also remove scenery visible through gaps between his arms and torso and through the mower handle. Keep grass clippings stuck ON the mower. No repositioning or reframing, no new artwork, no added shadow or glow. Clean crisp pixel silhouette with no old background fringe. The subject must stay aligned to the reference for compositing into its original location.
+
+2. Anticipation cutout, reference accepted grin cutout:
+Make the anticipation animation frame of this transparent game sprite. Preserve EXACT canvas size, transparent alpha, body and mower position, scale, pixel-art style and every object. Change only Joe's expression to a CLOSED-MOUTH tense half-smile before he speaks, with slightly raised shoulder folds and a slightly looser finger grip on the same handle. Keep his same recognizable face, eye locations, hair silhouette, clothes and mower. Keep all transparent holes between arms, torso and mower handle. This frame must align with the supplied sprite for a very subtle animation transition. No background, border, new objects, glow, shadow, resizing or repositioning.
+
+Accepted files:
+assets/intro-joe-grin-cutout.png (1672x941)
+assets/intro-joe-neutral-cutout.png (1671x941; normalized to the same canvas by runtime cache)
+web/assets/optimized/intro-joe-grin-cutout.webp
+web/assets/optimized/intro-joe-neutral-cutout.webp

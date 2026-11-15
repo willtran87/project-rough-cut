@@ -1,0 +1,39 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass54-timber-roots/${software?'software':'hardware'}`;
+const files=JSON.parse(fs.readFileSync('output/under-green/visual-upgrade-local/pass54-source/files.json'));
+const fixtures=[['gallery',0,8,0,.1],['offshoots',0,18,0,.75],['gallery-branches',0,19,-.5,.6],['bunker',-29.5,65,Math.PI,.15],['bunker-shoring',-29.5,65,Math.PI,.65],['range-timber',21,30,Math.PI/2,.65],['pump',-23.4,42,-1,.05],['keeper',12,13.5,-2.4,.05]];
+fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],audits=[],errors=[];try{
+ for(const before of [true,false]){
+  const p=await b.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  for(const name of files)await p.route('**/'+name+'.js',route=>{let s=fs.readFileSync(before?'output/under-green/visual-upgrade-local/pass54-source/'+name+'-before.js':'web/'+name+'.js','utf8');if(name==='under-green-scene'){const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__finish={scene,renderer,materials,camera,waterObjects};'+marker);}return route.fulfill({contentType:'application/javascript',body:s});});
+  if(!before)await p.route('**/under-green-secondary-roots.js',route=>{let s=fs.readFileSync('web/under-green-secondary-roots.js','utf8');s=s.replace(' geometry.dispose();',` geometry.computeBoundingBox();(window.__minorRoots??=[]).push({minHeight:geometry.boundingBox.min.y+anchor.y+position[1],maxHeight:geometry.boundingBox.max.y+anchor.y+position[1],vertices:geometry.attributes.position.count,triangles:geometry.index.count/3,preserveUV:geometry.userData.preserveDrainUV,finite:[...geometry.attributes.uv.array,...geometry.attributes.normal.array].every(Number.isFinite)}); geometry.dispose();`);return route.fulfill({contentType:'application/javascript',body:s});});
+  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
+  async function place(f,elapsed=0){await p.evaluate(async({f,elapsed})=>{const {createRun}=await import('./under-green-sim.js'),{solid}=await import('./under-green-course.js');if(solid({x:f[1],y:f[2]},.3))throw Error('Solid fixture '+f[0]);const r=createRun();r.mode='playing';r.time=26.3;r.elapsed=elapsed;r.joe.phase='absent';Object.assign(r.player,{x:f[1],y:f[2],yaw:f[3],pitch:f[4],grace:100});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},{f,elapsed});}
+  async function shot(name){await p.evaluate(()=>__underGreen.whenPresented());const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));rows.push({before,name,viewport:p.viewportSize(),player:s.player,graphics:s.graphics});await p.screenshot({path:`${out}/${before?'before':'after'}-${name}-${p.viewportSize().width}.jpg`,quality:91});
+   if(name==='offshoots'){
+    const png=await p.screenshot({type:'png'});
+    const signals=await p.evaluate(async data=>{const T=await import('./vendor/three/three.module.js'),{scene,camera,waterObjects,materials}=__finish,im=new Image();im.src='data:image/png;base64,'+data;await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);const rows=[];scene.updateMatrixWorld(true);
+     for(const w of waterObjects)for(const ls of w.signals)for(const light of ls){if(light.material!==materials.redSignal)continue;const v=light.getWorldPosition(new T.Vector3()),point=v.clone().project(camera);if(Math.abs(point.x)>.9||Math.abs(point.y)>.9||point.z>1)continue;const ray=new T.Raycaster(camera.position,v.clone().sub(camera.position).normalize());ray.camera=camera;const hit=ray.intersectObjects(scene.children,true).find(h=>h.object.visible&&h.object.material.opacity>0);const x=Math.round((point.x+1)*c.width/2),y=Math.round((1-point.y)*c.height/2),pixel=[...ctx.getImageData(x,y,1,1).data];rows.push({x,y,pixel,visibleHit:hit?.object===light,material:light.material.color.getHexString(),first:hit?.object.name});}return rows;
+    },png.toString('base64'));rows.at(-1).signals=signals;fs.writeFileSync(out+'/'+(before?'before':'after')+'-signals.json',JSON.stringify(signals,null,2));
+    assert(signals.some(s=>s.visibleHit&&s.pixel[0]>s.pixel[1]*1.3&&s.pixel[0]>80),'Lit red signal is not visible');
+   }}
+  for(const f of fixtures){await place(f);await shot(f[0]);}
+  const audit=await p.evaluate(()=>{
+   const {scene,materials}=__finish,hash=a=>{let h=2166136261;const b=new Uint8Array(a.buffer,a.byteOffset,a.byteLength);for(const v of b)h=Math.imul(h^v,16777619);return h>>>0;};
+   const meshes=[],missingColors=[];scene.updateMatrixWorld(true);scene.traverse(o=>{if(!o.isMesh)return;for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.vertexColors&&!o.geometry.attributes.color)missingColors.push(o.name);if(o.name&&!['root','wood','shoringWood'].includes(o.name))meshes.push({name:o.name,position:hash(o.geometry.attributes.position.array),index:o.geometry.index?hash(o.geometry.index.array):null,matrix:o.matrixWorld.elements});});
+   const wood=materials.wood.map,poses=[];for(const [x,y]of [[0,8],[0,12],[0,18],[0,20],[0,28],[-29.5,65],[21,30],[12,13.5]])for(const height of [1.12,1.65])for(const fov of [45,85])for(const aspect of [1.6,390/844])for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2])for(const pitch of [-.6,.6])poses.push({x,y,height,fov,aspect,yaw,pitch});
+   return {meshes,missingColors,roots:window.__minorRoots||[],shared:wood===materials.keeperWood.map,shoringShared:wood===materials.shoringWood.map,woodSize:[wood.image.width,wood.image.height],camera:__underGreen.inspectCameraClearance(poses)};
+  });audits.push(audit);assert.deepEqual(audit.missingColors,[]);assert(audit.camera.every(p=>!p.hits.length),'Camera intersects detail');
+  if(!before){assert.equal(audit.roots.length,53);assert(audit.roots.every(r=>r.finite&&r.preserveUV&&r.minHeight>3.18));assert(audit.shared&&audit.shoringShared);assert.deepEqual(audit.woodSize,[1254,1254]);
+   for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});for(const f of [fixtures[1],fixtures[4]]){await place(f);await shot('responsive-'+f[0]);}}
+   await p.setViewportSize({width:2560,height:1600});await place(fixtures[0],49);await shot('flood');await place(fixtures[0]);
+   await p.keyboard.down('c');await p.evaluate(()=>advanceTime(250));assert((await p.evaluate(()=>JSON.parse(render_game_to_text()))).player.eyeHeight<1.3);await shot('crouch');await p.keyboard.up('c');await p.evaluate(()=>advanceTime(300));
+   await p.keyboard.down('q');await p.evaluate(()=>advanceTime(300));await shot('rear');await p.keyboard.up('q');
+  }
+  await p.close();
+ }
+ assert.deepEqual(audits[0].meshes,audits[1].meshes,'Unaffected geometry changed');assert.deepEqual(errors,[]);
+ fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,rows,audits,errors},null,2));console.log(JSON.stringify({passed:true,software,views:rows.length,roots:audits[1].roots.length,cameraPoses:audits[1].camera.length,unaffectedMeshes:audits[1].meshes.length}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

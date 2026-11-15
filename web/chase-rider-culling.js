@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three/three.module.js';
 
-// The seated rig's actual weighted vertices stay within .895m of this
-// center across the current chest/head animation envelope. Retain >.25m
+// The seated rig's actual weighted vertices stay within .939m of this
+// center across steering, bracing and head motion. Retain >.21m
 // padding for interpolation and edge pixels. Bind-pose bounds on individual
 // skinned meshes are not valid after the legs are seated.
 export const CHASE_RIDER_CENTER=Object.freeze([0,1.3,0]);

@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three/three.module.js';
+import {putSecondaryRoot} from './under-green-secondary-roots.js';
 import {GATE_ROOF_SLOT} from './under-green-layout.js';
 
 // A course-side maintenance grate, authored in physical metres. The aperture
@@ -52,8 +53,8 @@ export function buildCourseOverhead({box,put,cyl,ball}){
   for(const side of [-1,1])for(const offset of [-.72,.48]){
    const x=s.x+side*(s.w/2-.015),y=s.y+offset;
    const points=[new THREE.Vector3(x+side*.035,5.26,-y),new THREE.Vector3(x-side*.025,5.02,-y+.06),new THREE.Vector3(x-side*.11,4.82,-y-.02),new THREE.Vector3(x-side*.08,4.58,-y+.04)];
-   const root=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),9,.025,5,false);put(root,'wood',0,0,0);root.dispose();
-   const branch=new THREE.TubeGeometry(new THREE.CatmullRomCurve3([points[2],new THREE.Vector3(x-side*.19,4.75,-y-.08),new THREE.Vector3(x-side*.22,4.64,-y-.14)]),5,.01,4,false);put(branch,'wood',0,0,0);branch.dispose();
+   putSecondaryRoot(put,points,.025);
+   putSecondaryRoot(put,[points[2],new THREE.Vector3(x-side*.19,4.75,-y-.08),new THREE.Vector3(x-side*.22,4.64,-y-.14)],.01);
   }
   // A trapped range ball rests on the grate, a small literal link to the course.
   put(ball,'white',s.x+.44,s.top+.097,-s.y-.65,.047,.047,.047);

@@ -15,7 +15,7 @@ export function woodlandHeight(x,z){
   const entranceBank=smooth(3.0,21,z)*(1.9+.65*Math.cos(x*.22));
   return .018+Math.max(0,h,endBank,entranceBank)*service*clubhouse;
 }
-export function createLandscape({root,mesh,cylinder}){
+export function createLandscape({root,mesh,cylinder,groundDetailClearance=()=>true}){
   function ground(x0,x1,z0,z1,kind='woodland-bank'){
     const r=root(kind,(x0+x1)/2,(z0+z1)/2),g=new THREE.PlaneGeometry(x1-x0,z1-z0,24,8);g.rotateX(-Math.PI/2);
     const p=g.attributes.position;
@@ -33,6 +33,7 @@ export function createLandscape({root,mesh,cylinder}){
     m.castShadow=false;return r;
   }
   function stone(r,x,y,z,s,seed){
+    if(!groundDetailClearance(x+r.position.x,z+r.position.z,s*1.12))return;
     const g=new THREE.SphereGeometry(1,8,5),p=g.attributes.position;
     for(let i=0;i<p.count;i++){const n=1+.12*Math.sin(p.getX(i)*9+p.getY(i)*7+seed);p.setXYZ(i,p.getX(i)*s*n,p.getY(i)*s*.58*n,p.getZ(i)*s*.80*n);}g.computeVertexNormals();
     const m=mesh(r,g,'masonry',0xc0c9b0,x,y,z);m.rotation.y=noise(seed)*6;return m;
@@ -46,7 +47,9 @@ export function createLandscape({root,mesh,cylinder}){
     // Plants are transparent, crossed components rooted in small irregular
     // clusters. They never turn toward the camera or form a solid hedge wall.
     const plantMats=[[0,100,420,475],[420,90,415,485],[835,100,419,475],[0,665,420,480],[420,665,415,480],[835,665,419,480]].map(crop=>new THREE.MeshLambertMaterial({map:Art.texture('rough-cut-verge-atlas-v1',crop),alphaTest:.28,side:THREE.DoubleSide,vertexColors:true,color:0xb8c9af}));
+    for(const m of plantMats)m.userData.courseHabitat='verge';
     function plant(r,x,z,h,seed,y=0,type=2){
+      if(!groundDetailClearance(x+r.position.x,z+r.position.z,h*.48))return;
       for(const turn of [0,Math.PI/2]){
         const height=h*(turn?.82:1),g=new THREE.PlaneGeometry(h*(.60+noise(seed+7)*.30),height,2,3),p=g.attributes.position,colors=[];
         const tint=new THREE.Color().setHSL(.25+noise(seed+9)*.06,.10+noise(seed+3)*.12,.82+noise(seed+4)*.12);

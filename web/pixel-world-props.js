@@ -1,14 +1,29 @@
+import {createLanternMetalTexture} from './course-lantern-metal.js';
+import {createLanternGlassTexture} from './course-lantern-glass.js';
+import {createHedgeGrowth} from './course-hedge-growth.js';
+import {createHedgeSurface,hedgeSurfaceNormals} from './course-hedge-surface.js';
 import {createVegetationContact,VEGETATION_PADDING} from './course-vegetation-contact.js';
+import {drainageFootprints,clearDrainageFootprints} from './course-building-drainage.js?v=20261114-drainage-ground';
+import {createStoneCourses} from './course-stone-courses.js?v=20261114-stone-finish';
+import {createStoneFinishTexture} from './course-stone-finish.js';
+import {tintCourseHabitatGeometry} from './course-habitat-palette.js';
 import {DRAIN_LAYOUT} from './drain-collision.js';
 import {HEDGE_PROFILE,STONE_PROFILE} from './course-cover-profile.js';
 import {raiseCourseCanopy} from './course-canopy-clearance.js';
 import {collisionArtBounds} from './collision-art-bounds.js';
 import * as THREE from './vendor/three/three.module.js';
 import * as Art from './pixel-art.js';
-import {createCourseSurfaces} from './course-surfaces.js';
-import { createBuildings } from './pixel-buildings.js?v=20261108-environment-guidance';
-import { createTrees } from './pixel-trees.js';
-import { createLandscape } from './pixel-landscape.js';
+import {createCraftedCourseSurfaces} from './course-crafted-surfaces.js';
+import {createAuditBellBody} from './course-audit-bell.js';
+import {createStationPaperFace,createStationInkGeometry} from './course-station-paper.js?v=20261114-station-ink';
+import {bindTreeWind,TREE_WIND_PADDING} from './course-tree-wind.js';
+import {buildCourseFloodlight,detailFloodlightLens} from './course-floodlight-craft.js';
+import {createPondBankGeometry,pondBankSeed} from './course-pond-bank.js';
+import {buildPondRunoff,runoffLayout} from './course-pond-runoff.js';
+import {shapeVergeNormals,shadeVergeNormals} from './course-verge-material.js';
+import { createBuildings } from './pixel-buildings.js?v=20261114-landmark-light';
+import { createTrees } from './pixel-trees.js?v=20261114-habitat-palette';
+import { createLandscape } from './pixel-landscape.js?v=20261114-habitat-palette';
 import { createSolidOcclusion } from './solid-occlusion.js';
 import { createIndexArray, compactVisibleIndices } from './visible-indices.js';
 import { createLocalLightCulling } from './local-light-culling.js?v=20261112-stable-material-order';
@@ -18,18 +33,18 @@ import { lanternFlickerGLSL } from './lantern-layout.js?v=20261113-symmetric-28'
 
 // The original illustrations inform surfaces, colors and craftsmanship. Solid
 // gameplay objects have fixed geometry, never a camera-facing picture of a prop.
-export function createPixelWorld(parent, { label, glow, economy=false }) {
+export function createPixelWorld(parent, { label, glow, economy=false,wind=null }) {
   const culledMeshes=[],cullFrustum=new THREE.Frustum(),cullProjection=new THREE.Matrix4(),lastCullProjection=new THREE.Matrix4();
   let cullValid=false;
   const solidOcclusion=createSolidOcclusion();
   const localLighting=economy?createLocalLightCulling():null;
   let occludedParts=0;
-  const records=[], materials=new Map(), staticRecords=[], surfaceTextures=new Map();
+  const records=[], materials=new Map(), staticRecords=[], surfaceTextures=new Map(),treeShadowMaterials=new Map(),treeMeshes=[],hedgeSurfaceMeshes=[];
   const drainCollisionParts=[];
   const flameTime={value:0},flameSteady={value:1};
   const reedContact=createVegetationContact();
   const reedTime={value:0},reedWind={value:0};let reedLast=null,reedDepth=null;
-  function reedShader(shader){reedContact.shader(shader);shader.uniforms.reedTime=reedTime;shader.uniforms.reedWind=reedWind;
+  function reedShader(shader){reedContact.shader(shader);shadeVergeNormals(shader);if(wind){wind.vegetationShader(shader,.16);return;}shader.uniforms.reedTime=reedTime;shader.uniforms.reedWind=reedWind;
     shader.vertexShader='uniform float reedTime;uniform float reedWind;\n'+shader.vertexShader;
     shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       float reedBend=uv.y*uv.y*reedWind*(.07*sin(reedTime*.9+position.x*1.3+position.z*.4)+.025*sin(reedTime*1.7+position.z));
@@ -39,7 +54,8 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     if(!frame.paused&&!frame.reducedMotion)reedTime.value+=dt;
     reedWind.value=frame.reducedMotion?0:.25+THREE.MathUtils.clamp(frame.fx?.wind?.strength||0,0,1)*.75;
   }
-  const flameMaterial=new THREE.MeshBasicMaterial({color:0xf0bd65});
+  const flameTexture=createLanternGlassTexture();
+  const flameMaterial=new THREE.MeshBasicMaterial({color:0xf0bd65,map:flameTexture});
   flameMaterial.onBeforeCompile=s=>{
     s.uniforms.lanternTime=flameTime;s.uniforms.lanternSteady=flameSteady;
     s.vertexShader='uniform float lanternTime;\nuniform float lanternSteady;\nvarying float vLanternFlame;\n'+lanternFlickerGLSL+'\n'+s.vertexShader;
@@ -56,11 +72,18 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     leaf:['rough-cut-hedge-hide-v2',[280,275,190,190]]
   };
   const authoredSurfaces={weatherboard:[0,0,1.05],'roof-metal':[512,0,1.8],masonry:[1024,0,1.7],plaster:[0,512,1.8],slate:[512,512,1.2],'forest-floor':[1024,512,2.6]};
-  const pixelSurface=createCourseSurfaces(surfaceTextures).texture;
+  const pixelSurface=createCraftedCourseSurfaces(surfaceTextures).texture;
   function material(type,color=0xffffff) {
+    if(type==='lantern-glass')return flameMaterial;
+    if(type==='lantern-metal'){const key=type+':'+color;if(materials.has(key))return materials.get(key);if(!surfaceTextures.has(type))surfaceTextures.set(type,createLanternMetalTexture());const m=new THREE.MeshLambertMaterial({map:surfaceTextures.get(type),color});materials.set(key,m);return m;}
     const key=type+':'+color;if(materials.has(key))return materials.get(key);
-    const authored=authoredSurfaces[type],source=surfaces[type],map=authored?Art.texture('rough-cut-architecture-surfaces-v1',[authored[0],authored[1],512,512],null,true):pixelSurface(type)||(source?Art.texture(...source,null,true):null);
+    if(type==='coursed-stone'&&!surfaceTextures.has(type))surfaceTextures.set(type,createStoneFinishTexture());
+    if(type==='hedge-leaf'&&!surfaceTextures.has(type)){const atlas=createHedgeSurface();surfaceTextures.set(type,atlas.color);surfaceTextures.set('hedge-normal',atlas.normal);}
+    const leaf=type==='leaf'||type==='hedge-leaf';
+    const authored=authoredSurfaces[type],source=surfaces[type],map=type==='coursed-stone'||type==='hedge-leaf'?surfaceTextures.get(type):authored?Art.texture('rough-cut-architecture-surfaces-v1',[authored[0],authored[1],512,512],null,true):pixelSurface(type)||(source?Art.texture(...source,null,true):null);
     const m=new THREE.MeshLambertMaterial({map,color});
+    if(type==='hedge-leaf')m.userData.courseHedgeSurface=true;
+    if(leaf||type==='forest-floor')m.userData.courseHabitat=leaf?'leaf':'soil';
     // Discrete shade steps keep surface lighting within the illustrated palette.
     // Texture detail stays in world space; camera motion cannot slide its pixels.
     m.onBeforeCompile=s=>{
@@ -68,11 +91,12 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
       s.vertexShader='attribute vec3 surfacePosition;\nattribute vec3 surfaceNormal;\nvarying vec3 vSurfacePosition;\nvarying vec3 vSurfaceNormal;\nvarying vec3 vLeafShade;\n'+s.vertexShader;
       s.vertexShader=s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
         vSurfacePosition=surfacePosition;vSurfaceNormal=surfaceNormal;
-        ${type==='leaf'?`float crown=smoothstep(.12,1.95,surfacePosition.y);
+        ${leaf?`float crown=smoothstep(.12,1.95,surfacePosition.y);
         float cluster=.5+.25*sin(surfacePosition.x*2.1+surfacePosition.z*.8)+.25*sin(surfacePosition.z*2.7-surfacePosition.y*1.3);
         vLeafShade=mix(vec3(.67,.74,.72),vec3(1.06,1.08,.98),crown)*mix(.90,1.06,cluster);`:''}`);
       s.fragmentShader='uniform float surfaceInvScale;\nvarying vec3 vSurfacePosition;\nvarying vec3 vSurfaceNormal;\nvarying vec3 vLeafShade;\n'+s.fragmentShader;
-      s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
+      s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',type==='coursed-stone'?`#include <map_fragment>
+        diffuseColor.rgb=pow(max(diffuseColor.rgb,vec3(0.0)),vec3(.65));`:`#ifdef USE_MAP
         vec3 weights=abs(vSurfaceNormal);${economy?'':'weights*=weights;weights*=weights;weights/=max(dot(weights,vec3(1.0)),.001);'}
         vec3 p=vSurfacePosition*surfaceInvScale;
         vec4 surfaceTexel=${economy?`texture2D(map,weights.x>weights.y&&weights.x>weights.z?p.${authored?'zy':'yz'}:weights.y>weights.z?p.xz:p.xy)`:`texture2D(map,p.${authored?'zy':'yz'})*weights.x+texture2D(map,p.xz)*weights.y+texture2D(map,p.xy)*weights.z`};
@@ -82,18 +106,19 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
         diffuseColor *= surfaceTexel;
         #endif
         diffuseColor.rgb=pow(max(diffuseColor.rgb,vec3(0.0)),vec3(${authored?'.85':'.65'}));
-        ${type==='leaf'?`// Broad root/crown shade is interpolated from vertices, keeping
+        ${leaf?`// Broad root/crown shade is interpolated from vertices, keeping
         // its cost independent of screen resolution on software rendering.
         diffuseColor.rgb*=vLeafShade;`:''}`);
       s.fragmentShader=s.fragmentShader.replace('#include <opaque_fragment>', 'vec3 pixelShade = floor(sqrt(max(outgoingLight, vec3(0.0))) * 48.0 + .5) / 48.0;\noutgoingLight = pixelShade * pixelShade;\n#include <opaque_fragment>');
+      if(type==='hedge-leaf')hedgeSurfaceNormals(s,surfaceTextures.get('hedge-normal'),economy);
     };
-    m.customProgramCacheKey=()=> 'rough-cut-pixel-surfaces-v5-'+(type==='leaf'?'leaf':type==='forest-floor'?'forest':authored?'authored':'procedural')+'-'+economy;materials.set(key,m);return m;
+    m.customProgramCacheKey=()=> 'rough-cut-pixel-surfaces-v5-'+(type==='hedge-leaf'?'hedge-leaf-v1':type==='coursed-stone'?'coursed-stone':type==='leaf'?'leaf':type==='forest-floor'?'forest':authored?'authored':'procedural')+'-'+economy;materials.set(key,m);return m;
   }
   function uvScale(g,meters=.7) {
     const pos=g.attributes.position,normal=g.attributes.normal,uv=g.attributes.uv;
     for(let i=0;i<pos.count;i++){const nx=Math.abs(normal.getX(i)),ny=Math.abs(normal.getY(i)),nz=Math.abs(normal.getZ(i));uv.setXY(i,(nx>ny&&nx>nz?pos.getZ(i):pos.getX(i))/meters,(ny>nx&&ny>nz?pos.getZ(i):pos.getY(i))/meters);}return g;
   }
-  function mesh(root,g,type,color,x=0,y=0,z=0){g.setAttribute('surfacePosition',g.attributes.position.clone());if(type==='leaf'){const sp=g.attributes.surfacePosition;for(let i=0;i<sp.count;i++)sp.setY(i,sp.getY(i)+y);}g.setAttribute('surfaceNormal',g.attributes.normal.clone());const m=new THREE.Mesh(uvScale(g),material(type,color));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;root.add(m);return m;}
+  function mesh(root,g,type,color,x=0,y=0,z=0){g.setAttribute('surfacePosition',g.attributes.position.clone());if(type==='leaf'){const sp=g.attributes.surfacePosition;for(let i=0;i<sp.count;i++)sp.setY(i,sp.getY(i)+y);}g.setAttribute('surfaceNormal',g.attributes.normal.clone());const m=new THREE.Mesh(type==='coursed-stone'||type==='lantern-glass'||type==='lantern-metal'?g:uvScale(g),material(type,color));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;root.add(m);return m;}
   function box(root,type,x,y,z,w,h,d,color=0xffffff,r=.035){
     r=Math.min(r,w*.2,h*.2,d*.2);const g=new THREE.BoxGeometry(1,1,1,3,3,3),p=g.attributes.position;
     for(let i=0;i<p.count;i++){const a=new THREE.Vector3(p.getX(i),p.getY(i),p.getZ(i)),half=[w/2,h/2,d/2];for(let j=0;j<3;j++)a.setComponent(j,Math.sign(a.getComponent(j))*(Math.abs(a.getComponent(j))>.49?half[j]:half[j]-r));const inside=a.clone();for(let j=0;j<3;j++)inside.setComponent(j,THREE.MathUtils.clamp(a.getComponent(j),-half[j]+r,half[j]-r));a.sub(inside).normalize().multiplyScalar(r).add(inside);p.setXYZ(i,a.x,a.y,a.z);}g.computeVertexNormals();return mesh(root,g,type,color,x,y,z);
@@ -105,22 +130,13 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
   function cover(x,z,rx,rz,stone=false,seed=0){
     const r=root(stone?'stone':'hedge',x,z,{shape:'ellipse',rx,rz});
     const points=(stone?STONE_PROFILE:HEDGE_PROFILE).map(([radius,y])=>new THREE.Vector2(radius,y));
-    const g=new THREE.LatheGeometry(points,32);g.scale(rx,1,rz);mesh(r,g,stone?'stone':'leaf',stone?0xb2bdb7:0x9bb5a4);
+    const g=new THREE.LatheGeometry(points,32);g.scale(rx,1,rz);mesh(r,g,stone?'stone':'hedge-leaf',stone?0xb2bdb7:0x9bb5a4);
     // Eight of the original 32 radial samples, contracted toward the center,
     // form a conservative convex interior of this closed, opaque lathe.
     // Foliage cards, roofs and open structures never serve as occluders.
     if(economy){const interior=[];for(const p of points)for(let i=0;i<8;i++){const a=i*Math.PI/4;interior.push(new THREE.Vector3(Math.cos(a)*p.x*rx*.98,1.04+(p.y-1.04)*.98,Math.sin(a)*p.x*rz*.98));}r.userData.solidInterior=interior;}
-    if(stone){const count=Math.max(12,Math.ceil(Math.PI*(rx+rz)/.62));for(let row=0;row<4;row++)for(let i=0;i<count;i++){const a=(i+(row%2)*.5)/count*Math.PI*2,ring=.94-row*.025,halfStep=Math.PI/count,span=2*Math.hypot(rx*Math.sin(a),rz*Math.cos(a))*halfStep;const block=box(r,'stone',Math.cos(a)*Math.max(0,rx*ring-.13),.25+row*.46,Math.sin(a)*Math.max(0,rz*ring-.13),span*.94,.43,.27,[0xb4c0b3,0x99afa4,0xc5caba][i%3],.045);block.rotation.y=Math.atan2(rx*Math.sin(a),rz*Math.cos(a));}}
-    // Anchored overlapping leaf/stone clusters break the rim while retaining the
-    // authoritative footprint, and reveal new surfaces when the player strafes.
-    const n=stone?12:20;
-    for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(random(i+seed)-.5)*.23,s=.13+random(i+seed)*.22,py=stone?1.76:1.52+random(i+seed+12)*.43;
-      const cluster=new THREE.SphereGeometry(1,8,5);cluster.scale(s*1.5,s*.7,s);mesh(r,cluster,stone?'stone':'leaf',stone?0x9dab9e:0xa3baa4,Math.cos(a)*Math.max(0,rx-s),py,Math.sin(a)*Math.max(0,rz-s));
-    }
-    if(!stone)for(let i=0;i<12;i++){
-      const a=i*2.39996+seed,radial=.25+random(i+seed)*.54,s=.14+random(i+seed+31)*.20,g=new THREE.SphereGeometry(1,8,5);g.scale(s*1.4,s*.65,s);
-      mesh(r,g,'leaf',[0x9eb79b,0xacc1a3,0x91ab92][i%3],Math.cos(a)*Math.max(0,rx-s)*radial,2.0+random(i+seed+7)*.06,Math.sin(a)*Math.max(0,rz-s)*radial);
-    }
+    if(stone){const courses=createStoneCourses(rx,rz,seed);courses.parts.forEach(({geometry,palette})=>mesh(r,geometry,'coursed-stone',[0xb4c0b3,0x99afa4,0xc5caba][palette]));r.userData.stoneCourses={stones:courses.stones,rows:5};}
+    if(!stone){const growth=createHedgeGrowth(rx,rz,seed);for(const g of growth.parts)mesh(r,g,'leaf',0xa3baa4);r.userData.hedgeGrowth={shoots:growth.shoots,leaves:growth.leaves};}
     return r;
   }
   function cart(x,z,length,width){
@@ -154,10 +170,10 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
   }
   function lanternAt(r,x,y,z,size=1){
     const l=new THREE.Group();l.position.set(x,y,z);l.scale.setScalar(size);r.add(l);
-    cylinder(l,'brass',0,.035,0,.13,.07,0xbbaa75);cylinder(l,'brass',0,.43,0,.14,.07,0xbbaa75,.09);
-    const glass=cylinder(l,'glass',0,.24,0,.085,.30,0xf8cf81);glass.material=flameMaterial;
+    cylinder(l,'lantern-metal',0,.035,0,.13,.07,0xc5b58a);cylinder(l,'lantern-metal',0,.43,0,.14,.07,0xc5b58a,.09);
+    const glass=cylinder(l,'lantern-glass',0,.24,0,.085,.30,0xf8cf81);glass.material=flameMaterial;
     for(let i=0;i<4;i++){const a=i*Math.PI/2;box(l,'iron',Math.cos(a)*.105,.24,Math.sin(a)*.105,.018,.35,.018,0x6e715b,.005);}
-    for(const y of [.12,.32]){const rim=torus(l,'brass',0,y,0,.11,.012,0xc1aa74);rim.rotation.x=Math.PI/2;}
+    for(const y of [.12,.32]){const rim=torus(l,'lantern-metal',0,y,0,.11,.012,0xcabd91);rim.rotation.x=Math.PI/2;}
     torus(l,'iron',0,.54,0,.065,.012,0x7d8065);glow(l,0,.24,0,.4);return glass;
   }
   const groundLampShapes=new Map();let groundLanternTriangles=0;
@@ -170,11 +186,11 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
       const g=groundLampShapes.get(key).clone();groundLanternTriangles+=(g.index?.count||g.attributes.position.count)/3;
       return mesh(l,g,type,color,x,y,z);
     };
-    shape('base',()=>new THREE.CylinderGeometry(.13,.13,.07,12),'brass',0xbbaa75,0,.035);
-    shape('cap',()=>new THREE.CylinderGeometry(.09,.14,.07,12),'brass',0xbbaa75,0,.43);
-    shape('glass',()=>new THREE.CylinderGeometry(.085,.085,.30,12),'glass',0xf8cf81,0,.24).material=flameMaterial;
+    shape('base',()=>new THREE.CylinderGeometry(.13,.13,.07,12),'lantern-metal',0xc5b58a,0,.035);
+    shape('cap',()=>new THREE.CylinderGeometry(.09,.14,.07,12),'lantern-metal',0xc5b58a,0,.43);
+    shape('glass',()=>new THREE.CylinderGeometry(.085,.085,.30,12),'lantern-glass',0xf8cf81,0,.24).material=flameMaterial;
     for(let i=0;i<4;i++){const a=i*Math.PI/2;shape('bar',()=>new THREE.BoxGeometry(.018,.35,.018),'iron',0x6e715b,Math.cos(a)*.105,.24,Math.sin(a)*.105);}
-    for(const y of [.12,.32])shape('rim',()=>new THREE.TorusGeometry(.11,.012,4,16),'brass',0xc1aa74,0,y).rotation.x=Math.PI/2;
+    for(const y of [.12,.32])shape('rim',()=>new THREE.TorusGeometry(.11,.012,4,16),'lantern-metal',0xcabd91,0,y).rotation.x=Math.PI/2;
     shape('handle',()=>new THREE.TorusGeometry(.065,.012,4,16),'iron',0x7d8065,0,.54);
     glow(l,0,.24,0,.4);return r;
   }
@@ -187,9 +203,10 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     if(kind==='bell'){
       box(r,'wood',.03,2.36,-.14,.96,.15,.24,0xd4b98b);box(r,'brass',-.31,2.02,-.01,.26,.31,.04,0xc2a570);plateY=2.55;
       moving.position.set(.18,2.19,0);moving.scale.setScalar(1.12);
-      const bell=new THREE.LatheGeometry([[.07,0],[.10,-.06],[.12,-.18],[.20,-.38],[.31,-.49],[.34,-.52],[.30,-.55],[.27,-.51],[.16,-.35],[.07,-.10]].map(p=>new THREE.Vector2(...p)),32);mesh(moving,bell,'brass',0xf2d498);
-      for(const y of [-.50,-.47,-.12]){const rim=torus(moving,'brass',0,y,0,y<-.4?.315:.105,.012,0xf6dc9c);rim.rotation.x=Math.PI/2;}
-      cylinder(moving,'iron',0,-.40,0,.018,.44,0x7b7462);cylinder(moving,'iron',0,-.61,0,.055,.065,0x645a44);
+      moving.add(createAuditBellBody());
+      for(const [y,radius] of [[-.50,.315],[-.47,.29],[-.12,.105]]){const rim=torus(moving,'brass',0,y,0,radius,.012,0xf6dc9c);rim.rotation.x=Math.PI/2;}
+      torus(moving,'iron',0,.04,0,.052,.012,0x7b7462);
+      cylinder(moving,'iron',0,-.3025,0,.018,.575,0x7b7462);cylinder(moving,'iron',0,-.61,0,.055,.065,0x645a44);
       cylinder(r,'wood',.45,.90,.10,.016,1.18,0xcbb486);torus(r,'wood',.45,.29,.10,.035,.012,0xcbb486);
     }else if(kind==='supply'){
       // Service locker: recessed shelves, slatted drawer and a brass latch.
@@ -213,14 +230,15 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     }else if(kind==='log'){
       box(r,'iron',0,.63,0,.35,.97,.31,0xa9b2a3);box(r,'wood',0,1.02,.05,.91,.16,.61,0xe0c393);
       box(r,'iron',0,1.52,-.19,.94,.95,.16,0xb9c1ae,.05);
-      const page=box(r,'paper',-.08,1.52,-.085,.66,.78,.028,0xffffff,.006);page.rotation.x=-.12;
+      const form=createStationPaperFace('log',.52,.75,.028);form.position.set(.10,1.52,-.085);form.rotation.x=-.12;r.add(form);
       box(r,'iron',0,2.01,-.10,1.06,.11,.45,0xa2ac9b,.05);
       moving.position.set(.28,1.32,.17);box(moving,'iron',0,0,0,.19,.12,.19,0xac9f7b);cylinder(moving,'wood',0,.15,0,.045,.22,0xc7ab78);cylinder(moving,'iron',0,.29,0,.075,.08,0x686b54);
     }else if(kind==='release'){
       box(r,'wood',.28,1.05,-.13,.19,1.88,.24,0xc5b487);box(r,'wood',-.12,1.94,-.13,.94,.15,.23,0xc5b487);
       const gong=mesh(r,new THREE.SphereGeometry(.31,24,12),'brass',0xd0b881,-.26,1.46,0);gong.scale.z=.20;
       torus(r,'brass',-.26,1.46,.025,.29,.015,0xe5c991);
-      box(r,'wood',.24,1.11,.13,.48,.65,.09,0xd2c196);box(r,'paper',.24,1.12,.19,.43,.59,.018,0xffffff,.004);
+      box(r,'wood',.24,1.11,.13,.48,.65,.09,0xd2c196);
+      const form=createStationPaperFace('release',.43,.59,.018);form.position.set(.24,1.12,.19);r.add(form);
       box(r,'iron',.53,.86,.37,.24,.10,.13,0x686b54,.008);
       moving.position.set(.61,.85,.40);cylinder(moving,'iron',0,.23,0,.025,.46,0x9b9e87);cylinder(moving,'wood',0,.49,0,.075,.12,0xb08d63);
     }else if(kind==='valve'){
@@ -270,7 +288,7 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     }
     if(kind==='log'){
       // The stamp lands on a supported form, not through the countertop.
-      box(r,'paper',.28,1.112,.17,.25,.024,.27,0xdad1af,.001);
+      const form=createStationPaperFace('stamp',.25,.27,.024);form.position.set(.28,1.112,.17);form.rotation.x=-Math.PI/2;r.add(form);
       for(let i=0;i<3;i++)box(r,'iron',-.14,1.128,.13+i*.065,.28,.002,.008,0x686b54,.001);
       box(r,'iron',.28,1.119,-.005,.26,.014,.035,0x686b54,.001);
       // Guide frame keeps the press grounded while its plunger moves.
@@ -283,9 +301,7 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
       box(r,'iron',-.18,1.12,.20,.43,.32,.12,0x686b54,.015);
       box(r,'iron',-.18,1.16,.267,.34,.07,.018,0x344b42,.002);
       const receipt=new THREE.Group();receipt.position.set(-.18,1.15,.28);r.add(receipt);
-      box(receipt,'paper',0,.10,0,.27,.24,.012,0xdad1af,.001);
-      box(receipt,'seal',.06,.14,.008,.07,.065,.004,0xb96947,.001);
-      for(let i=0;i<3;i++)box(receipt,'iron',-.02,.07+i*.035,.009,.16,.009,.004,0x686b54,.001);
+      const form=createStationPaperFace('receipt',.27,.24,.012);form.position.set(0,.10,0);receipt.add(form);
       // A stationary housing masks the lower slip as it emerges.
       box(r,'iron',-.18,1.06,.31,.38,.18,.045,0x829080,.008);
       receipt.traverse(o=>o.userData.keepDynamic=true);
@@ -310,19 +326,33 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     // Present the actual mechanism toward the player starting position; labels/lamps and
     // the interaction animation turn together, without changing its world anchor.
     r.rotation.y=target.facing??0;
-    const ink=box(r,'seal',kind==='valve'?0:.31,kind==='log'?1.51:kind==='valve'?.50:1.13,kind==='valve'?.11:.22,kind==='valve'?.07:.15,kind==='valve'?.07:.15,.02,0xb96947,.008);ink.name='completed-ink';ink.visible=false;
-    if(kind==='log'){ink.position.set(.28,1.126,.17);ink.rotation.x=-Math.PI/2;ink.scale.set(.8,.8,.15);}
+    let ink;
+    if(kind==='log'||kind==='release'){
+      const log=kind==='log';ink=mesh(r,createStationInkGeometry(log?.13:.21,log?.04:.062),'seal',0x854633);
+      // Half a millimetre above the printed stock: attached ink, without a
+      // floating block or a second shadow caster over the writing surface.
+      if(log){ink.position.set(.28,1.1245,.197);ink.rotation.x=-Math.PI/2;}
+      else ink.position.set(.24,1.06,.1995);
+      ink.castShadow=false;
+    }else ink=box(r,'seal',kind==='valve'?0:.31,kind==='valve'?.50:1.13,kind==='valve'?.11:.22,kind==='valve'?.07:.15,kind==='valve'?.07:.15,.02,0xb96947,.008);
+    ink.name='completed-ink';ink.visible=false;
     moving.traverse(o=>o.userData.keepDynamic=true);ink.userData.keepDynamic=true;lamp.userData.keepDynamic=true;
     if(kind==='log')rivets(r,.80,1.02,.38);else rivets(r,.96,.10,.385);
     return {root:r,moving,lamp,target,kind,pressureNeedle,mechanism};
   }
   const {tree,prepareTrees,disposeTrees,treePreparationStats}=createTrees({root,mesh});
-  function reeds(x,z,rx,rz){
+  function reeds(x,z,rx,rz,{runoff=false}={}){
     const r=root('reed-bed',x,z,{shape:'ellipse',rx,rz});
-    const shore=new THREE.RingGeometry(.90,1.015,48,2);shore.rotateX(-Math.PI/2);shore.scale(rx,1,rz);mesh(r,shore,'forest-floor',0x728473,0,.087,0);
-    if(!materials.has('reeds')){const m=new THREE.MeshLambertMaterial({map:Art.texture('rough-cut-verge-atlas-v1',[420,90,415,485]),alphaTest:.22,side:THREE.DoubleSide,color:0xb2c6a8});m.onBeforeCompile=reedShader;m.customProgramCacheKey=()=> 'course-reed-contact-v2';m.userData.reedWind=true;materials.set('reeds',m);
+    mesh(r,createPondBankGeometry(rx,rz,pondBankSeed(x,z)),'forest-floor',0x777866);
+    if(!materials.has('reeds')){const m=new THREE.MeshLambertMaterial({map:Art.texture('rough-cut-verge-atlas-v1',[420,90,415,485]),alphaTest:.22,side:THREE.DoubleSide,color:0xb2c6a8});m.onBeforeCompile=reedShader;m.customProgramCacheKey=()=> 'course-reed-contact-v2';m.userData.reedWind=true;m.userData.courseHabitat='verge';materials.set('reeds',m);
       reedDepth=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,map:m.map,alphaTest:.22,side:THREE.DoubleSide});reedDepth.onBeforeCompile=reedShader;reedDepth.customProgramCacheKey=()=> 'course-reed-contact-depth-v2';}
-    for(let i=0;i<24;i++){const a=i*2.4,radial=.76+random(i+z)*.20,h=.65+random(i+x)*1.25;for(const turn of [0,Math.PI/2]){const g=new THREE.PlaneGeometry(.48+random(i+17)*.25,h);g.setAttribute('surfacePosition',g.attributes.position.clone());g.setAttribute('surfaceNormal',g.attributes.normal.clone());const plant=new THREE.Mesh(g,materials.get('reeds'));plant.position.set(Math.cos(a)*Math.max(0,rx-.15)*radial,h/2,Math.sin(a)*Math.max(0,rz-.15)*radial);plant.rotation.y=a+turn;r.add(plant);}}
+    const outlet=runoff?runoffLayout(rx,rz):null;
+    for(let i=0;i<24;i++){const a=i*2.4,radial=.76+random(i+z)*.20,h=.65+random(i+x)*1.25;
+      const px=Math.cos(a)*Math.max(0,rx-.15)*radial,pz=Math.sin(a)*Math.max(0,rz-.15)*radial;
+      // The maintenance apron stays free of rooted plants and exposes the
+      // physical lip/contact. All other authored clumps keep their positions.
+      if(outlet&&Math.abs(px-outlet.x)<.85&&pz>outlet.lipZ-.45&&pz<outlet.bankZ+.55)continue;
+      for(const turn of [0,Math.PI/2]){const width=.48+random(i+17)*.25,g=shapeVergeNormals(new THREE.PlaneGeometry(width,h,1,wind?3:1),width);g.setAttribute('surfacePosition',g.attributes.position.clone());g.setAttribute('surfaceNormal',g.attributes.normal.clone());const plant=new THREE.Mesh(g,materials.get('reeds'));plant.position.set(px,h/2,pz);plant.rotation.y=a+turn;r.add(plant);}}
     return r;
   }
   function irrigationHead(head){
@@ -343,13 +373,13 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
   }
   function board(x,z,width){const r=root('notice-board',x,z);for(const side of [-1,1])box(r,'wood',side*width*.38,.86,0,.10,1.72,.12,0xc1af89);box(r,'wood',0,1.45,0,width,.89,.14,0xb8b094);box(r,'iron',0,1.96,0,width+.12,.07,.28,0x9ca48f);return r;}
   function floodlight(x,z){
-    const r=root('floodlight',x,z);box(r,'stone',0,.15,0,.48,.3,.48,0xa2aca2);cylinder(r,'iron',0,1.65,0,.055,3.1,0xa1ac98);
-    const fixture=box(r,'glass',0,3.13,.09,.54,.28,.08,0xe7d09b),source=fixture.material;
+    const r=root('floodlight',x,z),fixture=buildCourseFloodlight(r,{mesh,box}),source=fixture.material;
     // Lenses have independent power. Keep the pixel shading callbacks when
     // cloning; shared surface materials would make the last lamp win.
     fixture.material=source.clone();fixture.material.onBeforeCompile=source.onBeforeCompile;fixture.material.customProgramCacheKey=source.customProgramCacheKey;
+    detailFloodlightLens(fixture.material);
     fixture.material.color.setHex(0x26332d);fixture.material.emissive.setHex(0xffedbb);fixture.material.emissiveIntensity=1.6;
-    fixture.userData.keepDynamic=true;box(r,'iron',0,3.13,-.04,.66,.40,.20,0x919f89);return fixture;
+    fixture.userData.keepDynamic=true;return fixture;
   }
   function post(x,z){const r=root('boundary-post',x,z);cylinder(r,'wood',0,.44,0,.055,.88,0xc9af7e);cylinder(r,'iron',0,.87,0,.075,.07,0xb5aa88,.045);return r;}
   function boundaryRope(x,z,length=2.7){
@@ -408,17 +438,19 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     parent.updateMatrixWorld(true);let slice=performance.now();
     if(economy)for(const record of staticRecords)if(record.root.userData.solidInterior)solidOcclusion.addHull(record.root.userData.solidInterior,record.root.matrixWorld);
     const yieldFrame=()=>yieldCpuPreparation(cancelled);
-    for(const record of staticRecords){if(cancelled())return;const bound=new THREE.Box3().setFromObject(record.root);record.bounds=[bound.min.toArray(),bound.max.toArray()];const remove=[];
+    for(const record of staticRecords){if(cancelled())return;const bound=new THREE.Box3().setFromObject(record.root),treeWind=!!wind&&record.kind==='tree',treeAnchor=record.root.getWorldPosition(new THREE.Vector3()),treeHeight=bound.max.y-treeAnchor.y;
+      if(treeWind)bound.expandByScalar(TREE_WIND_PADDING);record.bounds=[bound.min.toArray(),bound.max.toArray()];const remove=[];
       const objects=[];record.root.traverse(o=>{if(o.isMesh&&!o.isSprite&&!o.material.transparent&&!o.userData.keepDynamic)objects.push(o);});
       for(const o of objects){
         if(cancelled())return;
         const source=o.material,g=geometryUses.get(o.geometry)>1?o.geometry.clone():o.geometry;
         // Tint belongs to vertices, not a separate draw/material for each nail,
         // plank or leaf. Preserve authored vertex colors and shader variants.
-        const surfaceKey=[source.type,source.map?.uuid,source.alphaMap?.uuid,source.side,source.alphaTest,source.customProgramCacheKey()].join(':');
+        const surfaceKey=[source.type,source.map?.uuid,source.alphaMap?.uuid,source.side,source.alphaTest,source.customProgramCacheKey(),treeWind?'tree-wind':'fixed'].join(':');
         if(!batchMaterials.has(surfaceKey)){
           const shared=source.clone();shared.color.set(0xffffff);shared.vertexColors=true;
           shared.onBeforeCompile=source.onBeforeCompile;shared.customProgramCacheKey=source.customProgramCacheKey;
+          if(treeWind){const compile=shared.onBeforeCompile,key=source.customProgramCacheKey();shared.onBeforeCompile=function(s,r){compile.call(this,s,r);wind.treeShader(s);};shared.customProgramCacheKey=()=>key+'-tree-wind-v1';shared.userData.treeWind=true;}
           batchMaterials.set(surfaceKey,shared);
         }
         const colors=new Float32Array(g.attributes.position.count*3),original=source.vertexColors?g.attributes.color:null;
@@ -427,14 +459,19 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
         if(!g.attributes.surfacePosition)g.setAttribute('surfacePosition',g.attributes.position.clone());
         if(!g.attributes.surfaceNormal)g.setAttribute('surfaceNormal',g.attributes.normal.clone());
         g.applyMatrix4(o.matrixWorld);
-        g.computeBoundingBox();if(source.userData.reedWind)g.boundingBox.expandByScalar(VEGETATION_PADDING);const center=g.boundingBox.getCenter(new THREE.Vector3());
+        if(source.userData.courseHabitat)tintCourseHabitatGeometry(g,null,source.userData.courseHabitat,source.userData.courseHabitat==='soil'?null:record.root.position);
+        if(treeWind)bindTreeWind(g,treeAnchor,treeHeight);
+        g.computeBoundingBox();if(source.userData.reedWind)g.boundingBox.expandByScalar(VEGETATION_PADDING);if(treeWind)g.boundingBox.expandByScalar(TREE_WIND_PADDING);const center=g.boundingBox.getCenter(new THREE.Vector3());
         // Software rendering still culls each original piece below. Wider
         // batches share buffers/draws without dropping visible canopy detail.
         const chunkSize=economy?20:12;
         const origin=economy?center:record.root.position;
-        const key=Math.floor(origin.x/chunkSize)+':'+Math.floor(origin.z/chunkSize)+':'+surfaceKey;
+        // This small lit fixture must not promote a whole distant stone/metal
+        // batch to the full point-light shader on the software renderer.
+        const lightGroup=economy&&record.kind==='pond-runoff'?':runoff':'';
+        const key=Math.floor(origin.x/chunkSize)+':'+Math.floor(origin.z/chunkSize)+':'+surfaceKey+lightGroup;
         if(!batches.has(key))batches.set(key,{material:batchMaterials.get(surfaceKey),position:[],normal:[],uv:[],surfacePosition:[],surfaceNormal:[],color:[],indices:[],vertices:0,parts:[],indexCount:0});
-        const b=batches.get(key);for(const name of ['position','normal','uv','surfacePosition','surfaceNormal','color'])b[name].push(g.attributes[name].array);
+        const b=batches.get(key);for(const name of ['position','normal','uv','surfacePosition','surfaceNormal','color',...(treeWind?['courseTreeShape','courseTreePhase']:[])]){if(!b[name])b[name]=[];b[name].push(g.attributes[name].array);}
         // Preserve shared vertices: expansion tripled vertex shading and buffer
         // upload work on the software renderer without adding any art detail.
         const indices=new Uint32Array(g.index?.count||g.attributes.position.count);
@@ -450,19 +487,29 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
     for(const b of batches.values()){
       if(cancelled())return;
       const g=new THREE.BufferGeometry();
-      for(const name of ['position','normal','uv','surfacePosition','surfaceNormal',...(b.color?['color']:[])]){
+      for(const name of ['position','normal','uv','surfacePosition','surfaceNormal',...(b.color?['color']:[]),...(b.material.userData.treeWind?['courseTreeShape','courseTreePhase']:[])]){
         // Keep typed chunks instead of expanding millions of floats into JS
         // arguments/number arrays, then allocating and copying them again.
         const chunks=b[name],data=new Float32Array(chunks.reduce((n,a)=>n+a.length,0));
         let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.length;}
-        g.setAttribute(name,new THREE.BufferAttribute(data,name==='uv'?2:3));
+        g.setAttribute(name,new THREE.BufferAttribute(data,name==='uv'||name==='courseTreePhase'?2:name==='courseTreeShape'?4:3));
       }
       const indices=createIndexArray(b.vertices,b.indices.reduce((n,a)=>n+a.length,0));let indexOffset=0;
       for(const chunk of b.indices){indices.set(chunk,indexOffset);indexOffset+=chunk.length;}
       g.setIndex(new THREE.BufferAttribute(indices,1));
-      g.computeBoundingSphere();const m=new THREE.Mesh(g,b.material);m.castShadow=m.receiveShadow=true;if(b.material.userData.reedWind){m.customDepthMaterial=reedDepth;g.boundingSphere.radius+=VEGETATION_PADDING;}parent.add(m);
+      g.computeBoundingSphere();const m=new THREE.Mesh(g,b.material);m.castShadow=m.receiveShadow=true;if(b.material.userData.reedWind){wind?.bindGeometry(g);m.customDepthMaterial=reedDepth;g.boundingSphere.radius+=VEGETATION_PADDING;}parent.add(m);
+      if(b.material.userData.courseHedgeSurface)hedgeSurfaceMeshes.push(m);
+      if(b.material.userData.treeWind){
+        m.name='CourseWindTree';g.boundingSphere.radius+=TREE_WIND_PADDING;
+        if(!treeShadowMaterials.has(b.material)){
+          const options={map:b.material.map,alphaTest:b.material.alphaTest,side:b.material.side};
+          const pair=[new THREE.MeshDepthMaterial({...options,depthPacking:THREE.RGBADepthPacking}),new THREE.MeshDistanceMaterial(options)];
+          for(const material of pair){material.onBeforeCompile=s=>wind.treeShader(s);material.customProgramCacheKey=()=> 'course-tree-wind-shadow-v1';}treeShadowMaterials.set(b.material,pair);
+        }
+        [m.customDepthMaterial,m.customDistanceMaterial]=treeShadowMaterials.get(b.material);treeMeshes.push(m);
+      }
       if(economy){m.userData.visibilityParts=b.parts;m.userData.fullIndices=indices.slice();g.index.setUsage(THREE.DynamicDrawUsage);}
-      g.computeBoundingBox();if(b.material.userData.reedWind)g.boundingBox.expandByScalar(VEGETATION_PADDING);culledMeshes.push(m);
+      g.computeBoundingBox();if(b.material.userData.reedWind)g.boundingBox.expandByScalar(VEGETATION_PADDING);if(b.material.userData.treeWind)g.boundingBox.expandByScalar(TREE_WIND_PADDING);culledMeshes.push(m);
       // Use the same visible pieces for light reach. Empty space inside a
       // wider batch must not force lighting work on distant visible foliage.
       localLighting?.register(m,b.parts);
@@ -494,9 +541,21 @@ export function createPixelWorld(parent, { label, glow, economy=false }) {
       mesh.visible=g.drawRange.count>0;
     }
   }
-  function dispose(){buildings.disposeClubhouseWindows();disposeTrees();reedDepth?.dispose();for(const g of groundLampShapes.values())g.dispose();flameMaterial.dispose();localLighting?.dispose();for(const t of surfaceTextures.values())t.dispose();for(const m of materials.values())m.dispose();}
+  function dispose(){buildings.disposeClubhouseWindows();disposeTrees();reedDepth?.dispose();for(const pair of treeShadowMaterials.values())for(const m of pair)m.dispose();treeShadowMaterials.clear();for(const m of treeMeshes)m.customDepthMaterial=m.customDistanceMaterial=undefined;treeMeshes.length=0;for(const g of groundLampShapes.values())g.dispose();flameMaterial.dispose();flameTexture.dispose();localLighting?.dispose();
+    // The atlas and these batched materials have one owner. Detach their
+    // meshes before the scene's generic traversal revisits every shared map.
+    const hedgeMaterials=new Set();for(const mesh of hedgeSurfaceMeshes){hedgeMaterials.add(mesh.material);mesh.geometry.dispose();mesh.removeFromParent();}for(const m of hedgeMaterials)m.dispose();hedgeSurfaceMeshes.length=0;
+    for(const t of surfaceTextures.values())t.dispose();for(const m of materials.values())m.dispose();}
   function stats(){return {mode:'fixed-volumes',drainCollisionArt:drainCollisionParts.map(p=>collisionArtBounds(p.id,p.owner,[p])),clubhouseWindows:buildings.clubhouseWindowStats(),lanternColor:flameMaterial.color.getHex(),groundLanternTriangles,occlusion:{solids:solidOcclusion.count(),parts:occludedParts},treePreparation:treePreparationStats(),surfaces:materials.size,objects:records.map(e=>{if(!e.bounds&&e.dynamic){const q=new THREE.Box3().setFromObject(e.root);e.bounds=[q.min.toArray(),q.max.toArray()];}return {kind:e.kind,position:e.root.position.toArray(),rotation:e.root.rotation.toArray().slice(0,3),hull:e.hull,bounds:e.bounds,form:e.root.userData.treeForm,canopyClearance:e.root.userData.canopyClearance,moving:e.dynamic?{rotation:e.root.children.find(o=>o.type==='Group')?.rotation.toArray().slice(0,3)}:undefined};})};}
+  function pondRunoff(x,z,rx,rz){const r=root('pond-runoff',x,z);buildPondRunoff(r,rx,rz,{box,mesh});return r;}
+  function groundDetailClearance(x,z,radius=0){
+    for(const entry of records){
+      if(entry.kind!=='service-building'&&entry.kind!=='maintenance-shed')continue;
+      if(!clearDrainageFootprints(drainageFootprints(entry.hull.width,entry.hull.depth/2),x-entry.root.position.x,z-entry.root.position.z,radius))return false;
+    }
+    return true;
+  }
   const buildings=createBuildings({root,mesh,box,cylinder,torus,lanternAt,label});
-  const landscape=createLandscape({root,mesh,cylinder});
-  return {cover,cart,station,irrigationHead,lantern,updateLanterns,updateReeds,reedStats:()=>({time:reedTime.value,wind:reedWind.value,contact:reedContact.stats()}),tree,reeds,board,floodlight,post,boundaryRope,rearFence,...buildings,...landscape,drain,plank,finish,updateCulling,localLighting,stats,dispose};
+  const landscape=createLandscape({root,mesh,cylinder,groundDetailClearance});
+  return {groundDetailClearance,cover,cart,station,irrigationHead,lantern,updateLanterns,updateReeds,reedStats:()=>({time:reedTime.value,wind:reedWind.value,contact:reedContact.stats()}),tree,reeds,pondRunoff,board,floodlight,post,boundaryRope,rearFence,...buildings,...landscape,drain,plank,finish,updateCulling,localLighting,stats,dispose};
 }

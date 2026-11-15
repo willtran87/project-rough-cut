@@ -25,9 +25,25 @@
         "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass29-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass29-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass34-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass37-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass41-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass42-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass52-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass91-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass104-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass105-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass107-2026-11-14.md"
       ],
-      "implementation_notes": "World-scale 1.46 x 1.16 m slabs, existing 627px material tiles at 2 m scale; final whole-level scale comparison still open. Pass17 adds explicit architectural sampling stats:313.5source texels/metre;627px/two metres,paired masonry1254px/four metres. Native/software close and oblique review passes. Full tapered-root/prop/actor scale acceptance remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass29: root UV circumference measured after taper/flatten;1318root variants/126250vertices physically identical. Full-density area-weighted P95 drops1741to367texels/m(native);17views per renderer and installedclient pass. V02 remains partial for full props/actor cohesion."
+      "implementation_notes": "World-scale 1.46 x 1.16 m slabs, existing 627px material tiles at 2 m scale; final whole-level scale comparison still open. Pass17 adds explicit architectural sampling stats:313.5source texels/metre;627px/two metres,paired masonry1254px/four metres. Native/software close and oblique review passes. Full tapered-root/prop/actor scale acceptance remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass29: root UV circumference measured after taper/flatten;1318root variants/126250vertices physically identical. Full-density area-weighted P95 drops1741to367texels/m(native);17views per renderer and installedclient pass. V02 remains partial for full props/actor cohesion. Pass34: selected built-in generated1254square keeper timber replaces512canvasgrain at4m/313.5texels per metre on ceiling/furniture, no added maps/draws/geometry/lights.32native/32software views;285structural geometry hashes unchanged,3actualtimberbatches audited, stablecamera return and installedclient pass. About6.7MiB additional estimatedGPU texture storage and2,686,964encodedbytes. Broader requirement remains partial. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass37: native1024wide route lettering, unchanged256gauge tags, physical washers/bolt sockets and fitted records edge tabs. Identicalfront/back art shared28to17textures, estimatedGPU storage+11.67MiB.37native/37software views,1098clear instruction rays,1379routeframes/106actor audits and installedclient verified; full-route lighting/readability acceptance remains open. Pass41: restored moving-panel machinery density and added 10 lower-rail plus 6 visible floor/guide deposits, using local UVs and existing mud maps. Exact base geometry,101travel fractions,41native/41software views and travel audits,1379dry-routeframes/106mesh audits, installedclient gameplay and local GPU timings verified. Two draws/1152triangles added; no maps/lights. Local V37 accepted; native timing regression and poor absolute software cost recorded. Full53scope/seven gates retained. Pass42: physical-scale cylindrical pipe art, swept east elbow, split clamp fittings, three repair sleeves and three torn insulation shells; north/outlet valve axes corrected and existing drips meet physical weep sockets.23native/23software views, actual E/pause/Q/reduced,1379dry-routeframes/106mesh audits and installedclient pass. New material/cell batches increase draws; no new maps/lights. Broad rust still needs concentrated joint staining/wetness and full-route composition review; V38 remains partial. Pass43: locally accepted V38 across physical network work and causal material finish. Quiet aged steel between fittings, irregular joint corrosion and independent dark wet sheen at three real leaks; extends to gallery cross-feeds, delivery riser and valve housings.35native/35software views plus2focused views each, actual E/pause/Q/reduced, 189network/113pump geometry parity,96552seam samples,all7actual shader profiles andinstalledclient verified.95488attribute bytes,no newimages/lights/geometry. Localtimings documented; whole-level performance/Level1 gates remain open. Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass52: generic iron/steel/brass/rust/red service hardware now shares existing627px machinery maps at2m/313.5texels per metre instead of128px/2m. Existing Lambert shaders and geometry retained;59actual hardware batch hashes match,28views per renderer and installedclient verified. Pump textures62to59, draw/triangle/program counts unchanged. Broader material/composition and allseven gates remain open. Pass53: mixed1.24-1.76m slabs, occasional corner repairs, nine collision-checked historical wear paths and corrected313.5samples/m floor quantization. Existing1024map alpha stores wear in rawDataTexture; baseline mud/sand/wet CPU/GPU channels match exactly within each renderer. Final39views per renderer,20floorbatch geometry hashes unchanged,3095wearcenter positions clear atplayer radius. Draw/triangle/texture/program counts unchanged; installedclient verified. FullLevel1/motion/performance gates remain open. Pass56: keeper desktop now stages an interrupted bypass-seal repair, open bowed night ledger with unfinished signature, connected pencil, tied survey packet, hollow enamel cup and localized wear. Four paper faces share one1024atlas replacing768x512log. Final26views per renderer,1872camera poses each, exact exterior-triangle hashes, real E release, opaque backing and installedclient pass. Added5draws/4050triangles at desk, same texture count, programs+2; estimatedatlas storage+3.33MiB. Broader route storytelling/Level1/performance acceptance remains open. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass105: a1254px grey-green range coating field and fixed-plane UV offsets replace the repeated627px peel field while preserving313.5texels/metre.70native/software paired views,27dark-range views/76motion frames and local cost verified. Broader material and whole-district composition acceptance remains open."
     },
     {
       "id": "V03",
@@ -42,9 +58,26 @@
         "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass23-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass23-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass30-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass34-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass42-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass52-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass69-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass81-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass91-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass104-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass105-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass107-2026-11-14.md"
       ],
-      "implementation_notes": "Quieter illustrated slab fields with chipped joint boundaries and separate sediment; other surface/actor finishing remains open. Pass17 replaces noisy masonry/concrete/ceramic with selected v3 pixel art: quiet faces, stepped chips, sparse damp mortar and aggregate. Native/software and responsive review plus source contrast measurements pass. Other material families and full grayscale acceptance remain open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open."
+      "implementation_notes": "Quieter illustrated slab fields with chipped joint boundaries and separate sediment; other surface/actor finishing remains open. Pass17 replaces noisy masonry/concrete/ceramic with selected v3 pixel art: quiet faces, stepped chips, sparse damp mortar and aggregate. Native/software and responsive review plus source contrast measurements pass. Other material families and full grayscale acceptance remain open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open. Pass30: dedicated1254square masonry field replaces paired eight-course strip;4x4m at313.5source texels/metre. More varied repairs/chips; unchanged draws/triangles/programs, about4MiB additional estimated map storage. Full-route repetition/filtering and other material acceptance remain open. Pass34: selected built-in generated1254square keeper timber replaces512canvasgrain at4m/313.5texels per metre on ceiling/furniture, no added maps/draws/geometry/lights.32native/32software views;285structural geometry hashes unchanged,3actualtimberbatches audited, stablecamera return and installedclient pass. About6.7MiB additional estimatedGPU texture storage and2,686,964encodedbytes. Broader requirement remains partial. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass42: physical-scale cylindrical pipe art, swept east elbow, split clamp fittings, three repair sleeves and three torn insulation shells; north/outlet valve axes corrected and existing drips meet physical weep sockets.23native/23software views, actual E/pause/Q/reduced,1379dry-routeframes/106mesh audits and installedclient pass. New material/cell batches increase draws; no new maps/lights. Broad rust still needs concentrated joint staining/wetness and full-route composition review; V38 remains partial. Pass43: locally accepted V38 across physical network work and causal material finish. Quiet aged steel between fittings, irregular joint corrosion and independent dark wet sheen at three real leaks; extends to gallery cross-feeds, delivery riser and valve housings.35native/35software views plus2focused views each, actual E/pause/Q/reduced, 189network/113pump geometry parity,96552seam samples,all7actual shader profiles andinstalledclient verified.95488attribute bytes,no newimages/lights/geometry. Localtimings documented; whole-level performance/Level1 gates remain open. Pass52: generic iron/steel/brass/rust/red service hardware now shares existing627px machinery maps at2m/313.5texels per metre instead of128px/2m. Existing Lambert shaders and geometry retained;59actual hardware batch hashes match,28views per renderer and installedclient verified. Pump textures62to59, draw/triangle/program counts unchanged. Broader material/composition and allseven gates remain open. Pass53: mixed1.24-1.76m slabs, occasional corner repairs, nine collision-checked historical wear paths and corrected313.5samples/m floor quantization. Existing1024map alpha stores wear in rawDataTexture; baseline mud/sand/wet CPU/GPU channels match exactly within each renderer. Final39views per renderer,20floorbatch geometry hashes unchanged,3095wearcenter positions clear atplayer radius. Draw/triangle/texture/program counts unchanged; installedclient verified. FullLevel1/motion/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass56: keeper desktop now stages an interrupted bypass-seal repair, open bowed night ledger with unfinished signature, connected pencil, tied survey packet, hollow enamel cup and localized wear. Four paper faces share one1024atlas replacing768x512log. Final26views per renderer,1872camera poses each, exact exterior-triangle hashes, real E release, opaque backing and installedclient pass. Added5draws/4050triangles at desk, same texture count, programs+2; estimatedatlas storage+3.33MiB. Broader route storytelling/Level1/performance acceptance remains open. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass69:22keeper tile fragments with original pixel-scale face sampling, irregular chipped outlines, exposed masonry and three opaque damp patches follow the existing root.34captures/1440camera poses perrenderer, closed-body/backing/UV unit, exact outside geometry, real E and installedclient verified. Added2963triangles/no new material, no newtextures/lights. Broader composition and allseven gates remain open. Final pigment is in the existing keeperStone shader; no overlay geometry/material. Final34views per renderer,1440clear cameras each, actualE and installedclient pass. Final sequential native/software timing and source hashes recorded in pass69QA; software cost +6-7ms remains open. Pass105: a1254px grey-green range coating field and fixed-plane UV offsets replace the repeated627px peel field while preserving313.5texels/metre.70native/software paired views,27dark-range views/76motion frames and local cost verified. Broader material and whole-district composition acceptance remains open."
     },
     {
       "id": "V04",
@@ -55,9 +88,21 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass17-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass30-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass34-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass102-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass104-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass105-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass106-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass107-2026-11-14.md"
       ],
-      "implementation_notes": "World-anchored deposit control across floor partitions and per-slab rotation/offset variation; final distant/motion repetition acceptance remains open. Pass17 pairs two coordinated brick variants into one four-metre-wide strip at unchanged pixel density and shader sample count. Existing world stains/slab variation remain. Vertical two-metre repeats and other material repetition still need full-route review."
+      "implementation_notes": "World-anchored deposit control across floor partitions and per-slab rotation/offset variation; final distant/motion repetition acceptance remains open. Pass17 pairs two coordinated brick variants into one four-metre-wide strip at unchanged pixel density and shader sample count. Existing world stains/slab variation remain. Vertical two-metre repeats and other material repetition still need full-route review. Pass30: dedicated1254square masonry field replaces paired eight-course strip;4x4m at313.5source texels/metre. More varied repairs/chips; unchanged draws/triangles/programs, about4MiB additional estimated map storage. Full-route repetition/filtering and other material acceptance remain open. Pass34: selected built-in generated1254square keeper timber replaces512canvasgrain at4m/313.5texels per metre on ceiling/furniture, no added maps/draws/geometry/lights.32native/32software views;285structural geometry hashes unchanged,3actualtimberbatches audited, stablecamera return and installedclient pass. About6.7MiB additional estimatedGPU texture storage and2,686,964encodedbytes. Broader requirement remains partial. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass53: mixed1.24-1.76m slabs, occasional corner repairs, nine collision-checked historical wear paths and corrected313.5samples/m floor quantization. Existing1024map alpha stores wear in rawDataTexture; baseline mud/sand/wet CPU/GPU channels match exactly within each renderer. Final39views per renderer,20floorbatch geometry hashes unchanged,3095wearcenter positions clear atplayer radius. Draw/triangle/texture/program counts unchanged; installedclient verified. FullLevel1/motion/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass105: a1254px grey-green range coating field and fixed-plane UV offsets replace the repeated627px peel field while preserving313.5texels/metre.70native/software paired views,27dark-range views/76motion frames and local cost verified. Broader material and whole-district composition acceptance remains open."
     },
     {
       "id": "V05",
@@ -72,9 +117,20 @@
         "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass23-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass23-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass34-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass72-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass90-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass91-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass93-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass107-2026-11-14.md"
       ],
-      "implementation_notes": "Separate RGB mud/sand/wetness control map and geometric mud profile; final all-material acceptance remains open. Pass17 confirms selected color maps remain independent of wetness and are not used as bump. Purposeful relief/material-family acceptance remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open."
+      "implementation_notes": "Separate RGB mud/sand/wetness control map and geometric mud profile; final all-material acceptance remains open. Pass17 confirms selected color maps remain independent of wetness and are not used as bump. Purposeful relief/material-family acceptance remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open. Pass34: selected built-in generated1254square keeper timber replaces512canvasgrain at4m/313.5texels per metre on ceiling/furniture, no added maps/draws/geometry/lights.32native/32software views;285structural geometry hashes unchanged,3actualtimberbatches audited, stablecamera return and installedclient pass. About6.7MiB additional estimatedGPU texture storage and2,686,964encodedbytes. Broader requirement remains partial. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass43: locally accepted V38 across physical network work and causal material finish. Quiet aged steel between fittings, irregular joint corrosion and independent dark wet sheen at three real leaks; extends to gallery cross-feeds, delivery riser and valve housings.35native/35software views plus2focused views each, actual E/pause/Q/reduced, 189network/113pump geometry parity,96552seam samples,all7actual shader profiles andinstalledclient verified.95488attribute bytes,no newimages/lights/geometry. Localtimings documented; whole-level performance/Level1 gates remain open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass72 adds localized gallery bark and runoff-film response using unchanged independent pigment/wetness maps and existing lamps; native/software31paired states each pass. No full-gallery, Level1 or performance acceptance."
     },
     {
       "id": "V06",
@@ -88,19 +144,38 @@
         "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass23-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass23-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass30-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass34-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass37-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass42-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass52-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass89-2026-11-14.md"
       ],
-      "implementation_notes": "Conservative fully-fogged static shading preserves geometry/depth and exact sampled pixels; small measured software gain, full performance/filtering gate remains open. Pass17 records actual2560x1600 native /960x600 software targets at matched viewport, nearest magnification/mipmapped minification, and identical lit-framebuffer camera round trips. Full motion/shimmer/resolution and Level1 parity gates remain open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open."
+      "implementation_notes": "Conservative fully-fogged static shading preserves geometry/depth and exact sampled pixels; small measured software gain, full performance/filtering gate remains open. Pass17 records actual2560x1600 native /960x600 software targets at matched viewport, nearest magnification/mipmapped minification, and identical lit-framebuffer camera round trips. Full motion/shimmer/resolution and Level1 parity gates remain open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open. Pass30: dedicated1254square masonry field replaces paired eight-course strip;4x4m at313.5source texels/metre. More varied repairs/chips; unchanged draws/triangles/programs, about4MiB additional estimated map storage. Full-route repetition/filtering and other material acceptance remain open. Pass34: selected built-in generated1254square keeper timber replaces512canvasgrain at4m/313.5texels per metre on ceiling/furniture, no added maps/draws/geometry/lights.32native/32software views;285structural geometry hashes unchanged,3actualtimberbatches audited, stablecamera return and installedclient pass. About6.7MiB additional estimatedGPU texture storage and2,686,964encodedbytes. Broader requirement remains partial. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass37: native1024wide route lettering, unchanged256gauge tags, physical washers/bolt sockets and fitted records edge tabs. Identicalfront/back art shared28to17textures, estimatedGPU storage+11.67MiB.37native/37software views,1098clear instruction rays,1379routeframes/106actor audits and installedclient verified; full-route lighting/readability acceptance remains open. Pass42: physical-scale cylindrical pipe art, swept east elbow, split clamp fittings, three repair sleeves and three torn insulation shells; north/outlet valve axes corrected and existing drips meet physical weep sockets.23native/23software views, actual E/pause/Q/reduced,1379dry-routeframes/106mesh audits and installedclient pass. New material/cell batches increase draws; no new maps/lights. Broad rust still needs concentrated joint staining/wetness and full-route composition review; V38 remains partial. Pass43: locally accepted V38 across physical network work and causal material finish. Quiet aged steel between fittings, irregular joint corrosion and independent dark wet sheen at three real leaks; extends to gallery cross-feeds, delivery riser and valve housings.35native/35software views plus2focused views each, actual E/pause/Q/reduced, 189network/113pump geometry parity,96552seam samples,all7actual shader profiles andinstalledclient verified.95488attribute bytes,no newimages/lights/geometry. Localtimings documented; whole-level performance/Level1 gates remain open. Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass52: generic iron/steel/brass/rust/red service hardware now shares existing627px machinery maps at2m/313.5texels per metre instead of128px/2m. Existing Lambert shaders and geometry retained;59actual hardware batch hashes match,28views per renderer and installedclient verified. Pump textures62to59, draw/triangle/program counts unchanged. Broader material/composition and allseven gates remain open. Pass53: mixed1.24-1.76m slabs, occasional corner repairs, nine collision-checked historical wear paths and corrected313.5samples/m floor quantization. Existing1024map alpha stores wear in rawDataTexture; baseline mud/sand/wet CPU/GPU channels match exactly within each renderer. Final39views per renderer,20floorbatch geometry hashes unchanged,3095wearcenter positions clear atplayer radius. Draw/triangle/texture/program counts unchanged; installedclient verified. FullLevel1/motion/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor."
     },
     {
       "id": "V07",
       "priority_scope": "P0 L",
       "requirement": "Rebuild key tunnel silhouettes with masonry vaults, irregular ribs, recessed courses and believable wall thickness.",
       "acceptance": "Root gallery reads as old drainage construction from front, oblique and rear views.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass1-2026-11-13.md"
-      ]
+        "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass74-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass75-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass77-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass103-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass104-2026-11-14.md"
+      ],
+      "implementation_notes": " Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass74:22bunkerbankedges receive closedcontouredfaces/unevenstrata and supportbearingpockets, preservingexistingillustratedsoil/sand/backings/coping.66parts/17464triangles;37views/4536camera poses/sixopacity probes perrenderer,1379dryrouteframes/106actorchecks and installedclient pass. No newmaps/lights/programs. Full composition/Level1/performance acceptance remains open. Pass77: closed curved entrance soffit with physically seated existing damage and fitted upper render; 7488 camera poses/10 opacity probes per renderer, 80 actor poses, route and installed client pass. Whole-scene and performance acceptance remain open. Pass104 acceptance from fresh pass103 front/oblique/reverse gallery views: closed masonry vaults, fitted ribs, recessed damaged render and supported services read as old drainage construction. Pass104 final gallery control matches baseline exactly on native/software. Specific V07 accepted; broader V11/composition and all release gates remain open."
     },
     {
       "id": "V08",
@@ -110,20 +185,32 @@
       "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass66-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass69-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass76-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass77-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass100-2026-11-14.md"
       ],
-      "implementation_notes": "Two solid-backed furnished keeper niches share rendered and software-occlusion wall splits; original floor/collision footprint retained. Final 3072 nearby camera poses clear."
+      "implementation_notes": "Two solid-backed furnished keeper niches share rendered and software-occlusion wall splits; original floor/collision footprint retained. Final 3072 nearby camera poses clear. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass66: localized gallery roof-root plaster failure,19thin closed chips and3receiver-matched damp patches. Initial out-of-bounds prototype corrected at actual gallery narrowing.32views/2688camera poses per renderer,144roof rays baseline/final,existing-geometry preservation,1379routeframes/106actor checks and installedclient verified. Added1384triangles/two local draws/two programs; no textures/lights. Full gallery/Level1/performance acceptance remains open. Pass69:22keeper tile fragments with original pixel-scale face sampling, irregular chipped outlines, exposed masonry and three opaque damp patches follow the existing root.34captures/1440camera poses perrenderer, closed-body/backing/UV unit, exact outside geometry, real E and installedclient verified. Added2963triangles/no new material, no newtextures/lights. Broader composition and allseven gates remain open. Final pigment is in the existing keeperStone shader; no overlay geometry/material. Final34views per renderer,1440clear cameras each, actualE and installedclient pass. Final sequential native/software timing and source hashes recorded in pass69QA; software cost +6-7ms remains open. Pass76: five chipped lime-render remnants with three brick windows, four seep trails and a localized west-wall floor fan interrupt the gallery brick rhythm. All five shells have closed oriented seams; native/software31view checks,2688camera poses each,9opacity probes each and installed input client pass. Existing maps/lights/colliders retained. Broader composition and allseven gates remain open. Draw-order experiment preserved18paired frames perrenderer but gave no software benefit and was removed; retainedscene byte-identical to full-suite/client build. Localsoftware cost remains unqualified under sharedhost contention. Pass77: closed curved entrance soffit with physically seated existing damage and fitted upper render; 7488 camera poses/10 opacity probes per renderer, 80 actor poses, route and installed client pass. Whole-scene and performance acceptance remain open."
     },
     {
       "id": "V09",
       "priority_scope": "P1 L",
       "requirement": "Give each district a different overhead profile: brick vault, bunker retaining structure, pump beams, range service supports, keeper ceiling.",
       "acceptance": "Location is recognizable with district labels hidden.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass3-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass31-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass33-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass67-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass86-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass105-2026-11-14.md"
       ],
-      "implementation_notes": "Bunker timber/earth and range metal-support ceilings implemented. Pump and keeper overhead composition still needs final treatment."
+      "implementation_notes": "Bunker timber/earth and range metal-support ceilings implemented. Pump and keeper overhead composition still needs final treatment. Pass31:31timber/steel overhead braces with real wall seats and fasteners; every added vertex above3.4m, shafts unchanged. Fixed black earth/timber by disabling inherited vertex colors on structural batches without a color attribute.28native/28software views, Q/pause/reduced and physical UV/clearance audits. Broader district/route acceptance remains open. Pass33: four riveted pump beams/service rack and twenty-board, three-beam keeper ceiling, 2796 triangles using existing maps/lights. Distinct gallery/bunker/pump/range/keeper profiles reviewed in 40native/40software views, 2016camera placements per renderer, 21gatefractions and48actor poses; actual E/Q/pause/reduced pass. Original shared material batching selected after direct grouping comparison. Broader material craft, full-route composition and release gates remain separate. Pass67: ten bunker shoring spans use varying heights/brace lengths,beveled closed timber,fitted roof packing and one reinforced western span;soil seams vary and taper out. Existingopaqueenclosure preserved.37pairedviews/4536camera poses/sixopacityprobes perrenderer;finalgrain-only refinement separately checked in8viewsperrenderer withposition/normalparity.1379routeframes/106actorchecks andinstalledclient pass. Net2928triangles,no newtextures/materials/lights/shaders;broadercomposition/Level1/performance remainopen. Pass105: a1254px grey-green range coating field and fixed-plane UV offsets replace the repeated627px peel field while preserving313.5texels/metre.70native/software paired views,27dark-range views/76motion frames and local cost verified. Broader material and whole-district composition acceptance remains open."
     },
     {
       "id": "V10",
@@ -132,9 +219,14 @@
       "acceptance": "Every void reads as a deliberate outdoor opening or enclosed space; opaque walls remain opaque at every distance. No return of trees through walls.",
       "status": "in_progress",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass3-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass31-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass32-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass74-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass75-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass97-2026-11-14.md"
       ],
-      "implementation_notes": "Opaque bunker/range roof panels and upper retaining faces, three real framed inspection wells, preserved keeper travel pocket. Area/raycast evidence recorded; final whole-level acceptance remains open."
+      "implementation_notes": "Opaque bunker/range roof panels and upper retaining faces, three real framed inspection wells, preserved keeper travel pocket. Area/raycast evidence recorded; final whole-level acceptance remains open. Pass31:31timber/steel overhead braces with real wall seats and fasteners; every added vertex above3.4m, shafts unchanged. Fixed black earth/timber by disabling inherited vertex colors on structural batches without a color attribute.28native/28software views, Q/pause/reduced and physical UV/clearance audits. Broader district/route acceptance remains open. Pass32: confirmed and sealed 6cm retaining-cap seam in 47 upper faces; same topology/materials/footprints. 4920 mesh rays and 21 gate positions pass; native34views with distant outside-sentinel occlusion pass. Full enclosure/Level1 release acceptance remains open. Pass74:22bunkerbankedges receive closedcontouredfaces/unevenstrata and supportbearingpockets, preservingexistingillustratedsoil/sand/backings/coping.66parts/17464triangles;37views/4536camera poses/sixopacity probes perrenderer,1379dryrouteframes/106actorchecks and installedclient pass. No newmaps/lights/programs. Full composition/Level1/performance acceptance remains open. Pass97: range failed lining expands into the main landing silhouette at unchanged height and physical UV scale. Folded seams, supported earth, larger roots and fitted lamp plate retain real attachment. Native/software33views each,1920camera poses each,96paired signal probes and80actual Joe poses pass. Local cost/resources documented; whole composition and software performance remain open."
     },
     {
       "id": "V11",
@@ -143,9 +235,25 @@
       "acceptance": "The first entrance, first crossing, pump return and sluice each have a deliberate composition in both travel directions.",
       "status": "in_progress",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass3-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass31-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass33-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass48-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass58-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass72-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass74-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass77-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass79-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass82-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass86-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass96-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass97-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass105-2026-11-14.md"
       ],
-      "implementation_notes": "Entrance root pillar, first-crossing tangle and bunker work-lamp/well provide landmarks. Pump return and sluice final composition still open."
+      "implementation_notes": "Entrance root pillar, first-crossing tangle and bunker work-lamp/well provide landmarks. Pump return and sluice final composition still open. Pass31:31timber/steel overhead braces with real wall seats and fasteners; every added vertex above3.4m, shafts unchanged. Fixed black earth/timber by disabling inherited vertex colors on structural batches without a color attribute.28native/28software views, Q/pause/reduced and physical UV/clearance audits. Broader district/route acceptance remains open. Pass33: four riveted pump beams/service rack and twenty-board, three-beam keeper ceiling, 2796 triangles using existing maps/lights. Distinct gallery/bunker/pump/range/keeper profiles reviewed in 40native/40software views, 2016camera placements per renderer, 21gatefractions and48actor poses; actual E/Q/pause/reduced pass. Original shared material batching selected after direct grouping comparison. Broader material craft, full-route composition and release gates remain separate. Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass48: first crossing plate raised above its projecting hood, first root knot moved to frame the lettering, sluice conduit bent around the release sign with correct spatial batching, and short-landscape water panel kept clear of physical signals. Final35native/35software views,2304crossing ink rays per renderer,357samples per sluice face,4176touch signal cases,2784camera poses/101gate fractions,1379routeframes/106actor audits and installedclient verified. Six gauge-back views and one distant retaining-post sightline remain documented; V50/full-route composition remain partial. All53requirements/seven gates retained; see QA for timing and evidence limits. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open. Pass58: the first gallery living pillar now carries two unequal root shoulders into real side walls, two subordinate forks, a returning braid and tapered feeders. Two new masonry penetrations use supported fractured courses. Final29views/2112camera poses per renderer, exact outside-triangle fingerprints,448masonry support samples,2304clear crossing-ink rays,1379route frames/106actor audits and installedclient pass. No new maps/materials/lights/colliders; whole-level art/performance acceptance remains open. Pass72 adds localized gallery bark and runoff-film response using unchanged independent pigment/wetness maps and existing lamps; native/software31paired states each pass. No full-gallery, Level1 or performance acceptance. Pass74:22bunkerbankedges receive closedcontouredfaces/unevenstrata and supportbearingpockets, preservingexistingillustratedsoil/sand/backings/coping.66parts/17464triangles;37views/4536camera poses/sixopacity probes perrenderer,1379dryrouteframes/106actorchecks and installedclient pass. No newmaps/lights/programs. Full composition/Level1/performance acceptance remains open. Pass77: closed curved entrance soffit with physically seated existing damage and fitted upper render; 7488 camera poses/10 opacity probes per renderer, 80 actor poses, route and installed client pass. Whole-scene and performance acceptance remain open. Pass79: existing pump work light moved forward, narrow inset casting bevels and four physical housing saddles improve front/base readability.31 states/2112 camera poses per renderer, 8487 low vertices/404 support samples, moving route and installed client verified. No new lamps/maps/colliders; local timings recorded. Whole-level art and performance gates remain open. Pass96: fitted keeper cabinet replaces repeated drawer grid with mixed doors/drawers, one splintered edge and real empty-drawer recess. Original worktop/story/light remain.32views and1872clearance poses perrenderer,1740opaque rays and actualE/client verified. Whole-room/whole-level acceptance and software cost remain open. Pass97: range failed lining expands into the main landing silhouette at unchanged height and physical UV scale. Folded seams, supported earth, larger roots and fitted lamp plate retain real attachment. Native/software33views each,1920camera poses each,96paired signal probes and80actual Joe poses pass. Local cost/resources documented; whole composition and software performance remain open. Pass105: a1254px grey-green range coating field and fixed-plane UV offsets replace the repeated627px peel field while preserving313.5texels/metre.70native/software paired views,27dark-range views/76motion frames and local cost verified. Broader material and whole-district composition acceptance remains open."
     },
     {
       "id": "V12",
@@ -154,9 +262,21 @@
       "acceptance": "Wear has structural causes; new decoration stays out of player, camera and scythe clearance.",
       "status": "in_progress",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass3-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass65-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass66-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass67-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass70-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass77-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass86-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass96-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass97-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass104-2026-11-14.md"
       ],
-      "implementation_notes": "Lifted masonry around roots and displaced repair edges added. Settled foundations and selective debris remain open."
+      "implementation_notes": "Lifted masonry around roots and displaced repair edges added. Settled foundations and selective debris remain open. Pass47: three closed elliptical barrel shells and all nine gallery ribs use170 fitted wedge stones, real reveals and physical arc-length UVs; authored material hook restored.179closed meshes/75overhead rays,31views/4032camera poses per renderer,1379route frames/106actor audits and installedclient pass. Added2320triangles, no added draws/textures/lights; software remains slow. Full architectural/composition acceptance remains open. Pass49: buried main/return root ends, 42 fractured entry fragments, tapered mortar cracks and properly seated soil/contact shade across six compositions. Final45views/6912camera poses/336actual masonry support samples per renderer, contact audit, route replay and installedclient verified. V15 locally implemented; broader material/composition and allseven gates remain open. SoftwareP95 regression and inadequate absolute cost retained inQA. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass65: three gallery root foundations gain irregular closed soil lobes and11seated masonry fragments, with25localized mud/moisture/failure masks inexistingflooratlas.1432triangles/1932sourcevertices, no newdraws/textures/materials/lights.27views and2688camera poses perrenderer, outsidegeometry/sand/wear parity,1379routeframes/106body-scythe checks pass. Initial continuous-ring shape corrected; finalUVflooralignment checked withunitassertion,3views perrenderer andinstalledclient. Broadgallery/district/fullLevel1/performance scope remains open; QA records local timing limits. Pass66: localized gallery roof-root plaster failure,19thin closed chips and3receiver-matched damp patches. Initial out-of-bounds prototype corrected at actual gallery narrowing.32views/2688camera poses per renderer,144roof rays baseline/final,existing-geometry preservation,1379routeframes/106actor checks and installedclient verified. Added1384triangles/two local draws/two programs; no textures/lights. Full gallery/Level1/performance acceptance remains open. Pass67: ten bunker shoring spans use varying heights/brace lengths,beveled closed timber,fitted roof packing and one reinforced western span;soil seams vary and taper out. Existingopaqueenclosure preserved.37pairedviews/4536camera poses/sixopacityprobes perrenderer;finalgrain-only refinement separately checked in8viewsperrenderer withposition/normalparity.1379routeframes/106actorchecks andinstalledclient pass. Net2928triangles,no newtextures/materials/lights/shaders;broadercomposition/Level1/performance remainopen. Pass70: east gallery roof failure has a closed irregular plaster lip, exposed opaque masonry and12unevenly grouped remnants; two causal floor sediment fans use the existing deposit map. Final29paired/responsive/control captures plus6state captures per renderer,2688clear cameras each, exact outside geometry/mask channels,1379dry-route frames/106Joe mesh checks and installedclient pass. Added2005triangles,no newmaps/materials/lights/colliders. Local composition refinement only; broader art/Level1/performance gates remain open. Pass77: closed curved entrance soffit with physically seated existing damage and fitted upper render; 7488 camera poses/10 opacity probes per renderer, 80 actor poses, route and installed client pass. Whole-scene and performance acceptance remain open. Pass96: fitted keeper cabinet replaces repeated drawer grid with mixed doors/drawers, one splintered edge and real empty-drawer recess. Original worktop/story/light remain.32views and1872clearance poses perrenderer,1740opaque rays and actualE/client verified. Whole-room/whole-level acceptance and software cost remain open. Pass97: range failed lining expands into the main landing silhouette at unchanged height and physical UV scale. Folded seams, supported earth, larger roots and fitted lamp plate retain real attachment. Native/software33views each,1920camera poses each,96paired signal probes and80actual Joe poses pass. Local cost/resources documented; whole composition and software performance remain open."
     },
     {
       "id": "V13",
@@ -167,9 +287,11 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass15-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass15-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md"
       ],
-      "implementation_notes": "Stable individual burls, unequal cross-sections, bark clefts and geometric shading, branch-position collars, continuous seam normals and thicker upper forks. Lower wall growth/pillar footprint preserved. Native/software close review, unchanged root topology, 3168camera poses and1379-frame route with106actor/scythe audits pass. Full material palette/density and whole-level quality gates remain separate open requirements."
+      "implementation_notes": "Stable individual burls, unequal cross-sections, bark clefts and geometric shading, branch-position collars, continuous seam normals and thicker upper forks. Lower wall growth/pillar footprint preserved. Native/software close review, unchanged root topology, 3168camera poses and1379-frame route with106actor/scythe audits pass. Full material palette/density and whole-level quality gates remain separate open requirements. Pass49: buried main/return root ends, 42 fractured entry fragments, tapered mortar cracks and properly seated soil/contact shade across six compositions. Final45views/6912camera poses/336actual masonry support samples per renderer, contact audit, route replay and installedclient verified. V15 locally implemented; broader material/composition and allseven gates remain open. SoftwareP95 regression and inadequate absolute cost retained inQA."
     },
     {
       "id": "V14",
@@ -178,22 +300,30 @@
       "acceptance": "Distinct silhouettes, quiet wall stretches and dense choke-point framing; no repeated root curtain.",
       "status": "in_progress",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass3-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass48-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass58-2026-11-14.md"
       ],
-      "implementation_notes": "Six distinct authored branch systems and reduced generic density/ceiling bundles implemented; root pillar adds a separate silhouette. Final whole-route art acceptance remains open."
+      "implementation_notes": "Six distinct authored branch systems and reduced generic density/ceiling bundles implemented; root pillar adds a separate silhouette. Final whole-route art acceptance remains open. Pass48: first crossing plate raised above its projecting hood, first root knot moved to frame the lettering, sluice conduit bent around the release sign with correct spatial batching, and short-landscape water panel kept clear of physical signals. Final35native/35software views,2304crossing ink rays per renderer,357samples per sluice face,4176touch signal cases,2784camera poses/101gate fractions,1379routeframes/106actor audits and installedclient verified. Six gauge-back views and one distant retaining-post sightline remain documented; V50/full-route composition remain partial. All53requirements/seven gates retained; see QA for timing and evidence limits. Pass49: buried main/return root ends, 42 fractured entry fragments, tapered mortar cracks and properly seated soil/contact shade across six compositions. Final45views/6912camera poses/336actual masonry support samples per renderer, contact audit, route replay and installedclient verified. V15 locally implemented; broader material/composition and allseven gates remain open. SoftwareP95 regression and inadequate absolute cost retained inQA. Pass58: the first gallery living pillar now carries two unequal root shoulders into real side walls, two subordinate forks, a returning braid and tapered feeders. Two new masonry penetrations use supported fractured courses. Final29views/2112camera poses per renderer, exact outside-triangle fingerprints,448masonry support samples,2304clear crossing-ink rays,1379route frames/106actor audits and installedclient pass. No new maps/materials/lights/colliders; whole-level art/performance acceptance remains open."
     },
     {
       "id": "V15",
       "priority_scope": "P1 L",
       "requirement": "Show where roots enter masonry: lifted bricks, cracked mortar, dirt wedges and contact shade.",
       "acceptance": "Roots feel embedded and load-bearing rather than pasted onto walls.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass15-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass16-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass16-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass58-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass69-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass70-2026-11-14.md"
       ],
-      "implementation_notes": "Six opaque crevices with displaced stones and moss now include18soil deposits beneath broken mortar. Contact ribbons track the sculpted width;70012positive-alpha vertices have actual masonry support. Final six-entry material/composition acceptance remains open."
+      "implementation_notes": "Six opaque crevices with displaced stones and moss now include18soil deposits beneath broken mortar. Contact ribbons track the sculpted width;70012positive-alpha vertices have actual masonry support. Final six-entry material/composition acceptance remains open. Pass49: buried main/return root ends, 42 fractured entry fragments, tapered mortar cracks and properly seated soil/contact shade across six compositions. Final45views/6912camera poses/336actual masonry support samples per renderer, contact audit, route replay and installedclient verified. V15 locally implemented; broader material/composition and allseven gates remain open. SoftwareP95 regression and inadequate absolute cost retained inQA. Pass58: the first gallery living pillar now carries two unequal root shoulders into real side walls, two subordinate forks, a returning braid and tapered feeders. Two new masonry penetrations use supported fractured courses. Final29views/2112camera poses per renderer, exact outside-triangle fingerprints,448masonry support samples,2304clear crossing-ink rays,1379route frames/106actor audits and installedclient pass. No new maps/materials/lights/colliders; whole-level art/performance acceptance remains open. Pass69:22keeper tile fragments with original pixel-scale face sampling, irregular chipped outlines, exposed masonry and three opaque damp patches follow the existing root.34captures/1440camera poses perrenderer, closed-body/backing/UV unit, exact outside geometry, real E and installedclient verified. Added2963triangles/no new material, no newtextures/lights. Broader composition and allseven gates remain open. Final pigment is in the existing keeperStone shader; no overlay geometry/material. Final34views per renderer,1440clear cameras each, actualE and installedclient pass. Final sequential native/software timing and source hashes recorded in pass69QA; software cost +6-7ms remains open. Pass70: east gallery roof failure has a closed irregular plaster lip, exposed opaque masonry and12unevenly grouped remnants; two causal floor sediment fans use the existing deposit map. Final29paired/responsive/control captures plus6state captures per renderer,2688clear cameras each, exact outside geometry/mask channels,1379dry-route frames/106Joe mesh checks and installedclient pass. Added2005triangles,no newmaps/materials/lights/colliders. Local composition refinement only; broader art/Level1/performance gates remain open."
     },
     {
       "id": "V16",
@@ -203,9 +333,11 @@
       "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass16-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass16-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass58-2026-11-14.md"
       ],
-      "implementation_notes": "Replaced regular moss beads with 12 irregular opaque pixel-art patches at six sheltered entries. Added 15 hardware / 9 software fine ceiling feeders at three knots above 2.7m; retained 48 / 24 wall hairs. Native/software close views, final camera/roof/controls checks, actual-surface support and installed client pass. Full-route motion and Level1 parity remain release gates."
+      "implementation_notes": "Replaced regular moss beads with 12 irregular opaque pixel-art patches at six sheltered entries. Added 15 hardware / 9 software fine ceiling feeders at three knots above 2.7m; retained 48 / 24 wall hairs. Native/software close views, final camera/roof/controls checks, actual-surface support and installed client pass. Full-route motion and Level1 parity remain release gates. Pass58: the first gallery living pillar now carries two unequal root shoulders into real side walls, two subordinate forks, a returning braid and tapered feeders. Two new masonry penetrations use supported fractured courses. Final29views/2112camera poses per renderer, exact outside-triangle fingerprints,448masonry support samples,2304clear crossing-ink rays,1379route frames/106actor audits and installedclient pass. No new maps/materials/lights/colliders; whole-level art/performance acceptance remains open."
     },
     {
       "id": "V17",
@@ -215,9 +347,18 @@
       "status": "in_progress",
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass4-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass35-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass62-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass65-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass83-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass100-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass106-2026-11-14.md"
       ],
-      "implementation_notes": "Rounded mud pockets taper into 1.8 cm smears; maximum projection reduced to 19.7 cm, full route geometry check passes. Final whole-route art acceptance remains open."
+      "implementation_notes": "Pass35: 103 continuous wall spans, irregular rounded deposits tapering to 4 mm film, 161 local chunks with 58 exact normal joins, maximum face offset 19.7 cm; root calls unchanged. Native/software close views and 1379-frame dry-route clearance pass. Close mud material and full-route/flood art acceptance remain open. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass62: 16 closed retaining-side mud deposits with exposed unequal shoulders and 16 catch grates/96 framed panels. Existing materials reused; no new lights/textures/colliders. Native/software 47 full views plus six remaining-channel views each, 4608 camera poses each, 1379 route frames/106 actor audits and installed client pass. Water surface hashes and gameplay states match baseline. Local contact progress; broad water composition, material integration and whole-level gates remain open. Pass65: three gallery root foundations gain irregular closed soil lobes and11seated masonry fragments, with25localized mud/moisture/failure masks inexistingflooratlas.1432triangles/1932sourcevertices, no newdraws/textures/materials/lights.27views and2688camera poses perrenderer, outsidegeometry/sand/wear parity,1379routeframes/106body-scythe checks pass. Initial continuous-ring shape corrected; finalUVflooralignment checked withunitassertion,3views perrenderer andinstalledclient. Broadgallery/district/fullLevel1/performance scope remains open; QA records local timing limits."
     },
     {
       "id": "V18",
@@ -228,9 +369,21 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass6-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass35-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass62-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass70-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass76-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass83-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass90-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass94-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass100-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass106-2026-11-14.md"
       ],
-      "implementation_notes": "Wet toe, compacted middle and drying margin; drainage-bank sediment and bunker sand fans. Trapped leaves/stones and final layering still needed. Pass 6: Six causal wet/dry sediment margins, two runoff grooves, four real pump-foot collars and trapped leaf clumps added; final all-material craft/lighting acceptance remains open."
+      "implementation_notes": "Wet toe, compacted middle and drying margin; drainage-bank sediment and bunker sand fans. Trapped leaves/stones and final layering still needed. Pass 6: Six causal wet/dry sediment margins, two runoff grooves, four real pump-foot collars and trapped leaf clumps added; final all-material craft/lighting acceptance remains open. Pass35: floor wet/mud aprons now share the actual bank profile, retaining outlet/puddle/runnel/bunker and pump-foot deposits. Final causal material layering remains open. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass62: 16 closed retaining-side mud deposits with exposed unequal shoulders and 16 catch grates/96 framed panels. Existing materials reused; no new lights/textures/colliders. Native/software 47 full views plus six remaining-channel views each, 4608 camera poses each, 1379 route frames/106 actor audits and installed client pass. Water surface hashes and gameplay states match baseline. Local contact progress; broad water composition, material integration and whole-level gates remain open. Pass70: east gallery roof failure has a closed irregular plaster lip, exposed opaque masonry and12unevenly grouped remnants; two causal floor sediment fans use the existing deposit map. Final29paired/responsive/control captures plus6state captures per renderer,2688clear cameras each, exact outside geometry/mask channels,1379dry-route frames/106Joe mesh checks and installedclient pass. Added2005triangles,no newmaps/materials/lights/colliders. Local composition refinement only; broader art/Level1/performance gates remain open. Pass76: five chipped lime-render remnants with three brick windows, four seep trails and a localized west-wall floor fan interrupt the gallery brick rhythm. All five shells have closed oriented seams; native/software31view checks,2688camera poses each,9opacity probes each and installed input client pass. Existing maps/lights/colliders retained. Broader composition and allseven gates remain open. Draw-order experiment preserved18paired frames perrenderer but gave no software benefit and was removed; retainedscene byte-identical to full-suite/client build. Localsoftware cost remains unqualified under sharedhost contention."
     },
     {
       "id": "V19",
@@ -250,13 +403,27 @@
       "priority_scope": "P0 L",
       "requirement": "Layer the floor into worn slabs, muddy joins, shallow runnels and localized puddles.",
       "acceptance": "The floor has readable large forms and does not resemble one repeated gravel sheet.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass6-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass65-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass70-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass76-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass83-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass90-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass91-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass93-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass94-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass100-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass106-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass107-2026-11-14.md"
       ],
-      "implementation_notes": "World-scale chipped slabs and muddy joints replace the competing small broken-floor pattern. Authored runnels and distinct localized puddles remain. Pass 6: Six shallow pools and two continuous runnels now layer the existing worn slabs and muddy joins; final matched Level 1 and movement-art acceptance remain open."
+      "implementation_notes": "World-scale chipped slabs and muddy joints replace the competing small broken-floor pattern. Authored runnels and distinct localized puddles remain. Pass 6: Six shallow pools and two continuous runnels now layer the existing worn slabs and muddy joins; final matched Level 1 and movement-art acceptance remain open. Pass36: dedicated1254square sediment albedo at4m/313.5texels per metre replaces fibrous mud quadrant; floor custom sampling matches bank scale. Independent wetness/no albedo bump;34native/34software views,285structural hashes and resource counts unchanged. Additional estimated6MiB GPU storage; whole-level material/route acceptance remains open. Pass53: mixed1.24-1.76m slabs, occasional corner repairs, nine collision-checked historical wear paths and corrected313.5samples/m floor quantization. Existing1024map alpha stores wear in rawDataTexture; baseline mud/sand/wet CPU/GPU channels match exactly within each renderer. Final39views per renderer,20floorbatch geometry hashes unchanged,3095wearcenter positions clear atplayer radius. Draw/triangle/texture/program counts unchanged; installedclient verified. FullLevel1/motion/performance gates remain open. Local V20 acceptance: current varied worn slabs/muddy joins plus previously verified six shallow pools and two runnels provide readable layered floor forms across reviewed districts. Global matched Level1 and complete movement-art gates remain separate and pending. Pass65: three gallery root foundations gain irregular closed soil lobes and11seated masonry fragments, with25localized mud/moisture/failure masks inexistingflooratlas.1432triangles/1932sourcevertices, no newdraws/textures/materials/lights.27views and2688camera poses perrenderer, outsidegeometry/sand/wear parity,1379routeframes/106body-scythe checks pass. Initial continuous-ring shape corrected; finalUVflooralignment checked withunitassertion,3views perrenderer andinstalledclient. Broadgallery/district/fullLevel1/performance scope remains open; QA records local timing limits. Pass70: east gallery roof failure has a closed irregular plaster lip, exposed opaque masonry and12unevenly grouped remnants; two causal floor sediment fans use the existing deposit map. Final29paired/responsive/control captures plus6state captures per renderer,2688clear cameras each, exact outside geometry/mask channels,1379dry-route frames/106Joe mesh checks and installedclient pass. Added2005triangles,no newmaps/materials/lights/colliders. Local composition refinement only; broader art/Level1/performance gates remain open. Pass76: five chipped lime-render remnants with three brick windows, four seep trails and a localized west-wall floor fan interrupt the gallery brick rhythm. All five shells have closed oriented seams; native/software31view checks,2688camera poses each,9opacity probes each and installed input client pass. Existing maps/lights/colliders retained. Broader composition and allseven gates remain open. Draw-order experiment preserved18paired frames perrenderer but gave no software benefit and was removed; retainedscene byte-identical to full-suite/client build. Localsoftware cost remains unqualified under sharedhost contention."
     },
     {
       "id": "V21",
@@ -277,9 +444,20 @@
       "status": "in_progress",
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass6-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass45-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass60-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass62-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass64-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass73-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass84-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass94-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass98-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass99-2026-11-14.md"
       ],
-      "implementation_notes": "Depth-dependent flood opacity and quieter murky channels; explicit shallow puddles and final material differentiation remain. Pass 6: Shallow translucent sediment pools are now distinct from opaque moving channels and deeper floodwater; complete water/lighting acceptance remains open."
+      "implementation_notes": "Depth-dependent flood opacity and quieter murky channels; explicit shallow puddles and final material differentiation remain. Pass 6: Shallow translucent sediment pools are now distinct from opaque moving channels and deeper floodwater; complete water/lighting acceptance remains open. Pass45: shallow shoreline transparency follows distance to the exact pool/runnel boundaries; stronger restrained practical-light sheen preserves visible paving. Flood normals now follow two broad slow waves. All8patches/33768coverage samples,96native and104software main views (8early reflected views excluded),6corrected focused views per renderer,36actual flood GPU samples each, pause/reduced/responsive and installedclient verified. Added6720triangles/188192geometry bytes overall, no newimages/lights/drawbatches. Localsoftware timing cost recorded; full water-art and performance acceptance remain open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass60: channel sediment/contact margins, 160samples/m, broken source-lit specular and continuous-phase two-wave optical normals; geometry/gameplay/resources unchanged. Final41views per renderer,198normal probes each, full12s pressure-cycle samples, pause/reduced/camera-return, installedclient and sequential budgets verified. Local improvement only; broad water composition, full motion/Level1 acceptance and software cost remain open. Pass62: 16 closed retaining-side mud deposits with exposed unequal shoulders and 16 catch grates/96 framed panels. Existing materials reused; no new lights/textures/colliders. Native/software 47 full views plus six remaining-channel views each, 4608 camera poses each, 1379 route frames/106 actor audits and installed client pass. Water surface hashes and gameplay states match baseline. Local contact progress; broad water composition, material integration and whole-level gates remain open. Pass64: borrowed existing sediment map at313.5texels/metre, refracted bed projection to real floor height, optical-depth/grazing attenuation and restrained murk.51views per renderer across8channels/4sizes, exact geometry/gameplay/resource parity, lights-out/cycle/pause/reduced/camera-return checks,32GPU ray/attenuation/occlusion probes per renderer and installedclient pass. No new textures/lights/geometry/draws. Local native median cost+0.4/+0.5ms atcrossing/outflow; software still slow. Flood material, broad shore/gallery composition and full-level gates remain open. Pass73: eight sloped, irregular-width catch-bank margins with shared physical contact heights, individually seated jet impacts and existing opaque source-lit sediment. Final native/software51captures each,645nonwatermesh fingerprints exact, allchannel phases/responsive views, real W/Q/crouch/pause/E and installedclient verified. +7680triangles total, no newdraws/maps/lights/programs. Broader water/art/motion/performance acceptance remains open. Pass84: dark silt flood surface, restrained broken lamp reflections and a world-anchored wall-contact field. Native/software 49 views, 4992 camera poses, motion/pause/reduced and GPU shore registration pass. Physical receiver and normal diagnostics pass natively. Added one 1.05MiB Red8 map; unchanged draws/geometry. Broad water composition and whole-level performance remain open; see QA84. Pass98: channel reflection uses two curved millimetre ripple families and grazing-angle source response; old separate brightness pattern removed. Native/software51views and198GPU normal readings each, full pressure cycle, lights-out equality, same geometry/state/resources, pause/reduced and stable camera return verified. Broader water/illustration and performance acceptance remain open; final cost/client evidence in QA. Pass99: irregular channel-normal fields and narrower/dimmer source reflections remove the repeated sine-band appearance. Native/software local views and independent GPU slope checks pass; broader water/composition/performance acceptance remains open."
     },
     {
       "id": "V23",
@@ -290,9 +468,11 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass12-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass13-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass13-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass73-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass81-2026-11-14.md"
       ],
-      "implementation_notes": "Pass12 natural droplets/gravity fans/dissipating impact clouds plus pass13 capped render-aware footprints and restrained actual-lamp backlighting. Final hardware/software eight-view comparisons, trajectories/positions/caps, rear/pause/reduced, light response, dense state/clearance and installed client pass. Individual local water-art requirement accepted; full dark-value, reflection, Level1parity and performance gates remain open."
+      "implementation_notes": "Pass12 natural droplets/gravity fans/dissipating impact clouds plus pass13 capped render-aware footprints and restrained actual-lamp backlighting. Final hardware/software eight-view comparisons, trajectories/positions/caps, rear/pause/reduced, light response, dense state/clearance and installed client pass. Individual local water-art requirement accepted; full dark-value, reflection, Level1parity and performance gates remain open. Pass73: eight sloped, irregular-width catch-bank margins with shared physical contact heights, individually seated jet impacts and existing opaque source-lit sediment. Final native/software51captures each,645nonwatermesh fingerprints exact, allchannel phases/responsive views, real W/Q/crouch/pause/E and installedclient verified. +7680triangles total, no newdraws/maps/lights/programs. Broader water/art/motion/performance acceptance remains open."
     },
     {
       "id": "V24",
@@ -303,9 +483,13 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass25-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass25-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass73-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass81-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass94-2026-11-14.md"
       ],
-      "implementation_notes": "Bounded contact history for player stride, actual animated Joe feet, real blade-water intersection and three physical pipe drips; reset/pause/dry suppression verified. Final cross-district visual acceptance remains. Pass 6: Shared shallow-pool/runnel boundaries now drive real contact ripples; browser movement produces four pool foot contacts. Final whole-level art acceptance remains open. Pass25 locally accepted: allsix shallow-pool input contacts,allthree physical drip arrivals,actual animated Joe/player feet andrendered blade-water contact,fading/expiry,pause/reduced/reset,18native/15software main views plus11districtviews per renderer. Full-level art gates remain separate."
+      "implementation_notes": "Bounded contact history for player stride, actual animated Joe feet, real blade-water intersection and three physical pipe drips; reset/pause/dry suppression verified. Final cross-district visual acceptance remains. Pass 6: Shared shallow-pool/runnel boundaries now drive real contact ripples; browser movement produces four pool foot contacts. Final whole-level art acceptance remains open. Pass25 locally accepted: allsix shallow-pool input contacts,allthree physical drip arrivals,actual animated Joe/player feet andrendered blade-water contact,fading/expiry,pause/reduced/reset,18native/15software main views plus11districtviews per renderer. Full-level art gates remain separate. Pass73: eight sloped, irregular-width catch-bank margins with shared physical contact heights, individually seated jet impacts and existing opaque source-lit sediment. Final native/software51captures each,645nonwatermesh fingerprints exact, allchannel phases/responsive views, real W/Q/crouch/pause/E and installedclient verified. +7680triangles total, no newdraws/maps/lights/programs. Broader water/art/motion/performance acceptance remains open."
     },
     {
       "id": "V25",
@@ -316,22 +500,35 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass8-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass12-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass12-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass44-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass45-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass60-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass73-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass84-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass98-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass99-2026-11-14.md"
       ],
-      "implementation_notes": "All 17 fixed practical sources remain authoritative. Pass 12 desaturates silty spray while preserving lamp intensity; cold-view cyan contribution falls about 67\u201370 percent in sampled views. Final hardware/software/client verification passes. Full reflection and wet-surface art acceptance remains open."
+      "implementation_notes": "All 17 fixed practical sources remain authoritative. Pass 12 desaturates silty spray while preserving lamp intensity; cold-view cyan contribution falls about 67\u201370 percent in sampled views. Final hardware/software/client verification passes. Full reflection and wet-surface art acceptance remains open. Pass44: corrected channel/puddle local wave normals using the existing per-mesh normalMatrix in the fragment shader. Final native/software actual GPU readback (66before/66after each),64views/75camera steps each, responsive/flood/pause/reduced and installed-client gameplay pass. No new textures, lights, geometry, attributes or varyings. Local timing medians stable after replacing the more expensive intermediate basis; software channel P95 and absolute software performance remain concerns. Shallow/channel/flood art distinction and full reflection acceptance remain open. Pass45: shallow shoreline transparency follows distance to the exact pool/runnel boundaries; stronger restrained practical-light sheen preserves visible paving. Flood normals now follow two broad slow waves. All8patches/33768coverage samples,96native and104software main views (8early reflected views excluded),6corrected focused views per renderer,36actual flood GPU samples each, pause/reduced/responsive and installedclient verified. Added6720triangles/188192geometry bytes overall, no newimages/lights/drawbatches. Localsoftware timing cost recorded; full water-art and performance acceptance remain open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass60: channel sediment/contact margins, 160samples/m, broken source-lit specular and continuous-phase two-wave optical normals; geometry/gameplay/resources unchanged. Final41views per renderer,198normal probes each, full12s pressure-cycle samples, pause/reduced/camera-return, installedclient and sequential budgets verified. Local improvement only; broad water composition, full motion/Level1 acceptance and software cost remain open. Pass73: eight sloped, irregular-width catch-bank margins with shared physical contact heights, individually seated jet impacts and existing opaque source-lit sediment. Final native/software51captures each,645nonwatermesh fingerprints exact, allchannel phases/responsive views, real W/Q/crouch/pause/E and installedclient verified. +7680triangles total, no newdraws/maps/lights/programs. Broader water/art/motion/performance acceptance remains open. Pass84: dark silt flood surface, restrained broken lamp reflections and a world-anchored wall-contact field. Native/software 49 views, 4992 camera poses, motion/pause/reduced and GPU shore registration pass. Physical receiver and normal diagnostics pass natively. Added one 1.05MiB Red8 map; unchanged draws/geometry. Broad water composition and whole-level performance remain open; see QA84. Pass98: channel reflection uses two curved millimetre ripple families and grazing-angle source response; old separate brightness pattern removed. Native/software51views and198GPU normal readings each, full pressure cycle, lights-out equality, same geometry/state/resources, pause/reduced and stable camera return verified. Broader water/illustration and performance acceptance remain open; final cost/client evidence in QA. Pass99: irregular channel-normal fields and narrower/dimmer source reflections remove the repeated sine-band appearance. Native/software local views and independent GPU slope checks pass; broader water/composition/performance acceptance remains open."
     },
     {
       "id": "V26",
       "priority_scope": "P1 L",
       "requirement": "Give a flood rise convincing edges: climbing waterline, darkened wall bases and debris lifting at onset.",
       "acceptance": "Visual height agrees with gameplay depth throughout rise/recession; no water through sealed walls; the keeper floor participates in the whole-level flood, while elevated records and shelves remain dry according to their actual height.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass84-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass90-2026-11-14.md"
       ],
-      "implementation_notes": "Wall waterline/residual film and 29 clumps follow physical flood depth. User requested whole-level rise: keeper floor remains flooded; protected records/shelves sit above maximum .38m depth. Dry-refuge wording corrected to match that explicit requirement. Final flood edge/art acceptance remains open."
+      "implementation_notes": "Wall waterline/residual film and 29 clumps follow physical flood depth. User requested whole-level rise: keeper floor remains flooded; protected records/shelves sit above maximum .38m depth. Dry-refuge wording corrected to match that explicit requirement. Final flood edge/art acceptance remains open. Pass46: physical flood wetness binds102opaque meshes/19material variants; real-height GPU diagnostics and201-time physical coverage/debris audit pass on both renderers. No new geometry/images/lights. Full water art and performance remain open. Pass84: dark silt flood surface, restrained broken lamp reflections and a world-anchored wall-contact field. Native/software 49 views, 4992 camera poses, motion/pause/reduced and GPU shore registration pass. Physical receiver and normal diagnostics pass natively. Added one 1.05MiB Red8 map; unchanged draws/geometry. Broad water composition and whole-level performance remain open; see QA84."
     },
     {
       "id": "V27",
@@ -349,14 +546,23 @@
       "priority_scope": "P0 L",
       "requirement": "Recompose light around actual fixtures, with warm refuge areas, cold service lights and dark intervals.",
       "acceptance": "Depth and material edges remain legible without lifting every surface equally.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass8-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass8-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass61-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass80-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass82-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass86-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass88-2026-11-14.md"
       ],
-      "implementation_notes": "Replaced two viewer-nearest sources with all17fixed world practicals, including distant keeper illumination. Conservative per-batch source bounds and preserved Three lighting equations match all-lamps reference in tested views. Full district composition/shadows and software performance remain unfinished."
+      "implementation_notes": "Replaced two viewer-nearest sources with all17fixed world practicals, including distant keeper illumination. Conservative per-batch source bounds and preserved Three lighting equations match all-lamps reference in tested views. Full district composition/shadows and software performance remain unfinished. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass59: moved the existing pump work fixture beside the motor and added smooth downward hood distribution with12%spill. Native/software29views and2112camera poses each, exact outside-geometry fingerprints, real E/pause/Q/crouch,1379routeframes/106actor audits, installedclient and stock spotlight oracle pass. No added lights/maps/colliders; programs169to207. Shared-load timing is provisional; software cost remains poor and operator/gallery samples worsened. Full53requirements/48refinements/seven gates remain open. Pass61: existing gallery-entry lamp moved beside the living root shoulder; physical roof hanger/glass/source follow. Four native candidates compared; final29views/4320camera poses per renderer, outside-geometry parity, E/pause/Q/reduced,1379routeframes/106actor samples and installedclient pass. No added lights/maps; local+12triangles and programs207to211. Broader reference-bay/Level1 and software performance remain open. Pass80: finite-light exclusion tests original part bounds; software uses shorter longitudinal groups, native preserves original grouping.31 native framebuffers exact;30/31 software exact,17 bounded bunker edge pixels differ. Full triangle attributes, world lamps and interaction states retained. Turning cost improves locally; software performance gate remains unresolved."
     },
     {
       "id": "V29",
@@ -366,9 +572,14 @@
       "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass10-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass10-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass68-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass88-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass92-2026-11-14.md"
       ],
-      "implementation_notes": "Implemented world-anchored wall/floor, root/masonry and machinery contact shade plus actual-shoe-centered feathered foot shade. All70,047positive-alpha root vertices supported by real masonry triangles; close/medium/flood/actor views inspected, world attachment and measured incremental cost verified. Overall matched Level1 and full-route release gates remain pending."
+      "implementation_notes": "Implemented world-anchored wall/floor, root/masonry and machinery contact shade plus actual-shoe-centered feathered foot shade. All70,047positive-alpha root vertices supported by real masonry triangles; close/medium/flood/actor views inspected, world attachment and measured incremental cost verified. Overall matched Level1 and full-route release gates remain pending. Pass49: buried main/return root ends, 42 fractured entry fragments, tapered mortar cracks and properly seated soil/contact shade across six compositions. Final45views/6912camera poses/336actual masonry support samples per renderer, contact audit, route replay and installedclient verified. V15 locally implemented; broader material/composition and allseven gates remain open. SoftwareP95 regression and inadequate absolute cost retained inQA. Pass68: software-only frustum compaction of909contact pieces preserves both original transparent batches and every visible pixel in43pairedviews perrenderer. Complete index/attribute/bounds/order checks, enabled-state restoration, stationary uploads, disposal and installedclient pass. Native unchanged. Local timings are modest/mixed under shared-host load; fullperformance and allseven gates remain open."
     },
     {
       "id": "V30",
@@ -377,33 +588,45 @@
       "acceptance": "Shadow tracks the real actor and light, stays behind opaque geometry and does not reveal hidden pursuit speed through walls.",
       "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass27-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass27-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md"
       ],
-      "implementation_notes": "Pass27: real animated body/scythe projected onto three authored floor receivers from actual practical lamps; stencil union prevents stacked limb opacity. Same observer rule plus speed/pace and light sight guards suppress hidden pursuit. Final32native/32software views include Q lookback, fresh run, pause, Reduced Motion, attacks and flood; sampled world pose error0, behind-wall pixels identical. Native/software budget and stencil controls pass; active14draws/19762triangles, no added sampled textures/render targets/lights. Software absolute frame time remains poor and all whole-level gates stay open."
+      "implementation_notes": "Pass27: real animated body/scythe projected onto three authored floor receivers from actual practical lamps; stencil union prevents stacked limb opacity. Same observer rule plus speed/pace and light sight guards suppress hidden pursuit. Final32native/32software views include Q lookback, fresh run, pause, Reduced Motion, attacks and flood; sampled world pose error0, behind-wall pixels identical. Native/software budget and stencil controls pass; active14draws/19762triangles, no added sampled textures/render targets/lights. Software absolute frame time remains poor and all whole-level gates stay open. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open."
     },
     {
       "id": "V31",
       "priority_scope": "P0 L",
       "requirement": "Refine fixtures themselves: dirty glass, cages, ceramic bases, wire runs, dim filaments and broken housings.",
       "acceptance": "Lamps look physically installed; bright surfaces have internal structure rather than plain luminous rectangles.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass38-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass39-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass61-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass79-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass82-2026-11-14.md"
       ],
-      "implementation_notes": "Four native pixel dirty/ribbed glass variants with socket, leads and narrow filament now replace flat luminous panes in the existing cage/hood fixtures. Shared 256x256 atlas, one lens batch; full district fixture/art acceptance remains open."
+      "implementation_notes": "Four native pixel dirty/ribbed glass variants with socket, leads and narrow filament now replace flat luminous panes in the existing cage/hood fixtures. Shared 256x256 atlas, one lens batch; full district fixture/art acceptance remains open. Pass38: shallow pressed-glass crowns plus cable loops/two glands on all17 lamps.45native/45software views verify physical fixtures and clock agreement;1379dry-routeframes/106mesh audits and installedclient pass. No new maps/lights/draws,4216added triangles. V31 still needs selective housing damage/wear; V32 still needs darkest-phase critical cue/attack review. Pass39 locally accepts V31: authored3chipped/3bent/2riveted-repair hoods,9intact; closed solids and actual repairs above glass,within prior envelopes.45native/45software views across17fixtures,all8affected housings inspected,1379dry-routeframes/106mesh audits and installedclient pass.228addedtriangles,no newdraws/maps/materials/lights. Physical installation/internal light detail now verified across fixture set; wholeLevel1/encounter/performance gates remain open. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open. Pass59: moved the existing pump work fixture beside the motor and added smooth downward hood distribution with12%spill. Native/software29views and2112camera poses each, exact outside-geometry fingerprints, real E/pause/Q/crouch,1379routeframes/106actor audits, installedclient and stock spotlight oracle pass. No added lights/maps/colliders; programs169to207. Shared-load timing is provisional; software cost remains poor and operator/gallery samples worsened. Full53requirements/48refinements/seven gates remain open. Pass61: existing gallery-entry lamp moved beside the living root shoulder; physical roof hanger/glass/source follow. Four native candidates compared; final29views/4320camera poses per renderer, outside-geometry parity, E/pause/Q/reduced,1379routeframes/106actor samples and installedclient pass. No added lights/maps; local+12triangles and programs207to211. Broader reference-bay/Level1 and software performance remain open. Pass79: existing pump work light moved forward, narrow inset casting bevels and four physical housing saddles improve front/base readability.31 states/2112 camera poses per renderer, 8487 low vertices/404 support samples, moving route and installed client verified. No new lamps/maps/colliders; local timings recorded. Whole-level art and performance gates remain open."
     },
     {
       "id": "V32",
       "priority_scope": "P1 L",
       "requirement": "Tune existing independent flicker into authored slow dips and recoveries that affect nearby surfaces consistently.",
       "acceptance": "No synchronized strobe; critical crossing/attack cues remain readable; Reduced Motion offers steady light.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
         "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass8-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass8-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass38-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass40-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md"
       ],
-      "implementation_notes": "Detailed lenses and all surface/actor illumination now share independent source flicker regardless of camera location. Camera-independent source records and Reduced Motion are verified in pass8 reports; full dim-encounter art acceptance remains open."
+      "implementation_notes": "Detailed lenses and all surface/actor illumination now share independent source flicker regardless of camera location. Camera-independent source records and Reduced Motion are verified in pass8 reports; full dim-encounter art acceptance remains open. Pass38: shallow pressed-glass crowns plus cable loops/two glands on all17 lamps.45native/45software views verify physical fixtures and clock agreement;1379dry-routeframes/106mesh audits and installedclient pass. No new maps/lights/draws,4216added triangles. V31 still needs selective housing damage/wear; V32 still needs darkest-phase critical cue/attack review. Pass40 locally accepts V32: all8crossings/29applicable states and5district attack views at real low-light candidate times;96native/96software captures plus380complete-sequence frames perrenderer, actual signal material states and blade pose parity.17clocks240s/120Hz bounded and reducedsteady. Existing pass38 source/glass/glow agreement retained. No brightness/runtime changes needed. Search uses attenuation heuristic, not absolute pixel minima; allwholelevel gates remain open. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open."
     },
     {
       "id": "V33",
@@ -412,9 +635,10 @@
       "acceptance": "Air separates layers without bleaching silhouettes or hiding navigable edges.",
       "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass11-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass11-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md"
       ],
-      "implementation_notes": "Six localized humidity pockets; final hardware/software visibility, wall occlusion, flood, rear glance, pause and Reduced Motion checks pass. Installed client completed five artifact pairs; final playing state and desktop/portrait/landscape captures inspected. Full-level performance and Level 1 parity gates remain pending."
+      "implementation_notes": "Six localized humidity pockets; final hardware/software visibility, wall occlusion, flood, rear glance, pause and Reduced Motion checks pass. Installed client completed five artifact pairs; final playing state and desktop/portrait/landscape captures inspected. Full-level performance and Level 1 parity gates remain pending. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open."
     },
     {
       "id": "V34",
@@ -423,9 +647,15 @@
       "acceptance": "Near-black cloth, brown mud and green-black water remain distinguishable on normal display brightness; vignette does not hide flank threats or controls.",
       "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass28-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass28-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass72-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass92-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass93-2026-11-14.md"
       ],
-      "implementation_notes": "Pass28: luminance-matched neutral fill, bounded hue-preserving shadow-detail grade;26general+6corrected threat views per renderer, eight channel materials excluded, isolated hardware/software timing. Full Level1 parity and release gates remain open."
+      "implementation_notes": "Pass28: luminance-matched neutral fill, bounded hue-preserving shadow-detail grade;26general+6corrected threat views per renderer, eight channel materials excluded, isolated hardware/software timing. Full Level1 parity and release gates remain open. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass72 adds localized gallery bark and runoff-film response using unchanged independent pigment/wetness maps and existing lamps; native/software31paired states each pass. No full-gallery, Level1 or performance acceptance."
     },
     {
       "id": "V35",
@@ -436,9 +666,12 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass20-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass20-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass79-2026-11-14.md"
       ],
-      "implementation_notes": "Locally accepted across passes2/19/20: centrifugal casting, finned motor, joined coupling, bolted cover, rounded continuous delivery, flange hardware, casing seal and independent corroded feet; dedicated627px/m paint/metal/rust. Close/front/rear/oblique native and software review; real operating control now echoes rounded red intro grip. Native924camera placements and1379frame dry-route/106mesh checks pass. Whole-level art/performance gates remain separate and open."
+      "implementation_notes": "Locally accepted across passes2/19/20: centrifugal casting, finned motor, joined coupling, bolted cover, rounded continuous delivery, flange hardware, casing seal and independent corroded feet; dedicated627px/m paint/metal/rust. Close/front/rear/oblique native and software review; real operating control now echoes rounded red intro grip. Native924camera placements and1379frame dry-route/106mesh checks pass. Whole-level art/performance gates remain separate and open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass59: moved the existing pump work fixture beside the motor and added smooth downward hood distribution with12%spill. Native/software29views and2112camera poses each, exact outside-geometry fingerprints, real E/pause/Q/crouch,1379routeframes/106actor audits, installedclient and stock spotlight oracle pass. No added lights/maps/colliders; programs169to207. Shared-load timing is provisional; software cost remains poor and operator/gallery samples worsened. Full53requirements/48refinements/seven gates remain open. Pass79: existing pump work light moved forward, narrow inset casting bevels and four physical housing saddles improve front/base readability.31 states/2112 camera poses per renderer, 8487 low vertices/404 support samples, moving route and installed client verified. No new lamps/maps/colliders; local timings recorded. Whole-level art and performance gates remain open."
     },
     {
       "id": "V36",
@@ -449,31 +682,38 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass20-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass20-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass79-2026-11-14.md"
       ],
-      "implementation_notes": "Locally accepted: tapered beveled red cast lever/rounded chipped grip,512px aged dials,256px separate cracked glass above real needles and below fitted bezel, rubber seals/brackets. Actual E/pause/pressure gauge/latch/release tests at four viewports; glass/needle separation3.5mm,gripradius0.48m,924camera placements clear. Motion and full-route geometry audits pass. No action banners or control changes."
+      "implementation_notes": "Locally accepted: tapered beveled red cast lever/rounded chipped grip,512px aged dials,256px separate cracked glass above real needles and below fitted bezel, rubber seals/brackets. Actual E/pause/pressure gauge/latch/release tests at four viewports; glass/needle separation3.5mm,gripradius0.48m,924camera placements clear. Motion and full-route geometry audits pass. No action banners or control changes. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass59: moved the existing pump work fixture beside the motor and added smooth downward hood distribution with12%spill. Native/software29views and2112camera poses each, exact outside-geometry fingerprints, real E/pause/Q/crouch,1379routeframes/106actor audits, installedclient and stock spotlight oracle pass. No added lights/maps/colliders; programs169to207. Shared-load timing is provisional; software cost remains poor and operator/gallery samples worsened. Full53requirements/48refinements/seven gates remain open. Pass79: existing pump work light moved forward, narrow inset casting bevels and four physical housing saddles improve front/base readability.31 states/2112 camera poses per renderer, 8487 low vertices/404 support samples, moving route and installed client verified. No new lamps/maps/colliders; local timings recorded. Whole-level art and performance gates remain open."
     },
     {
       "id": "V37",
       "priority_scope": "P1 L",
       "requirement": "Rebuild the sluice with weight: rails, roller housings, seals, worn travel marks and accumulated muck.",
       "acceptance": "Opening/closing shows a mechanically plausible path with no clipping or detached parts.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass2-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass41-2026-11-13.md"
       ],
-      "implementation_notes": "Gate guide bearing housings, seals, wear tracks, recessed panel bolts and corroded bases implemented. More accumulated sediment and final scene composition remain open."
+      "implementation_notes": "Gate guide bearing housings, seals, wear tracks, recessed panel bolts and corroded bases implemented. More accumulated sediment and final scene composition remain open. Pass41: restored moving-panel machinery density and added 10 lower-rail plus 6 visible floor/guide deposits, using local UVs and existing mud maps. Exact base geometry,101travel fractions,41native/41software views and travel audits,1379dry-routeframes/106mesh audits, installedclient gameplay and local GPU timings verified. Two draws/1152triangles added; no maps/lights. Local V37 accepted; native timing regression and poor absolute software cost recorded. Full53scope/seven gates retained."
     },
     {
       "id": "V38",
       "priority_scope": "P1 L",
       "requirement": "Make pipes a connected system with elbows, repair sleeves, supports, insulation remnants and localized leaks.",
       "acceptance": "Pipes meet fittings; rust and dampness concentrate at joints.",
-      "status": "in_progress",
+      "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass2-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass42-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass48-2026-11-13.md"
       ],
-      "implementation_notes": "Pump delivery line now has continuous curved geometry, flanges, bolts and a roof hanger. Whole-level network repair sleeves, insulation and leak treatment remain open."
+      "implementation_notes": "Pump delivery line now has continuous curved geometry, flanges, bolts and a roof hanger. Whole-level network repair sleeves, insulation and leak treatment remain open. Pass42: physical-scale cylindrical pipe art, swept east elbow, split clamp fittings, three repair sleeves and three torn insulation shells; north/outlet valve axes corrected and existing drips meet physical weep sockets.23native/23software views, actual E/pause/Q/reduced,1379dry-routeframes/106mesh audits and installedclient pass. New material/cell batches increase draws; no new maps/lights. Broad rust still needs concentrated joint staining/wetness and full-route composition review; V38 remains partial. Pass43: locally accepted V38 across physical network work and causal material finish. Quiet aged steel between fittings, irregular joint corrosion and independent dark wet sheen at three real leaks; extends to gallery cross-feeds, delivery riser and valve housings.35native/35software views plus2focused views each, actual E/pause/Q/reduced, 189network/113pump geometry parity,96552seam samples,all7actual shader profiles andinstalledclient verified.95488attribute bytes,no newimages/lights/geometry. Localtimings documented; whole-level performance/Level1 gates remain open. Pass48: first crossing plate raised above its projecting hood, first root knot moved to frame the lettering, sluice conduit bent around the release sign with correct spatial batching, and short-landscape water panel kept clear of physical signals. Final35native/35software views,2304crossing ink rays per renderer,357samples per sluice face,4176touch signal cases,2784camera poses/101gate fractions,1379routeframes/106actor audits and installedclient verified. Six gauge-back views and one distant retaining-post sightline remain documented; V50/full-route composition remain partial. All53requirements/seven gates retained; see QA for timing and evidence limits."
     },
     {
       "id": "V39",
@@ -482,9 +722,12 @@
       "acceptance": "The room reads as a former workplace with one narrative focal point, not scattered generic clutter.",
       "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass69-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass96-2026-11-14.md"
       ],
-      "implementation_notes": "Implemented and visually inspected recessed damaged desk, layered damp records, six empty boot-pair slots, framed eighteenth-green drainage plan, empty scythe hooks/outline and surviving rake. No extra colliders. Native2560x1600 and responsive/software checks, opaque recess backing, 3072 camera poses and 21 gate positions pass."
+      "implementation_notes": "Implemented and visually inspected recessed damaged desk, layered damp records, six empty boot-pair slots, framed eighteenth-green drainage plan, empty scythe hooks/outline and surviving rake. No extra colliders. Native2560x1600 and responsive/software checks, opaque recess backing, 3072 camera poses and 21 gate positions pass. Pass56: keeper desktop now stages an interrupted bypass-seal repair, open bowed night ledger with unfinished signature, connected pencil, tied survey packet, hollow enamel cup and localized wear. Four paper faces share one1024atlas replacing768x512log. Final26views per renderer,1872camera poses each, exact exterior-triangle hashes, real E release, opaque backing and installedclient pass. Added5draws/4050triangles at desk, same texture count, programs+2; estimatedatlas storage+3.33MiB. Broader route storytelling/Level1/performance acceptance remains open. Pass69:22keeper tile fragments with original pixel-scale face sampling, irregular chipped outlines, exposed masonry and three opaque damp patches follow the existing root.34captures/1440camera poses perrenderer, closed-body/backing/UV unit, exact outside geometry, real E and installedclient verified. Added2963triangles/no new material, no newtextures/lights. Broader composition and allseven gates remain open. Final pigment is in the existing keeperStone shader; no overlay geometry/material. Final34views per renderer,1440clear cameras each, actualE and installedclient pass. Final sequential native/software timing and source hashes recorded in pass69QA; software cost +6-7ms remains open. Pass96: fitted keeper cabinet replaces repeated drawer grid with mixed doors/drawers, one splintered edge and real empty-drawer recess. Original worktop/story/light remain.32views and1872clearance poses perrenderer,1740opaque rays and actualE/client verified. Whole-room/whole-level acceptance and software cost remain open."
     },
     {
       "id": "V40",
@@ -495,9 +738,10 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass67-2026-11-14.md"
       ],
-      "implementation_notes": "Eighteenth-green course/drainage plan reinforces the subterranean golf-course identity. Other golf traces and full route identity acceptance remain open."
+      "implementation_notes": "Eighteenth-green course/drainage plan reinforces the subterranean golf-course identity. Other golf traces and full route identity acceptance remain open. Pass67: ten bunker shoring spans use varying heights/brace lengths,beveled closed timber,fitted roof packing and one reinforced western span;soil seams vary and taper out. Existingopaqueenclosure preserved.37pairedviews/4536camera poses/sixopacityprobes perrenderer;finalgrain-only refinement separately checked in8viewsperrenderer withposition/normalparity.1379routeframes/106actorchecks andinstalledclient pass. Net2928triangles,no newtextures/materials/lights/shaders;broadercomposition/Level1/performance remainopen."
     },
     {
       "id": "V41",
@@ -506,9 +750,11 @@
       "acceptance": "Each arrangement communicates a specific story without new explanatory banners.",
       "status": "in_progress",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass7-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass86-2026-11-14.md"
       ],
-      "implementation_notes": "Raised records and an empty scythe rack with surviving rake form authored narrative arrangements without banners. Abandoned-repair compositions remain open."
+      "implementation_notes": "Raised records and an empty scythe rack with surviving rake form authored narrative arrangements without banners. Abandoned-repair compositions remain open. Pass56: keeper desktop now stages an interrupted bypass-seal repair, open bowed night ledger with unfinished signature, connected pencil, tied survey packet, hollow enamel cup and localized wear. Four paper faces share one1024atlas replacing768x512log. Final26views per renderer,1872camera poses each, exact exterior-triangle hashes, real E release, opaque backing and installedclient pass. Added5draws/4050triangles at desk, same texture count, programs+2; estimatedatlas storage+3.33MiB. Broader route storytelling/Level1/performance acceptance remains open."
     },
     {
       "id": "V42",
@@ -587,7 +833,9 @@
       "evidence": [
         "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass25-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass25-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass78-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass81-2026-11-14.md"
       ],
       "implementation_notes": "Three sparse pipe drips with calculated arrival ripples; Reduced Motion suppresses incidental drip animation. Remaining environmental motion still open. Pass 6: Shallow pool contact disturbance and restrained drifting debris added; remaining motivated pipe/root/environment animation still open. Pass25 adds restrained real-contact droplet fans at feet/blade/drip arrivals; Reduced Motion keeps subdued ripples. Remaining motivated pipe/root motion stays open."
     },
@@ -611,9 +859,11 @@
       "status": "in_progress",
       "evidence": [
         "qa/under-green-visual-upgrade-pass9-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass14-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass14-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass37-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass48-2026-11-13.md"
       ],
-      "implementation_notes": "All14plates use lit weathered enamel, crisp fitted lettering, backing thickness and real bolts. First crossing has a fitted side frame and a narrower two-line instruction plate for portrait framing. Actual-triangle probes reproduce94blocked baseline samples; candidate text region and projected plate bounds are verified separately. Material names sanitize whitespace to prevent multiline labels breaking GLSL compilation. Full route/flicker/distance readability acceptance remains open."
+      "implementation_notes": "All14plates use lit weathered enamel, crisp fitted lettering, backing thickness and real bolts. First crossing has a fitted side frame and a narrower two-line instruction plate for portrait framing. Actual-triangle probes reproduce94blocked baseline samples; candidate text region and projected plate bounds are verified separately. Material names sanitize whitespace to prevent multiline labels breaking GLSL compilation. Full route/flicker/distance readability acceptance remains open. Pass37: native1024wide route lettering, unchanged256gauge tags, physical washers/bolt sockets and fitted records edge tabs. Identicalfront/back art shared28to17textures, estimatedGPU storage+11.67MiB.37native/37software views,1098clear instruction rays,1379routeframes/106actor audits and installedclient verified; full-route lighting/readability acceptance remains open. Pass47 close upward approach (0,18,pitch.25) shows the first signal hood obscuring part of the lower instruction line; V50 remains partial pending mounting/readability correction. Pass48: first crossing plate raised above its projecting hood, first root knot moved to frame the lettering, sluice conduit bent around the release sign with correct spatial batching, and short-landscape water panel kept clear of physical signals. Final35native/35software views,2304crossing ink rays per renderer,357samples per sluice face,4176touch signal cases,2784camera poses/101gate fractions,1379routeframes/106actor audits and installedclient verified. Six gauge-back views and one distant retaining-post sightline remain documented; V50/full-route composition remain partial. All53requirements/seven gates retained; see QA for timing and evidence limits."
     },
     {
       "id": "V51",
@@ -622,9 +872,11 @@
       "acceptance": "E/Q remain consistent; banners do not announce actions or duplicate sound cues. Required hazard/accessibility information stays available.",
       "status": "implemented",
       "evidence": [
-        "qa/under-green-visual-upgrade-pass18-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass18-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass48-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass63-2026-11-14.md"
       ],
-      "implementation_notes": "Locally accepted against fresh Level 1 DOM HUD references: Courier/ivory/gold/translucent square panels, concise persistent objective, full paused instructions, compact water row and separate landscape accessibility captions. 51 accepted views across four sizes; actual E/Q/pump/pause/stance/controller/touch/sluice checks pass. Compact closure commitment remains visible during rear glance. No default action/sound banner. Full environment parity and all whole-level gates remain open."
+      "implementation_notes": "Locally accepted against fresh Level 1 DOM HUD references: Courier/ivory/gold/translucent square panels, concise persistent objective, full paused instructions, compact water row and separate landscape accessibility captions. 51 accepted views across four sizes; actual E/Q/pump/pause/stance/controller/touch/sluice checks pass. Compact closure commitment remains visible during rear glance. No default action/sound banner. Full environment parity and all whole-level gates remain open. Pass48: first crossing plate raised above its projecting hood, first root knot moved to frame the lettering, sluice conduit bent around the release sign with correct spatial batching, and short-landscape water panel kept clear of physical signals. Final35native/35software views,2304crossing ink rays per renderer,357samples per sluice face,4176touch signal cases,2784camera poses/101gate fractions,1379routeframes/106actor audits and installedclient verified. Six gauge-back views and one distant retaining-post sightline remain documented; V50/full-route composition remain partial. All53requirements/seven gates retained; see QA for timing and evidence limits. Pass63: crossing countdown/coaching is now explicit chapter-only opt-in, off by default. Physical signals/spray/audio and independent sound descriptions remain. Native/software20views each preserve exact scene pixels/state/resources; four viewport layouts, first crossing, pause/reload/entrance retry, E/Q, storage failure, controller/touch checkbox and installed client verified. Full environment/motion/performance gates remain open."
     },
     {
       "id": "V52",
@@ -639,9 +891,19 @@
         "qa/under-green-visual-upgrade-pass20-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
         "qa/under-green-visual-upgrade-pass22-2026-11-13.md",
-        "qa/under-green-visual-upgrade-pass23-2026-11-13.md"
+        "qa/under-green-visual-upgrade-pass23-2026-11-13.md",
+        "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass58-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass60-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass61-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass62-2026-11-14.md",
+        "qa/under-green-visual-upgrade-pass82-2026-11-14.md"
       ],
-      "implementation_notes": "Pump now has an industrial silhouette, green corroded paint, red controls and fitted dial hardware. Complete illustration/gameplay parity remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass20: rounded worn red grip, fitted gauge seals and physically separate cracked glass now more closely match the intro; full lamp/architecture/actor/prop coherence still open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass22 ghost retains one draw/no material maps; scene draw/triangle/texture/program counts unchanged in matched views, +247616bytes attributes. Finalnative/software and installedclient reachgameplay. Full timing/startup/memory acceptance remains open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open."
+      "implementation_notes": "Pump now has an industrial silhouette, green corroded paint, red controls and fitted dial hardware. Complete illustration/gameplay parity remains open. Pass19: dedicated green/metal/red/rust pixel master at627texels/metre on fixed/dynamic machine parts, independent damp mask, corrected release UV scale. Native/software close and actual E/pause/needle/latch/gate checks pass. More prop/contact finish and full Level1/illustration cohesion remain open. Pass20: rounded worn red grip, fitted gauge seals and physically separate cracked glass now more closely match the intro; full lamp/architecture/actor/prop coherence still open. Pass21: local scythe pixel material/geometry refinement verified native/software and through attacks/route clearance; -8 draws, +472 triangles per visible actor, four maps about6.83MiB. Broader requirement and full-level timing/memory acceptance remain open. Pass22 ghost retains one draw/no material maps; scene draw/triangle/texture/program counts unchanged in matched views, +247616bytes attributes. Finalnative/software and installedclient reachgameplay. Full timing/startup/memory acceptance remains open. Pass23: original Level1 pixel maps plus matching blue collar/48-step palette; material-separated non-emissive response and actual contact-driven cuffs/hems/shoes. Final30native/27software views, wetness contracts and installed client inspected. No new maps/draws;227904attribute bytes. Full-level cohesion/performance remain open. Pass50: all17fixed fixtures gain named warm/cold route profiles and coherent power across surfaces, glass, glow, humidity and actor shadow.33before/after/responsive views plus96dark-state views/380attack frames per renderer; actual source/instance agreement, pause/Q/reduced and installedclient verified. V28 locally implemented. No new geometry/maps/lights/programs/draws; fullLevel1/performance gates remain open. Pass55: material-specific damp response on15existing materials, six thinner vertical wet masks gated by existing seep patterns, and pump enamel/iron separation.37views per renderer,370unchanged meshes, exact lights-out and source pigment comparisons, installedclient and local GPU timings verified. No extra textures/lights/geometry; programs+10. Broader composition/material and allseven gates remain open; software performance poor. Pass56: keeper desktop now stages an interrupted bypass-seal repair, open bowed night ledger with unfinished signature, connected pencil, tied survey packet, hollow enamel cup and localized wear. Four paper faces share one1024atlas replacing768x512log. Final26views per renderer,1872camera poses each, exact exterior-triangle hashes, real E release, opaque backing and installedclient pass. Added5draws/4050triangles at desk, same texture count, programs+2; estimatedatlas storage+3.33MiB. Broader route storytelling/Level1/performance acceptance remains open. Pass57: 133 shaped bunker coping stones, eight closed soil spills and two fitted repairs replace the continuous metal cap while retaining opaque overlap. Individual illustrated stone-face UVs prevent nested brick patterns. Final33views and4536camera poses per renderer, six exterior-opacity probes each, exact outside-triangle fingerprints and1379dry-route frames/106actor audits pass. Installedclient finalplaying,noerrors. Local refinement only; full material/composition/performance acceptance remains open. Pass58: the first gallery living pillar now carries two unequal root shoulders into real side walls, two subordinate forks, a returning braid and tapered feeders. Two new masonry penetrations use supported fractured courses. Final29views/2112camera poses per renderer, exact outside-triangle fingerprints,448masonry support samples,2304clear crossing-ink rays,1379route frames/106actor audits and installedclient pass. No new maps/materials/lights/colliders; whole-level art/performance acceptance remains open. Pass59: moved the existing pump work fixture beside the motor and added smooth downward hood distribution with12%spill. Native/software29views and2112camera poses each, exact outside-geometry fingerprints, real E/pause/Q/crouch,1379routeframes/106actor audits, installedclient and stock spotlight oracle pass. No added lights/maps/colliders; programs169to207. Shared-load timing is provisional; software cost remains poor and operator/gallery samples worsened. Full53requirements/48refinements/seven gates remain open. Pass60: channel sediment/contact margins, 160samples/m, broken source-lit specular and continuous-phase two-wave optical normals; geometry/gameplay/resources unchanged. Final41views per renderer,198normal probes each, full12s pressure-cycle samples, pause/reduced/camera-return, installedclient and sequential budgets verified. Local improvement only; broad water composition, full motion/Level1 acceptance and software cost remain open. Pass61: existing gallery-entry lamp moved beside the living root shoulder; physical roof hanger/glass/source follow. Four native candidates compared; final29views/4320camera poses per renderer, outside-geometry parity, E/pause/Q/reduced,1379routeframes/106actor samples and installedclient pass. No added lights/maps; local+12triangles and programs207to211. Broader reference-bay/Level1 and software performance remain open. Pass62: 16 closed retaining-side mud deposits with exposed unequal shoulders and 16 catch grates/96 framed panels. Existing materials reused; no new lights/textures/colliders. Native/software 47 full views plus six remaining-channel views each, 4608 camera poses each, 1379 route frames/106 actor audits and installed client pass. Water surface hashes and gameplay states match baseline. Local contact progress; broad water composition, material integration and whole-level gates remain open."
     },
     {
       "id": "V53",
@@ -662,34 +924,506 @@
     "district_identity": "pending"
   },
   "passes": [
-    {"id": 1, "qa": "qa/under-green-visual-upgrade-pass1-2026-11-13.md", "scope": "Material foundation, roots/mud profiles, selected vaults and fixture detail; remaining item requirements still open"},
-    {"id": 2, "qa": "qa/under-green-visual-upgrade-pass2-2026-11-13.md", "scope": "Hero pump geometry/control art and sluice mechanical detail; no claim of all-item or release-gate completion"},
-    {"id": 3, "qa": "qa/under-green-visual-upgrade-pass3-2026-11-13.md", "scope": "Authored roots, wall repairs, bunker/range enclosure and damp masks; remaining53-item requirements/release gates stay open"},
-    {"id": 4, "qa": "qa/under-green-visual-upgrade-pass4-2026-11-13.md", "scope": "Ground slab forms, causal sediment and rounded mud pockets; all original item requirements and seven release gates retained"},
-    {"id": 5, "qa": "qa/under-green-visual-upgrade-pass5-2026-11-13.md", "scope": "Natural spray, contact ripples and flood wall film; original53requirements and seven acceptance gates retained"},
-    {"id": 6, "qa": "qa/under-green-visual-upgrade-pass6-2026-11-13.md", "scope": "Shallow pools/runoff, historical traces and flood-responsive leaf/silt debris; all 53 requirements and seven release gates retained"},
-    {"id": 7, "qa": "qa/under-green-visual-upgrade-pass7-2026-11-13.md", "scope": "Recessed keeper workplace/storytelling and detailed practical lamp glass; all 53 requirements and seven release gates retained"},
-    {"id": 8, "qa": "qa/under-green-visual-upgrade-pass8-2026-11-13.md", "scope": "Fixed world practical illumination, conservative material source sets and local wet-surface partitions; software pacing and all seven release gates remain open"},
-    {"id": 9, "qa": "qa/under-green-visual-upgrade-pass9-2026-11-13.md", "scope": "Depth-preserving far-fog shading and weathered physical sign art; all53requirements/seven release gates retained"},
-    {"id": 10, "qa": "qa/under-green-visual-upgrade-pass10-2026-11-13.md", "scope": "Surface-bound contact shading and actual-shoe foot grounding; projected Joe shadows and all full-scope release gates remain open"},
-    {"id": 11, "qa": "qa/under-green-visual-upgrade-pass11-2026-11-13.md", "scope": "Localized humidity and reduced uniform foreground haze; all53requirements/seven release gates retained"},
-    {"id": 12, "qa": "qa/under-green-visual-upgrade-pass12-2026-11-13.md", "scope": "Natural spray breakup and color; all 53 requirements and seven release gates retained"},
-    {"id": 13, "qa": "qa/under-green-visual-upgrade-pass13-2026-11-13.md", "scope": "Spray readability and physical signal finish; all53requirements/seven release gates retained"},
-    {"id": 14, "qa": "qa/under-green-visual-upgrade-pass14-2026-11-13.md", "scope": "Unobstructed first-crossing sign mount; measured and rejected depth-prepass experiment. Full visual scope and performance gate remain open."},
-    {"id": 15, "qa": "qa/under-green-visual-upgrade-pass15-2026-11-13.md", "scope": "Sculpted root cross-sections, actual branch collars, bark clefts and upper volume; soil contact advances. All53requirements/seven release gates retained."},
-    {"id": 16, "qa": "qa/under-green-visual-upgrade-pass16-2026-11-13.md", "scope": "Selective opaque pixel-art moss, algae, mineral, tide and fungal growth; fine ceiling feeders and real receiver placement. All 53 requirements and seven release gates retained."},
-    {"id": 17, "qa": "qa/under-green-visual-upgrade-pass17-2026-11-13.md", "scope": "Selected pixel-art masonry/concrete/ceramic master,paired brick variants and explicit density; native/software/responsive comparison. All53requirements/seven gates retained."},
-    {"id": 18, "qa": "qa/under-green-visual-upgrade-pass18-2026-11-13.md", "scope": "Level 1 HUD typography/panel coherence and compact objectives; responsive water/accessibility/closure clarity. All 53 requirements and seven release gates retained."},
-    {"id": 19, "qa": "qa/under-green-visual-upgrade-pass19-2026-11-13.md", "scope": "Dedicated close machinery pixel materials, physical UV density and independent wetness; actual pump/release checks. All53requirements/sevenreleasegates retained."},
-    {"id": 20, "qa": "qa/under-green-visual-upgrade-pass20-2026-11-13.md", "scope": "Locally accepted hero pump/control finishing: rounded cast grip, separate cracked glass/aged dial, fitted seals; live mechanisms and geometry verified. All53requirements/sevenreleasegates retained."},
-    {"id": 21, "qa": "qa/under-green-visual-upgrade-pass21-2026-11-13.md", "scope": "V44 locally accepted: curved forged scythe, thin physical edge, authored pixel surfaces, socket hardware; native/software and dynamic geometry verified. Full53requirements/sevenreleasegates retained."},
-    {"id": 22, "qa": "qa/under-green-visual-upgrade-pass22-2026-11-13.md", "scope": "V47 locally accepted: dark internally shaded walking ghosts, soft spatial fade and restrained metal reflections; allfive sites, occlusion and lifecycle verified. All53requirements/sevenreleasegates retained."},
-    {"id": 23, "qa": "qa/under-green-visual-upgrade-pass23-2026-11-13.md", "scope": "V42/V43 locally accepted: Level1 character identity and contact-driven local mud/dampness. All53requirements/sevenreleasegates retained."},
-    {"id": 24, "qa": "qa/under-green-visual-upgrade-pass24-2026-11-13.md", "scope": "V45 locally accepted: sequenced attack body weight and smooth interrupted recovery; actual blade/hand/foot/route checks. All53requirements/sevenreleasegates retained."},
-    {"id": 25, "qa": "qa/under-green-visual-upgrade-pass25-2026-11-13.md", "scope": "V24 locally accepted with cross-district contacts; V46 water impact implemented but stone/root response remains open. All53requirements/sevenreleasegates retained."},
-    {"id": 26, "qa": "qa/under-green-visual-upgrade-pass26-2026-11-13.md", "scope": "Physical masonry/root strike response, shared authored organic collision geometry and clear-path recovery; V46 locally implemented alongside pass25 water. All53requirements/seven gates retained."},
-    {"id": 27, "qa": "qa/under-green-visual-upgrade-pass27-2026-11-13.md", "scope": "V30 selected practical-light floor shadows locally accepted with actual skin/scythe projection, stencil union, hidden-speed suppression and measured local budget. All53requirements/seven gates retained."},
-    {"id": 28, "qa": "qa/under-green-visual-upgrade-pass28-2026-11-13.md", "scope": "V34 locally accepted; all53requirements/seven gates retained."},
-    {"id": 29, "qa": "qa/under-green-visual-upgrade-pass29-2026-11-13.md", "scope": "Root texture density corrected; V02 remains in_progress. Full53requirements/seven gates retained."}
-  ]
+    {
+      "id": 1,
+      "qa": "qa/under-green-visual-upgrade-pass1-2026-11-13.md",
+      "scope": "Material foundation, roots/mud profiles, selected vaults and fixture detail; remaining item requirements still open"
+    },
+    {
+      "id": 2,
+      "qa": "qa/under-green-visual-upgrade-pass2-2026-11-13.md",
+      "scope": "Hero pump geometry/control art and sluice mechanical detail; no claim of all-item or release-gate completion"
+    },
+    {
+      "id": 3,
+      "qa": "qa/under-green-visual-upgrade-pass3-2026-11-13.md",
+      "scope": "Authored roots, wall repairs, bunker/range enclosure and damp masks; remaining53-item requirements/release gates stay open"
+    },
+    {
+      "id": 4,
+      "qa": "qa/under-green-visual-upgrade-pass4-2026-11-13.md",
+      "scope": "Ground slab forms, causal sediment and rounded mud pockets; all original item requirements and seven release gates retained"
+    },
+    {
+      "id": 5,
+      "qa": "qa/under-green-visual-upgrade-pass5-2026-11-13.md",
+      "scope": "Natural spray, contact ripples and flood wall film; original53requirements and seven acceptance gates retained"
+    },
+    {
+      "id": 6,
+      "qa": "qa/under-green-visual-upgrade-pass6-2026-11-13.md",
+      "scope": "Shallow pools/runoff, historical traces and flood-responsive leaf/silt debris; all 53 requirements and seven release gates retained"
+    },
+    {
+      "id": 7,
+      "qa": "qa/under-green-visual-upgrade-pass7-2026-11-13.md",
+      "scope": "Recessed keeper workplace/storytelling and detailed practical lamp glass; all 53 requirements and seven release gates retained"
+    },
+    {
+      "id": 8,
+      "qa": "qa/under-green-visual-upgrade-pass8-2026-11-13.md",
+      "scope": "Fixed world practical illumination, conservative material source sets and local wet-surface partitions; software pacing and all seven release gates remain open"
+    },
+    {
+      "id": 9,
+      "qa": "qa/under-green-visual-upgrade-pass9-2026-11-13.md",
+      "scope": "Depth-preserving far-fog shading and weathered physical sign art; all53requirements/seven release gates retained"
+    },
+    {
+      "id": 10,
+      "qa": "qa/under-green-visual-upgrade-pass10-2026-11-13.md",
+      "scope": "Surface-bound contact shading and actual-shoe foot grounding; projected Joe shadows and all full-scope release gates remain open"
+    },
+    {
+      "id": 11,
+      "qa": "qa/under-green-visual-upgrade-pass11-2026-11-13.md",
+      "scope": "Localized humidity and reduced uniform foreground haze; all53requirements/seven release gates retained"
+    },
+    {
+      "id": 12,
+      "qa": "qa/under-green-visual-upgrade-pass12-2026-11-13.md",
+      "scope": "Natural spray breakup and color; all 53 requirements and seven release gates retained"
+    },
+    {
+      "id": 13,
+      "qa": "qa/under-green-visual-upgrade-pass13-2026-11-13.md",
+      "scope": "Spray readability and physical signal finish; all53requirements/seven release gates retained"
+    },
+    {
+      "id": 14,
+      "qa": "qa/under-green-visual-upgrade-pass14-2026-11-13.md",
+      "scope": "Unobstructed first-crossing sign mount; measured and rejected depth-prepass experiment. Full visual scope and performance gate remain open."
+    },
+    {
+      "id": 15,
+      "qa": "qa/under-green-visual-upgrade-pass15-2026-11-13.md",
+      "scope": "Sculpted root cross-sections, actual branch collars, bark clefts and upper volume; soil contact advances. All53requirements/seven release gates retained."
+    },
+    {
+      "id": 16,
+      "qa": "qa/under-green-visual-upgrade-pass16-2026-11-13.md",
+      "scope": "Selective opaque pixel-art moss, algae, mineral, tide and fungal growth; fine ceiling feeders and real receiver placement. All 53 requirements and seven release gates retained."
+    },
+    {
+      "id": 17,
+      "qa": "qa/under-green-visual-upgrade-pass17-2026-11-13.md",
+      "scope": "Selected pixel-art masonry/concrete/ceramic master,paired brick variants and explicit density; native/software/responsive comparison. All53requirements/seven gates retained."
+    },
+    {
+      "id": 18,
+      "qa": "qa/under-green-visual-upgrade-pass18-2026-11-13.md",
+      "scope": "Level 1 HUD typography/panel coherence and compact objectives; responsive water/accessibility/closure clarity. All 53 requirements and seven release gates retained."
+    },
+    {
+      "id": 19,
+      "qa": "qa/under-green-visual-upgrade-pass19-2026-11-13.md",
+      "scope": "Dedicated close machinery pixel materials, physical UV density and independent wetness; actual pump/release checks. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 20,
+      "qa": "qa/under-green-visual-upgrade-pass20-2026-11-13.md",
+      "scope": "Locally accepted hero pump/control finishing: rounded cast grip, separate cracked glass/aged dial, fitted seals; live mechanisms and geometry verified. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 21,
+      "qa": "qa/under-green-visual-upgrade-pass21-2026-11-13.md",
+      "scope": "V44 locally accepted: curved forged scythe, thin physical edge, authored pixel surfaces, socket hardware; native/software and dynamic geometry verified. Full53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 22,
+      "qa": "qa/under-green-visual-upgrade-pass22-2026-11-13.md",
+      "scope": "V47 locally accepted: dark internally shaded walking ghosts, soft spatial fade and restrained metal reflections; allfive sites, occlusion and lifecycle verified. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 23,
+      "qa": "qa/under-green-visual-upgrade-pass23-2026-11-13.md",
+      "scope": "V42/V43 locally accepted: Level1 character identity and contact-driven local mud/dampness. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 24,
+      "qa": "qa/under-green-visual-upgrade-pass24-2026-11-13.md",
+      "scope": "V45 locally accepted: sequenced attack body weight and smooth interrupted recovery; actual blade/hand/foot/route checks. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 25,
+      "qa": "qa/under-green-visual-upgrade-pass25-2026-11-13.md",
+      "scope": "V24 locally accepted with cross-district contacts; V46 water impact implemented but stone/root response remains open. All53requirements/sevenreleasegates retained."
+    },
+    {
+      "id": 26,
+      "qa": "qa/under-green-visual-upgrade-pass26-2026-11-13.md",
+      "scope": "Physical masonry/root strike response, shared authored organic collision geometry and clear-path recovery; V46 locally implemented alongside pass25 water. All53requirements/seven gates retained."
+    },
+    {
+      "id": 27,
+      "qa": "qa/under-green-visual-upgrade-pass27-2026-11-13.md",
+      "scope": "V30 selected practical-light floor shadows locally accepted with actual skin/scythe projection, stencil union, hidden-speed suppression and measured local budget. All53requirements/seven gates retained."
+    },
+    {
+      "id": 28,
+      "qa": "qa/under-green-visual-upgrade-pass28-2026-11-13.md",
+      "scope": "V34 locally accepted; all53requirements/seven gates retained."
+    },
+    {
+      "id": 29,
+      "qa": "qa/under-green-visual-upgrade-pass29-2026-11-13.md",
+      "scope": "Root texture density corrected; V02 remains in_progress. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 30,
+      "qa": "qa/under-green-visual-upgrade-pass30-2026-11-13.md",
+      "scope": "Dedicated full-height masonry art; V03/V04/V06 remain partial. All53requirements/seven release gates retained."
+    },
+    {
+      "id": 31,
+      "qa": "qa/under-green-visual-upgrade-pass31-2026-11-13.md",
+      "scope": "Bunker/range overhead bracing and invalid vertex-color correction; V09/V10/V11 remain in_progress. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 35,
+      "qa": "qa/under-green-visual-upgrade-pass35-2026-11-13.md",
+      "scope": "Continuous rounded mud banks and matching floor sediment; V17/V18 remain partial. All53 requirements/seven release gates retained."
+    },
+    {
+      "id": 36,
+      "qa": "qa/under-green-visual-upgrade-pass36-2026-11-13.md",
+      "scope": "Dedicated sediment pixel material and consistent floor/bank scale; material and whole-level requirements remain partial. All53requirements/seven gates retained."
+    },
+    {
+      "id": 37,
+      "qa": "qa/under-green-visual-upgrade-pass37-2026-11-13.md",
+      "scope": "Sharper native sign lettering, physical fasteners and records mounting; V02/V06/V50 remain partial. All53requirements/seven gates retained."
+    },
+    {
+      "id": 38,
+      "qa": "qa/under-green-visual-upgrade-pass38-2026-11-13.md",
+      "scope": "Curved lamp glass and fitted cable loops; all17 lamp clocks and native/software appearance verified. V31/V32 remain partial; full53scope/seven gates retained."
+    },
+    {
+      "id": 39,
+      "qa": "qa/under-green-visual-upgrade-pass39-2026-11-13.md",
+      "scope": "Selective chipped/bent/repaired lamp housings complete local V31 fixture craft.25implemented/27in_progress/1pending;all53scope/seven gates retained."
+    },
+    {
+      "id": 40,
+      "qa": "qa/under-green-visual-upgrade-pass40-2026-11-13.md",
+      "scope": "Low-light crossing and full authored attack-sequence verification completes local V32.26implemented/26in_progress/1pending,allseven gates open."
+    },
+    {
+      "id": 41,
+      "qa": "qa/under-green-visual-upgrade-pass41-2026-11-13.md",
+      "scope": "Sluice deposits and corrected moving machinery texture scale complete local V37.27implemented/25in_progress/1pending; all53requirements/seven gates retained."
+    },
+    {
+      "id": 42,
+      "qa": "qa/under-green-visual-upgrade-pass42-2026-11-13.md",
+      "scope": "Connected pipe runs, swept elbow, repair sleeves, torn insulation and physically anchored existing leaks. V38 remains partial; all53requirements/seven gates retained."
+    },
+    {
+      "id": 43,
+      "qa": "qa/under-green-visual-upgrade-pass43-2026-11-13.md",
+      "scope": "Causal joint corrosion and leak wetness complete local V38;28implemented/24in_progress/1pending. All53requirements/seven gates retained."
+    },
+    {
+      "id": 44,
+      "qa": "qa/under-green-visual-upgrade-pass44-2026-11-13.md",
+      "scope": "Corrected and optimized channel/puddle wave-normal coordinates; V25 remains partial. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 45,
+      "qa": "qa/under-green-visual-upgrade-pass45-2026-11-13.md",
+      "scope": "Shallow shorelines and broad flood light movement; V22/V25 remain partial. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 46,
+      "qa": "qa/under-green-visual-upgrade-pass46-2026-11-13.md",
+      "scope": "Real-surface flood wetness and full-cycle physical coverage; V26 locally implemented. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 47,
+      "qa": "qa/under-green-visual-upgrade-pass47-2026-11-13.md",
+      "scope": "Closed gallery vaults, all nine fitted masonry ribs and physical elliptical texture scale; V07 remains partial. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 48,
+      "qa": "qa/under-green-visual-upgrade-pass48-2026-11-13.md",
+      "scope": "Clear teaching/release lettering and landscape physical signals; V50 and whole-route composition remain partial. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 49,
+      "qa": "qa/under-green-visual-upgrade-pass49-2026-11-13.md",
+      "scope": "Embedded root/masonry junctions complete local V15. Full53requirements/seven gates retained."
+    },
+    {
+      "id": 50,
+      "qa": "qa/under-green-visual-upgrade-pass50-2026-11-14.md",
+      "scope": "Authored practical-light roles and coherent fixture power complete local V28; full53requirements/seven gates retained."
+    },
+    {
+      "id": 52,
+      "qa": "qa/under-green-visual-upgrade-pass52-2026-11-14.md",
+      "scope": "Service hardware uses existing fine metal art at architectural density; original53requirements and48review refinements retained, allseven gates pending."
+    },
+    {
+      "id": 53,
+      "qa": "qa/under-green-visual-upgrade-pass53-2026-11-14.md",
+      "scope": "Varied paving, historical floor wear and corrected source sampling complete local V20; full53items/48review refinements and seven gates retained."
+    },
+    {
+      "id": 54,
+      "qa": "qa/under-green-visual-upgrade-pass54-2026-11-14.md",
+      "scope": "Shared high-resolution sawn timber, longitudinal grain, and 53 tapered bark offshoots; full 53 items/48 refinements and all seven gates retained."
+    },
+    {
+      "id": 55,
+      "qa": "qa/under-green-visual-upgrade-pass55-2026-11-14.md",
+      "scope": "Selective damp finish and pump material separation; full53requirements/48refinements and seven gates retained."
+    },
+    {
+      "id": 56,
+      "qa": "qa/under-green-visual-upgrade-pass56-2026-11-14.md",
+      "scope": "Authored keeper desktop repair/records composition; full53requirements/48refinements and allseven gates retained."
+    },
+    {
+      "id": 57,
+      "qa": "qa/under-green-visual-upgrade-pass57-2026-11-14.md",
+      "scope": "Bunker coping, localized soil spills and fitted repairs; native/software visual, clearance, standard-client and local timing evidence recorded. Full53requirements/48refinements and allseven gates retained; software cost/regressions unresolved."
+    },
+    {
+      "id": 58,
+      "qa": "qa/under-green-visual-upgrade-pass58-2026-11-14.md",
+      "scope": "Connected first-gallery root canopy and seated wall fractures, verified native/software visuals, camera/actor clearance, sign readability and standard client. Provisional local timing under shared-machine load; software cost remains poor. All53requirements/48refinements and seven gates retained."
+    },
+    {
+      "id": 59,
+      "qa": "qa/under-green-visual-upgrade-pass59-2026-11-14.md",
+      "scope": "Pump work-light placement and physical downward distribution; operator labels verified, native/software visuals and actual controls/clearance pass. Shader variants increase; performance remains unresolved. Full53requirements/48refinements and seven gates retained."
+    },
+    {
+      "id": 60,
+      "qa": "qa/under-green-visual-upgrade-pass60-2026-11-14.md",
+      "scope": "Channel contact/sediment and continuous-phase optical reflections; final41views/198normal probes per renderer, pressure-cycle and installedclient verified. Software cost and whole-water composition remain open."
+    },
+    {
+      "id": 61,
+      "qa": "qa/under-green-visual-upgrade-pass61-2026-11-14.md",
+      "scope": "Gallery-entry practical moved beside living root shoulder with physical roof support. Final29views/4320camera poses per renderer, route/controls/client verified; broader art and performance remain open."
+    },
+    {
+      "id": 62,
+      "qa": "qa/under-green-visual-upgrade-pass62-2026-11-14.md",
+      "scope": "Physical channel retaining deposits and framed catch grates; all eight channels checked on native/software. Local contact improvement; full 53 requirements, 48 refinements and seven gates retained."
+    },
+    {
+      "id": 63,
+      "qa": "qa/under-green-visual-upgrade-pass63-2026-11-14.md",
+      "scope": "Optional crossing coaching; normal play leaves physical signals and sound in charge. Verified native/software UI, persistence, movement and accessibility. Full scope and seven gates retained."
+    },
+    {
+      "id": 64,
+      "qa": "qa/under-green-visual-upgrade-pass64-2026-11-14.md",
+      "scope": "Submerged channel sediment, floor refraction and depth attenuation; verified native/software. Full53scope and seven gates retained."
+    },
+    {
+      "id": 65,
+      "qa": "qa/under-green-visual-upgrade-pass65-2026-11-14.md",
+      "scope": "Gallery root foundations: irregular soil, embedded masonry and matching floor sediment. Full53scope and allseven gates retained."
+    },
+    {
+      "id": 66,
+      "qa": "qa/under-green-visual-upgrade-pass66-2026-11-14.md",
+      "scope": "Gallery roof-root plaster failure and connected damp staining. Full53scope,48refinements and allseven gates retained."
+    },
+    {
+      "id": 67,
+      "qa": "qa/under-green-visual-upgrade-pass67-2026-11-14.md",
+      "scope": "Bunker shoring variation, reinforced span and interrupted soil seams. Full53scope,48refinements and allseven gates retained."
+    },
+    {
+      "id": 68,
+      "qa": "qa/under-green-visual-upgrade-pass68-2026-11-14.md",
+      "scope": "Software contact-shade frustum culling with exact visible-image preservation. Full53scope,48refinements and allseven gates retained."
+    },
+    {
+      "id": 69,
+      "qa": "qa/under-green-visual-upgrade-pass69-2026-11-14.md",
+      "scope": "Keeper root/tile integration with fractured settled faces, exposed backing and source-linked dampness. Full53scope,48refinements and allseven gates retained."
+    },
+    {
+      "id": 70,
+      "qa": "qa/under-green-visual-upgrade-pass70-2026-11-14.md",
+      "scope": "Gallery east roof failure, irregular plaster remnants and causal floor runoff fans. Full53scope,48refinements and allseven gates retained."
+    },
+    {
+      "id": 71,
+      "qa": "qa/under-green-visual-upgrade-pass71-2026-11-14.md",
+      "scope": "Fixed channel, pump and release fixtures use conservative world-bound practical light sets. Pixel-exact native/software comparisons; local performance evidence only. Full 53 requirements, 48 refinements and seven pending gates retained."
+    },
+    {
+      "id": 72,
+      "qa": "qa/under-green-visual-upgrade-pass72-2026-11-14.md",
+      "scope": "Localized gallery canopy/pillar moisture and existing floor runoff sheen. Full53requirements,48refinements and seven pending gates retained."
+    },
+    {
+      "id": 73,
+      "qa": "qa/under-green-visual-upgrade-pass73-2026-11-14.md",
+      "scope": "Sloped channel shore integration and physically seated water impacts. Full53requirements,48refinements and seven pending gates retained."
+    },
+    {
+      "id": 74,
+      "qa": "qa/under-green-visual-upgrade-pass74-2026-11-14.md",
+      "scope": "Contoured bunker banks, uneven sand strata and preserved support bearings. Full53requirements,48refinements and seven pending gates retained."
+    },
+    {
+      "id": 75,
+      "qa": "qa/under-green-visual-upgrade-pass75-2026-11-14.md",
+      "scope": "Simplified closed bank backs and trimmed only enclosed backing planes; exact final native/software art preserved. Full53requirements/48refinements and allseven pending gates retained; no art-category promotion."
+    },
+    {
+      "id": 76,
+      "qa": "qa/under-green-visual-upgrade-pass76-2026-11-14.md",
+      "scope": "Aged gallery wall render, chipped lime edges and connected runoff;31views/2688camera poses/9opacity probes perrenderer pass. Rejected draw-order experiment absent; full53requirements/48refinements and seven pending gates retained."
+    },
+    {
+      "id": 80,
+      "qa": "qa/under-green-visual-upgrade-pass80-2026-11-14.md",
+      "scope": "Geometry-preserving light bounds and software batch refinement; local cost reduction, no whole-level performance/art gate acceptance"
+    },
+    {
+      "id": 81,
+      "qa": "qa/under-green-visual-upgrade-pass81-2026-11-14.md",
+      "scope": "Coherent varied spray flights, tapered pixel droplets and rotated impact mist; native/software visual and motion checks. Local software timing regression remains open. Full53/48/seven gates retained."
+    },
+    {
+      "id": 82,
+      "qa": "qa/under-green-visual-upgrade-pass82-2026-11-14.md",
+      "scope": "Gallery focal composition using the existing west lamp behind the root canopy; all other geometry/lights preserved. Native/software visual, camera, controls and local cost checks. Full53/48/seven gates retained."
+    },
+    {
+      "id": 83,
+      "qa": "qa/under-green-visual-upgrade-pass83-2026-11-14.md",
+      "scope": "Localized gallery mud shoulders and washout cuts with matching floor sediment; native/software controls, camera and geometry verified. Full plan and gates retained."
+    },
+    {
+      "id": 84,
+      "qa": "qa/under-green-visual-upgrade-pass84-2026-11-14.md",
+      "scope": "Murky flood surface, smaller broken practical-light reflections and actual wall contact. Local visual/motion/physical checks and cost recorded; full 53 requirements, 48 refinements and seven gates retained."
+    },
+    {
+      "id": 85,
+      "qa": "qa/under-green-visual-upgrade-pass85-2026-11-14.md",
+      "scope": "Software broad-surface grouping by identical lamp reach sets, with pixel-exact native/software comparison and unchanged geometry. Local median reduction, crossing P95 regression and absolute performance limits documented. Full53/48/seven gates retained."
+    },
+    {
+      "id": 86,
+      "qa": "qa/under-green-visual-upgrade-pass86-2026-11-14.md",
+      "scope": "Buckled range landing lining with seams, supports, roots and relocated existing practical. Native/software local views, clearance, signal visibility, route actor geometry and client checked; native/software timing cost and unresolved light occlusion documented. Full53/48/seven gates retained."
+    },
+    {
+      "id": 87,
+      "qa": "qa/under-green-visual-upgrade-pass87-2026-11-14.md",
+      "scope": "Baked fixed-light enclosure shadows from actual opaque geometry; native/software GPU sampling, district/interaction/responsive views, low-light attacks, moving ghosts and installed client checked. Native local timing near baseline; software at 960x600 regresses about 20-22%, so performance remains open. Full 53 requirements, 48 refinements and seven gates retained."
+    },
+    {
+      "id": 88,
+      "qa": "qa/under-green-visual-upgrade-pass88-2026-11-14.md",
+      "scope": "Software-only conservative wall occlusion removes fully blocked static light contributions. 936000 biased-PCF ray checks and 31 paired pixel-identical views per renderer plus installed client. Native path preserved; software median timings improve locally but tail/absolute performance remain open. Full53/48/seven gates retained."
+    },
+    {
+      "id": 89,
+      "qa": "qa/under-green-visual-upgrade-pass89-2026-11-14.md",
+      "scope": "Exact rectangular wall unions strengthen software camera/light occlusion. Six geometry cases, full source-volume coverage, 31 paired views per renderer, 63 software turn views and installed client preserve exact pixels. Local gallery/pump timing reduction; absolute software performance and all full-level art gates remain open. Full53/48/seven gates retained."
+    },
+    {
+      "id": 90,
+      "qa": "qa/under-green-visual-upgrade-pass90-2026-11-14.md",
+      "scope": "Independent dry/saturated paving color and reflection integrate with flood without double darkening. Native/software53views and84GPU outputs each, hashes and timing verified. Combined final gameplay verification recorded in pass91. Native local cost and absolute software performance remain open; full53/48/seven gates retained."
+    },
+    {
+      "id": 91,
+      "qa": "qa/under-green-visual-upgrade-pass91-2026-11-14.md",
+      "scope": "Dedicated high-resolution pixel paving replaces architectural concrete on walking floors. Native/software53views each, unchanged other material sampling, controls/flood/responsive checks and local timing recorded. Added one resident texture; full gallery composition, motion/Level1 parity and seven gates remain open. Final gameplay client status is in QA."
+    },
+    {
+      "id": 92,
+      "qa": "qa/under-green-visual-upgrade-pass92-2026-11-14.md",
+      "scope": "Ground wholly below visible receivers and lamps is omitted from the static bake, removing false grazing floor shadows. Actual grade/source bounds, seven transform/source cases, native/software GPU ray comparisons and49scene views each verified. Root/wall/raised-platform shadows retained; no per-frame GLSL/resource increase. Full53/48/seven gates retained; final client status in QA."
+    },
+    {
+      "id": 93,
+      "qa": "qa/under-green-visual-upgrade-pass93-2026-11-14.md",
+      "scope": "Removed the gallery floor gloss boost and tightened restrained wet-stone highlights, preserving paving/sediment visibility and independent runoff/flood saturation. Native/software 53 scene views and 84 GPU readings each, responsive controls and installed gameplay client verified. Resource counts unchanged; no speedup or whole-level acceptance claimed. Full 53/48 scope and seven pending gates retained."
+    },
+    {
+      "id": 94,
+      "qa": "qa/under-green-visual-upgrade-pass94-2026-11-14.md",
+      "scope": "All eight channels now have unequal shallow shore recesses, matching sediment/contact shading and splash membership. Native/software 51 scene views each, full pressure cycles, 36864 geometry samples and real-input/client runs verified. Triangles/draws/textures unchanged; new distance attribute/varying. Local native timings and software flooded p95 worsened; performance remains open. Full 53/48/seven gates retained."
+    },
+    {
+      "id": 95,
+      "qa": "qa/under-green-visual-upgrade-pass95-2026-11-14.md",
+      "scope": "Routed packed shoreline varyings preserved exact native pixels but did not establish useful timing benefit. Candidate not installed; runtime unchanged. Full scope retained."
+    },
+    {
+      "id": 96,
+      "qa": "qa/under-green-visual-upgrade-pass96-2026-11-14.md",
+      "scope": "Keeper cabinet now has mixed door/drawer shapes, a splintered lower panel, recessed empty drawer, closed interior and localized timber damage.32native/32software views,1872clearance poses each,1740opaque rays, unchanged unrelated geometry and actual E/client verified. No new maps/lights; +1draw, native -552triangles. Software close/flood timings worsen; full performance/Level1 gates remain open."
+    },
+    {
+      "id": 97,
+      "qa": "qa/under-green-visual-upgrade-pass97-2026-11-14.md",
+      "scope": "Range failed lining extends into the landing view with thicker roots and an underside-fitted lamp mount. Native/software33views each,1920camera poses each,96signal probes,80actual actor poses and geometry verification pass. Draws/maps/programs unchanged in measured views; native +160triangles. Software flood timing tail worsens; full53/48 scope and seven pending gates retained. Installed client completion recorded separately in QA."
+    },
+    {
+      "id": 98,
+      "qa": "qa/under-green-visual-upgrade-pass98-2026-11-14.md",
+      "scope": "Eight channels gain curved source-lit ripple reflections with dark sediment/bed retained. Native/software51views and198GPU normal readings each pass; same geometry/state/resources and lights-out equality. No new textures/lights/passes. Full53requirements/48refinements/seven gates retained. Cost/client completion recorded in QA."
+    },
+    {
+      "id": 99,
+      "qa": "qa/under-green-visual-upgrade-pass99-2026-11-14.md",
+      "scope": "Irregular optical ripple fields replace parallel channel reflection bands. Final native/software51views and198GPU normal readings each pass; dark sediment, source-only lighting, geometry, hazards and resources retained. Zero-radiance lighting guard rejected after no timing benefit. Whole53/48/seven-gate scope retained; budget/client qualification in QA."
+    },
+    {
+      "id": 100,
+      "qa": "qa/under-green-visual-upgrade-pass100-2026-11-14.md",
+      "scope": "Gallery sediment fans/wet trails and fitted narrow-east plaster repair. Final native/software55views,2688camera poses and15opacity probes each; actual-wall backing and unchanged outside geometry/masks verified. Native cost close to baseline; software repair129.1->153.7ms remains a regression. Draw-order diagnostic rejected. Full53/48/seven-gate scope retained; no requirement promoted."
+    },
+    {
+      "id": 101,
+      "qa": "qa/under-green-visual-upgrade-pass101-2026-11-14.md",
+      "scope": "Hidden brick-face removal behind the narrow east repair, with perimeter/window backing and original shadow-bake geometry. Native/software55views,2688camera poses and15opacity probes each;22684geometry rays; strict raw-pixel bounds and unchanged resources verified. Software repair215.8->195.5ms; other software views slightly slower. Full53/48/seven-gate scope retained; no requirement promoted."
+    },
+    {
+      "id": 102,
+      "qa": "qa/under-green-visual-upgrade-pass102-2026-11-14.md",
+      "scope": "Mixed gallery flagstone courses with narrower joints and varied split faces, retaining existing grain/mud/runoff. Final native/software38views each, fourfloodstates, fourviewport layouts, state/resources/camera-return and exact unrelated district images pass. No added geometry/maps/lights/programs; local timing near baseline, software absolutecost remains poor. Full53/48/seven-gate scope retained. Next perform a current whole-level acceptance audit before more cosmetic passes."
+    },
+    {
+      "id": 103,
+      "qa": "qa/under-green-visual-upgrade-pass103-2026-11-14.md",
+      "scope": "Current matched native2560x1440 Level1 reference (6views) and underground districts (24views). Material/district review identifies bunker diagonal soil repeats, range bay repetition, lower pump contrast and broader composition gaps. Dark-readability job ended ENOSPC at final report; partial artifacts are not a passed test. No status promotions; full53/48/seven-gate scope retained."
+    },
+    {
+      "id": 104,
+      "qa": "qa/under-green-visual-upgrade-pass104-2026-11-14.md",
+      "scope": "Distinct authored bunker soil/sand, interrupted lenses, shared seam normals and isolated bankSand. Native/software74views, identical gallery/keeper controls, opaque backing/camera checks, final client/dry route/dark96 passed. Local cost recorded; software absolute cost remains poor. V07 construction accepted from current front/oblique/reverse audit; all seven full-level gates remain pending."
+    },
+    {
+      "id": 105,
+      "qa": "qa/under-green-visual-upgrade-pass105-2026-11-14.md",
+      "scope": "Range painted-steel field with finer fractures, quiet coating and fixed-plane UV offsets. Native/software35views each, exact geometry/state/resources and three outside control images,96signal rays/1920camera poses each. Local native/software timing, installedclient and27targeted dark-range views/76sequence frames passed. Approximately6MiB additional texture storage; software absolute cost/full-level gates remain open. No status promotions."
+    },
+    {
+      "id": 106,
+      "qa": "qa/under-green-visual-upgrade-pass106-2026-11-14.md",
+      "scope": "Gallery mud coverage buries slab joints under thick clay and breaks thin margins into stationary patches. Native/software38views each, exact independent channels/outside controls/state/resources, responsive/flood/Q/crouch/pause/camera-return and installed client passed. No new rendering resources. Broader composition and full-level gates remain open; no status promotions."
+    },
+    {
+      "id": 107,
+      "qa": "qa/under-green-visual-upgrade-pass107-2026-11-14.md",
+      "scope": "Finer illustrated paving replaces the old broad material marks at unchanged physical density and texture dimensions. V2 rejected for plaster-like flakes; refined v3 retained. Native/software38views each, exact unchanged deposit channels and paired state/resources, compact/flood/Q/crouch/pause/camera-return plus installed client passed. No additional GPU resources; timing provisional under storage pressure. Full scope/gates remain open; no status promotions."
+    }
+  ],
+  "refinement_review": "design/under-green-visual-review-2026-11-14.md"
 }

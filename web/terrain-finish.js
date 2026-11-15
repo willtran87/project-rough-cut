@@ -1,5 +1,7 @@
 import * as THREE from './vendor/three/three.module.js';
 import * as Art from './pixel-art.js';
+import {pathWearPatches,PATH_WEAR_COLORS} from './course-path-wear.js';
+export {paintApproachWear} from './course-approach-wear.js';
 
 // The large atlas owns route/footing colors; this small source-art texture owns
 // close turf detail. Its world scale stays constant across resolution settings.
@@ -33,19 +35,12 @@ export function detailedGroundMaterial(map) {
 }
 
 export async function finishPaths(g, data, tx, ty, xScale, scale, pixelsPerMeter, cancelled=()=>false) {
-  // Stable grit and irregular shoulders follow authored paths; no route changes.
-  let seed = 19,painted=0;
-  const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  for (const path of data.paths) for (let i=1;i<path.length;i++) {
-    const a={x:path[i-1].x*xScale,z:-path[i-1].y*scale},b={x:path[i].x*xScale,z:-path[i].y*scale};
-    const length=Math.hypot(b.x-a.x,b.z-a.z);if(!length)continue;
-    const nx=(b.z-a.z)/length,nz=(a.x-b.x)/length;
-    for(let d=0;d<length;d+=.035){
-      const lateral=(random()-.5)*2.2,x=a.x+(b.x-a.x)*d/length+nx*lateral,z=a.z+(b.z-a.z)*d/length+nz*lateral;
-      const edge=Math.abs(lateral)>.65;
-      g.fillStyle=edge?(random()>.5?'rgba(42,59,36,.42)':'rgba(108,106,64,.32)'):(random()>.55?'rgba(215,197,151,.28)':'rgba(42,40,30,.23)');
-      const size=(.025+random()*.055)*pixelsPerMeter;g.fillRect(tx(x),ty(z),size*(edge?2:1),size);
-      if(++painted%1024===0){await new Promise(resolve=>setTimeout(resolve,0));if(cancelled())return;}
-    }
+  let painted=0;
+  for(const mark of pathWearPatches(data,xScale,scale)){
+    if(cancelled())return;
+    g.fillStyle=PATH_WEAR_COLORS[mark.kind];g.beginPath();
+    mark.points.forEach((p,i)=>{const x=Math.round(tx(p.x)),y=Math.round(ty(p.z));if(i)g.lineTo(x,y);else g.moveTo(x,y);});
+    g.closePath();g.fill();
+    if(++painted%256===0){await new Promise(resolve=>setTimeout(resolve,0));if(cancelled())return;}
   }
 }

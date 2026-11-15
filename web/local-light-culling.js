@@ -13,13 +13,14 @@ export function stableLightMaterialSort(a,b){
 
 // Optional visible-piece bounds describe static world-space geometry. They
 // tighten the proof for disjoint fences/props without splitting draw calls.
-// Static software-rendered batches outside every point light's finite reach
+// Static software-rendered batches outside every supplied local light's reach
 // have exactly zero point-light contribution. Keep their original ambient,
 // hemisphere, moon, texture, alpha and fog shading; omit only that zero work.
-export function createLocalLightCulling(){
+// includeSpots requires callers to supply every spot as well as every point.
+export function createLocalLightCulling({prepareFull=false,includeSpots=false}={}){
   const entries=[],pairs=new Map(),lights=[],preparation=new THREE.Group();
   const marker='#if ( NUM_POINT_LIGHTS > 0 ) && defined( RE_Direct )';
-  const chunk=THREE.ShaderChunk.lights_fragment_begin;
+  const chunk=includeSpots?THREE.ShaderChunk.lights_fragment_begin.replace('#if ( NUM_SPOT_LIGHTS > 0 ) && defined( RE_Direct )','#if 0'):THREE.ShaderChunk.lights_fragment_begin;
   let valid=false,updates=0,unlit=0;
   function register(mesh,pieces=null){
     const full=mesh.material;
@@ -31,12 +32,17 @@ export function createLocalLightCulling(){
         compile.call(full,shader);
         shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_begin>',chunk.replace(marker,'#if 0'));
       };
-      lite.customProgramCacheKey=()=>key+'-outside-point-lights-v1';
+      lite.customProgramCacheKey=()=>key+'-outside-point-lights-v1'+(includeSpots?'-and-spots':'');
       pairs.set(full,lite);
       // These proxies are compiled and uploaded under the existing loading
       // gate, never added to the playable scene. Geometry/textures are shared.
-      const proxy=new THREE.Mesh(mesh.geometry,lite);proxy.receiveShadow=mesh.receiveShadow;
-      preparation.add(proxy);
+      // Some scenes perform their initial culling update before preparation.
+      // Retain a full-light representative too: a distant sand/roof batch
+      // may otherwise have no lit variant until the player reaches it.
+      for(const variant of prepareFull?[full,lite]:[lite]){
+       const proxy=new THREE.Mesh(mesh.geometry,variant);proxy.receiveShadow=mesh.receiveShadow;
+       preparation.add(proxy);
+      }
     }
     mesh.updateWorldMatrix(true,false);
     entries.push({mesh,pieces,full,lite:pairs.get(full),bounds:mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld)});

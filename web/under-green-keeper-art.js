@@ -1,4 +1,6 @@
 import * as THREE from './vendor/three/three.module.js';
+import {KEEPER_TIMBER_SPAN,KEEPER_TIMBER_ASSET} from './under-green-keeper-timber.js';
+import {paintKeeperRecords} from './under-green-keeper-record-art.js';
 
 const hash=n=>{const v=Math.sin(n*127.1+23.9)*43758.5453;return v-Math.floor(v);};
 function canvas(width,height){const c=document.createElement('canvas');c.width=width;c.height=height;return c;}
@@ -12,21 +14,14 @@ function paper(c){
 function poly(g,points,fill){g.fillStyle=fill;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();}
 function stroke(g,points,color,width=2){g.strokeStyle=color;g.lineWidth=width;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();}
 
-export function createKeeperArt(){
- const wood=canvas(512,512),w=wood.getContext('2d');w.fillStyle='#554631';w.fillRect(0,0,512,512);
- for(let i=0;i<260;i++){const x=hash(i)*512,y=hash(i+81)*512,length=20+hash(i+37)*170;w.strokeStyle=i%3?'#61503a':'#403a2c';w.lineWidth=i%5===0?2:1;w.beginPath();w.moveTo(x,y);w.bezierCurveTo(x+8,y+length*.35,x-4,y+length*.6,x+3,y+length);w.stroke();}
- for(const x of [126,255,386]){w.fillStyle='#292a20';w.fillRect(x,0,3,512);w.fillStyle='#796248';w.fillRect(x+3,0,1,512);}
- for(let i=0;i<35;i++){const x=hash(i+311)*512,y=hash(i+401)*512;stroke(w,[[x,y],[x+2,y+8+hash(i)*24]],'#9b8057',1);}
- for(const [cx,cy]of [[47,108],[181,379],[315,242],[452,91]]){
-  for(let ring=0;ring<6;ring++){w.strokeStyle=ring%2?'#786044':'#3e3629';w.lineWidth=1;w.beginPath();w.ellipse(cx,cy,2+ring*1.6,4+ring*3.8,.08,0,Math.PI*2);w.stroke();}
-  stroke(w,[[cx,cy-42],[cx-1,cy-15],[cx+2,cy+10],[cx,cy+49]],'#302f24',1);
- }
- for(let i=0;i<44;i++){
-  const x=Math.floor(hash(i+301)*512),y=Math.floor(hash(i+509)*512),wide=10+Math.floor(hash(i+71)*39),tall=5+Math.floor(hash(i+22)*38);
-  w.fillStyle='rgba(28,30,23,.12)';for(let row=0;row<tall;row+=3)w.fillRect(x+Math.sin(row*.2+i)*3,y+row,wide*(.6+.4*Math.sin(row/tall*Math.PI)),3);
- }
- for(const x of [126,255,386])for(let i=0;i<16;i++){w.fillStyle=i%3?'#89704f':'#342f24';w.fillRect(x-1,hash(i+x)*512,2+hash(i+8)*4,3+hash(i+61)*11);}
- const woodTexture=texture(wood);woodTexture.wrapS=woodTexture.wrapT=THREE.RepeatWrapping;
+export function createKeeperArt(timberImage,sharedWood=null){
+ if(!timberImage?.naturalWidth)throw Error('Keeper timber must be decoded before room construction');
+ // Keep the selected native pixels. Pigment detail supplies neither bump nor
+ // gloss: the matte finish and physical joinery remain separate from albedo.
+ const woodTexture=sharedWood||new THREE.Texture(timberImage);woodTexture.needsUpdate=true;
+ woodTexture.colorSpace=THREE.SRGBColorSpace;woodTexture.magFilter=THREE.NearestFilter;woodTexture.minFilter=THREE.NearestMipmapLinearFilter;
+ woodTexture.wrapS=woodTexture.wrapT=THREE.RepeatWrapping;
+ const timber={asset:KEEPER_TIMBER_ASSET,pixels:[timberImage.naturalWidth,timberImage.naturalHeight],metres:KEEPER_TIMBER_SPAN,texelsPerMetre:timberImage.naturalWidth/KEEPER_TIMBER_SPAN};
 
  const plan=canvas(1024,512),g=paper(plan);
  g.strokeStyle='#5b604b';g.lineWidth=2;g.strokeRect(21,20,982,472);g.strokeRect(26,25,972,462);
@@ -50,13 +45,7 @@ export function createKeeperArt(){
  g.fillStyle='rgba(62,51,36,.13)';g.fillRect(508,26,4,458);g.fillStyle='rgba(226,218,175,.2)';g.fillRect(512,26,2,458);
  for(let i=0;i<16;i++){g.fillStyle='#746c52';g.fillRect(29+i*61,480-hash(i)*6,8+hash(i+1)*12,2);}
 
- const log=canvas(768,512),l=paper(log);l.fillStyle='#30392e';l.font='bold 28px monospace';l.fillText('PUMP / NIGHT RECORD',40,53);l.font='17px monospace';l.fillText('18     RETURN     PRESSURE     KEEPER',40,85);
- for(let i=0;i<9;i++){
-  const y=116+i*37;stroke(l,[[35,y],[732,y]],'#7d8168',1);l.fillStyle='#555b45';l.font='16px monospace';l.fillText(['21:10','21:45','22:20','23:05','23:40','00:15','00:50','01:25','02:00'][i],43,y+24);
-  l.fillText(i<5?'OPEN':'CLOSED',188,y+24);l.fillText(i<4?'NORMAL':i<7?'RISING':'HIGH',365,y+24);
-  stroke(l,[[572,y+22],[585,y+16],[591,y+24],[609,y+13],[631,y+20]],'#4f5541',2);
- }
- l.strokeStyle='#8d4938';l.lineWidth=3;l.strokeRect(350,372,135,57);stroke(l,[[511,421],[536,400],[529,438]],'#8d4938',2);
+ const log=paintKeeperRecords(canvas(1024,1024));
 
  const rack=canvas(512,768),r=rack.getContext('2d');r.fillStyle='#3a4437';r.fillRect(0,0,512,768);
  for(let i=0;i<170;i++){r.fillStyle=i%3?'#434a3a':'#303a30';r.fillRect(hash(i)*512,hash(i+9)*768,3+hash(i+42)*17,1+hash(i+71)*4);}
@@ -73,5 +62,5 @@ export function createKeeperArt(){
   if(wear>.2){s.fillStyle=`rgba(169,151,112,${(1-edge*.7)*(tread?.15:.65)*wear})`;s.fillRect(x,y,1,1);}
  }
  const maps={wood:woodTexture,plan:texture(plan),log:texture(log),rack:texture(rack),sole:texture(sole)};
- return {maps,sizes:{wood:[512,512],plan:[1024,512],log:[768,512],rack:[512,768],sole:[128,256]},dispose(){Object.values(maps).forEach(t=>t.dispose());}};
+ return {maps,timber,sizes:{wood:timber.pixels,plan:[1024,512],log:[1024,1024],rack:[512,768],sole:[128,256]},dispose(){Object.entries(maps).forEach(([key,t])=>{if(key!=='wood'||!sharedWood)t.dispose();});}};
 }

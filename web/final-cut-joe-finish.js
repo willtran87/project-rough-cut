@@ -14,11 +14,9 @@ export async function finishFinalCutJoe(actor){
   }
  });
  const expressionMaps={scrutiny:faceMap},surfaceMaps={},loader=new THREE.TextureLoader();
- const expressionUrls={search:'./assets/optimized/joe-expressions-v1/search.webp',attack:'./assets/optimized/joe-expressions-v1/attack.webp',frustrated:'./assets/optimized/joe-expressions-v1/frustrated.webp',panic:'./assets/optimized/joe-expressions-v1/panic.webp'};
- const surfaceUrls={skin:'./assets/optimized/joe-garments-v1/skin.webp',collar:'./assets/optimized/joe-garments-v1/collar.webp'};
- const jobs=[...Object.entries(expressionUrls).map(([name,url])=>({name,url,target:expressionMaps})),...Object.entries(surfaceUrls).map(([name,url])=>({name,url,target:surfaceMaps}))];
- const loaded=await Promise.allSettled(jobs.map(async({name,url,target})=>{
-  const map=await loader.loadAsync(new URL(url,import.meta.url).href);
+ const jobs=[...['search','attack','frustrated','panic'].map(name=>({name,folder:'joe-expressions-v1',target:expressionMaps})),...['skin','collar'].map(name=>({name,folder:'joe-garments-v1',target:surfaceMaps}))];
+ const loaded=await Promise.allSettled(jobs.map(async({name,folder,target})=>{
+  const map=await loader.loadAsync(new URL(`./assets/optimized/${folder}/${name}.webp`,import.meta.url).href);
   map.colorSpace=faceMap.colorSpace;map.flipY=faceMap.flipY;map.wrapS=faceMap.wrapS;map.wrapT=faceMap.wrapT;
   map.offset.copy(faceMap.offset);map.repeat.copy(faceMap.repeat);map.center.copy(faceMap.center);map.rotation=faceMap.rotation;
   if(target===surfaceMaps){map.wrapS=map.wrapT=THREE.RepeatWrapping;map.offset.set(0,0);map.repeat.set(1,1);map.center.set(0,0);map.rotation=0;}

@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from '../web/vendor/three/three.module.js';
 import {createChaseBeaconShadows} from '../web/chase-beacon-shadows.js';
+import {windbreakCoreGeometry} from '../web/back-nine-shrub-craft.js';
 
-const scene=new THREE.Scene(),cover=createChaseBeaconShadows(scene),material=new THREE.MeshLambertMaterial(),original=[];
+const crafted=process.argv.includes('--crafted'),scene=new THREE.Scene(),cover=createChaseBeaconShadows(scene),material=new THREE.MeshLambertMaterial(),original=[];
 for(const z of [0,-100,-200]){
- const g=new THREE.BoxGeometry(3,3.1,40);g.translate(-19,1.55,z);cover.collect(g,material);original.push(new THREE.Mesh(g,new THREE.MeshBasicMaterial({side:THREE.DoubleSide})));
+ const g=crafted?windbreakCoreGeometry(THREE,{rx:1.5,ry:20,y:z}):new THREE.BoxGeometry(3,3.1,40);g.translate(-19,crafted?0:1.55,z);cover.collect(g,material);original.push(new THREE.Mesh(g,new THREE.MeshBasicMaterial({side:THREE.DoubleSide})));
 }
 const light=new THREE.PointLight(0xff2010,600,40,2);light.position.set(-25,3.45,0);scene.add(light);cover.build(light);
 const proxies=scene.children.filter(o=>o.name==='BeaconCover'),ray=new THREE.Raycaster();ray.layers.enable(29);scene.updateMatrixWorld(true);
@@ -29,5 +30,5 @@ const shutter=new THREE.Group(),panel=new THREE.Mesh(new THREE.BoxGeometry(11,4.
 cover.update(0);assert(cover.stats().updates>stationary+1,'Retry must invalidate the old shadow pose');
 const active=cover.stats().updates;light.intensity=0;light.position.z=0;cover.update(1);assert.equal(cover.stats().updates,active);assert.equal(light.shadow.needsUpdate,false);light.intensity=315;cover.update(2);assert.equal(cover.stats().updates,active+1);
 const stats=cover.stats();cover.dispose();assert(!scene.getObjectByName('BeaconCover'));
-const result={passed:true,checks,stats,claims:['Rendered proxy rays match visible cover and open ends','Finite light selection follows relocations across the course','Stationary pulses do not rebuild shadows','Moving garage shutter and retry invalidate cached shadow']};
-fs.mkdirSync('output/back-nine-experience/beacon',{recursive:true});fs.writeFileSync('output/back-nine-experience/beacon/rules.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+const result={passed:true,crafted,checks,stats,claims:['Rendered proxy rays match visible cover and open ends','Finite light selection follows relocations across the course','Stationary pulses do not rebuild shadows','Moving garage shutter and retry invalidate cached shadow']};
+fs.mkdirSync('output/back-nine-experience/beacon',{recursive:true});fs.writeFileSync('output/back-nine-experience/beacon/rules'+(crafted?'-crafted':'')+'.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

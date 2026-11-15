@@ -4,11 +4,6 @@ import * as THREE from './vendor/three/three.module.js';
 // Atlas crops stay in memory; source art and gameplay footprints are unchanged.
 const images = new Map(), textures = new Map();
 const sourceUrls={
-  'final-cut-reed-clumps-v1':'./assets/optimized/final-cut-reed-clumps-v1.webp',
-  'final-cut-rough-clumps-v1':'./assets/optimized/final-cut-rough-clumps-v1.webp',
-  'final-cut-stone-materials-v1':'./assets/optimized/final-cut-stone-materials-v1.webp',
-  'final-cut-ground-materials-v1':'./assets/optimized/final-cut-ground-materials-v1.webp',
-  'final-cut-industrial-materials-v1':'./assets/optimized/final-cut-industrial-materials-v1.webp',
   'rough-cut-needle-sprays-v1':'./assets/optimized/rough-cut-needle-sprays-v1.webp',
   'rough-cut-architecture-surfaces-v1':'./assets/optimized/rough-cut-architecture-surfaces-v1.webp'
 };

@@ -2,6 +2,7 @@ import * as THREE from './vendor/three/three.module.js';
 import {onFloor,OBSTACLES} from './under-green-course.js';
 import {keeperWallPieces} from './under-green-keeper-layout.js';
 import {mergeIndexedGeometries} from './indexed-geometry.js';
+import {createCourseBatchCulling} from './course-batch-culling.js';
 
 // Small surface-bound occlusion masks, not projected actor shadows. Alpha is
 // carried by vertices: no textures, screen-space halos or light shader work.
@@ -17,8 +18,12 @@ export function featheredContactGeometry(segments=24){
 }
 export function contactShadeMaterial(opacity=.35){return new THREE.MeshBasicMaterial({color:0x000000,vertexColors:true,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide,forceSinglePass:true});}
 
-export function createDrainContactShade({scene,layout}){
- const floorParts=[],rootPositions=[],rootColors=[],rootIndices=[],receivers=new Map();let wallSeams=0,rootStrips=0,rejectedRootQuads=0,machineContacts=0,meshes=[];
+export function createDrainContactShade({scene,layout,software=false}){
+ const floorParts=[],rootParts=[],rootPositions=[],rootColors=[],rootIndices=[],receivers=new Map();let wallSeams=0,rootStrips=0,rejectedRootQuads=0,machineContacts=0,meshes=[],enabled=true;
+ // Keep the two original transparent batches and their sorting centers. Only
+ // compact whole off-screen pieces, preserving all retained triangle order.
+ // Native rendering keeps its original immutable buffers.
+ let culling=software?createCourseBatchCulling():null;
  const key=(vertical,boundary)=>`${vertical}:${boundary.toFixed(3)}`;
  for(const w of layout.walls){
   const vertical=w.w<w.d,boundary=vertical?w.x:w.y,k=key(vertical,boundary),side=vertical?(onFloor(w.x+.3,w.y)?1:-1):(onFloor(w.x,w.y+.3)?1:-1);
@@ -41,7 +46,7 @@ export function createDrainContactShade({scene,layout}){
  for(const id of ['pump-control','record-stand','sluice-console','root-pillar','bunker-buttress','pump-buttress','range-island']){
   const o=OBSTACLES.find(v=>v.id===id);floorContact(o.x,o.y,o.w+.28,o.d+.28,id==='root-pillar'?.7:.85);
  }
- function root(curve,radius,wall,{taper=.83,widthAt=null}={}){
+ function root(curve,radius,wall,{taper=.83,widthAt=null,alphaAt=null}={}){
   if(!wall||radius<.035||!Number.isFinite(wall.boundary)||!wall.side)return;
   const surfaces=receivers.get(key(wall.vertical,wall.boundary));if(!surfaces)return;
   const steps=Math.max(6,Math.min(48,Math.ceil(curve.getLength()/.18))),rows=[];
@@ -49,8 +54,9 @@ export function createDrainContactShade({scene,layout}){
   for(let i=0;i<=steps;i++){
    const t=i/steps,p=projected(curve.getPointAt(t)),tangent=projected(curve.getPointAt(Math.min(1,t+.003))).sub(projected(curve.getPointAt(Math.max(0,t-.003)))).normalize(),normal=new THREE.Vector2(-tangent.y,tangent.x);
    const knot=Math.exp(-(((t-.32)/.09)**2))*.16+Math.exp(-(((t-.71)/.065)**2))*.10,width=(widthAt?widthAt(t):radius*(1-t*taper)*(.84+knot+Math.sin(t*19+radius*50)*.06))*1.13;
-   rows.push([-1,-.63,0,.63,1].map((n,j)=>{const q=p.clone().addScaledVector(normal,n*width);return {along:q.x,height:q.y,alpha:[0,.22,.34,.22,0][j]*Math.min(1,t*24,(1-t)*24)};}));
+   rows.push([-1,-.63,0,.63,1].map((n,j)=>{const q=p.clone().addScaledVector(normal,n*width);return {along:q.x,height:q.y,alpha:[0,.22,.34,.22,0][j]*Math.min(1,t*24,(1-t)*24)*(alphaAt?alphaAt(t):1)};}));
   }
+  const firstIndex=rootIndices.length,firstPosition=rootPositions.length;
   const supported=p=>surfaces.some(s=>p.along>=s.lo&&p.along<=s.hi&&p.height>=s.bottom+.003&&p.height<=s.top-.003);
   for(let i=0;i<steps;i++)for(let j=0;j<4;j++){
    const quad=[rows[i][j],rows[i+1][j],rows[i][j+1],rows[i+1][j+1]];
@@ -59,13 +65,22 @@ export function createDrainContactShade({scene,layout}){
    for(const p of quad){rootPositions.push(wall.vertical?face:p.along,p.height,-(wall.vertical?p.along:face));rootColors.push(1,1,1,p.alpha);}
    rootIndices.push(start,start+1,start+2,start+2,start+1,start+3);
   }
+  if(culling&&rootIndices.length>firstIndex){
+   const bounds=new THREE.Box3(),point=new THREE.Vector3();
+   for(let i=firstPosition;i<rootPositions.length;i+=3)bounds.expandByPoint(point.fromArray(rootPositions,i));
+   // Registration needs only each piece's bounds and contiguous index count.
+   // The culler's padding also covers conversion to Float32 vertex storage.
+   rootParts.push({boundingBox:bounds,index:{count:rootIndices.length-firstIndex},computeBoundingBox(){}});
+  }
   rootStrips++;
  }
  function finish(){
-  const ground=mergeIndexedGeometries(floorParts);floorParts.forEach(g=>g.dispose());floorParts.length=0;
+  const ground=mergeIndexedGeometries(floorParts);
   const roots=new THREE.BufferGeometry();roots.setAttribute('position',new THREE.Float32BufferAttribute(rootPositions,3));roots.setAttribute('color',new THREE.Float32BufferAttribute(rootColors,4));roots.setIndex(rootIndices);roots.computeVertexNormals();
   meshes=[ground,roots].map((g,i)=>{const m=new THREE.Mesh(g,contactShadeMaterial(i?.9:.65));m.name=i?'Root masonry contact shade':'Wall and machinery contact shade';m.renderOrder=-3;scene.add(m);return m;});
+  if(culling){for(const m of meshes)m.geometry.computeBoundingBox();culling.register(meshes[0],floorParts);culling.register(meshes[1],rootParts);}
+  floorParts.forEach(g=>g.dispose());floorParts.length=rootParts.length=0;
   rootPositions.length=rootColors.length=rootIndices.length=0;receivers.clear();
  }
- return {root,finish,setEnabled(value){meshes.forEach(m=>m.visible=!!value);},stats:()=>({wallSeams,rootStrips,rejectedRootQuads,machineContacts,draws:meshes.length,triangles:meshes.reduce((n,m)=>n+m.geometry.index.count/3,0),worldAnchored:true}),dispose(){meshes.forEach(m=>{m.removeFromParent();m.geometry.dispose();m.material.dispose();});meshes=[];}};
+ return {root,finish,update(camera){if(enabled)culling?.update(camera);},setEnabled(value){const next=!!value;if(next===enabled)return;if(next)culling?.restore();enabled=next;meshes.forEach(m=>m.visible=enabled);},stats:()=>({wallSeams,rootStrips,rejectedRootQuads,machineContacts,draws:meshes.length,triangles:meshes.reduce((n,m)=>n+m.geometry.index.count/3,0),submittedTriangles:meshes.reduce((n,m)=>n+(m.visible?Math.min(m.geometry.index.count,m.geometry.drawRange.count)/3:0),0),culling:culling?.stats()||null,worldAnchored:true}),dispose(){meshes.forEach(m=>{m.removeFromParent();m.geometry.dispose();m.material.dispose();});meshes=[];culling=null;}};
 }

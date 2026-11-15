@@ -8,8 +8,12 @@ export function waterEffectTexture(kind){
   const px=(x-31.5)/31.5,py=(y-31.5)/31.5,r=Math.hypot(px,py),angle=Math.atan2(py,px);
   let alpha;
   if(kind==='drop'){
-   const body=Math.max(0,1-px*px/.72-py*py/.87);
-   alpha=Math.min(1,body*body*1.65);
+   // A slightly blunt leading head and a tapering tail follow the billboard's
+   // velocity axis. Four quiet coverage bands describe a small pixel cluster,
+   // avoiding the soft circular 'bokeh' disc of the previous mask.
+   const width=.60-py*.17,offset=px+Math.sin(py*3.)*.035;
+   const body=1-offset*offset/(width*width)-(py+.08)*(py+.08)/.78;
+   alpha=body>.76?.94:body>.44?.72:body>.18?.38:body>.035?.12:0;
   }else if(kind==='spray'){
    const lobe=.76+.12*Math.sin(angle*3+.7)+.07*Math.cos(angle*5);
    alpha=Math.max(0,1-r/lobe)**2*(.65+.35*Math.sin(px*8+py*4)**2);

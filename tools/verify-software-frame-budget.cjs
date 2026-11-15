@@ -24,6 +24,15 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  for(let i=0;i<240;i++)after.budget.observe(20*(after.budget.scale()/.75)**2);
  assert.equal(after.budget.scale(),.75,'Recovered headroom restores full software quality');
  assert.equal(trace(createSoftwareFrameBudget,38).changes,0,'Affordable scenes retain maximum software quality');
+ const responsive=trace(()=>createSoftwareFrameBudget({responsiveDownshift:true}),90);
+ assert.equal(responsive.changes,2);assert.equal(responsive.slowFrames,22);assert.equal(responsive.finalScale,.5,'Responsive descent retains the same final quality');
+ assert.equal(responsive.budget.stats().minScale,.5);assert.equal(responsive.budget.stats().maxScale,.75);
+ for(let i=0;i<240;i++)responsive.budget.observe(20*(responsive.budget.scale()/.75)**2);
+ assert.equal(responsive.budget.scale(),.75,'Responsive descent retains sustained quality recovery');
+ const responsiveSpikes=createSoftwareFrameBudget({responsiveDownshift:true});
+ for(let i=0;i<6;i++)responsiveSpikes.observe(20);
+ for(let i=0;i<100;i++){responsiveSpikes.observe(140);responsiveSpikes.observe(55);}
+ assert.equal(responsiveSpikes.scale(),.75,'Responsive descent still rejects isolated stalls');
  const tunnel=trace(()=>createSoftwareFrameBudget({slowMs:38,recoverMs:26}),48);
  assert.equal(tunnel.finalScale,.625,'The tunnel target settles at the affordable middle buffer');
  assert.equal(tunnel.changes,1,'The lower target does not oscillate');

@@ -1,12 +1,15 @@
 import {waterLocal,onFloor,solid} from './under-green-course.js';
 import {floodState} from './under-green-flood.js';
 import {shallowWaterHeight} from './under-green-wet-ground.js';
+import {channelSurfaceHeight,channelHasSurface} from './under-green-channel-shore.js';
+import {GALLERY_RUNOFF_DRIPS} from './under-green-gallery-runoff.js';
 
 // Beneath the existing gallery pipe and pump-return pipe, over real water.
 export const DRAIN_DRIPS=Object.freeze([
  {x:-2.65,y:23,height:3.1,period:4.7,offset:1.3},
  {x:-2.65,y:64,height:3.1,period:6.1,offset:3.2},
- {x:-20,y:49,height:3.45,period:5.3,offset:.4},
+ {x:-20,y:49,height:3.33,period:5.3,offset:.4},
+ ...GALLERY_RUNOFF_DRIPS,
 ]);
 export function drainDripSample(drip,time,waterHeight){
  const age=((time+drip.offset)%drip.period+drip.period)%drip.period;
@@ -20,7 +23,7 @@ export function waterContactHeight(point,waters,states,floodDepth=0){
  if(floodDepth>.006)height=Math.max(height??0,floodDepth);
  for(let i=0;i<waters.length;i++){
   const local=waterLocal(point,waters[i]);
-  if(Math.abs(local.x)<waters[i].width/2-.08&&Math.abs(local.y)<waters[i].depth/2-.22)height=Math.max(height??0,.025+states[i].level*.08);
+  if(Math.abs(local.x)<waters[i].width/2-.08&&Math.abs(local.y)<waters[i].depth/2-.22&&channelHasSurface(waters[i],local.x,local.y))height=Math.max(height??0,channelSurfaceHeight(waters[i],local.x,local.y,states[i].level));
  }
  return height;
 }

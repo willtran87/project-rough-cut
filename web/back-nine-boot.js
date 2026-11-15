@@ -1,3 +1,4 @@
+window.RCChapterLaunch=RCLaunchScreens.mount(document.getElementById('panel'),'back-nine');
 // Keep import/link and early initialization failures out of the silent static
 // "Preparing" state. This small loader does not allocate a renderer or audio.
 const script=document.querySelector('[data-chase-entry]');
@@ -14,4 +15,4 @@ function showStartupError(error){
  button.onclick=()=>{const url=new URL(location.href);url.searchParams.set('retry',String(Date.now()));location.replace(url.href);};
  button.focus({preventScroll:true});
 }
-try{await import(script.dataset.chaseEntry);}catch(error){showStartupError(error);}
+if(RCProgression.admit('back-nine'))try{await import(script.dataset.chaseEntry);}catch(error){showStartupError(error);}

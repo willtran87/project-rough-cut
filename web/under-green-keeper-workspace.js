@@ -1,10 +1,15 @@
+import {drainLampProfile} from './under-green-lamp-direction.js';
 import * as THREE from './vendor/three/three.module.js';
 import {KEEPER_NICHES,nichePoint} from './under-green-keeper-layout.js';
 import {createKeeperArt} from './under-green-keeper-art.js';
+import {KEEPER_TIMBER_SPAN} from './under-green-keeper-timber.js';
+import {buildKeeperStory} from './under-green-keeper-story.js';
+import {buildKeeperCabinet} from './under-green-keeper-cabinet.js';
 
-export function buildKeeperWorkspace({materials,box,put,cyl,lamps}){
- const art=createKeeperArt();
+export function buildKeeperWorkspace({materials,box,put,cyl,lamps,keeperTimber}){
+ const art=createKeeperArt(keeperTimber,materials.wood.map);
  materials.keeperWood=new THREE.MeshPhongMaterial({map:art.maps.wood,color:0xbcb4a0,specular:0x3c402e,shininess:7});materials.keeperWood.userData.drainWorldUV=true;
+ materials.keeperWood.userData.drainUVMetres=KEEPER_TIMBER_SPAN;
  materials.keeperEndgrain=materials.keeperWood.clone();materials.keeperEndgrain.color.setHex(0x857a5e);materials.keeperEndgrain.userData.drainWorldUV=true;
  materials.keeperPaper=new THREE.MeshLambertMaterial({color:0xaaa58b});
  materials.keeperPlan=new THREE.MeshLambertMaterial({map:art.maps.plan,color:0xcac4a7});
@@ -24,32 +29,13 @@ export function buildKeeperWorkspace({materials,box,put,cyl,lamps}){
  const desk=KEEPER_NICHES[0],front=desk.boundary+.105;
  // A fitted cabinet desk closes the original wall face below the counter.
  // All depth and damaged corners extend into the recess, never into the route.
- box('keeperEndgrain',desk.along,.49,-front-.012,desk.width-.1,.98,.01);
- for(const [x,width]of [[9.91,.82],[10.89,.92],[12.02,1.16],[13.13,.84]]){
-  for(const h of [.25,.57,.85]){
-   box('keeperWood',x,h,-front-.025,width,.235,.012);
-   box('machineIron',x,h+.035,-front-.037,.19,.024,.012);
-   for(const dx of [-.07,.07])put(cyl,'machineRust',x+dx,h+.035,-front-.045,.013,.008,.013,Math.PI/2);
-  }
- }
+ const cabinet=buildKeeperCabinet({materials,box,put,desk});
  const top=new THREE.Shape();[[9.53,front],[13.77,front],[13.77,10.97],[13.59,10.89],[13.62,10.61],[9.53,10.61]].forEach(([x,y],i)=>i?top.lineTo(x,y):top.moveTo(x,y));top.closePath();
  const slab=new THREE.ExtrudeGeometry(top,{depth:.07,bevelEnabled:false,steps:1});slab.rotateX(-Math.PI/2);put(slab,'keeperWood',0,.985,0);slab.dispose();
  box('keeperEndgrain',11.65,1.02,-front,4.24,.07,.016);
  // Exposed splinters at the back-right break explain the damaged counter.
  for(let i=0;i<5;i++)box('keeperEndgrain',13.61+i*.027,1.02,-10.88-i*.019,.016,.045,.09);
- // Dry records stand on a metal tray, well above the old flood mark.
- box('machineIron',11.82,1.067,-11.02,.87,.025,.52);
- for(const side of [-1,1])box('machineRust',11.82+side*.43,1.085,-11.02,.018,.055,.52);
- box('keeperBook',11.78,1.107,-11.02,.65,.055,.41);
- for(let i=0;i<5;i++)box('keeperPaper',11.78+(i%2)*.004,1.136+i*.004,-11.02,.62,.002,.385);
- const log=new THREE.PlaneGeometry(.62,.385);put(log,'keeperLog',11.782,1.155,-11.02,1,1,1,-Math.PI/2,0,Math.PI);log.dispose();
- // Loose ledger leaves, bent at one corner instead of hovering flat.
- const page=new THREE.PlaneGeometry(.43,.3,8,5),position=page.attributes.position;
- for(let i=0;i<position.count;i++){const x=position.getX(i),y=position.getY(i);position.setZ(i,Math.max(0,(x-.10)*.2)*Math.max(0,(y+.15)/.3));}page.computeVertexNormals();
- put(page,'keeperLog',10.75,1.06,-10.99,1,1,1,-Math.PI/2,0,Math.PI-.14);page.dispose();
- box('keeperBook',12.92,1.13,-10.85,.34,.15,.24);
- for(let i=0;i<3;i++)box('keeperPaper',12.92,1.08+i*.047,-10.845,.32,.008,.23);
- const pencil=new THREE.CylinderGeometry(.006,.006,.19,6);put(pencil,'keeperEndgrain',11.2,1.066,-11.16,1,1,1,Math.PI/2,0,.3);pencil.dispose();
+ const story=buildKeeperStory({materials,box,put});
  // The old course plan is mounted on the actual recessed back wall.
  const plan=new THREE.PlaneGeometry(2.5,1.25);put(plan,'keeperPlan',11.57,2.14,-(desk.boundary-desk.depth+.008),1,1,1,0,Math.PI);plan.dispose();
  for(const x of [10.28,12.86])box('keeperWood',x,2.14,-10.61,.075,1.4,.04);
@@ -59,7 +45,7 @@ export function buildKeeperWorkspace({materials,box,put,cyl,lamps}){
  }
  // The small task light faces into the room; its visible lens and dynamic
  // light share the position, color and flicker through the normal lamp path.
- lamps.push({x:9.87,y:10.77,height:2.65,lensOffset:-.18,facing:-1,color:0xe9b575,power:.6});
+ lamps.push({...drainLampProfile('keeper-desk'),x:9.87,y:10.77,height:2.65,lensOffset:-.18,facing:-1});
  box('machineIron',9.87,2.65,-10.77,.46,.35,.21);
  put(cyl,'machineIron',9.87,2.965,-10.77,.02,.27,.02);
  box('machineIron',9.87,3.085,-10.77,.25,.035,.22);
@@ -90,5 +76,5 @@ export function buildKeeperWorkspace({materials,box,put,cyl,lamps}){
  for(let i=0;i<8;i++)box('machineRust',16.85,.635,-11.74-i*.075,.025,.16,.018);
  box('machineIron',16.85,2.5,-12.0,.035,.055,.18);
  const owned=['keeperWood','keeperEndgrain','keeperPaper','keeperPlan','keeperLog','keeperRack','keeperBook','keeperSole'].map(n=>materials[n]);
- return {niches:KEEPER_NICHES.map(n=>({...n})),desk:{x:11.65,y:11.02,height:1.055,recordsHeight:1.155},plan:{x:11.57,y:10.578,height:2.14,width:2.5},bootRack:{x:6.83,y:14.1,height:.945,emptySlots:6},toolRack:{x:16.855,y:13.2,height:1.68,missing:'grass-scythe',remaining:'rake'},art:art.sizes,maximumTrimIntrusion:.19,addedColliders:0,dispose(){art.dispose();owned.forEach(m=>m.dispose());}};
+ return {niches:KEEPER_NICHES.map(n=>({...n})),desk:{x:11.65,y:11.02,height:1.055,recordsHeight:1.111},cabinet,story,plan:{x:11.57,y:10.578,height:2.14,width:2.5},bootRack:{x:6.83,y:14.1,height:.945,emptySlots:6},toolRack:{x:16.855,y:13.2,height:1.68,missing:'grass-scythe',remaining:'rake'},art:art.sizes,timber:art.timber,maximumTrimIntrusion:.19,addedColliders:0,dispose(){cabinet.dispose();story.dispose();art.dispose();owned.forEach(m=>m.dispose());}};
 }

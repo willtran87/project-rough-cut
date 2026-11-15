@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {createCourseWind} from '../web/course-wind.js';
+import * as THREE from '../web/vendor/three/three.module.js';
+const wind=createCourseWind({obstacles:[{x:0,y:0,radiusX:1,radiusY:2,shape:'box',blocks:true},{x:20,y:10,radius:2,blocks:true}]},{scale:1,xScale:1});
+assert(wind.exposure(2,0,1)<.5);assert.equal(wind.exposure(2,0,-1),1);
+assert(wind.exposure(-2,0,-1)<.5);assert.equal(wind.exposure(-2,0,1),1);
+assert.equal(wind.exposure(6,0,1),1);assert.equal(wind.exposure(2,3,1),1);
+assert(wind.exposure(22,-10,1)<1,'Every solid footprint participates');
+const frame={time:0,fx:{wind:{strength:1,direction:1}}};wind.update(frame);
+for(let i=1;i<=40;i++){frame.time=i*.05;wind.update(frame);}assert(wind.stats().drive>.999);
+const start=wind.stats();wind.update(frame);assert.deepEqual(wind.stats(),start);
+frame.paused=true;frame.time+=5;wind.update(frame);assert.deepEqual(wind.stats(),start);
+frame.paused=false;frame.fx.wind.direction=-1;frame.time+=.05;wind.update(frame);assert(wind.stats().drive>0,'Reversal crosses through calm rather than jumping');
+for(let i=0;i<40;i++){frame.time+=.05;wind.update(frame);}assert(wind.stats().drive<-.999);
+frame.reducedMotion=true;wind.update(frame);assert.equal(wind.stats().drive,0);assert.equal(wind.signAngle(0,0),0);
+const reduced=wind.stats();frame.time+=1;wind.update(frame);assert.deepEqual(wind.stats(),reduced);
+frame.reducedMotion=false;frame.fx.enabled=false;frame.time+=1;wind.update(frame);assert.equal(wind.stats().drive,0);
+frame.fx.enabled=true;frame.time=0;wind.update(frame);assert.deepEqual(wind.stats(),{time:0,drive:0,blockers:2,maxVegetationBend:.16});
+const geometry=new THREE.BufferGeometry(),placements=Array.from({length:100},(_,i)=>({x:Math.sin(i)*16,z:-i*1.3}));wind.bindGeometry(geometry,placements);
+let maxError=0;for(let i=0;i<100;i++)for(const t of [0,.3,1.7,13,101]){
+ const p=geometry.attributes.courseWindPhase,s=geometry.attributes.courseWindSide,x=Math.fround(placements[i].x),z=Math.fround(placements[i].z),phase=x*.16+z*.07;
+ const expanded=.68+.22*(Math.sin(t*.82)*p.getX(i)-Math.cos(t*.82)*p.getY(i))+.10*(Math.sin(t*1.67)*p.getZ(i)-Math.cos(t*1.67)*p.getW(i));
+ const direct=.68+.22*Math.sin(t*.82-phase)+.10*Math.sin(t*1.67-phase*.4);
+ maxError=Math.max(maxError,Math.abs(expanded-direct),Math.abs(Math.sin(t*.63)*s.getX(i)+Math.cos(t*.63)*s.getY(i)-Math.sin(t*.63+z*.17)));
+}assert(maxError<1e-7,'Baked phase expansion preserves original gusts');geometry.dispose();
+console.log(JSON.stringify({phaseSamples:500,maxError}));
+console.log('Wind shelter direction/range, every blocker, smooth reversal, repeated frames, pause, reduced/disabled and reset pass');

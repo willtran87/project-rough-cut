@@ -1,3 +1,4 @@
+import {buildCourtWear} from './back-nine-court-wear.js';
 // Course-scale composition: planting belongs to islands and boundaries,
 // greens to fairways, and service bays connect to the cart-path network.
 export const LANDSCAPE_BEDS=[
@@ -8,6 +9,7 @@ export const LANDSCAPE_BEDS=[
  [36,610,3.4],[-12,638,3.7],[36,747,3.3],[28,764,3.4]
 ];
 export const COURSE_GREENS=[{x:28,y:145,rx:7,ry:10,hole:10},{x:-24,y:274,rx:7,ry:9,hole:12},{x:26,y:335,rx:8,ry:9,hole:13},{x:30,y:539,rx:5.5,ry:8,hole:15},{x:33,y:644,rx:5,ry:7,hole:17},{x:-29,y:739,rx:4.8,ry:5.7,hole:18}];
+export const COURSE_SERVICE_COURTS=[{x:-11,y:211,w:25,d:22},{x:-25,y:350,w:20,d:30},{x:29,y:199,w:18,d:22},{x:-24,y:771,w:17,d:28}];
 export const COURSE_RESERVOIRS=[[59,232,10,31],[59,474,10,36]];
 // Authored hole axes and mowing widths. Service roads remain the chase's
 // connected network; each playing surface now has its own landing area,
@@ -33,6 +35,17 @@ export function coursePatch(THREE,seed=0,variation=1){
  for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=1+variation*(.025*Math.sin(a*3+seed)+.014*Math.sin(a*5-seed));p.push(Math.cos(a)*r,0,-Math.sin(a)*r);uv.push(.5+Math.cos(a)*.5,.5+Math.sin(a)*.5);}
  for(let i=0;i<n;i++)indices.push(0,i+1,(i+1)%n+1);
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
+}
+// Concentric authored color bands soften turf/fringe boundaries and retain
+// damp sand at the bank. All rings share the original boundary silhouette.
+export function courseColorPatch(THREE,seed,rings,variation=1){
+ const p=[],uv=[],colors=[],indices=[],n=48;
+ for(const [radius,color]of rings)for(let i=0;i<=n;i++){
+  const a=i/n*Math.PI*2,r=radius*(1+variation*(.025*Math.sin(a*3+seed)+.014*Math.sin(a*5-seed)));
+  p.push(Math.cos(a)*r,0,-Math.sin(a)*r);uv.push(.5+Math.cos(a)*r*.5,.5+Math.sin(a)*r*.5);colors.push(color.r,color.g,color.b);
+ }
+ for(let ring=0;ring<rings.length-1;ring++)for(let i=0;i<n;i++){const a=ring*(n+1)+i,b=a+n+1;indices.push(a,b,a+1,a+1,b,b+1);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setIndex(indices);g.computeVertexNormals();return g;
 }
 export function bunkerLip(THREE,s,paths=[]){
  const p=[],uv=[],indices=[],n=48,radii=[.985,1.035,1.09],heights=[.027,.14,.018];
@@ -94,13 +107,14 @@ function* courseRibbonSteps(THREE,put,type,route,width,height,banded=false,offse
 function* estateGroundSteps({THREE,put,box,cylinder,circle,COURSE,turfColors}){
  // Equipment and gates sit within a small number of working courtyards.
  // These flush surfaces connect existing props without adding solid barriers.
- const courts=[{x:-11,y:211,w:25,d:22},{x:-25,y:350,w:20,d:30},{x:29,y:199,w:18,d:22},{x:-24,y:771,w:17,d:28}];
+ const courts=COURSE_SERVICE_COURTS;
  for(const c of courts){
   // Compacted gravel belongs to a work court. Rounded rectangular corners
   // replace the unconnected-looking dark turf ellipses beneath equipment.
   const outline=new THREE.Shape(),w=c.w*.5+1,d=c.d*.5+1,r=1.5;
   outline.moveTo(-w+r,-d);outline.lineTo(w-r,-d);outline.quadraticCurveTo(w,-d,w,-d+r);outline.lineTo(w,d-r);outline.quadraticCurveTo(w,d,w-r,d);outline.lineTo(-w+r,d);outline.quadraticCurveTo(-w,d,-w,d-r);outline.lineTo(-w,-d+r);outline.quadraticCurveTo(-w,-d,-w+r,-d);
   const patch=new THREE.ShapeGeometry(outline,4);patch.rotateX(-Math.PI/2);put(patch,'track',c.x,.014,-c.y);patch.dispose();
+  buildCourtWear({THREE,put,court:c});
   for(const side of [-1,1])for(const end of [-1,1]){
    // Low, flush stone corner courses indicate maintenance grounds, not walls.
    box('stone',c.x+side*(c.w*.5-1),.021,-c.y+end*c.d*.5,2,.012,.12);
@@ -116,19 +130,28 @@ function* estateGroundSteps({THREE,put,box,cylinder,circle,COURSE,turfColors}){
  const fairways=COURSE_FAIRWAYS;
  // Rounded mown turf and thin alternating cuts carry the fairway's direction.
  let teeConnections=0;
- for(const {spine,widths}of fairways){
+ for(const {spine,widths,hole}of fairways){
   // A tapered, curved fairway with cross-course mower passes. Short static
   // strips retain spatial culling; the existing grass is the rough apron.
   const curve=new THREE.CatmullRomCurve3(spine.map(([x,y])=>new THREE.Vector3(x,0,-y))),length=curve.getLength(),steps=Math.ceil(length/4);
-  const edge=(t,side)=>{const p=curve.getPointAt(t),d=curve.getTangentAt(t),v=t*(widths.length-1),i=Math.min(widths.length-2,Math.floor(v)),f=v-i,e=f*f*(3-2*f),width=widths[i]+(widths[i+1]-widths[i])*e;return [p.x+d.z*width*side,.005,p.z-d.x*width*side];};
+  const edge=(t,side)=>{const p=curve.getPointAt(t),d=curve.getTangentAt(t),v=t*(widths.length-1),i=Math.min(widths.length-2,Math.floor(v)),f=v-i,e=f*f*(3-2*f),width=(widths[i]+(widths[i+1]-widths[i])*e)*(1+.025*Math.sin(t*length*.47+hole)+.016*Math.sin(t*length*.83-hole));return [p.x+d.z*width*side,.005,p.z-d.x*width*side];};
   for(let i=0;i<steps;i++){
    // Blend the mown core into a soft collar rather than outlining each hole
    // with another hard-edged slab. One cullable strip and one shared material.
-   const p=[],uv=[],colors=[],indices=[],sides=[-1.16,-1,-.94,.94,1,1.16],cut=turfColors[i%2?'fairwayCut':'fairway'];
-   for(const t of [i/steps,(i+1)/steps])for(let n=0;n<sides.length;n++){
-    p.push(...edge(t,sides[n]));uv.push(n/5,t);const c=n===0||n===5?turfColors.grass:n===1||n===4?turfColors.fairway:cut;colors.push(c.r**.65,c.g**.65,c.b**.65);
+   const p=[],uv=[],colors=[],indices=[],sides=[-1.16,-1.04,-.94,-.78,-.69,-.58,0,.58,.69,.78,.94,1.04,1.16],cut=turfColors[i%2?'fairwayCut':'fairway'],row=sides.length;
+   for(const [ri,t]of [i/steps,(i+.075)/steps,(i+1)/steps].entries())for(let n=0;n<sides.length;n++){
+    // Shared curved boundaries avoid overlapping faces. A narrow second-cut
+    // strip describes deck overlap; one interrupted shoulder pass per hole
+    // retains taller grass without disguising the driving surface.
+    const bowed=Math.max(0,Math.min(1,t+Math.sin(sides[n]*Math.PI*.5)*.7/length));
+    p.push(...edge(bowed,sides[n]));uv.push(n/(row-1),t);
+    const edgeVertex=n===0||n===row-1,shoulder=n===1||n===row-2;
+    const missed=i>=Math.floor(steps*.37)&&i<Math.floor(steps*.37)+3&&(hole%2?n===4:n===8);
+    const c=edgeVertex||missed?turfColors.grass:shoulder?turfColors.fairway:cut;
+    const overlap=!edgeVertex&&!shoulder&&!missed&&ri===1?.96:1;
+    colors.push(c.r**.65*overlap,c.g**.65*overlap,c.b**.65*overlap);
    }
-   for(let n=0;n<5;n++)indices.push(n,n+6,n+1,n+1,n+6,n+7);
+   for(let r=0;r<2;r++)for(let n=0;n<row-1;n++){const a=r*row+n;indices.push(a,a+row,a+1,a+1,a+row,a+row+1);}
    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setIndex(indices);g.computeVertexNormals();put(g,'fairway',0,0,0);g.dispose();yield;
   }
   // Tee markers belong at the start of a hole, not beside the putting cup.
@@ -146,9 +169,27 @@ function* estateGroundSteps({THREE,put,box,cylinder,circle,COURSE,turfColors}){
   if(best>4&&best<28){yield* courseRibbonSteps(THREE,put,'fairway',roundedCourseRoute([join,[(join[0]+tee[0])*.5,tee[1]-2],tee],1),1.25,.007);teeConnections++;}
  }
  for(const g of COURSE_GREENS){
-  const green=coursePatch(THREE,g.hole,2.5);put(green,'fairwayCut',g.x,.006,-g.y,g.rx+1.2,1,g.ry+1.2);put(green,'green',g.x,.009,-g.y,g.rx,1,g.ry);green.dispose();
+  const tint=k=>{const c=turfColors[k];return {r:c.r**.65,g:c.g**.65,b:c.b**.65};};
+  const green=courseColorPatch(THREE,g.hole,[[0,tint('green')],[.90,tint('green')],[1,tint('green')],[1.035,tint('fairwayCut')],[1.12,tint('fairwayCut')],[1.19,tint('grass')]],2.5);
+  put(green,'green',g.x,.009,-g.y,g.rx,1,g.ry);green.dispose();
+  // A worn cup collar and two old repaired plug marks belong to each green.
+  // Their feathered colors preserve the short-cut turf's world-space pixels.
+  const worn=tint('green'),soil={r:worn.r*.68,g:worn.g*.65,b:worn.b*.57};
+  const collar=courseColorPatch(THREE,g.hole,[[.44,soil],[.57,soil],[.82,{r:worn.r*.91,g:worn.g*.89,b:worn.b*.78}],[1,worn]],3);
+  put(collar,'green',g.x,.012,-g.y,.26,1,.26);collar.dispose();
+  for(let old=0;old<2;old++){
+   const patch=courseColorPatch(THREE,g.hole+old,[[0,{r:worn.r*.87,g:worn.g*.88,b:worn.b*.82}],[.6,{r:worn.r*.92,g:worn.g*.94,b:worn.b*.89}],[1,worn]],2);
+   put(patch,'green',g.x+1.3+old*.8,.011,-g.y+1.1-old*2.3,.17,1,.15);patch.dispose();
+  }
+  // Terrain-following moon shadows: the same moon direction as the scene.
+  // Narrow feathered pole contact and a small flag silhouette stay local.
+  const shade={r:worn.r*.52,g:worn.g*.54,b:worn.b*.58};
+  const poleShadow=courseColorPatch(THREE,0,[[0,shade],[.56,shade],[1,worn]],0);
+  put(poleShadow,'green',g.x+.6,.011,-g.y-.2,.047,1,.64,-Math.atan2(3,1));poleShadow.dispose();
+  const flagShadow=courseColorPatch(THREE,g.hole,[[0,shade],[.68,shade],[1,worn]],2);
+  put(flagShadow,'green',g.x+1.42,.011,-g.y-.365,.30,1,.10,-.12);flagShadow.dispose();
   // The flag and a flush cup make each clearing read as a putting green.
-  put(circle,'rubber',g.x,.014,-g.y,.11,1,.11);put(cylinder,'paint',g.x,1.1,-g.y,.018,2.2,.018);box('flag',g.x+.27,2.01,-g.y,.53,.3,.015);
+  put(circle,'rubber',g.x,.014,-g.y,.11,1,.11);put(cylinder,'paint',g.x,1.1,-g.y,.018,2.2,.018);
   // Recessed irrigation heads mark maintained green edges without new obstacles.
   for(const side of [-1,1]){
    put(cylinder,'iron',g.x+side*(g.rx+.6),.018,-g.y,.12,.028,.12);
@@ -158,12 +199,7 @@ function* estateGroundSteps({THREE,put,box,cylinder,circle,COURSE,turfColors}){
  }
  // Proper aprons tie the shelters to the path rather than leaving floating huts.
  for(const c of COURSE.checkpoints){box('road',c.x,.018,-c.y,7,.022,11);for(const side of [-1,1]){box('stone',c.x+side*3.4,.032,-c.y,.12,.018,10);for(let n=0;n<6;n++)box('iron',c.x+side*3.15,.038,-c.y-2+n*.8,.32,.012,.055);}}
- // Service spurs explain how equipment reached each bay. Keep them flat and
- // visually subordinate to the main cart path; they introduce no solid props.
- for(const f of COURSE.features.filter(f=>['trailer','parked-cart','cistern'].includes(f.kind))){
-  let nearest=null,best=Infinity;for(const route of COURSE.paths)for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((f.x-a[0])*dx+(f.y-a[1])*dy)/(dx*dx+dy*dy))),p=[a[0]+dx*t,a[1]+dy*t],d=Math.hypot(p[0]-f.x,p[1]-f.y);if(d<best){best=d;nearest=p;}}
-  if(best>1&&best<22)yield* courseRibbonSteps(THREE,put,'pathEdge',[[f.x,f.y],nearest],2.8,.018);
- }
+ // Service-spur dressing is built with the shared feathered route margins.
  // Reservoirs sit beyond the existing boundary fence. The driveable wet
  // lanes stay shallow turf, while these larger water bodies explain irrigation.
  for(const [x,y,rx,ry]of COURSE_RESERVOIRS){
@@ -187,3 +223,13 @@ export function courseRibbon(...args){return finishSteps(courseRibbonSteps(...ar
 export function courseRibbonAsync(yieldPreparation,...args){return prepareSteps(courseRibbonSteps(...args),yieldPreparation);}
 export function buildEstateGround(args){return finishSteps(estateGroundSteps(args));}
 export function buildEstateGroundAsync(args,yieldPreparation){return prepareSteps(estateGroundSteps(args),yieldPreparation);}
+
+// Preserve the original equipment-to-route connections as shared authoring data.
+export function courseServiceSpurs(COURSE){
+ const spurs=[];
+ for(const f of COURSE.features.filter(f=>['trailer','parked-cart','cistern'].includes(f.kind))){
+  let nearest=null,best=Infinity;for(const route of COURSE.paths)for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((f.x-a[0])*dx+(f.y-a[1])*dy)/(dx*dx+dy*dy))),p=[a[0]+dx*t,a[1]+dy*t],d=Math.hypot(p[0]-f.x,p[1]-f.y);if(d<best){best=d;nearest=p;}}
+  if(best>1&&best<22)spurs.push({id:f.id,route:[[f.x,f.y],nearest]});
+ }
+ return spurs;
+}

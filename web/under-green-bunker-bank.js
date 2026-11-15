@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three/three.module.js';
+import {putSecondaryRoot} from './under-green-secondary-roots.js';
 import {BUNKER_BANK} from './under-green-bunker-layout.js';
 
 export function buildBunkerBankDetails({box,put,ball}) {
@@ -12,8 +13,7 @@ export function buildBunkerBankDetails({box,put,ball}) {
         new THREE.Vector3(-31.98,4.78,-y+branch*.22),
         new THREE.Vector3(-32.01,4.63,-y+branch*.28+.06),
       ];
-      const root = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),6,.018,4,false);
-      put(root,'wood',0,0,0);root.dispose();
+      putSecondaryRoot(put,points,.018);
     }
     // An uneven turf lip gives the cross-section a natural edge in silhouette.
     box('grass',-32.03,5.13,-y,.19,.14,.65);

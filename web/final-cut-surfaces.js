@@ -3,7 +3,7 @@ import {pavingShader} from './final-cut-paving.js';
 // Coordinates stop at the instance's parent: moving furniture carries its grain.
 // Dominant-face projection uses one texture read, keeping the pixel edges crisp.
 export function finishCourseSurfaces(materials){
- const scales={ashlar:1.5,ashlarWarm:1.5,ashlarDark:1.5,ashlarMoss:1.5,coping:1.5,mortar:1.5,stone:1.7,path:1.6,gravel:3.2,wood:1.05,grass:1.9,stripe:1.9,rough:2.4,roof:1.8,slate:1.2,moss:1.7,green:.8,cream:1.2,metal:.65,dark:.7,brass:.5,red:.7};
+ const scales={ashlar:.95,ashlarWarm:.95,ashlarDark:.95,ashlarMoss:.95,coping:.95,mortar:1.5,stone:1.1,path:1.6,gravel:3.2,wood:1.05,grass:1.9,stripe:1.9,rough:2.4,roof:1.8,slate:1.2,moss:1.7,green:.8,cream:1.2,metal:.65,dark:.7,brass:.5,red:.7};
  for(const [name,metres]of Object.entries(scales)){
   const material=materials[name],previous=material.onBeforeCompile,turf=['grass','stripe','rough'].includes(name);
   material.onBeforeCompile=shader=>{

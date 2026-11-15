@@ -14,7 +14,11 @@ export function keeperWallPieces(w,height){
  const along=niche.axis==='x'?'y':'x',length=niche.axis==='x'?w.d:w.w,start=w[along]-length/2,end=w[along]+length/2;
  const left=Math.max(start,niche.along-niche.width/2),right=Math.min(end,niche.along+niche.width/2),parts=[];
  function part(a,b,base,top){if(b-a<.00001||top-base<.00001)return;parts.push({...w,[along]:(a+b)/2,[niche.axis==='x'?'d':'w']:b-a,base,height:top-base});}
- part(start,left,0,height);part(right,end,0,height);part(left,right,0,niche.bottom);part(left,right,niche.top,height);
+ // The fitted desk cabinet supplies its own opaque back and sides below the
+ // worktop. Leave space for the real shallow drawer interior, retaining the
+ // original navigation boundary and a masonry footing beneath its plinth.
+ const bottom=niche.id==='keeper-desk'?.08:niche.bottom;
+ part(start,left,0,height);part(right,end,0,height);part(left,right,0,bottom);part(left,right,niche.top,height);
  return parts;
 }
 

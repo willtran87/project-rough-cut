@@ -31,7 +31,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{createHash}=re
    check(Art.stats().errors.length===0,'Original art sources loaded');const stats=pines.stats();pines.dispose();world.dispose();surfaces.dispose();first.dispose();second.dispose();return {checks,pines:stats};
   });
   // Enter Level 1 through the normal menu after exercising the shared modules.
-  await page.setViewportSize({width:2560,height:1600});await page.goto('http://127.0.0.1:4187');await page.locator('canvas').click();await page.keyboard.press('Space');
+  await page.setViewportSize({width:2560,height:1600});await page.addInitScript(()=>localStorage.setItem('rough-cut.opening-story.v1',JSON.stringify({skip:true})));await page.goto('http://127.0.0.1:4187');await page.locator('#game').click();await page.keyboard.press('Space');
   await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).mode==='menu');await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.RCScene3D?.stats().ready&&!document.querySelector('[data-brief-start]')?.disabled,null,{timeout:90000});await page.locator('[data-brief-start]').click();
   for(const[width,height]of [[2560,1600],[1280,720],[844,390]]){await page.setViewportSize({width,height});await page.evaluate(async()=>{advanceTime(17);await RCScene3D.whenPresented();});await page.screenshot({path:`${out}/level-one-${width}.png`});}

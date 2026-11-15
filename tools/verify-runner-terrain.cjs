@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
 (async()=>{
- const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),hz=Number(process.argv.find(a=>a.startsWith('--hz='))?.slice(5)||30),tag=(software?'software':'hardware')+(baseline?'-baseline':'')+(hz===30?'':`-${hz}hz`),out='output/back-nine-experience/runner-terrain';
+ const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),hz=Number(process.argv.find(a=>a.startsWith('--hz='))?.slice(5)||30),tag=(software?'software':'hardware')+(baseline?'-baseline':'')+(hz===30?'':`-${hz}hz`),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/back-nine-experience/runner-terrain';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));

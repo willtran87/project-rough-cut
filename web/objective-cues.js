@@ -1,8 +1,11 @@
 import { practiceStatus } from './station-feedback.js';
 import * as THREE from './vendor/three/three.module.js';
+import {buildCourseSignCraft,paintCourseSignPatina} from './course-sign-craft.js';
+import {createCourseSignLamp} from './course-sign-lamp.js';
+import {createCourseSignFamilyLighting} from './course-sign-family-lighting.js';
 
-// Fixed physical signs: two opaque batches, one small nearest-filtered atlas.
-// No lights, particles, animation, navigation input or through-wall overlays.
+// Fixed physical signs with shielded reading fixtures; the opening lamp also lights the world.
+// One atlas; physical depth/occlusion; no navigation input or overlays.
 const LETTERS={
  M:['10001','11011','10101','10101','10001','10001','10001'],
  A:['01110','10001','10001','11111','10001','10001','10001'],B:['11110','10001','10001','11110','10001','10001','11110'],C:['01111','10000','10000','10000','10000','10000','01111'],D:['11110','10001','10001','10001','10001','10001','11110'],E:['11111','10000','10000','11110','10000','10000','11111'],F:['11111','10000','10000','11110','10000','10000','10000'],G:['01111','10000','10000','10111','10001','10001','01111'],H:['10001','10001','10001','11111','10001','10001','10001'],I:['11111','00100','00100','00100','00100','00100','11111'],K:['10001','10010','10100','11000','10100','10010','10001'],L:['10000','10000','10000','10000','10000','10000','11111'],N:['10001','11001','11001','10101','10011','10011','10001'],O:['01110','10001','10001','10001','10001','10001','01110'],P:['11110','10001','10001','11110','10000','10000','10000'],Q:['01110','10001','10001','10001','10101','10010','01101'],R:['11110','10001','10001','11110','10100','10010','10001'],S:['01111','10000','10000','01110','00001','00001','11110'],T:['11111','00100','00100','00100','00100','00100','00100'],U:['10001','10001','10001','10001','10001','10001','01110'],V:['10001','10001','10001','10001','10001','01010','00100'],W:['10001','10001','10001','10101','10101','10101','01010'],X:['10001','10001','01010','00100','01010','10001','10001'],Y:['10001','10001','01010','00100','00100','00100','00100'],
@@ -74,6 +77,7 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
   text('FOLLOW LANTERNS',x+16,y+77,1,ink);
   g.fillStyle=ink;g.fillRect(x+166,y+36,4,27);for(let k=0;k<5;k++){g.fillRect(x+166-k*3,y+36+k*3,4,4);g.fillRect(x+166+k*3,y+36+k*3,4,4);}
  }
+ paintCourseSignPatina(g);
  const atlas=new THREE.CanvasTexture(canvas);atlas.colorSpace=THREE.SRGBColorSpace;atlas.magFilter=atlas.minFilter=THREE.NearestFilter;atlas.generateMipmaps=false;
  const root=new THREE.Group();root.name='ObjectiveWayfinding';root.visible=false;parent.add(root);
  const entries=data.actions.map((a,i)=>({id:a.id,index:i,x:a.x,z:a.y,y:i===0?3.15:2.85,yaw:i===0?-Math.PI/2:0,junction:false}));
@@ -89,7 +93,8 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
  for(const a of data.reviews)entries.push({id:a.id,x:a.x,z:a.y,y:1.95,supply:true});
  entries.push({id:'practice-bell',x:data.practice.x,z:data.practice.y,y:1.95,practice:true});
  const bp=[],bc=[],sp=[],uv=[],sc=[],indices=[],boxGeo=new THREE.BoxGeometry(1,1,1).toNonIndexed(),color=new THREE.Color();
- function box(x,y,z,w,h,d,tint){color.setHex(tint);const a=boxGeo.attributes.position,n=boxGeo.attributes.normal;for(let i=0;i<a.count;i++){bp.push(x+a.getX(i)*w,y+a.getY(i)*h,z+a.getZ(i)*d);const shade=n.getY(i)>.5?1:n.getZ(i)>.5?.87:.62;bc.push(color.r*shade,color.g*shade,color.b*shade);}}
+ let readingLamp=null;const familyLighting=createCourseSignFamilyLighting();
+ function box(x,y,z,w,h,d,tint){color.setHex(tint);const a=boxGeo.attributes.position;for(let i=0;i<a.count;i++){bp.push(x+a.getX(i)*w,y+a.getY(i)*h,z+a.getZ(i)*d);bc.push(color.r,color.g,color.b);}}
  for(const entry of entries){
   const x=entry.x*xScale,z=-entry.z*scale,y=entry.y,size=entry.boardScale||1;
   const bodyStart=bp.length;entry.bodyStart=bodyStart/3;
@@ -97,11 +102,13 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
   // Station mast extends its existing left wooden upright; junction poles sit
   // off the path and do not introduce collision or navigation changes.
   if(entry.exit){for(const side of [-1,1]){
-    if(entry.route==='shed')box(x+side*.70,2.82,z-.08,.065,.65,.14,0x596052);
-    else box(x+side*.70,2.91,z-.08,.075,.55,.075,0x596052);
+    // Mount at the outside rails, clear of both faces and their reading beams.
+    if(entry.route==='shed')box(x+side*.86*size,2.82,z-.08,.065,.65,.14,0x596052);
+    else box(x+side*.86*size,2.91,z-.08,.075,.55,.075,0x596052);
    }if(entry.route==='drain')box(x,2.76,z-.08,2.10,.065,.08,0x596052);
   }else box(x+(entry.junction?0:-.31),(y-.39)/2,z-.14,.075,y-.39,.075,0x596052);
   for(const side of [-1,1])box(x+side*.82*size,y,z+.058,.035,.81*size,.025,0x857b56);
+  buildCourseSignCraft(box,{x,y,z,size,mastX:entry.exit?null:x+(entry.junction?0:-.31),mastHeight:y-.39,frontOnly:!!entry.junction});
   // Restrained steady amber slits distinguish this family from floor lanterns.
   entry.accentStart=bc.length/3;
   for(const side of [-1,1])box(x+side*.66*size,y+.48*size,z,.10,.07,.10,0xb69a60);
@@ -112,6 +119,8 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
   }
   if(entry.practice){const radius=data.practice.radius*scale;for(let i=0;i<32;i++){const a=i*Math.PI/16;box(x+Math.cos(a)*radius,.035,z+Math.sin(a)*radius,.14,.025,.14,0xb69a60);}}
   entry.accentEnd=bc.length/3;
+  if(entry.approach)readingLamp=createCourseSignLamp(root,box,{x,y,z,yaw:entry.yaw||0,scale,xScale});
+  else familyLighting.fixtures(box,{x,y,z,size,yaw:entry.yaw||0,twoSided:!entry.junction});
   entry.start=sp.length/3;
   entry.vertices=entry.junction?4:8;
   // Direction boards are front-only; repeating the same arrow on their back
@@ -126,18 +135,28 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
   for(const [array,start]of [[bp,bodyStart],[sp,entry.start*3]])for(let j=start;j<array.length;j+=3){const dx=array[j]-x,dz=array[j+2]-z;array[j]=x+dx*cosine+dz*sine;array[j+2]=z-dx*sine+dz*cosine;}
  }
  boxGeo.dispose();const bodyGeo=new THREE.BufferGeometry();bodyGeo.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bodyGeo.setAttribute('color',new THREE.Float32BufferAttribute(bc,3));bodyGeo.computeBoundingSphere();
- const bodies=new THREE.Mesh(bodyGeo,new THREE.MeshBasicMaterial({vertexColors:true}));root.add(bodies);
+ bodyGeo.computeVertexNormals();
+ familyLighting.attributes(bodyGeo,entries,{scale,xScale});
+ const bodies=new THREE.Mesh(bodyGeo,[familyLighting.material({vertexColors:true}),new THREE.MeshLambertMaterial({vertexColors:true})]);bodies.name='CourseSignFrames';bodies.castShadow=bodies.receiveShadow=true;root.add(bodies);
  const signGeo=new THREE.BufferGeometry();signGeo.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));signGeo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));signGeo.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));signGeo.setIndex(indices);signGeo.computeBoundingSphere();
- const signs=new THREE.Mesh(signGeo,new THREE.MeshBasicMaterial({map:atlas,vertexColors:true}));root.add(signs);
+ signGeo.computeVertexNormals();
+ familyLighting.attributes(signGeo,entries,{scale,xScale,faces:true});
+ const signs=new THREE.Mesh(signGeo,[familyLighting.material({map:atlas,vertexColors:true}),new THREE.MeshLambertMaterial({map:atlas,vertexColors:true})]);signs.name='CourseSignFaces';signs.receiveShadow=true;root.add(signs);
+ const readingLenses=familyLighting.lenses(root);root.userData.signFamilyLighting=familyLighting;
  const approach=entries.find(e=>e.approach);
+ function materialGroups(geometry,start,count,total){geometry.addGroup(0,start,0);geometry.addGroup(start,count,1);geometry.addGroup(start+count,total-start-count,0);}
+ materialGroups(bodyGeo,approach.bodyStart,approach.bodyCount,bp.length/3);
+ materialGroups(signGeo,approach.start/4*6,6,indices.length);
  let signature='',updates=0,state=[],exits=[],optional=[],clearNavigation=false;
  function update(frame){
   clearNavigation=frame.clearNavigation===true;
   root.visible=true;
   // The early physical sign belongs to the course. Extra route labels retain
-  // their existing navigation preference; no additional mesh/material is needed.
+  // their existing navigation preference, including all attached reading lenses.
   bodyGeo.setDrawRange(clearNavigation?0:approach.bodyStart,clearNavigation?Infinity:approach.bodyCount);
   signGeo.setDrawRange(clearNavigation?0:approach.start/4*6,clearNavigation?Infinity:6);
+  readingLenses.visible=clearNavigation;
+  readingLamp?.update(frame);
   const key=[frame.completed.join(','),!!frame.hasKey,!!frame.valveOpen,!!frame.exitFiling,!!frame.sealing,frame.exitRoute,(frame.reviews||[]).join(','),practiceStatus(frame)].join(':');if(key===signature)return;signature=key;updates++;
   state=objectiveCueState(frame.completed,frame.hasKey,frame.valveOpen);
   exits=exitCueState(frame);
@@ -153,5 +172,12 @@ export function createObjectiveCues(parent,data,{scale,xScale}){
   signGeo.attributes.uv.needsUpdate=signGeo.attributes.color.needsUpdate=bodyGeo.attributes.color.needsUpdate=true;
  }
  update({completed:[],hasKey:false,valveOpen:false});
- return {update,stats:()=>({clearNavigation,visibleSigns:clearNavigation?entries.length:1,approachDraw:{body:bodyGeo.drawRange,sign:signGeo.drawRange},signs:entries.length,batches:2,atlas:[ATLAS_WIDTH,ATLAS_HEIGHT],updates,depthTest:signs.material.depthTest,depthWrite:signs.material.depthWrite,state,exits,optional,anchors:entries.map(e=>({id:e.id,x:e.x,y:e.z,height:e.y,junction:e.junction}))})};
+ let disposed=false;
+ function dispose(){
+  if(disposed)return;disposed=true;
+  root.removeFromParent();const geometries=new Set(),materials=new Set(),textures=new Set();
+  root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){materials.add(m);if(m.map)textures.add(m.map);}if(o.isLight)o.shadow?.dispose();});
+  geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
+ }
+ return {update,dispose,stats:()=>({clearNavigation,visibleSigns:clearNavigation?entries.length:1,approachDraw:{body:bodyGeo.drawRange,sign:signGeo.drawRange},signs:entries.length,batches:clearNavigation?8:3,readingLamp:readingLamp?.stats(),readingFixtures:familyLighting.stats(),atlas:[ATLAS_WIDTH,ATLAS_HEIGHT],updates,depthTest:signs.material.every(m=>m.depthTest),depthWrite:signs.material.every(m=>m.depthWrite),state,exits,optional,anchors:entries.map(e=>({id:e.id,x:e.x,y:e.z,height:e.y,junction:e.junction,yaw:e.yaw||0,size:e.boardScale||1}))})};
 }

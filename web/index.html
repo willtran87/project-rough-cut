@@ -24,11 +24,12 @@
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-opening.webp" fetchpriority="high">
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-grass-curtain.webp" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css?v=20261112-course-results">
-  <link rel="stylesheet" href="./quality-ui.css?v=20261112-danger-action-resize">
+  <link rel="stylesheet" href="./quality-ui.css?v=20261115-progression">
   <link rel="stylesheet" href="./course-settings.css?v=20261112-course-settings">
-  <link rel="stylesheet" href="./course-menu.css?v=20261112-course-menu">
-  <link rel="stylesheet" href="./opening-story.css?v=20261111-opening">
-</head>
+  <link rel="stylesheet" href="./course-menu.css?v=20261115-progression">
+  <link rel="stylesheet" href="./course-menu-materials.css?v=20261115-progression">
+  <link rel="stylesheet" href="./opening-story.css?v=20261114-idle-screens">
+<link rel="stylesheet" href="./launch-screens.css?v=20261114-theme"><script src="./launch-screens.js?v=20261114-unified"></script><link rel="stylesheet" href="./game-theme.css?v=20261114-unified"><script src="./game-theme.js?v=20261114-unified"></script><link rel="stylesheet" href="./game-theme.css?v=20261114-unified"><script src="./game-theme.js?v=20261114-unified"></script><script src="./campaign-progress.js?v=20261115-progression"></script></head>
 <body>
   <main id="game-shell">
     <p id="game-instructions" class="visually-hidden">
@@ -47,11 +48,11 @@
     </p>
     <button id="study-launch" hidden>Field journal &amp; playtest</button>
     <div id="course-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
-      <img class="course-loading-art" src="./assets/optimized/rough-cut-opening.webp" width="1672" height="941" alt="" decoding="async">
+      <img class="course-loading-art" src="./assets/menu/night-order-scene.webp" width="1672" height="941" alt="" decoding="async">
       <div class="course-loading-copy">
-        <span class="course-loading-kicker">ROUGH CUT · NIGHT SHIFT</span>
+        <span class="course-loading-kicker">ROUGH CUT / CHAPTER 01 · NIGHT ORDER</span>
         <p class="course-loading-title"><span class="course-loading-mark" aria-hidden="true">▪▪▪</span> Preparing the golf course…</p>
-        <p class="course-loading-hint">Keep to the lanterns. Listen for the mower.</p>
+        <p class="course-loading-hint">Your chapter is preparing. You begin when you are ready.</p>
       </div>
     </div>
   </main>
@@ -101,19 +102,22 @@
     </section>
   </dialog>
   <noscript>Rough Cut requires JavaScript to run.</noscript>
-  <script type="module" src="./chapter-links.js?v=20261112-course-menu"></script>
+  <script src="./chapter-links.js?v=20261115-progression"></script>
   <script src="./joe-dialogue.js"></script>
   <script src="./foundation.js?v=20261106-quality-reset"></script>
   <script src="./course-renderer.js?v=20261105-foundation"></script>
   <script src="./quality-core.js?v=20261113-audit-restored"></script>
   <script src="./joe-navigation.js?v=20261113-pursuit"></script>
-  <script src="./quality-ui.js?v=20261113-audit-restored"></script>
-  <script src="./course-settings-ui.js?v=20261112-course-settings"></script>
-  <script src="./course-menu-ui.js?v=20261113-audit-restored"></script>
+  <script src="./quality-ui.js?v=20261115-progression"></script>
+  <script src="./course-settings-ui.js?v=unified-20261115-progression"></script>
+  <script src="./course-menu-atmosphere-fallback.js?v=20261114-intro-title-break"></script>
+  <script src="./course-menu-atmosphere.js?v=20261114-intro-title-break"></script>
+  <script src="./intro-presentation.js?v=20261115-progression"></script>
+  <script src="./course-menu-ui.js?v=20261115-progression"></script>
   <script src="./spatial-preferences.js"></script>
   <script src="./spatial-controls.js?v=20261106-illustrated-props"></script>
-  <script type="module" src="./scene-3d.js?v=20261113-visual-pass"></script>
-  <script type="module" src="./game.js?v=20261113-symmetric-28"></script>
+  <script type="module" src="./scene-3d.js?v=20261114-ambient-lift-2"></script>
+  <script type="module" src="./game.js?v=20261115-progression"></script>
   <script type="module" src="./playtest.js?v=20261106-quality-reset"></script>
   <script type="module" src="./rebuild-ui.js?v=20261113-audit-restored"></script>
 </body>

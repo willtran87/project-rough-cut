@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const out=process.argv[2];if(!out)throw Error('Output directory required');
+(async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__riderWorld={rider,mower,scene,camera,renderer,update,draw()')}));
+ await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
+ await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+ const report=await p.evaluate(async()=>{const T=await import('./vendor/three/three.module.js'),{createRun}=await import('./back-nine-sim.js'),w=__riderWorld,r=createRun(0,0,713);r.mode='driving';r.time=20;r.grace=0;r.departure.phase='finished';r.tension.cooldown=r.hunt.cooldown=100;r.panic.armed=false;Object.assign(r.cart,{x:35,y:10,health:0,failedAt:0});Object.assign(r.joe,{x:20,y:55,yaw:0,speed:0});r.foot={x:20,y:65,yaw:0,viewYaw:0,speed:0,onFoot:true,invulnerable:0,rearBlend:1};__backNine.run=r;await __backNine.whenPresented();__backNine.render();await __backNine.whenPresented();w.rider.updateWorldMatrix(true,true);const nodes=[];w.rider.traverse(o=>{if(o.isBone)nodes.push({name:o.name,position:w.mower.root.worldToLocal(o.getWorldPosition(new T.Vector3())).toArray(),local:o.position.toArray(),q:o.quaternion.toArray()});});return{nodes,state:JSON.parse(render_game_to_text())};});
+ await p.screenshot({path:path.join(out,'gameplay-2560.jpg'),type:'jpeg',quality:94});
+ for(const[name,x,y,z]of [['front',22,2.6,-59],['side',24,2.4,-55]]){await p.evaluate(async({x,y,z})=>{const w=__riderWorld;w.camera.position.set(x,y+w.mower.root.position.y,z);w.camera.lookAt(20,w.mower.root.position.y+1.6,-55);w.draw();await __backNine.whenPresented();},{x,y,z});await p.screenshot({path:path.join(out,name+'-diagnostic.jpg'),type:'jpeg',quality:94});}
+ fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({...report,errors},null,2));console.log(JSON.stringify(report.nodes));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

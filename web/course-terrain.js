@@ -42,19 +42,20 @@ export function terrainSlope(x,y,yaw){
 
 // Ground-only tessellation, at construction time. Existing textured patches
 // follow the same height function instead of floating as flat disks over hills.
-export function contourGround(THREE,g){
+export function contourGround(THREE,g,{retainFlatTriangles=false}={}){
  const p=g.attributes.position,u=g.attributes.uv,color=g.attributes.color,idx=g.index,positions=[],uvs=[],colors=[],indices=[],cache=new Map();
- // Raised borders need their edge subdivisions to retain the same blended
- // normals. Only flat input sheets qualify for the planar fast path below.
+ // Default callers retain the established raised-border normal field.
+ // Authored bunker banks opt into their original planar triangles wherever
+ // the underlying terrain is provably flat; curved terrain stays tessellated.
  let horizontal=true;for(let i=1;i<p.count;i++)if(Math.abs(p.getY(i)-p.getY(0))>1e-7){horizontal=false;break;}
- function vertex(a){const key=a.map(v=>v.toFixed(5)).join(',');if(cache.has(key))return cache.get(key);const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)colors.push(a[5],a[6],a[7]);cache.set(key,id);return id;}
+ function vertex(a){const key=a.map(v=>v.toFixed(5)).join(',');if(cache.has(key))return cache.get(key);const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)colors.push(...a.slice(5,5+color.itemSize));cache.set(key,id);return id;}
  function clip(poly,dist){
   const out=[];if(!poly.length)return out;
   let a=poly.at(-1),da=dist(a);
   for(const b of poly){const db=dist(b);if((da>=0)!==(db>=0)){const t=da/(da-db);out.push(a.map((v,i)=>v+(b[i]-v)*t));}if(db>=0)out.push(b);a=b;da=db;}return out;
  }
  function emit(poly){if(poly.length<3)return;const a=vertex(poly[0]);for(let i=1;i<poly.length-1;i++){const b=vertex(poly[i]),c=vertex(poly[i+1]);if(a!==b&&b!==c&&a!==c)indices.push(a,b,c);}}
- const v=i=>[p.getX(i),p.getY(i),p.getZ(i),u?.getX(i)||0,u?.getY(i)||0,...(color?[color.getX(i),color.getY(i),color.getZ(i)]:[])];
+ const v=i=>[p.getX(i),p.getY(i),p.getZ(i),u?.getX(i)||0,u?.getY(i)||0,...(color?Array.from({length:color.itemSize},(_,k)=>color.array[i*color.itemSize+k]):[])];
  for(let i=0;i<(idx?.count||p.count);i+=3){
   const tri=[0,1,2].map(n=>v(idx?idx.getX(i+n):i+n));
   const minX=Math.floor(Math.min(...tri.map(a=>a[0]))),maxX=Math.max(minX,Math.ceil(Math.max(...tri.map(a=>a[0])))-1);
@@ -63,7 +64,7 @@ export function contourGround(THREE,g){
   // Keep its original topology instead of clipping thousands of redundant
   // cells into flat shoulders. Include a neighbouring-cell margin so normals
   // beside the curved grid still use the original tessellation.
-  const flat=horizontal&&TERRAIN_FORMS.every(([cx,cy,rx,ry])=>{
+  const flat=(horizontal||retainFlatTriangles)&&TERRAIN_FORMS.every(([cx,cy,rx,ry])=>{
    const dx=Math.max(minX-1-cx,0,cx-(maxX+2)),dy=Math.max(minY-1-cy,0,cy-(maxY+2));
    return (dx/rx)**2+(dy/ry)**2>=1;
   });
@@ -73,5 +74,5 @@ export function contourGround(THREE,g){
    emit(clip(poly,a=>1-(a[0]-x)+a[2]+y));emit(clip(poly,a=>(a[0]-x)-a[2]-y-1));
   }
  }
- const out=new THREE.BufferGeometry();out.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));out.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));if(color)out.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));out.setIndex(indices);out.computeVertexNormals();return out;
+ const out=new THREE.BufferGeometry();out.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));out.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));if(color)out.setAttribute('color',new THREE.Float32BufferAttribute(colors,color.itemSize));out.setIndex(indices);out.computeVertexNormals();return out;
 }

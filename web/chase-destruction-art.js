@@ -5,7 +5,7 @@ import {BREAKABLE_PROPS} from './chase-destruction.js';
 // on the simulation clock; impacts allocate no geometry, textures or lights.
 export function createDestructionArt(scene,materials){
  const count=BREAKABLE_PROPS.length*10,geometry=new THREE.BoxGeometry(1,1,1),wood=new THREE.InstancedMesh(geometry,materials.wood,count),iron=new THREE.InstancedMesh(geometry,materials.iron,count),dummy=new THREE.Object3D();
- wood.instanceMatrix.setUsage(THREE.DynamicDrawUsage);iron.instanceMatrix.setUsage(THREE.DynamicDrawUsage);wood.frustumCulled=iron.frustumCulled=false;wood.castShadow=iron.castShadow=true;scene.add(wood,iron);
+ wood.userData.rigidInstanceBounds=iron.userData.rigidInstanceBounds=true;wood.instanceMatrix.setUsage(THREE.DynamicDrawUsage);iron.instanceMatrix.setUsage(THREE.DynamicDrawUsage);wood.frustumCulled=iron.frustumCulled=false;wood.castShadow=iron.castShadow=true;scene.add(wood,iron);
  dummy.rotation.order='YXZ'; // World-up yaw must not tip a settled flat panel.
  let signature='',uploads=0,lastRun=null;
  function update(run,reduced=false){

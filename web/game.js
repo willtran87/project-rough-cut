@@ -27,7 +27,7 @@ import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-region
 import { createMouseLook } from './mouse-look.js';
 import { advanceCartTimer, courseSoundMix } from './encounter-timing.js';
 import { COURSE_CIRCUITS, CIRCUIT_SECONDS, circuitPower, advanceCircuits, traceUnseenSeconds } from './course-circuits.js';
-import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261111-back-nine';
+import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261114-launch-theme';
 import { freshCourseArrival, advanceCourseArrival, arrivalPhoneVisible } from './course-arrival.js';
 import { freshFirstImpression, advanceFirstImpression, TEE_ANOMALY } from './course-first-impression.js';
 import {zoneCueAnchor,zoneCueSound} from './zone-cue-scene.js';
@@ -84,9 +84,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
   const miniMapBuffer =
     document.createElement("canvas");
   miniMapBuffer.width =
-    COURSE_MAP_WIDTH;
+    COURSE_MAP_WIDTH * 2;
   miniMapBuffer.height =
-    COURSE_MAP_HEIGHT;
+    COURSE_MAP_HEIGHT * 2;
   const miniMapCtx =
     miniMapBuffer.getContext("2d");
   miniMapCtx.imageSmoothingEnabled =
@@ -235,11 +235,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   buildScreenTexture();
-  const CUT_START = 1.15;
-  const CUT_END = 4.65;
-  const LINE_START = 5.25;
-  const LINE_END = 6.95;
-  const MENU_TIME = 8.15;
+  const CUT_START = window.RCIntroPresentation?.timing?.cuts[0] ?? 1.15;
+  const CUT_END = (window.RCIntroPresentation?.timing?.motorStop ?? 4.77) - 0.12;
+  const LINE_START = window.RCIntroPresentation?.timing?.lineStart ?? 5.25;
+  const LINE_END = window.RCIntroPresentation?.timing?.lineEnd ?? 6.95;
+  const MENU_TIME = window.RCIntroPresentation?.timing?.menu ?? 8.15;
   const PLAYER_STORY = {
     role:
       "associate product analyst on Joe's insurance-software product team",
@@ -255,25 +255,21 @@ import { createCourseAnnouncement } from './course-announcement.js';
       "Unfiled Change Requests prove Joe knew the turf-telemetry pilot and its automated course controls were unsafe.",
   };
   const MENU_ITEMS = [
-    "BEGIN THE ROUND",
-    "HOW TO PLAY / SETTINGS",
-    "SUBMIT CHANGE REQUEST",
-    "REPLAY STORY",
-    "CLOCK OUT",
+    "CHAPTERS",
+    "SETTINGS",
+    "START GAME",
   ];
   const MENU_DESCRIPTIONS = [
-    "Answer Joe's last task. Cross the locked course.",
+    "Browse the chapters and choose where to play.",
     "Tune audio, captions, and camera motion.",
-    "Request a scope exception from Joe.",
-    "Revisit the illustrated Night Order story, then open the guide.",
-    "End the shift. The course remembers.",
+    "Play the selected chapter.",
   ];
   const MENU_ITEM_START_Y = 294;
   const PAUSE_ITEMS = [
-    "RESUME ROUND",
-    "HOW TO PLAY / SETTINGS",
-    "RESTART HOLE",
-    "RETURN TO CLUBHOUSE",
+    "Resume round",
+    "How to play / settings",
+    "Restart chapter",
+    "Main menu",
   ];
   const PAUSE_DESCRIPTIONS = [
     "Continue from the exact point where the audit stopped.",
@@ -283,11 +279,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
   ];
   const PAUSE_WORLD_VEIL_ALPHA =
     0.84;
-  const RESULT_ACTION_IDS = [
-    "rematch",
-    "next_order",
-    "clubhouse",
-  ];
   const PORTFOLIO_PANEL = {
     x: 558,
     y: 78,
@@ -365,7 +356,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
     { id: "guided_hints", group: "presentation", label: "CONTEXTUAL COACHING", key: "guidedHints", type: "toggle" },
     { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
     {id:"clear_navigation",group:"presentation",label:"CLEAR NAVIGATION",key:"clearNavigation",type:"toggle"},
-    { id: "route_guidance", group: "presentation", label: "ROUTE THREAD", key: "routeGuidance", type: "toggle" },
   ];
   const KEYBOARD_BINDING_ROWS = [
     { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
@@ -3222,12 +3212,14 @@ import { createCourseAnnouncement } from './course-announcement.js';
     { x: -96, y: 195 },
     { x: -35, y: 195 },
   ];
+  // Retired layouts remain here only to recognize historical save records.
+  // Every playable entry point uses the original Night Order layout.
   const RUN_VARIANTS = [
     {
       id: "standard_review",
       number: 1,
-      name: "STANDARD REVIEW",
-      shortName: "STANDARD",
+      name: "NIGHT ORDER",
+      shortName: "NIGHT ORDER",
       key: KEY_POINT,
       sprinkler: SPRINKLER_POINT,
       changeRequest: {
@@ -3395,19 +3387,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
     };
   }
 
-  function runVariantForRound(roundsStarted) {
-    return RUN_VARIANTS[
-      Math.max(0, roundsStarted) %
-        RUN_VARIANTS.length
-    ];
-  }
+  function runVariantForRound() { return RUN_VARIANTS[0]; }
 
-  function activeRunVariant() {
-    return (
-      RUN_VARIANTS[state.hole?.variantIndex || 0] ||
-      RUN_VARIANTS[0]
-    );
-  }
+  function activeRunVariant() { return RUN_VARIANTS[0]; }
 
   function activeKeyPoint() {
     return activeRunVariant().key;
@@ -6428,15 +6410,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
       "Select an action, then press Enter to reassign it.",
     settingsReturnMode: "menu",
     career: savedCareer,
-    portfolioVariantId:
-      savedCareer.selectedVariantId ||
-      runVariantForRound(
-        savedCareer.roundsStarted,
-      ).id,
-    overtimeSelected:
-      savedCareer.overtimeEnabled &&
-      savedCareer.completedVariants.length ===
-        RUN_VARIANTS.length,
+    portfolioVariantId: RUN_VARIANTS[0].id,
+    overtimeSelected: false,
     status: "One last action item. One locked gate.",
     pendingCourseStart: false,
     lastJoeCaptureLineId: null,
@@ -6972,19 +6947,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
     return records[0];
   }
 
-  function overtimeUnlocked() {
-    return (
-      state.career.completedVariants.length >=
-      RUN_VARIANTS.length
-    );
-  }
+  function overtimeUnlocked() { return false; }
 
-  function portfolioUnlocked() {
-    return (
-      state.career.filedChangeRequests.length >=
-      RUN_VARIANTS.length
-    );
-  }
+  function portfolioUnlocked() { return false; }
 
   function shotCraftDefinition(id) {
     return (
@@ -7018,20 +6983,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
-  function totalPerformanceStamps() {
-    let total = 0;
-    for (
-      let index = 0;
-      index < RUN_VARIANTS.length;
-      index += 1
-    ) {
-      total +=
-        performanceStampsFor(
-          RUN_VARIANTS[index].id,
-        ).length;
-    }
-    return total;
-  }
+  function totalPerformanceStamps() { return performanceStampsFor(RUN_VARIANTS[0].id).length; }
 
   function dossierPerfected(
     variantId,
@@ -7044,13 +6996,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
-  function masterProductOwnerUnlocked() {
-    return (
-      totalPerformanceStamps() >=
-      PERFORMANCE_STAMPS.length *
-        RUN_VARIANTS.length
-    );
-  }
+  function masterProductOwnerUnlocked() { return totalPerformanceStamps() >= PERFORMANCE_STAMPS.length; }
 
   function awardPerformanceStamps(
     result,
@@ -7094,100 +7040,17 @@ import { createCourseAnnouncement } from './course-announcement.js';
         PERFORMANCE_STAMPS.length;
     result.masterProductOwnerUnlocked =
       totalBefore <
-        PERFORMANCE_STAMPS.length *
-          RUN_VARIANTS.length &&
+        PERFORMANCE_STAMPS.length &&
       masterProductOwnerUnlocked();
   }
 
-  function portfolioVariant() {
-    return (
-      RUN_VARIANTS.find(
-        (variant) =>
-          variant.id ===
-          state.portfolioVariantId,
-      ) ||
-      runVariantForRound(
-        state.career.roundsStarted,
-      )
-    );
-  }
+  function portfolioVariant() { return RUN_VARIANTS[0]; }
 
-  function selectedMenuVariant() {
-    return portfolioUnlocked()
-      ? portfolioVariant()
-      : runVariantForRound(
-          state.career.roundsStarted,
-        );
-  }
+  function selectedMenuVariant() { return RUN_VARIANTS[0]; }
 
-  function selectPortfolioVariant(
-    selection,
-    absolute = false,
-  ) {
-    if (!portfolioUnlocked()) {
-      state.status =
-        `File all ${RUN_VARIANTS.length} Change Requests to authorize Portfolio Override.`;
-      playUiTone(116, 0.08, 0.02);
-      return;
-    }
-    const currentIndex = Math.max(
-      0,
-      RUN_VARIANTS.findIndex(
-        (variant) =>
-          variant.id ===
-          state.portfolioVariantId,
-      ),
-    );
-    const nextIndex =
-      absolute
-        ? clamp(
-            selection,
-            0,
-            RUN_VARIANTS.length - 1,
-          )
-        : (
-            currentIndex +
-            selection +
-            RUN_VARIANTS.length
-          ) %
-          RUN_VARIANTS.length;
-    const variant =
-      RUN_VARIANTS[nextIndex];
-    state.portfolioVariantId =
-      variant.id;
-    state.career.selectedVariantId =
-      variant.id;
-    state.status =
-      `Portfolio Override: Night Order ${String(variant.number).padStart(2, "0")} selected.`;
-    saveCareer();
-    playUiTone(
-      280 + nextIndex * 72,
-      0.08,
-      0.026,
-    );
-  }
+  function selectPortfolioVariant() { state.portfolioVariantId = RUN_VARIANTS[0].id; }
 
-  function toggleOvertimeAudit() {
-    if (!overtimeUnlocked()) {
-      state.status =
-        `Clear all ${RUN_VARIANTS.length} Night Orders to authorize Overtime Audit.`;
-      playUiTone(116, 0.08, 0.02);
-      return;
-    }
-    state.overtimeSelected =
-      !state.overtimeSelected;
-    state.career.overtimeEnabled =
-      state.overtimeSelected;
-    state.status = state.overtimeSelected
-      ? "Overtime Audit armed. Joe has accepted the escalation."
-      : "Overtime Audit stood down.";
-    saveCareer();
-    playUiTone(
-      state.overtimeSelected ? 365 : 190,
-      0.09,
-      0.03,
-    );
-  }
+  function toggleOvertimeAudit() { state.overtimeSelected = false; }
 
   function gradeForScore(score) {
     if (score >= 8000) {
@@ -11217,7 +11080,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function drawScreenTexture() {
-    if (state.mode === "settings") return;
+    if (state.mode === "settings" || (["intro","gate"].includes(state.mode)&&window.RCIntroPresentation?.stats().ready)) return;
     if (["first_hole", "paused"].includes(state.mode) && !state.screenTexture) return;
     ctx.drawImage(
       screenTextureBuffer,
@@ -11226,6 +11089,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
+  const openingBase = document.createElement('canvas'), grassBase = document.createElement('canvas');
+  openingBase.width=WIDTH;openingBase.height=HEIGHT;
+  grassBase.width=WIDTH+16;grassBase.height=HEIGHT;
+  let openingBaseSource=null,grassBaseSource=null;
   function drawOpeningArt(time, lineProgress, menuMode) {
     if (!art.complete || art.naturalWidth === 0) {
       ctx.fillStyle = "#07150c";
@@ -11255,7 +11122,12 @@ import { createCourseAnnouncement } from './course-announcement.js';
     ctx.scale(zoom, zoom);
     ctx.translate(-WIDTH * 0.5, -HEIGHT * 0.5);
     ctx.globalAlpha = state.mode === "intro" ? clamp(time / 0.85, 0, 1) : 1;
-    ctx.drawImage(drawableImage(art), cover.x, cover.y, cover.width, cover.height);
+    const sourceImage=drawableImage(art);
+    if(openingBaseSource!==sourceImage){
+      const base=openingBase.getContext('2d');base.imageSmoothingEnabled=false;base.clearRect(0,0,WIDTH,HEIGHT);
+      base.drawImage(sourceImage,cover.x,cover.y,cover.width,cover.height);openingBaseSource=sourceImage;
+    }
+    ctx.drawImage(openingBase,0,0);
 
     const menuTwitch = menuMode && !reduced
       ? Math.pow(Math.max(0, Math.sin(time * 0.71)), 18)
@@ -11315,7 +11187,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
     grassCtx.clearRect(0, 0, WIDTH, HEIGHT);
     grassCtx.imageSmoothingEnabled = false;
     const sway = state.reducedMotion ? 0 : Math.sin(time * 0.62) * 4;
-    if (!drawImageCover(grassCtx, grassArt, sway, 0, 1.025)) {
+    if(grassArt.complete&&grassArt.naturalWidth>0){
+      const sourceImage=drawableImage(grassArt);
+      if(grassBaseSource!==sourceImage){const base=grassBase.getContext('2d');base.imageSmoothingEnabled=false;base.clearRect(0,0,grassBase.width,HEIGHT);base.save();base.translate(8,0);drawImageCover(base,grassArt,0,0,1.025);base.restore();grassBaseSource=sourceImage;}
+      grassCtx.drawImage(grassBase,sway-8,0);
+    }else{
       grassCtx.fillStyle = "#102b17";
       grassCtx.fillRect(0, 0, WIDTH, HEIGHT);
     }
@@ -11391,6 +11267,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function drawGate() {
+    if(window.RCIntroPresentation?.gate(ctx,inputCopy("CLICK / ENTER / SPACE TO BEGIN","A / START TO BEGIN INCIDENT","TAP TO BEGIN INCIDENT")))return;
     drawOpeningArt(0, 0, false);
     drawGrassCurtain(0, state.time, 0);
     drawMotes(state.time, 18, "212,156,66", HEIGHT * 0.1);
@@ -11500,6 +11377,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function drawIntro() {
+    if(window.RCIntroPresentation?.draw(ctx,state.time,{reducedMotion:state.reducedMotion,subtitles:state.subtitles}))return;
     const cut = inverseLerp(CUT_START, CUT_END, state.time);
     const lineProgress = inverseLerp(LINE_START, LINE_END, state.time);
     drawOpeningArt(state.time, lineProgress, false);
@@ -11540,18 +11418,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
       }
     }
 
-    drawText(
-      inputCopy(
-        "ENTER / SPACE / ESC / CLICK TO SKIP",
-        "A / B / START TO SKIP",
-        "TAP TO SKIP",
-      ),
-      WIDTH - 32,
-      HEIGHT - 25,
-      15,
-      "#b7c0aa",
-      "right",
-    );
     const courseAssets =
       assetPhaseSummary("course");
     if (
@@ -12105,269 +11971,68 @@ import { createCourseAnnouncement } from './course-announcement.js';
   function drawCompactMenu() {
     drawOpeningArt(state.time,0,true);
     ctx.fillStyle="rgba(2,13,8,.94)";ctx.fillRect(48,32,1184,656);
-    drawText("ROUGH CUT",80,112,56,"#f0f0d4","left",true);
-    drawText("THE COURSE CLOSES AT DUSK.",80,154,26,"#eacb88","left",true);
-    ["START ROUND","SETTINGS","CHANGE REQUEST","REPLAY INTRO","CLOCK OUT"].forEach((label,index)=>{
+    drawText("NIGHT ORDER",80,112,48,"#f0f0d4","left",true);
+    drawText("ROUGH CUT · CHAPTER 01",80,154,26,"#eacb88","left",true);
+    MENU_ITEMS.forEach((label,index)=>{
       const b=compactMenuButton(index),selected=index===state.menuIndex;
       ctx.fillStyle=selected?"#3d4023":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);
       strokeRect(b.x,b.y,b.width,b.height,selected?"#e7974e":"#547964",2);
-      drawText(label,b.x+24,b.y+54,32,"#eef3df","left",true);
+      drawText(label,b.x+24,b.y+54,26,"#eef3df","left",true);
     });
-    const selected=selectedMenuVariant(),unlocked=portfolioUnlocked();
-    drawText("CHOOSE YOUR NIGHT ORDER",580,112,32,"#eacb88","left",true);
-    RUN_VARIANTS.forEach((variant,index)=>{
-      const x=PORTFOLIO_PANEL.x+22+index*(PORTFOLIO_CARD_WIDTH+PORTFOLIO_CARD_GAP);
-      ctx.fillStyle=selected.id===variant.id?"#34432c":"#10271b";ctx.fillRect(x,146,190,286);
-      strokeRect(x,146,190,286,selected.id===variant.id?"#eacb88":"#547964",2);
-      drawText(String(index+1).padStart(2,"0"),x+95,216,54,"#eef3df","center",true);
-      const names=[["STANDARD","REVIEW"],["EASTERN","EXCEPTION"],["CLOSING","SHIFT"]][index];
-      names.forEach((line,i)=>drawText(line,x+95,274+i*36,28,"#eef3df","center",true));
-      drawText(state.career.completedVariants.includes(variant.id)?"CLEARED":selected.id===variant.id?"NEXT":unlocked?"SELECT":"LOCKED",x+95,390,26,"#b6dfd1","center",true);
-    });
-    const plans={standard_review:["KEY: WEST OF WATER","LURE JOE BEFORE CROSSING"],eastern_exception:["KEY: BY THE FLOODLIGHT","SCOUT JOE; KEEP A BALL"],closing_shift:["KEY: AUDIT ROW","JOE GUARDS THE EXITS"]};
-    plans[selected.id].forEach((line,i)=>drawText(line,580,468+i*36,28,"#b6dfd1","left",true));
-    ctx.fillStyle="#10271b";ctx.fillRect(558,530,650,106);strokeRect(558,530,650,106,"#547964",2);
-    drawText(overtimeUnlocked()?`OVERTIME: ${state.overtimeSelected?"ON":"OFF"}`:"OVERTIME LOCKED",580,568,30,"#eacb88","left",true);
-    drawText(overtimeUnlocked()?inputCopy("R / CLICK TO TOGGLE","RB TO TOGGLE","TAP TO TOGGLE"):"CLEAR ALL THREE ORDERS",580,610,26,"#b6dfd1","left",true);
-    const assets=assetPhaseSummary("course");
-    drawText(!assets.ready?`LOADING COURSE ${assets.percent}%`:assets.failed?`${assets.failed} IMAGES UNAVAILABLE · RELOAD TO RETRY`:inputCopy("ARROWS SELECT · ENTER CONFIRM","D-PAD SELECT · A CONFIRM","TAP TO CHOOSE"),640,686,25,"#eacb88","center",true);
+    drawText("ONE LAST ACTION ITEM.",580,214,30,"#eacb88","left",true);
+    ["EXPLORE THE COURSE.","FIND THE THREE FIELD CHECKS.","DISTRACT JOE. USE COVER.","FIND YOUR WAY OUT."].forEach((line,i)=>drawText(line,580,280+i*54,26,"#b6dfd1","left",true));
+    drawText(inputCopy("ARROWS SELECT · ENTER CONFIRM","D-PAD SELECT · A CONFIRM","TAP TO CHOOSE"),640,686,25,"#eacb88","center",true);
   }
 
+
   const clubhouseControls={
+    refresh(){render();},
     select(index){if(['menu','claim'].includes(state.mode)&&index>=0&&index<MENU_ITEMS.length)state.menuIndex=index;},
     activate(index){if(!['menu','claim'].includes(state.mode))return;state.menuIndex=index;activateMenu();render();},
+    replay(){if(state.mode==='menu'){state.menuIndex=2;activateMenu(true);render();}},
     order(index){if(['menu','claim'].includes(state.mode)){selectPortfolioVariant(index,true);render();}},
     overtime(){if(['menu','claim'].includes(state.mode)){toggleOvertimeAudit();render();}},
     back(){if(['claim','clocked_out'].includes(state.mode)){enterMenu();render();}}
   };
   function drawResponsiveClubhouse(){
-    const selected=selectedMenuVariant(),unlocked=portfolioUnlocked(),clock=state.mode==='clocked_out',assets=gameplayAssetSummary();
+    const selected=selectedMenuVariant(),clock=state.mode==='clocked_out',assets=gameplayAssetSummary(),earned=performanceStampsFor(selected.id);
     const recordText=record=>record?`${record.grade} · ${record.score.toLocaleString()} · ${record.route.toUpperCase()} · ${formatRunTime(record.timeSeconds)}`:'Unfiled';
-    const orders=RUN_VARIANTS.map((variant,index)=>{const stamps=performanceStampsFor(variant.id),cleared=state.career.completedVariants.includes(variant.id),filed=state.career.filedChangeRequests.includes(variant.id);return {id:variant.id,index,number:variant.number,name:variant.name,keyHint:variant.keyHint,
-      status:stamps.length===PERFORMANCE_STAMPS.length?'Perfect':cleared?'Order cleared':unlocked?'Review open':'Rotation preview',
-      change:`${variant.changeRequest.code} · ${filed?'Filed':'Unfiled'}`,record:'Best: '+recordText(bestRecordForVariant(variant.id)),stamps:PERFORMANCE_STAMPS.map(stamp=>({name:stamp.name,hint:stamp.hint,earned:stamps.includes(stamp.id)}))};});
-    RCCourseMenu.render({mode:state.mode,scale:state.uiScale,art:mainCtx.canvas,firstRound:state.career.roundsStarted===0,selected:state.menuIndex,variant:selected.id,unlocked,
-      actions:MENU_ITEMS.map((label,index)=>({label:index===0&&state.pendingCourseStart?'Preparing the course…':label,description:MENU_DESCRIPTIONS[index]})),orders,
+    RCCourseMenu.render({mode:state.mode,scale:state.uiScale,art:mainCtx.canvas,selected:state.menuIndex,reducedMotion:state.reducedMotion,
+      actions:MENU_ITEMS.map((label,index)=>({label:index===2&&state.pendingCourseStart?'Preparing the course…':label,description:MENU_DESCRIPTIONS[index]})),
+      stamps:PERFORMANCE_STAMPS.map(stamp=>({name:stamp.name,hint:stamp.hint,earned:earned.includes(stamp.id)})),
       shots:SHOT_CRAFT_BOOK.map(shot=>({label:shot.label,hint:shot.hint,earned:shotCraftDiscovered(shot.id)})),
-      authorization:masterProductOwnerUnlocked()?'Master Product Owner · All 12 stamps':unlocked?'Red-pen authorization · Choose your Night Order':`File all ${RUN_VARIANTS.length} Change Requests to choose an order. Until then, runs follow rotation.`,
-      progress:`Changes ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} · Orders ${state.career.completedVariants.length}/${RUN_VARIANTS.length} · Stamps ${totalPerformanceStamps()}/${PERFORMANCE_STAMPS.length*RUN_VARIANTS.length}`,
-      record:'Course record: '+recordText(bestCareerRecord()),career:state.career.roundsStarted?`${state.career.roundsStarted} rounds · ${state.career.escapes} escaped · ${state.career.captures} denied`:'',next:`Next order: ${String(selected.number).padStart(2,'0')} · ${selected.name}`,
-      overtime:state.overtimeSelected,overtimeUnlocked:overtimeUnlocked(),overtimeLabel:overtimeUnlocked()?`Overtime: ${state.overtimeSelected?'On':'Off'}`:'Overtime locked',
-      overtimeHelp:overtimeUnlocked()?'2 balls · Faster Joe · Stronger evidence · Score ×1.30':`Clear all ${RUN_VARIANTS.length} Night Orders to unlock Joe’s after-hours contract.`,overtimeRecord:'Overtime record: '+recordText(state.career.overtimeBest),
+      progress:`Performance stamps: ${totalPerformanceStamps()}/${PERFORMANCE_STAMPS.length}`,
+      record:'Course record: '+recordText(bestCareerRecord()),career:state.career.roundsStarted?`${state.career.roundsStarted} rounds · ${state.career.escapes} escaped · ${state.career.captures} denied`:'',
       noticeTitle:clock?'':state.mode==='claim'?'Change rejected':assets.failed?'Some art could not load':'',
-      notice:clock?'':state.mode==='claim'?state.status.replace(/^CHANGE REJECTED:\s*/,''):assets.failed?'Reload to retry.':state.pendingCourseStart?state.status:state.status||`${state.career.roundsStarted} rounds · ${state.career.escapes} escaped · ${state.career.captures} denied`,
-      controls:clock?clockedOutReturnPrompt():state.mode==='claim'?inputCopy('Escape dismiss · ↑↓ Menu · Enter confirm','B dismiss · D-pad menu · A confirm','Dismiss rejection or choose another menu action'):inputCopy('↑↓ Menu · Enter confirm · ←→ Order · R overtime · Page keys scroll','D-pad menu / order · A confirm · LB details · RB overtime · X comfort · Y journal · Right stick scroll','Tap an action · Scroll for orders, records and chapters')},clubhouseControls);
+      notice:clock?'':state.mode==='claim'?state.status.replace(/^CHANGE REJECTED:\s*/,''):assets.failed?'Reload to retry.':state.status,
+      controls:clock?clockedOutReturnPrompt():state.mode==='claim'?inputCopy('Escape dismiss · ↑↓ Menu · Enter confirm','B dismiss · D-pad menu · A confirm','Dismiss rejection or choose another menu action'):inputCopy('←→ Chapter · ↑↓ Action · Enter confirm · Page keys scroll','D-pad ←→ Chapter · ↑↓ Action · A confirm · LB records · X comfort · Y journal · Right stick scroll','Choose a chapter, then Start Game · Scroll for details')},clubhouseControls);
+  }
+
+  const menuBackdrop = document.createElement('canvas');
+  menuBackdrop.width = WIDTH; menuBackdrop.height = HEIGHT;
+  let menuBackdropKey = '', lastMenuRenderKey = '', lastBriefingRenderKey = '';
+  function menuAssetsKey() {
+    return [art.naturalWidth,grassArt.naturalWidth,preparedImageSources.has(art),preparedImageSources.has(grassArt)].join(':');
+  }
+  function menuRenderKey() {
+    const career=state.career,record=bestCareerRecord(),assets=gameplayAssetSummary();
+    return JSON.stringify([state.mode,state.menuIndex,window.RCChapterSelect?.selected().id,RCProgression.state(),state.inputMethod,state.uiScale,state.reducedMotion,state.status,state.pendingCourseStart,
+      career.roundsStarted,career.escapes,career.captures,career.performanceStamps,career.shotCraftBook,
+      record?.score,record?.grade,record?.route,record?.timeSeconds,assets.failed,menuAssetsKey(),
+      window.innerWidth,window.innerHeight,window.roughCutStudy?.available(),document.querySelector('dialog[open]')?.id]);
   }
   function drawMenu() {
-    if(window.RCCourseMenu){const time=state.reducedMotion?0:state.time;drawOpeningArt(time,0,true);drawGrassCurtain(1,time,0);drawMotes(time,24,'211,152,58',HEIGHT*.15);drawResponsiveClubhouse();return;}
-    if (gameplayReadability().compact) {drawCompactMenu();return;}
-    drawOpeningArt(state.time, 0, true);
-    drawGrassCurtain(1, state.time, 0);
-    ctx.fillStyle = "rgba(1,8,4,0.25)";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    drawMotes(state.time, 24, "211,152,58", HEIGHT * 0.15);
-
-    const panel = { x: 62, y: 40, width: 450, height: 640 };
-    ctx.fillStyle = "rgba(4,15,8,0.9)";
-    ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
-    strokeRect(panel.x, panel.y, panel.width, panel.height, "#617c3c", 2);
-    drawText("A JOE HORROR GAME", 92, 84, 17, "#b4c489", "left");
-    drawText("ROUGH CUT", 90, 166, 65, "#f0f0d4", "left", true);
-    drawText("THE COURSE CLOSES AT DUSK.", 92, 215, 18, "#ea8740", "left");
-    drawText("JOE DOES NOT.", 92, 240, 18, "#ea8740", "left");
-    const careerBest = bestCareerRecord();
-    const nextVariant =
-      selectedMenuVariant();
-    ctx.fillStyle = "rgba(9,25,13,0.88)";
-    ctx.fillRect(88, 252, 390, 34);
-    drawText(
-      careerBest
-        ? `COURSE RECORD  ${careerBest.grade}  //  ${careerBest.score.toLocaleString()}  //  ${careerBest.route.toUpperCase()}`
-        : "COURSE RECORD  —  UNFILED",
-      100,
-      270,
-      12,
-      careerBest
-        ? gradeColor(careerBest.grade)
-        : "#71806d",
-      "left",
-      Boolean(careerBest),
-    );
-    drawText(
-      `NEXT ORDER  ${String(nextVariant.number).padStart(2, "0")}  //  ${nextVariant.name}`,
-      100,
-      284,
-      11,
-      nextVariant.accent,
-      "left",
-      true,
-    );
-
-    MENU_ITEMS.forEach((label, index) => {
-      const y = MENU_ITEM_START_Y + index * 61;
-      const selected = state.menuIndex === index;
-      const selectionPulse = 0.86 + (Math.sin(state.time * 4.5) + 1) * 0.07;
-      ctx.fillStyle = selected ? `rgba(48,66,22,${selectionPulse})` : "rgba(10,27,14,0.88)";
-      ctx.fillRect(88, y, 390, 48);
-      strokeRect(88, y, 390, 48, selected ? "#e66f22" : "#31472a", selected ? 3 : 1);
-      if (selected) {
-        ctx.fillStyle = "#e66f22";
-        polygon([[98, y + 17], [108, y + 24], [98, y + 31]]);
+    if(window.RCCourseMenu){
+      const key=menuAssetsKey();
+      if(key!==menuBackdropKey){
+        const previous=ctx;ctx=menuBackdrop.getContext('2d');
+        try{ctx.clearRect(0,0,WIDTH,HEIGHT);drawOpeningArt(0,0,true);drawGrassCurtain(1,0,0);drawMotes(0,24,'211,152,58',HEIGHT*.15);}
+        finally{ctx=previous;}
+        menuBackdropKey=key;
       }
-      drawText(label, 108, y + 31, 19, selected ? "#ffc16d" : "#dce5ca", "left");
-    });
-
-    const overtimeAvailable = overtimeUnlocked();
-    if (state.career.roundsStarted === 0) {
-      drawFirstRoundInvitation();
-    } else {
-      drawPortfolioBoard();
-
-      const overtimePanel = {
-        x: 558,
-        y: 510,
-        width: 650,
-        height: 126,
-      };
-      const overtimeActive =
-        overtimeAvailable &&
-        state.overtimeSelected;
-      ctx.fillStyle = overtimeActive
-        ? "rgba(39,12,7,0.93)"
-        : "rgba(3,13,8,0.88)";
-      ctx.fillRect(
-        overtimePanel.x,
-        overtimePanel.y,
-        overtimePanel.width,
-        overtimePanel.height,
-      );
-      strokeRect(
-        overtimePanel.x,
-        overtimePanel.y,
-        overtimePanel.width,
-        overtimePanel.height,
-        overtimeActive
-          ? "#df6c2f"
-          : overtimeAvailable
-            ? "#8b7844"
-            : "#394637",
-        overtimeActive ? 3 : 2,
-      );
-      drawText(
-        overtimeAvailable
-          ? "OVERTIME AUDIT"
-          : "OVERTIME AUDIT // LOCKED",
-        overtimePanel.x + 24,
-        overtimePanel.y + 31,
-        18,
-        overtimeActive
-          ? "#ffb467"
-          : overtimeAvailable
-            ? "#dcc47b"
-            : "#738071",
-        "left",
-        true,
-      );
-      drawText(
-        overtimeAvailable
-          ? inputCopy(
-              `R — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-              `RB — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-              `TAP CARD — ${overtimeActive ? "STAND DOWN" : "AUTHORIZE"}`,
-            )
-          : `${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED`,
-        overtimePanel.x + overtimePanel.width - 24,
-        overtimePanel.y + 31,
-        12,
-        overtimeActive ? "#ffcb89" : "#9eaa91",
-        "right",
-        overtimeAvailable,
-      );
-      drawText(
-        overtimeAvailable
-          ? "2 BALLS  •  FASTER JOE  •  STRONGER EVIDENCE  •  SCORE ×1.30"
-          : "MASTER EVERY ORDER TO UNLOCK JOE'S AFTER-HOURS CONTRACT.",
-        overtimePanel.x + 24,
-        overtimePanel.y + 65,
-        13,
-        overtimeActive ? "#e79355" : "#98a391",
-        "left",
-        overtimeActive,
-      );
-      const changeRequestProgress =
-        `CHANGES ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length}`;
-      drawText(
-        `${
-          state.career.overtimeBest
-            ? `OVERTIME RECORD  ${state.career.overtimeBest.grade}  //  ${state.career.overtimeBest.score.toLocaleString()}  //  ${state.career.overtimeBest.route.toUpperCase()}`
-            : overtimeAvailable
-              ? "OVERTIME RECORD  —  UNFILED"
-              : "CLEARANCE REQUIRED // ALL ORDERS"
-        }  •  ${changeRequestProgress}`,
-        overtimePanel.x + 24,
-        overtimePanel.y + 99,
-        12,
-        state.career.overtimeBest
-          ? gradeColor(
-              state.career.overtimeBest.grade,
-            )
-          : "#70806d",
-        "left",
-        Boolean(state.career.overtimeBest),
-      );
-
+      ctx.drawImage(menuBackdrop,0,0);drawResponsiveClubhouse();return;
     }
-
-    if (gameplayAssetSummary().failed > 0) {
-      drawText("SOME ART COULD NOT LOAD", 91, 622, 22, "#efbd80", "left", true);
-      drawText("RELOAD TO RETRY", 91, 650, 24, "#e8e5cc", "left", true);
-    } else if (state.status.startsWith("CHANGE REJECTED:")) {
-      drawText("CHANGE REJECTED:", 91, 622, 13, "#db8041", "left");
-      drawText(
-        state.status.slice("CHANGE REJECTED:".length).trim(),
-        91,
-        643,
-        12,
-        "#a7b29e",
-        "left",
-      );
-    } else {
-      drawText(MENU_DESCRIPTIONS[state.menuIndex], 91, 621, 13, "#d0d8bf", "left");
-      drawText(
-        state.pendingCourseStart
-          ? state.status
-          : state.career.roundsStarted > 0
-          ? `FILE: ${state.career.roundsStarted} ROUND${state.career.roundsStarted === 1 ? "" : "S"}  •  ${state.career.escapes} ESCAPED  •  ${state.career.captures} DENIED`
-          : state.status,
-        91,
-        644,
-        12,
-        "#84927d",
-        "left",
-      );
-    }
-    drawText(
-      state.mode === "claim"
-        ? inputCopy(
-            `ESC DISMISS  •  ↑↓ MENU${portfolioUnlocked() ? "  •  ←→ ORDER" : ""}  •  ENTER CONFIRM`,
-            `B DISMISS  •  D-PAD MENU${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM`,
-            "TAP ANOTHER MENU ITEM",
-          )
-        : inputCopy(
-            `${portfolioUnlocked() ? "←→ ORDER  •  " : ""}↑↓ SELECT  •  ENTER CONFIRM${overtimeAvailable ? "  •  R OVERTIME" : ""}  •  F FULLSCREEN`,
-            `D-PAD SELECT${portfolioUnlocked() ? " / ORDER" : ""}  •  A CONFIRM  •  X COMFORT  •  Y JOURNAL${overtimeAvailable ? "  •  RB OVERTIME" : ""}`,
-            portfolioUnlocked()
-              ? "TAP MENU / DOSSIER / OVERTIME CARD"
-              : overtimeAvailable
-                ? "TAP MENU ITEM  •  TAP OVERTIME CARD"
-                : "TAP A MENU ITEM",
-          ),
-      WIDTH - 32,
-      HEIGHT - 25,
-      14,
-      "#aab5a0",
-      "right",
-    );
+    drawCompactMenu();
   }
 
   function settingsFieldPage() {
@@ -12388,7 +12053,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   const SETTINGS_CATEGORIES = [
     {name:"AUDIO",ids:["master","ambience","mower","effects","danger","mute"]},
     {name:"CONTROLS",ids:["look_sensitivity","invert_look","stick_deadzone","free_look"]},
-    {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","sound_captions","threat_captions","ui_scale","focused_hud","guided_hints","clear_navigation","route_guidance"]},
+    {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","sound_captions","threat_captions","ui_scale","focused_hud","guided_hints","clear_navigation"]},
     {name:"ATMOSPHERE",ids:["reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
     {name:"CHALLENGE",ids:["pursuit_intensity"]}
   ];
@@ -12806,7 +12471,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         ctx.fillStyle="#193323";ctx.fillRect(80,414,360,64);strokeRect(80,414,360,64,"#9dc9ab",2);
         drawText("REPLAY LESSONS",260,455,26,"#f1e6c9","center",true);
       }
-      drawText(state.settingsNotice || (category===4?"Pressure changes during play make that run unranked.":category===2?inputCopy("T: REPLAY LESSONS · Listen reveals a hidden route.","X: REPLAY LESSONS · Listen reveals a hidden route.","MORE: lessons and route guidance options."):"Changes save automatically. RESET affects this category only."),80,542,24,"#b9d9c7","left");
+      drawText(state.settingsNotice || (category===4?"Pressure changes during play make that run unranked.":category===2?inputCopy("T: REPLAY LESSONS · Listen for nearby activity.","X: REPLAY LESSONS · Listen for nearby activity.","MORE: lessons and readability options."):"Changes save automatically. RESET affects this category only."),80,542,24,"#b9d9c7","left");
     }
     [[80,196,"< CATEGORY"],[300,196,"RESET"],[520,196,ids.length>6?"MORE":"KEYS"],[740,196,"RETURN"],[960,240,"CATEGORY >"]].forEach(([x,width,label])=>{
       ctx.fillStyle="#193323";ctx.fillRect(x,576,width,72);strokeRect(x,576,width,72,"#9dc9ab",2);
@@ -13542,13 +13207,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
     courseBackdropRenderedAt = -Infinity;
     miniMapRenderedAt = -Infinity;
     clearTouchInputs(true);
-    const variant =
-      variantOverride ||
-      selectedMenuVariant();
-    const variantIndex = RUN_VARIANTS.indexOf(variant);
-    const overtime =
-      state.overtimeSelected &&
-      overtimeUnlocked();
+    const variant = RUN_VARIANTS[0];
+    const variantIndex = 0;
+    const overtime = false;
+    state.portfolioVariantId = variant.id;
+    state.overtimeSelected = false;
     const courseEchoRecord =
       compatibleCourseEchoRecord(
         variant.id,
@@ -22938,6 +22601,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   function completeHole(route) {
     state.hole.escapeRoute = route;
+    window.RCProgression.complete("night-order",route);
     recordNightOrderReceipt(route,state.hole.nightOrderActionsCompleted,{rehearsal:Boolean((state.hole.rehearsal||state.rehearsalCareer)&&!state.hole.checkpointContinuation)});
     if (route === "drain") {
       try { localStorage.setItem("rough-cut.under-green.v1", JSON.stringify({version:1, unlocked:true, checkpoint:0, completed:false, evidence:false})); } catch {}
@@ -34557,6 +34221,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function visibleNavigationRibbonEntries() {
+    if (!routeThreadVisible()) return [];
     return navigationRibbonEntries()
       .filter(
         (entry) =>
@@ -34568,6 +34233,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function visibleNavigationRibbonSegments() {
+    if (!routeThreadVisible()) return [];
     const entries =
       navigationRibbonEntries();
     const segments = [];
@@ -35018,153 +34684,12 @@ import { createCourseAnnouncement } from './course-announcement.js';
     }
     const visible =
       visibleNavigationRibbonEntries();
-    const segments =
-      visibleNavigationRibbonSegments();
-    const presentation =
-      navigationRibbonPresentation(
-        samples,
-      );
     const captionPresentation =
       navigationRibbonCaptionPresentation(
         visible.length,
       );
     ctx.save();
-    if (segments.length > 0) {
-      const threadPulse =
-        state.reducedMotion
-          ? presentation
-              .threadAlphaBase +
-            presentation
-              .threadAlphaPulse
-          : presentation
-              .threadAlphaBase +
-            (
-              Math.sin(
-                state.time * 2.4,
-              ) + 1
-            ) *
-              presentation
-                .threadAlphaPulse;
-      ctx.lineCap = "round";
-      ctx.setLineDash(
-        presentation.dash,
-      );
-      ctx.beginPath();
-      for (
-        let index = 0;
-        index < segments.length;
-        index += 1
-      ) {
-        const segment =
-          segments[index];
-        ctx.moveTo(
-          segment.start.point.x,
-          segment.start.point.y - 2,
-        );
-        ctx.lineTo(
-          segment.end.point.x,
-          segment.end.point.y - 2,
-        );
-      }
-      ctx.strokeStyle =
-        `rgba(2,8,5,${presentation.underlayAlpha})`;
-      ctx.lineWidth =
-        presentation.underlayWidth;
-      ctx.stroke();
-      ctx.globalAlpha = threadPulse;
-      ctx.strokeStyle =
-        guide.targetColor;
-      ctx.lineWidth =
-        presentation.threadWidth;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.setLineDash([]);
-    }
-    for (
-      let index = visible.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      const entry = visible[index];
-      const point = entry.point;
-      const nextSample =
-        samples[
-          entry.index + 1
-        ] || guide.target;
-      const nextPoint =
-        worldToScreen(
-          nextSample.x,
-          nextSample.y,
-        );
-      const size = clamp(
-        point.scale * 10,
-        5,
-        25,
-      );
-      const direction = Math.atan2(
-        nextPoint.y - point.y,
-        nextPoint.x - point.x,
-      );
-      const pulse = state.reducedMotion
-        ? 1
-        : 0.88 +
-          Math.sin(
-            state.time * 3.6 -
-              entry.index * 0.7,
-          ) *
-            0.12;
-      ctx.save();
-      ctx.translate(
-        point.x,
-        point.y - 2,
-      );
-      ctx.rotate(direction);
-      ctx.globalAlpha = clamp(
-        (
-          0.3 +
-          point.scale * 0.34
-        ) * pulse,
-        presentation
-          .reflectorAlphaMinimum,
-        presentation
-          .reflectorAlphaMaximum,
-      );
-      ctx.strokeStyle =
-        guide.targetColor;
-      ctx.lineWidth = clamp(
-        point.scale * 1.4,
-        1,
-        3,
-      );
-      ctx.beginPath();
-      ctx.moveTo(
-        -size * 0.7,
-        -size * 0.55,
-      );
-      ctx.lineTo(size * 0.35, 0);
-      ctx.lineTo(
-        -size * 0.7,
-        size * 0.55,
-      );
-      ctx.stroke();
-      ctx.fillStyle =
-        "rgba(3,9,5,0.38)";
-      ctx.beginPath();
-      ctx.ellipse(
-        -size * 0.25,
-        size * 0.9,
-        size * 0.75,
-        Math.max(
-          1,
-          size * 0.13,
-        ),
-        0,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.restore();
-    }
+    // Keep the route caption; navigation no longer paints dashes or arrows on the ground.
     if (
       captionPresentation.visible &&
       captionPresentation.placement
@@ -44534,6 +44059,29 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
+  let coursePlanBuffer=null;
+  function mapFootprint(g,x,y,rx,ry){
+    const points=[[-1,-.45],[-.65,-.45],[-.65,-.8],[.3,-.8],[.3,-1],[.7,-1],[.7,-.5],[1,-.5],[1,.4],[.6,.4],[.6,.8],[-.25,.8],[-.25,1],[-.7,1],[-.7,.45],[-1,.45]];
+    g.beginPath();points.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](Math.round(x+u*rx),Math.round(y+v*ry)));g.closePath();
+  }
+  function buildCoursePlan(panel,mapPoint,sx,sy){
+    const canvas=document.createElement('canvas');canvas.width=panel.width*2;canvas.height=panel.height*2;
+    const g=canvas.getContext('2d');g.scale(2,2);g.translate(-panel.x,-panel.y);
+    g.fillStyle='#13271b';g.fillRect(panel.x+13,panel.y+54,panel.width-26,panel.height-68);
+    g.save();g.beginPath();g.rect(panel.x+14,panel.y+55,panel.width-28,panel.height-70);g.clip();
+    // Fixed survey grid and engraved turf marks are built once, never per frame.
+    g.fillStyle='#243425';for(let y=panel.y+60;y<panel.y+panel.height;y+=12)for(let x=panel.x+18;x<panel.x+panel.width;x+=12)g.fillRect(x,y,1,1);
+    g.strokeStyle='#566044';g.lineWidth=.5;
+    for(const zone of COURSE_ZONES.slice(1)){const y=Math.round(mapPoint(0,zone.start).y)+.5;g.beginPath();g.moveTo(panel.x+14,y);g.lineTo(panel.x+panel.width-14,y);g.stroke();}
+    g.fillStyle='#35452c';g.beginPath();
+    [[.43,panel.y+panel.height-14],[.57,panel.y+panel.height-14],[.69,panel.y+62],[.31,panel.y+62]].forEach(([x,y],i)=>g[i?'lineTo':'moveTo'](Math.round(panel.x+panel.width*x),y));g.closePath();g.fill();
+    for(const [zones,fill,edge]of [[BUNKER_SAND_ZONES,'#746342','#aa9262'],[FOOTING_HAZARD_ZONES,'#41402b','#857451']])for(const z of zones){const p=mapPoint(z.x,z.y);mapFootprint(g,p.x,p.y,Math.max(3,z.radiusX*sx),Math.max(2,z.radiusY*sy));g.fillStyle=fill;g.fill();g.strokeStyle=edge;g.lineWidth=.7;g.stroke();}
+    for(const o of COURSE_OBSTACLES){if(!o.blocks)continue;const p=mapPoint(o.x,o.y),f=obstacleFootprintAxes(o,PLAYER_COLLISION_RADIUS);mapFootprint(g,p.x,p.y,Math.max(2.5,f.x/.72*sx),Math.max(1.8,f.y*sy));g.fillStyle=o.draw===false?'#30442c':'#172c20';g.fill();g.strokeStyle='#718164';g.lineWidth=.7;g.stroke();g.fillStyle='#879173';g.fillRect(Math.round(p.x)-1,Math.round(p.y)-1,2,1);}
+    const left=mapPoint(-COURSE_MAX_X,0),right=mapPoint(COURSE_MAX_X,COURSE_LENGTH);g.strokeStyle='#98a078';g.lineWidth=.7;g.setLineDash([3,3]);g.strokeRect(left.x,right.y,right.x-left.x,left.y-right.y);g.setLineDash([]);
+    g.restore();g.strokeStyle='#8d8058';g.lineWidth=1;g.strokeRect(panel.x+13.5,panel.y+54.5,panel.width-27,panel.height-69);
+    return canvas;
+  }
+
   function renderCourseMiniMap() {
     const collisionRecoveryRoute =
       collisionRecoveryWorldRoutePresentation();
@@ -44706,49 +44254,13 @@ import { createCourseAnnouncement } from './course-announcement.js';
       );
     }
 
-    ctx.fillStyle = "#0a1b10";
-    ctx.fillRect(panel.x + 13, panel.y + 54, panel.width - 26, panel.height - 68);
-    for (let index = 1; index < COURSE_ZONES.length; index += 1) {
-      const zoneY = mapPoint(0, COURSE_ZONES[index].start).y;
-      ctx.strokeStyle = "rgba(164,178,125,0.22)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(panel.x + 14, zoneY);
-      ctx.lineTo(panel.x + panel.width - 14, zoneY);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "#294426";
-    polygon([
-      [panel.x + panel.width * 0.43, panel.y + panel.height - 14],
-      [panel.x + panel.width * 0.57, panel.y + panel.height - 14],
-      [panel.x + panel.width * 0.69, mapTop],
-      [panel.x + panel.width * 0.31, mapTop],
-    ]);
     const mapScaleX =
       (panel.width - 28) / 224;
     const mapScaleY =
       (mapBottom - mapTop) /
       COURSE_LENGTH;
-    const mapBoundsLeft =
-      mapPoint(-COURSE_MAX_X, 0);
-    const mapBoundsRight =
-      mapPoint(
-        COURSE_MAX_X,
-        COURSE_LENGTH,
-      );
-    ctx.strokeStyle =
-      "rgba(188,202,150,0.58)";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 4]);
-    ctx.strokeRect(
-      mapBoundsLeft.x,
-      mapBoundsRight.y,
-      mapBoundsRight.x -
-        mapBoundsLeft.x,
-      mapBoundsLeft.y -
-        mapBoundsRight.y,
-    );
-    ctx.setLineDash([]);
+    if (!coursePlanBuffer) coursePlanBuffer = buildCoursePlan(panel,mapPoint,mapScaleX,mapScaleY);
+    ctx.drawImage(coursePlanBuffer,panel.x,panel.y,panel.width,panel.height);
     const drawMapInteractionRange = (
       target,
       color,
@@ -44798,104 +44310,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     };
-    for (
-      let index = 0;
-      index < BUNKER_SAND_ZONES.length;
-      index += 1
-    ) {
-      const sandZone =
-        BUNKER_SAND_ZONES[index];
-      const sandPoint =
-        mapPoint(
-          sandZone.x,
-          sandZone.y,
-        );
-      const active =
-        state.hole.environment
-          ?.sandZone?.id ===
-          sandZone.id &&
-        state.hole.environment.sand;
-      ctx.fillStyle = active
-        ? "rgba(214,164,82,0.68)"
-        : "rgba(145,106,55,0.48)";
-      ctx.beginPath();
-      ctx.ellipse(
-        sandPoint.x,
-        sandPoint.y,
-        Math.max(
-          3,
-          sandZone.radiusX *
-            mapScaleX,
-        ),
-        Math.max(
-          2,
-          sandZone.radiusY *
-            mapScaleY,
-        ),
-        0,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.strokeStyle =
-        active
-          ? "#e5bd72"
-          : "#745b37";
-      ctx.lineWidth =
-        active ? 2 : 1;
-      ctx.stroke();
-    }
-    for (
-      let index = 0;
-      index <
-        FOOTING_HAZARD_ZONES.length;
-      index += 1
-    ) {
-      const hazard =
-        FOOTING_HAZARD_ZONES[index];
-      const point = mapPoint(
-        hazard.x,
-        hazard.y,
-      );
-      const active =
-        state.hole.environment
-          ?.footingHazardZone?.id ===
-          hazard.id &&
-        state.hole.environment
-          .footingHazard;
-      ctx.fillStyle = active
-        ? "rgba(202,139,62,0.66)"
-        : hazard.kind === "mud"
-          ? "rgba(81,63,39,0.56)"
-          : hazard.kind === "roots"
-            ? "rgba(116,76,39,0.5)"
-            : "rgba(99,104,48,0.5)";
-      ctx.strokeStyle = active
-        ? "#e0a454"
-        : "#857044";
-      ctx.lineWidth = active
-        ? 2
-        : 1;
-      ctx.beginPath();
-      ctx.ellipse(
-        point.x,
-        point.y,
-        Math.max(
-          3,
-          hazard.radiusX *
-            mapScaleX,
-        ),
-        Math.max(
-          2,
-          hazard.radiusY *
-            mapScaleY,
-        ),
-        hazard.angle || 0,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-      ctx.stroke();
+    for(const zone of [state.hole.environment?.sand&&state.hole.environment.sandZone,state.hole.environment?.footingHazard&&state.hole.environment.footingHazardZone]){
+      if(!zone)continue;const point=mapPoint(zone.x,zone.y);
+      mapFootprint(ctx,point.x,point.y,Math.max(3,zone.radiusX*mapScaleX),Math.max(2,zone.radiusY*mapScaleY));
+      ctx.strokeStyle='#e5bd72';ctx.lineWidth=1.5;ctx.stroke();
     }
     if (collisionRecoveryRoute.active) {
       const localTarget = mapPoint(
@@ -45051,6 +44469,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         collisionContactActivelyRefreshed() &&
         state.hole.blockedObstacle ===
           obstacle.id;
+      if(!blocked)continue;
       ctx.fillStyle = blocked
         ? "rgba(180,65,29,0.68)"
         : obstacle.draw === false
@@ -45069,25 +44488,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
           obstacle,
           PLAYER_COLLISION_RADIUS,
         );
-      ctx.beginPath();
-      ctx.ellipse(
-        obstaclePoint.x,
-        obstaclePoint.y,
-        Math.max(
-          2.5,
-          footprint.x /
-            0.72 *
-            mapScaleX,
-        ),
-        Math.max(
-          1.8,
-          footprint.y *
-            mapScaleY,
-        ),
-        0,
-        0,
-        Math.PI * 2,
-      );
+      mapFootprint(ctx,obstaclePoint.x,obstaclePoint.y,Math.max(2.5,footprint.x/.72*mapScaleX),Math.max(1.8,footprint.y*mapScaleY));
       ctx.fill();
       ctx.stroke();
     }
@@ -46218,10 +45619,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
         miniMapCriticalStateKey
     ) {
       miniMapCtx.setTransform(
-        1,
+        2,
         0,
         0,
-        1,
+        2,
         0,
         0,
       );
@@ -46253,6 +45654,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
       miniMapBuffer,
       COURSE_MAP_X,
       COURSE_MAP_Y,
+      COURSE_MAP_WIDTH,
+      COURSE_MAP_HEIGHT,
     );
     if (state.hole.mapOpen) {
       for (const tool of courseToolPresentation()) {
@@ -53604,8 +53007,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
     setClearNavigation:value=>{state.clearNavigation=Boolean(value);savePreferences();render();},
     toggleMap:()=>{toggleCourseMap();render();},
     pauseMap:()=>{if(state.mode==='first_hole'){enterPause();render();}},
-    selectResult:index=>{if(['victory','defeat'].includes(state.mode)&&Number.isInteger(index)&&index>=0&&index<RESULT_ACTION_IDS.length)state.resultIndex=index;},
-    activateResult:index=>{if(['victory','defeat'].includes(state.mode)&&Number.isInteger(index)&&index>=0&&index<RESULT_ACTION_IDS.length){state.resultIndex=index;activateResultAction();render();if(state.mode==='first_hole')canvas.focus();}},
+    selectResult:index=>{if(['victory','defeat'].includes(state.mode)&&Number.isInteger(index)&&index>=0&&index<resultActionPresentations(state.mode).length)state.resultIndex=index;},
+    activateResult:index=>{if(['victory','defeat'].includes(state.mode)&&Number.isInteger(index)&&index>=0&&index<resultActionPresentations(state.mode).length){state.resultIndex=index;activateResultAction();render();if(state.mode==='first_hole')canvas.focus();}},
     selectPause:index=>{if(state.mode==='paused'&&Number.isInteger(index)&&index>=0&&index<PAUSE_ITEMS.length)state.pauseIndex=index;},
     activatePause:index=>{if(state.mode==='paused'&&Number.isInteger(index)&&index>=0&&index<PAUSE_ITEMS.length){state.pauseIndex=index;activatePause();render();if(state.mode==='first_hole')canvas.focus();}},
     route:()=>({dom:Boolean(window.RCScene3D?.domHud()&&spatialViewEnabled()),visible:state.mode==="first_hole"&&state.hole.mapOpen,input:state.inputMethod,selected:state.hole.rebuild.preferredExit,plans:state.mode==='first_hole'&&state.hole.mapOpen?exitPlanChoices():[]}),
@@ -54133,9 +53536,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function routeThreadVisible() {
-    if(state.focusedHud&&!state.hole.focus&&!state.hole.mapOpen&&!state.routeGuidance)return false;
-    return state.routeGuidance || state.hole.focus || state.hole.mapOpen ||
-      Boolean(activeFieldActionBreakaway()) || state.hole.blockedTimer > 0 || Boolean(activeFootingNavigationOverride());
+    // Explore through physical paths and landmarks. Saved preferences and
+    // Listen/Map must not restore an animated trail on the ground.
+    return false;
   }
 
   function applyComfortPreset(index) {
@@ -54256,7 +53659,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     const advice = h.escapeFiling.sealing ? "RELEASE AUTHORIZED" : filing ? h.joe.mode === "chase" || h.hasLineOfSight ? "MOVE TO CANCEL IF UNSAFE" : "HOLD STILL UNTIL FILED" : h.joe.mode === "chase" ? h.hasLineOfSight ? "BREAK SIGHT WITH COVER" : "CHANGE YOUR ROUTE" : distantEvidence ? "KEEP MOVING QUIETLY" : h.detectionSource === "trail" ? "LEAVE ROUGH; CHANGE ROUTE" : h.detectionSource === "wake" ? "LEAVE THE OPEN LANE" : h.joe.mode === "search" ? "LEAVE YOUR LAST SPOT" : h.joe.mode === "investigate" ? "MOVE QUIETLY NOW" : h.hasLineOfSight ? "GET BEHIND COVER" : "SCOUT THE NEXT COVER";
     return {compact,font,action,route,cover,threat,advice,color:read.color,access,filing,
       progress:`${action.exitReadiness.checks}/3 CHECKS | ${access} | ${h.golfBalls} BALLS`,
-      navigation:["field_signal_breakaway","filing","authorized"].includes(action.phase) ? action.coaching : !routeThreadVisible() ? inputCopy(`HOLD ${keyboardBindingLabel("focus")} FOR ROUTE`,"HOLD LT FOR ROUTE","HOLD LISTEN FOR ROUTE") : `ROUTE: ${route.direction}`,
+      navigation:["field_signal_breakaway","filing","authorized"].includes(action.phase) ? action.coaching : !routeThreadVisible() ? inputCopy(`HOLD ${keyboardBindingLabel("focus")} TO LISTEN`,"HOLD LT TO LISTEN","HOLD LISTEN") : `ROUTE: ${route.direction}`,
       payoff: tacticalPayoffVisible() ? h.tacticalPayoff : null,
       mapExpanded: Boolean(h.mapOpen || h.focus), layout: "two_line_contextual_threat", bounds:{left:{x:24,y:22,width:650,height:78},right:{x:772,y:22,width:484,height:78}}};
   }
@@ -57739,7 +57142,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     RCQualityUI.render({action:normalizeDisplayText(dangerAction.action),consequence:normalizeDisplayText(spatialDisplayUnits(dangerAction.consequence)),listening:listeningPresentation(environment),scale:state.uiScale,target:projectedTarget?.visible?projectedTarget:null,zone:h.rebuild.lab?'Practice · no records':courseZoneAt(state.player.y).name,goal,context:normalizeDisplayText(spatialDisplayUnits(context)),progress,progressLabel,
       resources:`${h.golfBalls} balls · ${completedNightOrderActionCount()}/3 checks`+(h.keyCollected?' · Shed key':h.drainUnlocked?' · Drain open':''),
       threat:danger&&instruction!=='danger'?threat.text:!danger&&tacticalPayoffVisible()?h.tacticalPayoff.title:'',danger,
-      caption:h.ballAim.active||h.engagement.closeEscape.remaining>0?'':danger?soundCaption:evidenceCaption||captions||soundCaption||(!context&&joeBarkVisible()?h.joeBark:''),touch:state.inputMethod==='touch'?TOUCH_CONTROLS:null,moveX:state.touch.moveX,moveY:state.touch.moveY,touchRunActive:touchRun.active,touchRunToggle:state.touchSprintToggle});
+      caption:h.ballAim.active||h.engagement.closeEscape.remaining>0?'':danger?soundCaption:evidenceCaption||captions||soundCaption||(!context&&joeBarkVisible()?h.joeBark:''),touch:state.inputMethod==='touch'?TOUCH_CONTROLS:null,moveX:state.touch.moveX,moveY:state.touch.moveY,touchHeld:{move:state.touch.movePointerId!==null,aim:state.touch.aimPointerId!==null,crouch:h.crouched,focus:h.focus,lookBack:state.touch.lookBackPointerId!==null},touchRunActive:touchRun.active,touchRunToggle:state.touchSprintToggle});
     RCScene3D.showDomHud();window.RCQualityTelemetry ||= {};window.RCQualityTelemetry.hudMs=performance.now()-hudStart;return true;
   }
   function spatialEffectsFrame(){
@@ -57895,16 +57298,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     drawMotes(state.time, 28, "198,173,81", HEIGHT * 0.16);
     drawCourseBoundaryRopes();
     drawCourseWayfindingStakes();
-    drawWorldNavigationRibbon(
-      footingGuidance,
-    );
-    drawCollisionRecoveryWorldRoute(
-      collisionRecoveryRoute,
-    );
-    drawFootingHazardBypassRoute(
-      footingGuidance,
-      collisionRecoveryRoute.active,
-    );
+    // Ground-route overlays are omitted so the player discovers the course.
     drawStatusRequestSpatialFootprint();
     drawCadenceForecast();
     drawCourseCollisionFootprints();
@@ -58325,15 +57719,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     drawText("NO OVERTIME WAS AUTHORIZED.", WIDTH - 28, HEIGHT - 24, 11, "#586451", "right", true);
   }
 
-  function nextNightOrderVariant() {
-    return RUN_VARIANTS[
-      (
-        state.hole.variantIndex +
-        1
-      ) %
-        RUN_VARIANTS.length
-    ];
-  }
+  function nextNightOrderVariant() { return RUN_VARIANTS[0]; }
 
   function nextPerformanceTarget() {
     const variant =
@@ -58692,8 +58078,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
         id: "rematch",
         label:
           outcome === "defeat"
-            ? "RESTART RUN"
-            : shedContinuation ? "DRIVE THE BACK NINE" : drainContinuation ? "ENTER THE DRAIN" : "BEAT YOUR RUN",
+            ? "Restart run"
+            : shedContinuation ? "Drive the Back Nine" : drainContinuation ? "Enter the drain" : "Beat your run",
         detail:
           shedContinuation ? "LEVEL 2 // THE CART KEYS ARE WAITING" : drainContinuation ? "LEVEL 2 // UNDER THE GREEN" : captureReview
             ? `${captureReview.coachingMode === "recovery_drill" ? "DRILL" : captureReview.coachingMode === "guided_adjustment" ? "ADJUST" : "COUNTER"} // ${captureReview.shortLabel}`
@@ -58709,27 +58095,28 @@ import { createCourseAnnouncement } from './course-announcement.js';
       },
       {
         id: "next_order",
-        label: outcome === "defeat" ? "CONTINUE" : "NEXT ORDER",
-        detail: outcome === "defeat" ? `${(state.hole.rehearsalCheckpoint||state.hole.rehearsalOrigin)?.checks.length||0}/3 CHECKS SAVED // UNRANKED` : `ORDER ${String(nextVariant.number).padStart(2, "0")} // ${nextVariant.shortName}`,
-        description: outcome === "defeat" ? "Resume your last safe point with its checks, discoveries and supplies. Later safe points keep saving. This run will not set a score record." : `${nextVariant.name}: ${nextVariant.briefing}`,
+        label: outcome === "defeat" ? "Continue" : "Replay chapter",
+        detail: outcome === "defeat" ? `${(state.hole.rehearsalCheckpoint||state.hole.rehearsalOrigin)?.checks.length||0}/3 CHECKS SAVED // UNRANKED` : "CHAPTER 01 // NIGHT ORDER",
+        description: outcome === "defeat" ? "Resume your last safe point with its checks, discoveries and supplies. Later safe points keep saving. This run will not set a score record." : "Start Night Order again from the tee.",
       },
       {
         id: "clubhouse",
-        label: "CLUBHOUSE",
+        label: "Main menu",
         detail:
           "RECORDS // SETTINGS",
         description:
           "Review records, contracts, accessibility, and audio.",
       },
-    ];
+    ].filter(action=>outcome!=="victory"||action.id!=="next_order");
   }
 
   function resultActionGeometry(
     index,
   ) {
-    if (gameplayReadability().compact) return {x:80+index*384,y:584,width:352,height:96};
+    const count=resultActionPresentations(state.mode).length;
+    if (gameplayReadability().compact){const width=(WIDTH-160-(count-1)*32)/count;return {x:80+index*(width+32),y:584,width,height:96};}
     return {
-      x: 260 + index * 260,
+      x: (WIDTH-(count*240+(count-1)*20))/2 + index * 260,
       y: 600,
       width: 240,
       height: 62,
@@ -58748,7 +58135,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     for (
       let index = 0;
       index <
-      RESULT_ACTION_IDS.length;
+      resultActionPresentations(state.mode).length;
       index += 1
     ) {
       const geometry =
@@ -59192,36 +58579,20 @@ import { createCourseAnnouncement } from './course-announcement.js';
     ];
     return statRows;
   }
-  function victoryMilestoneText(result){return result.masterProductOwnerUnlocked
-        ? "MASTER PRODUCT OWNER AUTHORIZED — ALL TWELVE PERFORMANCE STAMPS FILED."
-        : result.masteryUnlocked &&
-      result.portfolioUnlocked
-        ? "FULL MASTER FILE — OVERTIME AND PORTFOLIO OVERRIDE AUTHORIZED."
-        : result.portfolioUnlocked
-          ? "ALL CHANGES FILED — NIGHT ORDER PORTFOLIO OVERRIDE AUTHORIZED."
-      : result.masteryUnlocked
-        ? "ALL NIGHT ORDERS CLEARED — OVERTIME AUDIT AUTHORIZED."
-        : result.dossierPerfected
-          ? `ORDER ${String(result.variantNumber).padStart(2, "0")} DOSSIER PERFECTED — ALL FOUR PERFORMANCE STAMPS FILED.`
-        : result.shotCraftBookCompleted
-          ? "SHOT BOOK COMPLETE — PRESSURE, BANK, AND LIE WORK ARE NOW ON FILE."
-        : result.newPerformanceStamps.length >
-            0
-          ? `PERFORMANCE STAMP FILED — DOSSIER ${result.performanceStampProgress}/${PERFORMANCE_STAMPS.length}.`
-        : result.newChangeRequestFiled
-          ? `${activeChangeRequest().code} FILED. CHANGE REQUESTS ${state.career.filedChangeRequests.length}/${RUN_VARIANTS.length} SECURED.`
-        : result.echoOvertaken
-          ? `COURSE ECHO OVERTAKEN. ${result.route.toUpperCase()} PAPERWORK NOW HAUNTS THE NEXT ROUND.`
-        : result.newBest
-          ? result.overtime
-            ? "OVERTIME RECORD FILED. JOE REQUESTED A RETROSPECTIVE."
-            : `PERSONAL RECORD FILED. ${state.career.completedVariants.length}/${RUN_VARIANTS.length} NIGHT ORDERS CLEARED.`
-          : "PAR IS NOT A SAFETY STANDARD. JOE DID NOT STOP.";
+  function victoryMilestoneText(result){return result.masterProductOwnerUnlocked || result.dossierPerfected
+      ? "NIGHT ORDER PERFECTED — ALL FOUR PERFORMANCE STAMPS FILED."
+      : result.shotCraftBookCompleted ? "SHOT BOOK COMPLETE — PRESSURE, BANK, AND LIE WORK ARE NOW ON FILE."
+      : result.newPerformanceStamps.length > 0 ? `PERFORMANCE STAMP FILED — ${result.performanceStampProgress}/${PERFORMANCE_STAMPS.length}.`
+      : result.newChangeRequestFiled ? `${activeChangeRequest().code} FILED.`
+      : result.echoOvertaken ? "COURSE ECHO OVERTAKEN. YOUR NEXT ROUND HAS A NEW RECORD TO BEAT."
+      : result.newBest ? "PERSONAL RECORD FILED."
+      : "PAR IS NOT A SAFETY STANDARD. JOE DID NOT STOP.";
   }
+
   function responsiveResultPresentation(outcome){
     const h=state.hole,victory=outcome==='victory',actions=resultActionPresentations(outcome);
     const common={outcome,selected:state.resultIndex,actions,scale:state.uiScale,
-      controls:inputCopy('Arrows select · Enter confirms · Page Up / Down scrolls · Esc menu','D-pad selects · A confirms · Right stick scrolls · Y journal · B menu','Tap an action · Scroll for the full review'),
+      controls:inputCopy('Arrows select · Enter confirms · Page Up / Down scrolls · Esc menu',victory?'D-pad selects · A confirms · Right stick scrolls · Y journal · B menu':'D-pad selects · A confirms · X loss details · Right stick scrolls · B menu','Tap an action · Scroll for the full review'),
       art:mainCtx.canvas};
     if(!victory){
       const review=h.captureReview||{label:'Close contact',zoneName:courseZoneAt(state.player.y).name,evidence:'Joe closed the final distance before the route was clear.',counterplay:'Use Listening Focus, preserve cover, and keep a second route available.',repeatCount:1};
@@ -59229,7 +58600,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       return {...common,title:'Caught by Joe',kicker:review.zoneName,headline:review.label,
         summary:`${(h.rehearsalCheckpoint||h.rehearsalOrigin)?.checks.length||0}/3 checks at safe point · Continue is unranked`,
         evidence:review.evidence,advice:review.counterplay,
-        dialogue:state.subtitles?`Joe · ${dialogue.tone}: “${dialogue.lines.join(' ')}”`:'',
+        dialogue:`“${dialogue.lines.join(' ')}”`,
         milestone:cleanBreakDefeatPresentation().text,
         stats:[['Repeated incident',String(review.repeatCount||1)]],events:[]};
     }
@@ -59240,7 +58611,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       headline:`${result.grade} · ${result.gradeLabel} · ${result.score.toLocaleString()} points`,
       summary:result.unranked?'Unranked · Career and records unchanged':result.newBest?'New '+(result.overtime?'overtime':result.route+' route')+' record':`Route best · ${(record?.score||result.score).toLocaleString()} points`,
       evidence:echo?echo.headline+' · '+echo.detail:`${result.route.toUpperCase()} escape filed`,
-      advice:runStyleSummary().title+' · '+runStyleSummary().next,dialogue:'',
+      advice:actions[0].description,dialogue:'',
       milestone:victoryMilestoneText(result),stats:victoryStatRows(result,echo),events:victoryScoreNotes(result).map(e=>e.text)};
   }
   function drawResponsiveResult(outcome){RCQualityUI.result(responsiveResultPresentation(outcome));RCScene3D.showDomHud();}
@@ -59260,7 +58631,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     lines.forEach((line,i)=>drawText(line,80,174+i*48,fittedTextSize(line,i===0?40:30,1120,28,true),i===0?accent:"#b6dfd1","left",true));
     const actions=resultActionPresentations(outcome),selected=actions[state.resultIndex];
     drawText(victory?"YOUR NEXT CHALLENGE":"NEXT TRY",80,358,30,accent,"left",true);
-    const help=!victory&&state.resultIndex===0?(review?.counterplay||"Listen before blind turns. Keep a second route available."):victory&&state.resultIndex===0&&h.escapeRoute!=="shed"?runStyleSummary().title+' — '+runStyleSummary().next:selected.description;
+    const help=!victory&&state.resultIndex===0?(review?.counterplay||"Listen before blind turns. Keep a second route available."):selected.description;
     wrapReadableText(help,32,1120).slice(0,4).forEach((line,i)=>drawText(line,80,402+i*39,32,"#eef3df","left",true));
     actions.forEach((action,index)=>{const b=resultActionGeometry(index),active=index===state.resultIndex;
       ctx.fillStyle=active?"#344b29":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);strokeRect(b.x,b.y,b.width,b.height,active?accent:"#547964",2);
@@ -60159,7 +59530,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       return "Rough Cut opening gate. Activate the game to begin the incident.";
     }
     if (state.mode === "intro") {
-      return "Opening incident playing. Activate again to skip to the clubhouse menu.";
+      return "Opening incident playing. The clubhouse menu opens when it finishes.";
     }
     if (
       state.mode === "menu" ||
@@ -60209,7 +59580,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       return `Escape filed. Selected result action: ${resultActionPresentations("victory")[state.resultIndex].label}.`;
     }
     if (state.mode === "defeat") {
-      return `Joe caught the player. Selected result action: ${RESULT_ACTION_IDS[state.resultIndex]}.`;
+      return `Joe caught the player. Selected result action: ${resultActionPresentations(state.mode)[state.resultIndex].id}.`;
     }
     if (state.mode === "clocked_out") {
       return "Shift ended. Activate to return to the clubhouse.";
@@ -60246,6 +59617,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     if(state.mode!=='settings')window.RCCourseSettings?.hide();
     if(!['menu','claim','clocked_out'].includes(state.mode))window.RCCourseMenu?.hide();
     const shell=document.getElementById('game-shell');
+    const introVisible=['gate','intro'].includes(state.mode);if(shell.dataset.intro!==String(introVisible))shell.dataset.intro=String(introVisible);
     if(shell.dataset.coursePortrait!==String(portrait))shell.dataset.coursePortrait=String(portrait);
     const viewportKey=portrait?`${canvas.clientWidth}:${canvas.clientHeight}`:'landscape';
     if(viewportKey!==touchViewportKey){
@@ -60256,6 +59628,29 @@ import { createCourseAnnouncement } from './course-announcement.js';
       Object.assign(TOUCH_CONTROLS,portrait?portraitTouchControls(canvas.clientWidth,canvas.clientHeight):structuredClone(LANDSCAPE_TOUCH_CONTROLS));
       touchViewportKey=viewportKey;
     }
+    // A still DOM menu needs no canvas repaint or GPU upload while idle.
+    // Keep assets, input, records and viewport changes observable without
+    // including the continuously advancing clock in its presentation key.
+    const clubhouse=['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu;
+    if(clubhouse){
+      const key=menuRenderKey();
+      if(key===lastMenuRenderKey)return;
+      lastMenuRenderKey=key;
+    }else lastMenuRenderKey='';
+    // The opaque DOM briefing owns the screen after preparation. Keep input and
+    // readiness live without redrawing the hidden course or uploading its canvas.
+    if(state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()&&window.RCQualityUI?.briefing&&!window.RCScene3D?.isPreparing()){
+      const loading=document.getElementById('course-loading');if(loading&&!loading.hidden)loading.hidden=true;
+      const key=[state.inputMethod,state.hole.overtime,state.uiScale,window.innerWidth,window.innerHeight,keyboardBindingLabel('interact'),keyboardBindingLabel('chip')].join(':');
+      if(key===lastBriefingRenderKey)return;lastBriefingRenderKey=key;
+      window.RCQualityUI.mode(state.mode,true);drawTutorialBriefing();syncAccessibleGameStatus();return;
+    }
+    lastBriefingRenderKey='';
+    // Retain the paused presentation until its selection, preferences or size change.
+    if(state.mode==='paused'&&spatialViewEnabled()&&window.RCScene3D?.domHud()){
+      const key=JSON.stringify([state.pauseIndex,state.inputMethod,state.uiScale,state.freeLook,state.threatCaptions,state.player.x,state.player.y,state.hole.elapsed,state.hole.golfBalls,state.hole.nightOrderActionsCompleted,state.hole.keyCollected,state.hole.drainUnlocked,state.hole.rebuild.lessonComplete,state.hole.mapOpen,state.hole.focus,state.transitionAlpha,window.innerWidth,window.innerHeight]);
+      if(key===render.pausedThemeKey)return;render.pausedThemeKey=key;
+    }else render.pausedThemeKey='';
     refreshThreatCaptionBearings();
     // The full-screen illustrated dialog owns presentation. Do not repeatedly
     // upload a hidden canvas or render the 3D course behind still illustrations.
@@ -60361,7 +59756,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     }
 
     if (state.mode === "intro") {
-      if (!state.stingerPlayed && state.time >= LINE_END) {
+      if (!state.stingerPlayed && state.time >= (window.RCIntroPresentation?.timing?.handoff ?? LINE_END)) {
         state.stingerPlayed = true;
         triggerStinger();
       }
@@ -61384,17 +60779,22 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
 
   function startIntro() {
+    window.RCIntroPresentation?.prepare();
     ensureAudio();
     loadAssetPhase("course");
     state.mode = "intro";
     state.time = 0;
     state.stingerPlayed = false;
     state.status = "Every blade is in scope.";
-    state.transitionAlpha = 1;
+    state.transitionAlpha = window.RCIntroPresentation ? 0 : 1;
     canvas.focus();
   }
 
   function enterMenu() {
+    const fromIntro=state.mode==="intro";
+    window.RCChapterSelect?.refreshProgress();
+    if(state.mode!=="settings")window.RCChapterSelect?.select(RCProgression.state().current);
+    if(fromIntro)window.RCCourseMenu?.continueIntro(state.time);
     restoreRankedCareer();
     clearTouchInputs(true);
     loadAssetPhase("course");
@@ -61407,7 +60807,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       state.career.roundsStarted === 0
         ? "5:47 PM — Joe assigned one last action item."
         : "Every blade is in scope.";
-    state.transitionAlpha = 0.62;
+    state.transitionAlpha = fromIntro?0:0.62;
     setMotorLevel(0.018, 48);
     openingStory.preloadFirst();
   }
@@ -61496,6 +60896,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   function enterFirstHoleGuide() {
     openingStory.release();
+    window.RCProgression.enter("night-order");
     loadAssetPhase("results");
     state.pendingCourseStart = false;
     state.mode = "first_hole";
@@ -61508,9 +60909,14 @@ import { createCourseAnnouncement } from './course-announcement.js';
     beginGameplayPerformanceWindow();
   }
 
-  function activateMenu() {
+  function activateMenu(forceReplay=false) {
     switch (state.menuIndex) {
       case 0:
+        window.RCCourseMenu?.openChapters();
+        break;
+      case 2:
+        if(!forceReplay){const next=RCProgression.next(RCChapterSelect.selected().id);if(next){window.location.assign(next.href);return;}}
+        if(window.RCChapterSelect?.selected().href){const href=RCProgression.menuHref(RCChapterSelect.selected().id);if(href)window.location.assign(href);return;}
         loadAssetPhase("course");
         loadAssetPhase("results");
         beginFirstHoleFromMenu();
@@ -61521,20 +60927,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
         state.bindingCaptureId = null;
         state.mode = "settings";
         state.transitionAlpha = 0.35;
-        break;
-      case 2:
-        state.mode = "claim";
-        state.status = "CHANGE REJECTED: unauthorized scope in the rough.";
-        break;
-      case 3:
-        startOpeningStory();
-        break;
-      case 4:
-        state.mode = "clocked_out";
-        state.status =
-          "SHIFT ENDED: Night Order left unsigned.";
-        state.transitionAlpha = 0.7;
-        setMotorLevel(0, 40);
         break;
       default:
         break;
@@ -62120,13 +61512,17 @@ import { createCourseAnnouncement } from './course-announcement.js';
       );
     }
     if (state.mode === "intro") {
-      if (state.time < 0.95) {
+      const revealMotor = window.RCIntroPresentation?.motor?.(state.time);
+      if (revealMotor) {
+        setMotorLevel(revealMotor.level, revealMotor.hz);
+        motorOcclusionFilter?.frequency.setTargetAtTime(revealMotor.cutoff ?? 6200, now, 0.08);
+      } else if (state.time < 0.95) {
         const sputter = Math.sin(state.time * 29) * 0.5 + 0.5 >= 0.35 ? 0.07 : 0;
         setMotorLevel(sputter, 58);
-      } else if (state.time < CUT_END + 0.12) {
+      } else if (state.time < (window.RCIntroPresentation?.motorStop ?? CUT_END + 0.12)) {
         setMotorLevel(0.11 + Math.sin(state.time * 5.4) * 0.02, 82 + Math.sin(state.time * 7) * 5);
       } else if (state.time < LINE_END) {
-        setMotorLevel(0.008, 39);
+        setMotorLevel(state.time < LINE_START ? 0 : 0.008, 39);
       } else {
         setMotorLevel(0.018, 48);
       }
@@ -63350,52 +62746,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
     };
   }
 
-  function menuIndexAt(point) {
-    if(gameplayReadability().compact){return MENU_ITEMS.findIndex((_,index)=>{const b=compactMenuButton(index);return point.x>=b.x&&point.x<=b.x+b.width&&point.y>=b.y&&point.y<=b.y+b.height;});}
-    if (point.x < 88 || point.x > 478) {
-      return -1;
-    }
-    for (let index = 0; index < MENU_ITEMS.length; index += 1) {
-      const y = MENU_ITEM_START_Y + index * 61;
-      if (point.y >= y && point.y <= y + 48) {
-        return index;
-      }
-    }
-    return -1;
-  }
+  function menuIndexAt(point) { return MENU_ITEMS.findIndex((_,index)=>{const b=compactMenuButton(index);return point.x>=b.x&&point.x<=b.x+b.width&&point.y>=b.y&&point.y<=b.y+b.height;}); }
 
-  function portfolioIndexAt(point) {
-    if (
-      point.y < PORTFOLIO_CARD_Y ||
-      point.y >
-        PORTFOLIO_CARD_Y +
-          PORTFOLIO_CARD_HEIGHT
-    ) {
-      return -1;
-    }
-    for (
-      let index = 0;
-      index < RUN_VARIANTS.length;
-      index += 1
-    ) {
-      const x =
-        PORTFOLIO_PANEL.x +
-        22 +
-        index *
-          (
-            PORTFOLIO_CARD_WIDTH +
-            PORTFOLIO_CARD_GAP
-          );
-      if (
-        point.x >= x &&
-        point.x <=
-          x + PORTFOLIO_CARD_WIDTH
-      ) {
-        return index;
-      }
-    }
-    return -1;
-  }
+  function portfolioIndexAt() { return -1; }
 
   function pauseIndexAt(point) {
     return PAUSE_ITEMS.findIndex((_,index)=>{const b=pauseButtonGeometry(index);return point.x>=b.x&&point.x<=b.x+b.width&&point.y>=b.y&&point.y<=b.y+b.height;});
@@ -63727,8 +63080,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
     }
     if (state.mode === "gate") {
       startIntro();
-    } else if (state.mode === "intro") {
-      enterMenu();
     } else if (state.mode === "menu" || state.mode === "claim") {
       const portfolioIndex =
         portfolioIndexAt(point);
@@ -64235,7 +63586,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
     state.transitionAlpha = 0.88;
     state.status =
-      `Night Order ${String(nextVariant.number).padStart(2, "0")}: ${nextVariant.name}.`;
+      "Night Order. South gate locked. Find your way out.";
   }
 
   function selectResultAction(
@@ -64245,9 +63596,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
       (
         state.resultIndex +
         direction +
-        RESULT_ACTION_IDS.length
+        resultActionPresentations(state.mode).length
       ) %
-      RESULT_ACTION_IDS.length;
+      resultActionPresentations(state.mode).length;
     playUiTone(
       206 +
         state.resultIndex * 48,
@@ -64258,9 +63609,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   function activateResultAction() {
     const action =
-      RESULT_ACTION_IDS[
-        state.resultIndex
-      ];
+      resultActionPresentations(state.mode)[state.resultIndex]?.id;
     playUiTone(
       286 +
         state.resultIndex * 46,
@@ -64268,11 +63617,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
       0.026,
     );
     if (action === "rematch" && state.mode === "victory" && state.hole.escapeRoute === "shed") {
-      window.location.assign("./back-nine.html");
+      window.location.assign("./back-nine.html?from=shed");
       return;
     }
     if (action === "rematch" && state.mode === "victory" && state.hole.escapeRoute === "drain") {
-      window.location.assign("./under-green.html");
+      window.location.assign("./under-green.html?from=drain");
       return;
     }
     if (action === "rematch") {
@@ -64331,8 +63680,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
   function handleGamepadConfirm() {
     if (state.mode === "gate") {
       startIntro();
-    } else if (state.mode === "intro") {
-      enterMenu();
     } else if (state.mode === "menu" || state.mode === "claim") {
       playUiTone(285, 0.07, 0.025);
       activateMenu();
@@ -64372,8 +63719,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
       state.hole.ballAim.active
     ) {
       cancelGolfBallAim();
-    } else if (state.mode === "intro") {
-      enterMenu();
     } else if (state.mode === "first_hole") {
       enterPause();
     } else if (state.mode === "paused") {
@@ -64409,6 +63754,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
     // These existing DOM dialogs sit above the canvas menu. Use the same
     // focused-control adapter as the other chapters and consume their input.
     const hadDialog=studyDialogOpen();
+    const briefingRoot=document.getElementById('night-order');
+    const briefingActive=state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()&&!hadDialog;
+    if(briefingRoot&&!gamepadDialogs.has('night-order'))gamepadDialogs.set('night-order',createDOMGamepadMenu({root:briefingRoot,onBack:()=>enterPause(),onStart:()=>window.roughCutRebuild.startBriefing()}));
+    if(!briefingActive||!pad)gamepadDialogs.get('night-order')?.update(pad,false,dt);
     for(const [id,closeSelector] of [['controls-dialog','button'],['study-dialog','#study-close']]){
       const root=document.getElementById(id);if(!root)continue;
       if(!gamepadDialogs.has(id)){
@@ -64514,8 +63863,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     if(state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()){
       if(meaningfulInput)state.inputMethod='gamepad';
       state.gamepad.inputX=state.gamepad.inputY=state.gamepad.lookX=state.gamepad.lookY=0;
-      if(pressed(0))window.roughCutRebuild.startBriefing();
-      else if(pressed(9)||pressed(1))enterPause();
+      gamepadDialogs.get('night-order')?.update(pad,true,dt);
       state.gamepad.previousButtons=currentButtons;state.gamepad.previousDirections=directions;return;
     }
     if(state.mode==='first_hole'&&state.hole.mapOpen&&spatialViewEnabled()&&window.RCScene3D?.domHud()){
@@ -64562,6 +63910,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
     if(['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu&&Math.abs(axisValue(3))>.18)RCCourseMenu.scroll(axisValue(3)*420*dt);
     if(['victory','defeat'].includes(state.mode)&&window.RCScene3D?.domHud()){
+      if(state.mode==='defeat'&&pressed(2)){const detail=document.querySelector('#course-result .rc-loss-details');if(detail){detail.open=!detail.open;if(detail.open)detail.scrollIntoView({block:'nearest'});}}
       if(Math.abs(axisValue(3))>.18)RCQualityUI.scrollResult(axisValue(3)*420*dt);
       if(pressed(3))document.getElementById('study-launch')?.click();
     }
@@ -64581,14 +63930,14 @@ import { createCourseAnnouncement } from './course-announcement.js';
       } else if (
         directionPressed("left")
       ) {
-        selectPortfolioVariant(-1);
+        window.RCChapterSelect?.shift(-1);
       } else if (
         directionPressed("right")
       ) {
-        selectPortfolioVariant(1);
+        window.RCChapterSelect?.shift(1);
       }
       if (pressed(5)) {
-        toggleOvertimeAudit();
+        if(RCProgression.next(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
       }
       if (pressed(4))window.RCCourseMenu?.toggleDetails();
     } else if (state.mode === "settings") {
@@ -64692,17 +64041,21 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   window.addEventListener("keydown", (event) => {
     if(state.mode==='opening_story')return;
+    if(['victory','defeat'].includes(state.mode)&&event.target.closest?.('#course-result summary')&&['Enter','Space'].includes(event.code))return;
     if (studyDialogOpen() || (event.target.closest?.("#study-launch, #controls-launch, #direct-choices, #route-choices") && ["Enter","Space"].includes(event.code))) return;
     if(['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu){
       if(state.mode!=='clocked_out'&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){
         state.inputMethod='keyboard';
-        if(event.code==='ArrowLeft'||event.code==='ArrowRight')selectPortfolioVariant(event.code==='ArrowLeft'?-1:1);
+        if(event.code==='ArrowLeft'||event.code==='ArrowRight'){
+          window.RCChapterSelect.shift(event.code==='ArrowLeft'?-1:1);
+          if(event.target.closest?.('#chapter-links'))document.querySelector('#chapter-links [aria-pressed="true"]')?.focus({preventScroll:true});
+        }
         else{state.menuIndex=(state.menuIndex+(event.code==='ArrowUp'?-1:1)+MENU_ITEMS.length)%MENU_ITEMS.length;playUiTone(190+state.menuIndex*14,.045,.016);}
         // Native order/footer buttons must not confirm stale focus when Enter
         // follows an arrow before the next animation frame.
         event.preventDefault();render();return;
       }
-      if(event.target.closest?.('[data-clubhouse-command],[data-variant-index],#course-menu summary,#chapter-links a')&&['Enter','Space'].includes(event.code))return;
+      if(event.target.closest?.('[data-clubhouse-command],[data-variant-index],#course-menu summary,#chapter-links button')&&['Enter','Space'].includes(event.code))return;
       if(['PageUp','PageDown','Home','End'].includes(event.code)){RCCourseMenu.scroll(event.code==='Home'?-1e6:event.code==='End'?1e6:event.code==='PageUp'?-300:300);event.preventDefault();return;}
     }
     if(state.mode==='settings'&&window.RCCourseSettings&&!state.bindingCaptureId){
@@ -64714,6 +64067,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
     }
     if(state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()){
       if(event.code==='Tab')return;
+      if(event.target.closest?.('#night-order button,#night-order a,#night-order summary')&&['Enter','Space'].includes(event.code))return;
+      if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End'].includes(event.code)){
+        document.querySelector('#night-order .rc-brief-scroll')?.scrollBy({top:event.code==='Home'?-1e6:event.code==='End'?1e6:event.code==='ArrowDown'?60:event.code==='ArrowUp'?-60:event.code==='PageDown'?300:-300});event.preventDefault();return;
+      }
       if(event.code==='KeyF'){if(!event.repeat)toggleFullscreen();}
       else if(event.code==='Escape'){if(!event.repeat)enterPause();}
       else if(!event.repeat&&(event.code==='Enter'||event.code===keyboardBindingCode('interact')||(event.code==='Space'&&event.target.closest?.('#night-order button'))))window.roughCutRebuild.startBriefing();
@@ -64776,7 +64133,6 @@ import { createCourseAnnouncement } from './course-announcement.js';
       startIntro();
       event.preventDefault();
     } else if (state.mode === "intro" && ["Enter", "Space", "Escape"].includes(event.code)) {
-      enterMenu();
       event.preventDefault();
     } else if (state.mode === "menu" || state.mode === "claim") {
       if (
@@ -64786,7 +64142,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         enterMenu();
         event.preventDefault();
       } else if (event.code === "KeyR" && !event.repeat) {
-        toggleOvertimeAudit();
+        if(RCProgression.next(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
         event.preventDefault();
       } else if (event.code === "ArrowDown") {
         state.menuIndex = (state.menuIndex + 1) % MENU_ITEMS.length;
@@ -67870,7 +67226,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   document.addEventListener("visibilitychange", () => {
     if(state.mode==='opening_story')updateAudio();
-    if (document.hidden && state.mode === "first_hole") {
+    if (document.hidden && state.mode === "first_hole" && !state.hole.tutorialVisible) {
       enterPause();
       runtimePerformance.lifecycle
         .visibilityAutoPauses += 1;
@@ -67899,7 +67255,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     state.keys.clear();
     state.lookPreviewPointer = null;
     clearTouchInputs(true);
-    if (state.mode === "first_hole") enterPause();
+    if (state.mode === "first_hole" && !state.hole.tutorialVisible) enterPause();
   });
 
   canvas.addEventListener("pointerdown", handlePointerDown);
@@ -68125,6 +67481,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         "window.audit_rough_cut_readiness()",
     },
     introTimeSeconds: Number(state.time.toFixed(2)),
+    introPresentation: ["gate","intro"].includes(state.mode)?window.RCIntroPresentation?.stats():null,
     selectedMenuItem: state.mode === "menu" || state.mode === "claim"
       ? MENU_ITEMS[state.menuIndex]
       : null,
@@ -68254,9 +67611,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       state.mode === "defeat"
         ? {
             selected:
-              RESULT_ACTION_IDS[
-                state.resultIndex
-              ],
+              resultActionPresentations(state.mode)[state.resultIndex]?.id,
             options:
               resultActionPresentations(
                 state.mode,
@@ -68292,10 +67647,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
               selectedMenuVariant().number,
             name:
               selectedMenuVariant().name,
-            source:
-              portfolioUnlocked()
-                ? "portfolio_override"
-                : "career_rotation",
+            source: "single_chapter",
           }
         : null,
     narrative: {
@@ -68317,6 +67669,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     },
     challenge: {
       id: "overtime_audit",
+      retired: true,
       unlocked: overtimeUnlocked(),
       selected:
         overtimeUnlocked() &&
@@ -68339,12 +67692,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
     },
     portfolio: {
       id: "night_order_portfolio",
+      retired: true,
       unlocked:
         portfolioUnlocked(),
-      presentationMode:
-        portfolioUnlocked()
-          ? "interactive"
-          : "rotation_preview",
+      presentationMode: "single_chapter",
       unlockProgress: {
         filed:
           state.career.filedChangeRequests.length,
@@ -68359,9 +67710,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       performanceStamps: {
         earned:
           totalPerformanceStamps(),
-        available:
-          PERFORMANCE_STAMPS.length *
-          RUN_VARIANTS.length,
+        available: PERFORMANCE_STAMPS.length,
         masterProductOwner:
           masterProductOwnerUnlocked(),
         definitions:
@@ -74952,33 +74301,33 @@ import { createCourseAnnouncement } from './course-announcement.js';
     controls: {
       global: "F fullscreen",
       gate: "Click, Enter, or Space",
-      intro: "Click, Enter, Space, or Escape to skip",
-      menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
+      intro: "Plays through automatically",
+      menu: "Left/right selects a chapter; up/down selects an action; Enter confirms. Clicking a chapter previews it; Start Game launches it.",
       firstHole: `${keyboardMovementCopy()} moves relative to your view; click for mouse look or drag to turn horizontally; Escape releases the mouse; ${onFootActionVerb('sprint','keyboard',state)} ${keyboardBindingLabel('sprint')} to sprint; ${onFootActionVerb('crouch','keyboard',state)} ${keyboardBindingLabel('crouch')} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
       pause: "Arrow keys select; Enter confirms; Escape resumes",
-      result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
+      result: "Left/right selects an action; Enter confirms; Escape returns to the main menu",
       keyboard: {
         global: "F fullscreen",
         gate: "Click, Enter, or Space",
-        intro: "Click, Enter, Space, or Escape to skip",
-        menu: "Up/down and Enter, or pointer; after filing all Change Requests, left/right selects a Night Order; R toggles Overtime Audit after mastery",
+        intro: "Plays through automatically",
+        menu: "Left/right selects a chapter; up/down selects an action; Enter confirms. Clicking a chapter previews it; Start Game launches it.",
         firstHole: `${keyboardMovementCopy()} moves relative to your view; click for mouse look or drag to turn horizontally; Escape releases the mouse; ${onFootActionVerb('sprint','keyboard',state)} ${keyboardBindingLabel('sprint')} to sprint; ${onFootActionVerb('crouch','keyboard',state)} ${keyboardBindingLabel('crouch')} to crouch; hold ${keyboardBindingLabel("focus")} for Listening Focus; hold ${keyboardBindingLabel("look_back")} to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; ${keyboardBindingLabel("interact")} interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold ${keyboardBindingLabel("chip")} and use ${keyboardBindingLabel("move_left")}/${keyboardBindingLabel("move_right")} to aim, then release to chip; ${keyboardBindingLabel("controls")} shows controls; Escape cancels a shot or pauses`,
         pause: "Arrow keys select; Enter confirms; Escape resumes",
-        result: "Left/right selects Rematch File, Next Order, or Clubhouse; Enter confirms; Escape returns to the Clubhouse",
+        result: "Left/right selects an action; Enter confirms; Escape returns to the main menu",
       },
       gamepad: {
-        menu: "D-pad up/down selects menu items; after filing all Change Requests, D-pad left/right selects a Night Order; A confirms; RB toggles Overtime Audit after mastery; B returns",
+        menu: "D-pad left/right selects a chapter; up/down selects an action; A confirms; B returns",
         firstHole: `Left stick or D-pad moves relative to your view; right stick looks horizontally; ${onFootActionVerb('sprint','gamepad',state)} RT to sprint; ${onFootActionVerb('crouch','gamepad',state)} LB to crouch; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses`,
         pause: "D-pad selects; A confirms; B or Start resumes",
-        result: "D-pad left/right selects Rematch File, Next Order, or Clubhouse; A confirms; B returns to the Clubhouse",
+        result: "D-pad left/right selects an action; A confirms; B returns to the main menu",
       },
       touch: {
         gate: "Tap to begin",
-        intro: "Tap to skip",
-        menu: "Tap menu items directly; after filing all Change Requests, tap a Night Order dossier; tap the Overtime card after mastery",
+        intro: "Plays through automatically",
+        menu: "Tap a chapter to preview it, then tap Start Game. Other menu actions respond directly.",
         firstHole: `Drag the left pad to move relative to your view; swipe open screen space to look horizontally; ${onFootActionVerb('sprint','touch',state)} Run while moving to sprint; hold Crouch or Listen for stealth information; hold Rear to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; tap Use to interact, answer a Status Request while standing still, reclaim a ball, start Final Filing, or sacrifice a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold Chip, slide left or right to aim, and release to shoot; tap Pause to suspend the round`,
         pause: "Tap a menu item directly",
-        result: "Tap Rematch File, Next Order, or Clubhouse directly",
+        result: "Tap a result action",
       },
     },
   }, displayTextJsonReplacer);
@@ -75005,11 +74354,21 @@ import { createCourseAnnouncement } from './course-announcement.js';
       requestAnimationFrame(frame);
       return;
     }
+    const clubhouse=['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu;
+    const opening=['gate','intro','opening_story'].includes(state.mode);
+    const briefing=state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()&&window.RCQualityUI?.briefing&&!window.RCScene3D?.isPreparing();
+    // Other windows can keep playing video while the menu is unattended.
+    // Native DOM input remains event driven; controller polling needs only 20Hz.
+    if((clubhouse||opening||briefing)&&(document.hidden||!document.hasFocus())){
+      lastFrame=now;lastPresentedFrame=now;
+      requestAnimationFrame(frame);return;
+    }
+    const frameInterval=clubhouse||briefing||state.mode==='opening_story'?50:opening?1000/30:TARGET_FRAME_MS;
     const presentationElapsed =
       now - lastPresentedFrame;
     if (
       presentationElapsed <
-      TARGET_FRAME_MS -
+      frameInterval -
         FRAME_PRESENTATION_TOLERANCE_MS
     ) {
       runtimePerformance
@@ -75020,10 +74379,12 @@ import { createCourseAnnouncement } from './course-announcement.js';
     lastPresentedFrame =
       now -
       (
-        presentationElapsed %
-        TARGET_FRAME_MS
+        // An early frame accepted by tolerance must still advance the clock.
+        // Otherwise the intro can repaint again on the next display refresh.
+        (opening ? Math.max(0, presentationElapsed - frameInterval) : presentationElapsed) %
+        frameInterval
       );
-    recordPresentationPerformance(
+    if(!clubhouse&&!opening&&!briefing)recordPresentationPerformance(
       presentationElapsed,
     );
     const simulationStart=performance.now();

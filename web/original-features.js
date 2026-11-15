@@ -81,7 +81,7 @@ export function createOriginalFeatures(parent,{software,scale,xScale,blockers,po
     }
     const usefulStart=marks.count;
     // Earned tactical evidence remains visible at zero decorative density.
-    if(f.forecast?.timer>0){const path=f.forecast.path||[];for(let i=1;i<path.length&&i<25;i++){const a=path[i-1],b=path[i],dx=(b.x-a.x)*xScale,dz=-(b.y-a.y)*scale,l=Math.hypot(dx,dz);if(l<.01||l>8)continue;const x=(a.x+b.x)*xScale/2,zz=-(a.y+b.y)*scale/2;box(x,woodlandHeight(x,zz)+.04,zz,.045,.026,l*.7,0x79bdac,0,Math.atan2(dx,dz));}}
+    // Forecasts remain gameplay information; no luminous route is drawn on the turf.
     if(f.trace?.timer>0){
       const trace=f.trace,tint=trace.freshness==='fresh'?0xc6d383:0xafa16b;
       dashRing(trace,.4,tint,10);

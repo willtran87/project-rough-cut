@@ -1,0 +1,401 @@
+/* In-game only. Deliberately excludes intro, lead-in, menu and story surfaces. */
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map,.rc-settings){
+ --gt-ink:#eee5cb;--gt-muted:#b9c5b5;--gt-edge:#8b8057;--gt-brass:#ccb580;
+ --gt-grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath fill='%23d6c797' fill-opacity='.07' d='M4 8h7v1H4zM41 22h2v1h-2zM75 7h9v1h-9zM20 58h3v1h-3zM67 71h11v1H67zM8 88h2v2H8z'/%3E%3C/svg%3E");
+ color:var(--gt-ink);font-family:'Segoe UI',sans-serif;accent-color:var(--gt-brass);color-scheme:dark;
+}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map,.rc-settings) :is(button,input,select,textarea){font-family:'Segoe UI',sans-serif;accent-color:var(--gt-brass);border-radius:0}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map,.rc-settings) button{background:#172b20;color:var(--gt-ink);border:1px solid #7c8060;min-height:44px;padding:10px 16px;font-size:14px;font-weight:600;letter-spacing:.015em;cursor:pointer;text-transform:none}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map,.rc-settings) :is(button,a,summary,input,select,textarea):focus-visible{outline:2px solid #f1d698;outline-offset:3px}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map,.rc-settings) button:hover:not(:disabled){border-color:#e0c88d}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings,#controls-dialog,#study-dialog,#course-map) :is(h1,h2,h3){font-family:Georgia,serif;color:var(--gt-ink);letter-spacing:-.015em}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings) h1{font-size:clamp(30px,2.5vw,46px);line-height:1.15;font-weight:600}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings) p{line-height:1.5}
+:is(.rc-runtime,#course-pause,#course-result,#course-settings) :is(small,summary){color:var(--gt-muted)}
+#course-pause .course-pause-card,#course-result .course-result-card,#course-settings .course-settings-card,#controls-dialog,#study-dialog,#course-map,#panel.rc-runtime .panel-body,#panel.rc-runtime.rc-brief-shell{
+ background:var(--gt-grain),linear-gradient(125deg,#17291f,#091810 70%);border:1px solid var(--gt-edge);box-shadow:inset 0 0 0 3px #030c08,inset 0 0 0 4px #bba57633,0 8px 20px #0006;
+ clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);
+}
+#panel.rc-runtime{position:fixed;inset:0;width:100%;height:100dvh;max-height:none;margin:0;padding:24px;display:grid;place-items:center;overflow:hidden;background:#06110fee;text-align:left;z-index:30;transform:none}
+#panel.rc-runtime .rc-brief-shell{display:flex;flex-direction:column;width:min(100%,1120px);max-width:1120px;max-height:100%;min-height:0;padding:0;margin:0;overflow:hidden}
+#panel.rc-runtime.rc-brief-shell{inset:24px;width:min(calc(100% - 48px),1120px);height:fit-content;max-height:calc(100dvh - 48px);margin:auto;display:flex;padding:0;box-shadow:0 0 0 100vmax #06110fee,inset 0 0 0 3px #030c08}
+.rc-runtime .rc-brief-scroll{display:block;min-height:0;overflow:auto;padding:28px 32px;overscroll-behavior:contain;scrollbar-gutter:stable}
+.rc-runtime .rc-brief-native{display:flex;flex-direction:column;gap:0}
+.rc-runtime .rc-brief-summary{display:none}
+.rc-runtime #panel-content{overflow:visible;padding:0;display:contents}
+.rc-runtime .bn-heading{display:block;margin:0}
+.rc-runtime :is(#brief-art,#loading-art,#chapter-caption,.panel-art,.controller-menu-help){display:none!important}
+.rc-runtime #title{font:600 clamp(30px,2.5vw,46px)/1.15 Georgia,serif;margin:12px 0}
+.rc-runtime :is(#tagline,#story,#result){font:16px/1.55 'Segoe UI',sans-serif;max-width:72ch;color:var(--gt-muted);margin:10px 0 18px}
+.rc-runtime :is(.eyebrow,#eyebrow){font:11px/1.5 Consolas,monospace;letter-spacing:.12em;color:var(--gt-brass)}
+#panel.rc-runtime .rc-brief-notes{display:block;border-top:1px solid #8b805766;margin-top:16px;padding:12px 0;font:14px/1.5 'Segoe UI',sans-serif;order:5}
+#panel.rc-runtime .rc-brief-notes>summary{display:list-item;cursor:pointer;color:var(--gt-brass);padding:4px 0}
+.rc-runtime .rc-brief-notes:not([open])>:not(summary){display:none!important}
+.rc-runtime #guide{margin-top:16px}
+.rc-runtime #guide :is(p,li){font:14px/1.6 'Segoe UI',sans-serif}
+.rc-runtime .rc-brief-footer{display:flex;flex-direction:column;gap:8px;flex:none;padding:16px 32px;border-top:1px solid #8b805766;background:var(--gt-grain),#09180f}
+.rc-runtime #panel-footer{position:static}
+.rc-runtime .rc-brief-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:12px;margin:0;width:100%}
+.rc-runtime .rc-brief-actions #primary{order:10}
+.rc-runtime .rc-brief-footer :is(#save-note,#checkpoint-note){font:12px/1.4 'Segoe UI',sans-serif;margin:0;color:var(--gt-muted)}
+.rc-runtime .rc-brief-footer #loading:empty{display:none}
+.rc-runtime .chapters{font:12px/1.5 'Segoe UI',sans-serif;gap:12px;margin:20px 0 0;order:6}
+.rc-runtime .rc-brief-actions>a{font:14px/1.5 'Segoe UI',sans-serif;padding:10px 4px;color:var(--gt-muted)}
+#panel.rc-runtime #primary,#course-pause [data-pause-action="0"],#course-result [data-result-action="0"],#course-settings [data-settings-command="return"]{
+ background:var(--gt-grain),linear-gradient(115deg,#d9c38e,#baa16a 60%,#d0bb86);color:#152316;border:1px solid #e1cd99;box-shadow:inset 0 2px #f0dfae55,inset 0 -3px #8f794d,0 3px #030c08;font:700 15px/1.4 'Segoe UI',sans-serif;min-height:50px;
+}
+#course-pause [data-pause-action="0"] small{color:#314232}
+#course-pause button[data-selected=true],#course-result button[data-selected=true]{outline:2px solid #f1d698;outline-offset:3px}
+#course-pause .course-pause-card{width:min(94%,1120px)}
+#course-pause .course-pause-body{grid-template-columns:minmax(0,1.2fr) minmax(260px,1fr);gap:28px}
+#course-pause .course-pause-body nav{grid-column:1;grid-row:1}
+#course-pause .course-pause-summary{grid-column:2;grid-row:1;border-left:1px solid #8b805755;padding-left:24px}
+#course-pause :is([data-pause=next],[data-pause=controls]){display:none}
+#course-pause :is(p,small){font-size:14px}
+#course-pause h2{font-size:20px}
+#course-pause .course-pause-card>header,#course-result .course-result-card>header{padding:24px 28px 16px;border-color:#8b805766;background:transparent}
+#course-result .course-result-card{width:min(96%,1280px);background-color:#0c1b13}
+#course-result .course-result-scroll{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;padding:24px 28px}
+#course-result .course-result-scroll article{font:16px/1.55 'Segoe UI',sans-serif;min-width:0}
+#course-result .course-result-scroll h2{font-size:23px}
+#course-result [data-result=advice]{border-left:2px solid var(--gt-brass);padding-left:14px;color:var(--gt-ink)}
+#course-result [data-result=evidence]{color:var(--gt-muted)}
+#course-result :is(dl,.course-result-events,.course-result-next){font:14px/1.5 'Segoe UI',sans-serif}
+#course-result .course-result-art{border:4px solid #253323;outline:1px solid var(--gt-edge);image-rendering:pixelated;box-sizing:border-box}
+#course-result blockquote{font:italic 17px/1.5 Georgia,serif;color:#d8cba6;border-color:#8b805755}
+#course-result footer{background:var(--gt-grain),#09180f;border-color:#8b805766}
+#course-result footer nav{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+#course-result footer nav button{flex:0 1 auto;min-width:160px}
+#course-result [data-result-action="0"]{order:10}
+.rc-report{border-top:1px solid #8b805766;padding:14px 0;margin:20px 0 0;font:14px/1.5 'Segoe UI',sans-serif}
+.rc-report>summary{cursor:pointer;color:var(--gt-brass)}
+#panel.rc-runtime .rc-outcome-art{position:relative;inset:auto;width:100%;height:clamp(180px,29vh,380px);max-height:none;margin:0 0 24px;transform:none;overflow:hidden;background:#07140e;border:4px solid #253323;outline:1px solid var(--gt-edge);flex:none}
+#panel.rc-runtime .rc-outcome-art img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;object-position:center 38%}
+#panel.rc-runtime .rc-outcome-art::after{display:none}
+.rc-runtime :is(#defeat-dialogue,#loss-quote){background:#1c261a;border-color:#8b805766;color:#dfcba5;padding:16px;font:italic 17px/1.5 Georgia,serif;text-align:left;max-width:none}
+.rc-runtime :is(#defeat-review,#advice,#retry-advice){border-left:2px solid var(--gt-brass);padding:8px 16px;font:15px/1.6 'Segoe UI',sans-serif;white-space:pre-line}
+.rc-runtime #loss-story{font:14px/1.5 'Segoe UI',sans-serif;color:var(--gt-muted)}
+.rc-runtime #ending-art{max-height:32vh;margin:0 0 18px}
+.rc-runtime #ending-art img{max-height:32vh;object-fit:contain;image-rendering:pixelated}
+.rc-settings{border-top:1px solid #8b805766;padding:14px 0;margin:14px 0;font:14px/1.5 'Segoe UI',sans-serif}
+.rc-settings>summary{color:var(--gt-brass);font-weight:600;cursor:pointer;padding:4px 0}
+.rc-settings-tabs{display:flex;gap:6px;overflow:auto;padding:10px 4px;scrollbar-width:thin}
+.rc-settings-tabs button{flex:none}
+.rc-settings-tabs button[aria-pressed=true],#course-settings nav button[aria-current=true]{background:#4e5130;color:#f1e4bd;border-color:#d3b978}
+.rc-settings-body{max-height:42vh;min-height:80px;overflow:auto;padding:10px 6px;overscroll-behavior:contain;scrollbar-gutter:stable}
+.rc-settings-body fieldset{margin:8px 0;padding:16px;border:1px solid #8b805755;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px}
+.rc-settings-body legend{font:600 18px Georgia,serif;padding:0 8px;color:var(--gt-brass)}
+.rc-settings-body :is(p,h3,[data-keyboard-fields],button){grid-column:1/-1}
+.rc-settings-body label{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:4px 0;line-height:1.5}
+.rc-settings-body input[type=range]{width:100%;min-height:24px}
+.rc-settings-body input[type=checkbox]{width:20px;height:20px;flex:none}
+.rc-settings-body p{font:13px/1.5 'Segoe UI',sans-serif;color:var(--gt-muted)}
+.rc-settings-body :is(input,select,textarea){max-width:100%;background-color:#15271c;color:var(--gt-ink)}
+.rc-settings-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #8b805755;padding-top:10px;font-size:12px;color:var(--gt-muted)}
+.rc-category-hidden{display:none!important}
+#controls-dialog,#study-dialog{width:min(920px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:24px;box-sizing:border-box}
+#controls-dialog .study-heading,#study-dialog .study-heading{position:sticky;top:-24px;background:#122219;padding:12px 0;z-index:1;border-bottom:1px solid #8b805755}
+#controls-dialog h2,#study-dialog h1{font-size:30px}
+#controls-dialog .rc-settings{border:0;margin:0}
+#controls-dialog .rc-settings-body{max-height:calc(100dvh - 270px)}
+#course-settings .course-settings-row{background:#14291c;border-color:#8b805755;font-family:'Segoe UI',sans-serif}
+#course-settings .course-settings-row>span{font-weight:600;text-transform:none;font-size:15px}
+#course-settings :is(header,footer){background:#102117;border-color:#8b805766}
+#course-settings .course-settings-row[data-selected=true]{border-color:#ddc28c;background:#26371f}
+#course-settings nav{scrollbar-width:thin}
+#study-dialog.rc-journal-only .study-tabs,#study-dialog.rc-journal-only #study-feedback,#study-dialog.rc-journal-only #study-setup{display:none!important}
+/* HUDs use the same on-foot reading scale; driving telemetry keeps its layout. */
+body :is(#objective-card,#quality-hud .q-objective){background:#0b1b18ed;border-left:2px solid #ccb580;color:#eee5cb}
+body #objective-card strong{font:600 clamp(16px,1.35vw,24px)/1.45 Consolas,'Courier New',monospace}
+body #objective-card :is(small,#checkpoint,#record-status){font:clamp(11px,.8vw,14px)/1.5 Consolas,monospace;color:#c1cbb8}
+body :is(.hud-tools,.tools) button{font:600 13px/1.4 'Segoe UI',sans-serif;background:#14291ce8;color:#eee5cb;border:1px solid #8b8057;border-radius:0;min-height:44px}
+body #use{font:600 clamp(14px,1vw,18px)/1.45 'Segoe UI',sans-serif;background:#ccb580;color:#13251a;border:1px solid #e1cd99;border-radius:0;padding:12px 18px}
+body #hint{font:12px/1.5 Consolas,monospace;color:#bac7b4}
+body[data-theme-arrival=true] #caption{font:14px/1.5 'Segoe UI',sans-serif;color:#c1cbb8;background:#0b1b18d9;max-width:58ch}
+body[data-theme-arrival=true] :is(#threat,#hint,#ball-status){display:none!important}
+@media(max-width:700px){
+ #panel.rc-runtime{padding:8px}#panel.rc-runtime.rc-brief-shell{inset:8px;width:calc(100% - 16px);max-height:calc(100dvh - 16px)}
+ .rc-runtime .rc-brief-scroll{padding:22px 18px}.rc-runtime .rc-brief-footer{padding:12px 18px}
+ .rc-runtime .rc-brief-actions{gap:8px}.rc-runtime .rc-brief-actions #primary{width:100%}
+ .rc-runtime .chapters{display:none}
+ #course-pause .course-pause-body{display:flex;flex-direction:column;gap:18px}
+ #course-pause .course-pause-summary{border-left:0;border-top:1px solid #8b805755;padding:16px 0 0}
+ #course-pause .course-pause-card>header,#course-result .course-result-card>header{padding:20px 18px 12px}
+ #course-result .course-result-scroll{grid-template-columns:1fr;padding:18px;gap:18px}
+ #course-result footer nav button{min-width:0;flex:1 1 40%;padding:10px;font-size:13px}
+ #course-result footer nav [data-result-action="0"]{flex-basis:100%}
+ .rc-settings-body fieldset{grid-template-columns:1fr;padding:12px}
+ .rc-settings-tabs button{padding:10px;font-size:13px}
+ .rc-settings-body{max-height:36vh}
+ #controls-dialog,#study-dialog{padding:18px}
+ #panel.rc-runtime .rc-outcome-art{height:190px}
+}
+@media(max-height:560px){.rc-runtime .rc-brief-scroll{padding:16px 22px}.rc-runtime .rc-brief-footer{padding:10px 22px}.rc-settings-body{max-height:30vh}#panel.rc-runtime .rc-outcome-art{height:150px}}
+
+/* Native selectors retain their handlers; these final rules own emphasis. */
+#course-pause nav button[data-pause-action="0"],#course-result nav button[data-result-action="0"]{background:var(--gt-grain),linear-gradient(115deg,#d9c38e,#baa16a 60%,#d0bb86);color:#152316;border-color:#e1cd99}
+#course-pause nav button strong{font:700 16px/1.4 'Segoe UI',sans-serif}
+#course-pause nav button small{font:14px/1.5 'Segoe UI',sans-serif}
+#course-result footer nav button{font:600 14px/1.4 'Segoe UI',sans-serif}
+.rc-runtime :is(.rc-brief-scroll,.rc-brief-native,.rc-settings,.rc-settings-tabs,.rc-settings-body){min-width:0;max-width:100%;box-sizing:border-box}
+.rc-runtime .rc-brief-scroll{flex:1 1 auto;width:100%}
+.rc-report:has(#completion-details[hidden]){display:none}
+.rc-runtime .rc-settings-body label{min-width:0}
+
+/* Shared outcome composition: artwork left, outcome/advice right, actions below. */
+#panel.rc-runtime{font:16px/1.5 'Segoe UI',sans-serif}
+#panel.rc-runtime :is(.bn-heading,#defeat-dialogue,#story){text-align:left;max-width:none;width:auto;margin-left:0;margin-right:0}
+#panel.rc-runtime .bn-heading{display:block}
+#panel.rc-runtime #title{font:600 clamp(30px,2.5vw,46px)/1.15 Georgia,serif;letter-spacing:-.02em}
+#panel.rc-runtime #panel-content{min-width:0;width:100%;padding:0;overflow:visible;display:contents}
+#panel.rc-runtime #panel-footer{padding:16px 24px;text-align:left}
+#panel.rc-runtime #panel-footer .actions{justify-content:flex-end}
+#panel.rc-runtime[data-screen=caught] .rc-brief-native{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);column-gap:28px;align-items:start}
+#panel.rc-runtime[data-screen=caught] .rc-brief-native>*{grid-column:2;min-width:0}
+#panel.rc-runtime[data-screen=caught] .rc-outcome-art{grid-column:1;grid-row:1/8;height:auto;aspect-ratio:16/11;align-self:start;margin:0}
+#panel.rc-runtime[data-screen=caught] .rc-outcome-art img{object-fit:contain}
+#panel.rc-runtime[data-screen=caught] :is(.rc-settings,.rc-report){grid-column:1/-1}
+#panel.rc-runtime[data-screen=caught] .rc-brief-notes{display:none}
+#panel.rc-runtime[data-screen=caught] :is(#defeat-dialogue,#loss-quote){font:italic 16px/1.5 Georgia,serif;margin:8px 0;padding:12px}
+#panel.rc-runtime[data-screen=caught] :is(#defeat-review,#advice,#retry-advice){font:14px/1.5 'Segoe UI',sans-serif;margin:8px 0}
+#panel.rc-runtime[data-screen=caught] .rc-brief-footer{width:100%;box-sizing:border-box}
+#panel.rc-runtime .rc-settings-tabs{width:100%;max-width:100%;overflow-x:auto}
+#hud #objective-card strong,#quality-hud .q-objective strong{font:600 clamp(16px,1.35vw,24px)/1.45 Consolas,'Courier New',monospace}
+#quality-hud .q-objective strong{font-size:calc(clamp(16px,1.35vw,24px) * var(--q-user-scale,1))}
+@media(max-width:700px){
+ #panel.rc-runtime[data-screen=caught] .rc-brief-native{display:flex;gap:0}
+ #panel.rc-runtime[data-screen=caught] .rc-outcome-art{height:190px;aspect-ratio:auto;order:0;margin-bottom:18px}
+ #panel.rc-runtime #panel-footer{padding:12px 18px}
+ #panel.rc-runtime .rc-brief-scroll{width:100%;padding:20px 18px}
+}
+
+#panel.rc-runtime.rc-brief-shell{flex-direction:column}
+#panel.rc-runtime[data-screen]:not(.rc-brief-shell){display:grid;place-items:center;padding:24px;justify-content:normal;align-items:center;background:#06110fee}
+:is(#controls-dialog,#panel) .rc-settings-tabs button[aria-pressed=true]{background:#4e5130;color:#f1e4bd;border-color:#d3b978}
+@media(max-width:700px){#panel.rc-runtime[data-screen]:not(.rc-brief-shell){padding:8px}}
+@media(max-height:560px) and (min-width:701px){#panel.rc-runtime[data-screen]:not(.rc-brief-shell){padding:8px 18px}}
+
+#panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) :is(#tagline,#story,.chapters,.rc-brief-notes,#round-plan){display:none}
+#panel.rc-runtime .rc-settings-body{max-height:clamp(110px,calc(100dvh - 460px),600px)}
+#panel.rc-runtime #advice:empty{display:none}
+@media(max-width:700px){#panel.rc-runtime .rc-settings-body{max-height:clamp(110px,calc(100dvh - 590px),400px)}}
+
+/* Preserve the existing text-size preferences inside the new hierarchy. */
+#course-settings .course-settings-row>span{font-size:calc(15px * var(--settings-scale,1))}
+#course-settings button{font-size:calc(14px * var(--settings-scale,1))}
+#course-pause nav button strong{font-size:calc(16px * var(--q-user-scale,1))}
+#course-pause nav button small,#course-pause .course-pause-summary p{font-size:calc(14px * var(--q-user-scale,1))}
+#course-result .course-result-scroll article{font-size:calc(16px * var(--q-user-scale,1))}
+.rc-runtime :is(#tagline,#story,#result){font-size:calc(16px * var(--rc-text-scale,1))}
+/* Follow-up refinements: static surfaces, shared controls, bounded reading areas. */
+#quality-hud :is(.q-map,.q-context>span,.q-caption,.q-resources){background:#102219e8;color:#eee5cb;border:1px solid #8b805766;font-family:Consolas,'Courier New',monospace;border-radius:0}
+#quality-hud .q-map{min-height:44px;padding:8px 16px;color:#dfc58b;font:600 14px/1.4 'Segoe UI',sans-serif;border-color:#8b8057}
+#quality-hud .q-context>span{padding:10px 16px;border-left:2px solid #ccb580}
+#quality-hud .q-caption{border-color:transparent;color:#d0d5bd}
+#quality-hud .q-resources{padding:6px 12px;color:#c1cbb8}
+#quality-hud .q-touch :is(circle,ellipse,rect){fill:#14291ce8;stroke:#aa9665;stroke-width:1.5}
+#quality-hud .q-touch text{fill:#eee5cb;font:600 12px 'Segoe UI',sans-serif;letter-spacing:.03em}
+#quality-hud .q-touch [data-knob]{fill:#c9b37caa;stroke:#e1cd99}
+#quality-hud .q-touch .active{fill:#766337;stroke:#f1d698;stroke-width:3}
+body #touch button{background:#14291ce8;color:#eee5cb;border:1px solid #aa9665;border-radius:0;font:600 12px/1.35 'Segoe UI',sans-serif;letter-spacing:.03em;box-shadow:inset 0 -2px #06130f}
+body #touch button:is(:active,.active,[aria-pressed=true]){background:#766337;color:#fff0c5;border-color:#f1d698;box-shadow:inset 0 2px #413a24}
+#quality-hud #course-map{inset:50% auto auto 50%;transform:translate(-50%,-50%);width:min(94%,1100px);height:auto;max-height:94%;font-size:calc(16px * var(--q-user-scale,1))}
+#course-map .course-map-scroll{grid-template-columns:minmax(260px,468px) minmax(240px,1fr);gap:28px;padding:20px;align-items:start}
+#course-map .course-map-info{border-left:1px solid #8b805755;padding-left:24px}
+#course-map header{padding:16px 20px}
+#course-map .course-map-status{padding:10px 20px;font-size:14px}
+#course-map .course-map-scroll canvas{width:100%;max-width:468px}
+#course-map #route-choices button{padding:16px;font:600 15px/1.5 'Segoe UI',sans-serif;background:#14291c;border-color:#8b8057}
+#course-map .course-map-legend{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;margin:16px 0 24px;font:13px/1.5 Consolas,monospace;color:#c1cbb8}
+#course-map .course-map-legend dt{color:#dfc58b}#course-map .course-map-legend dd{margin:0}
+#panel.rc-runtime #ending-art{width:min(100%,calc(40vh * 1672 / 941));max-height:none;margin:0 auto 24px;border:4px solid #253323;outline:1px solid #8b8057;box-sizing:border-box;background:#102219}
+#panel.rc-runtime #ending-art img{display:block;width:100%;height:auto;max-height:none;aspect-ratio:1672/941}
+#panel.rc-runtime #ending-art figcaption{padding:8px 12px;font:11px/1.4 Consolas,monospace;letter-spacing:.08em;color:#dfc58b}
+@media(max-width:600px){
+ #quality-hud #course-map{width:96%;max-height:96%}
+ #course-map .course-map-scroll{grid-template-columns:1fr;padding:12px;gap:16px}
+ #course-map .course-map-info{border-left:0;border-top:1px solid #8b805755;padding:16px 0 0}
+ #course-map .course-map-status{padding:8px 12px}
+ #quality-hud .q-resources{font-size:11px}
+}
+@media(max-width:620px) and (orientation:portrait){
+ body:has(#game-shell #crew-count) #game-shell:has(#hud:not([hidden])){min-height:100dvh;align-content:stretch;grid-template-rows:minmax(125px,1fr) auto auto minmax(48px,.45fr) auto auto;background:var(--gt-grain,none),linear-gradient(155deg,#213023,#0a1b14 60%,#18291c);border-color:#8b805766}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) .objective{align-self:center}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) .tools{align-self:center}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) #game{border-top:1px solid #8b8057;border-bottom:1px solid #8b8057}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) #message-rails{align-self:center}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) #touch{padding:18px 8px max(20px,env(safe-area-inset-bottom));background:#102219}
+}
+.rc-drive-identity,.rc-drive-note{display:none}
+#controls-dialog .rc-settings-body{max-height:calc(100dvh - 340px)}
+@media(max-width:620px) and (orientation:portrait){
+ #game-shell:has(#hud:not([hidden])) .rc-drive-identity{display:flex;flex-direction:column;gap:8px;position:absolute;top:30px;left:22px;pointer-events:none;color:#ddc58b}
+ .rc-drive-identity small{font:11px/1.5 Consolas,monospace;letter-spacing:.14em}
+ .rc-drive-identity strong{font:600 30px/1.2 Georgia,serif}
+ #game-shell:has(#hud:not([hidden])) .rc-drive-note{display:block;grid-area:4/1/5/-1;align-self:end;max-width:34ch;margin:16px 22px 22px;color:#aebba4;font:13px/1.6 'Segoe UI',sans-serif;pointer-events:none}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) :is(.objective,.tools){align-self:end;margin-bottom:32px}
+ body:has(#crew-count) #game-shell:has(#hud:not([hidden])) #message-rails{align-self:start}
+ #controls-dialog .rc-settings-body{max-height:calc(100dvh - 390px)}
+}
+/* Live warnings take priority over the portrait driving reminder. */
+@media(max-width:620px) and (orientation:portrait){
+ body.on-foot .rc-drive-note,#game-shell:has(#caption:not(:empty):not([hidden])) .rc-drive-note,#game-shell:has(#sound-caption:not(:empty):not([hidden])) .rc-drive-note{display:none!important}
+}
+
+/* Paper documents have their own ink; dark-panel heading colors must not leak in. */
+#panel.rc-runtime .notice-paper{--paper-ink:#253c2d;--paper-muted:#47563e;background:var(--gt-grain),#d8ceaa;color:var(--paper-ink);border-top-color:#68734f;box-shadow:4px 4px #06130f}
+#panel.rc-runtime .notice-paper :is(h2,small,p){color:var(--paper-ink)}
+#panel.rc-runtime .notice-paper small{color:var(--paper-muted);font:12px/1.5 Consolas,monospace;letter-spacing:.08em}
+#panel.rc-runtime .notice-paper .notice-stamp{color:#7d3d2d;border-color:#7d3d2d;font:14px/1.6 Consolas,monospace}
+/* Recovered documents share the same disclosure, title and reading measure. */
+#panel.rc-runtime .rc-record{margin:20px 0;padding:16px 0;border-top:1px solid #8b805766;font:15px/1.65 'Segoe UI',sans-serif}
+#panel.rc-runtime .rc-record>summary{color:#dfc58b;font:600 15px/1.5 'Segoe UI',sans-serif;padding:6px 0;cursor:pointer}
+#panel.rc-runtime .rc-record :is(p,article){max-width:66ch;font:15px/1.65 'Segoe UI',sans-serif;color:#d7ddc7}
+#panel.rc-runtime .rc-record h3{font:600 21px/1.3 Georgia,serif;color:#e5d3a5;margin:20px 0 10px}
+#panel.rc-runtime .rc-record article+article{margin-top:24px;padding-top:4px;border-top:1px solid #8b805744}
+#panel.rc-runtime .rc-record #field-log{white-space:normal;padding:0;border:0;background:none;margin:0;max-width:none;font:inherit}
+#panel.rc-runtime .rc-record:has(>#field-log[hidden]){display:none}
+#panel.rc-runtime .rc-record .maintenance-diagram{max-width:590px;width:100%;margin:18px 0}
+#panel.rc-runtime .maintenance-diagram img{width:100%;height:auto;aspect-ratio:1000/620}
+#panel.rc-runtime .maintenance-diagram figcaption{font:12px/1.5 Consolas,monospace;color:#b9c5b5;margin-top:10px}
+/* One control grammar across primary settings and the chapter settings dialogs. */
+#course-settings{font-family:'Segoe UI',sans-serif}
+#course-settings .course-settings-card{height:auto;max-height:100%;width:min(100%,1040px)}
+#course-settings .course-settings-scroll{flex:0 1 auto;max-height:62vh;padding:16px 20px}
+#course-settings :is(nav button,.course-settings-actions button){font:600 14px/1.4 'Segoe UI',sans-serif;min-height:44px;text-transform:none}
+#course-settings nav{justify-content:flex-start;gap:6px;padding:12px 20px}
+#course-settings nav button{flex:0 0 auto;padding:10px 16px}
+#course-settings :is(.course-settings-help,footer p){font:13px/1.5 'Segoe UI',sans-serif;color:#b9c5b5}
+#course-settings footer small{font:12px/1.5 Consolas,monospace}
+#course-settings .course-settings-row,.rc-settings-body label.rc-setting-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 16px;padding:12px;margin:0;background:#14291c;border:1px solid #8b805755;min-width:0;font:14px/1.5 'Segoe UI',sans-serif}
+.rc-settings-body .rc-setting-row>.rc-setting-name{grid-column:1;grid-row:1;font-weight:600;color:#eee5cb}
+.rc-settings-body .rc-setting-row>input[type=range],#course-settings .course-settings-row>input[type=range]{grid-column:1/-1;grid-row:2;width:100%;min-width:0;max-width:none;min-height:28px;height:28px;margin:0;accent-color:#ccb580}
+.rc-settings-body .rc-setting-row>output{grid-column:2;grid-row:1;color:#dfc58b;font:13px/1.5 Consolas,monospace}
+.rc-settings-body .rc-setting-row>:is(select,input[type=checkbox]){grid-column:2;grid-row:1;margin:0}
+.rc-settings-body .rc-setting-row>select{width:auto;max-width:100%;font-size:14px}
+#course-settings .course-settings-row>output{color:#dfc58b;font:13px/1.5 Consolas,monospace}
+#course-settings .course-settings-row button[role=switch]{font:600 14px/1.4 'Segoe UI',sans-serif;min-width:68px;background:#172b20}
+#course-settings .course-settings-row button[aria-checked=true]{background:#4e5130;color:#f1e4bd;border-color:#d3b978}
+.rc-settings-body .rc-setting-row:focus-within,#course-settings .course-settings-row[data-selected=true]{border-color:#ddc28c;background:#26371f}
+.rc-settings-body:has(>.rc-setting-row){display:flex;flex-direction:column;gap:12px}
+/* Listening stays legible without stretching across half a large monitor. */
+#quality-hud[data-listening=true] .q-messages{width:min(640px,92%);left:50%;transform:translateX(-50%);gap:0;border:1px solid #8b805766;border-left:2px solid #ccb580;background:#102219ed}
+#quality-hud :is(.q-listening-header,.q-listening-cadence,.q-listening-clues){background:transparent;color:#eee5cb}
+#quality-hud .q-listening-header{padding:12px 14px;background:#102219;gap:12px}
+#quality-hud .q-listening-header strong{font:600 clamp(14px,1vw,18px)/1.4 Consolas,monospace}
+#quality-hud .q-listening-header small{font:11px/1.5 Consolas,monospace;color:#c6b17d;letter-spacing:.08em}
+#quality-hud :is(.q-listening-cadence,.q-listening-clues){font:14px/1.5 'Segoe UI',sans-serif;border-top:1px solid #8b805744}
+#quality-hud .q-listening-cadence{padding:9px 14px;text-align:left;color:#b9c5b5}
+#quality-hud .q-listening-clues summary{padding:10px 14px;color:#dfc58b}
+#quality-hud .q-listening-clues ul{padding:0 14px 10px}
+#quality-hud .q-listening-clues li{border-color:#8b805744;padding:8px 0}
+/* Closing screens keep their own actions in the persistent footer. */
+#panel.rc-runtime[data-screen=complete] :is(.rc-brief-notes,.chapters,#save-note){display:none!important}
+#panel.rc-runtime .rc-closing-actions{display:flex;gap:12px;flex-wrap:wrap;margin:0}
+#panel.rc-runtime .rc-closing-actions[hidden]{display:none!important}
+#panel.rc-runtime[data-closing=credits] .rc-brief-footer,#panel.rc-runtime[data-closing=notice] .rc-brief-footer{flex-direction:row;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#panel.rc-runtime[data-closing=credits] .rc-brief-actions,#panel.rc-runtime[data-closing=notice] .rc-brief-actions{width:auto;margin-left:auto}
+#panel.rc-runtime :is(#credits-back,#notice-back){background:#ccb580;color:#152316;border-color:#e1cd99}
+#panel.rc-runtime :is(#final-credits,#post-credits){max-width:76ch}
+@media(max-width:700px){
+ #course-settings nav{padding:10px 12px;flex-wrap:nowrap;overflow-x:auto}
+ #course-settings nav button{padding:10px 12px}
+ #course-settings .course-settings-scroll{max-height:60vh;padding:12px}
+ #course-settings .course-settings-row{padding:10px}
+ #panel.rc-runtime .rc-record :is(p,article){font-size:14px}
+ #panel.rc-runtime .rc-record h3{font-size:20px}
+ #panel.rc-runtime .rc-closing-actions{width:100%}
+ #panel.rc-runtime .rc-closing-actions button{flex:1}
+ #quality-hud :is(.q-listening-cadence,.q-listening-clues){font-size:13px}
+}
+@media(max-height:560px){#course-settings .course-settings-scroll{max-height:44vh}#course-settings header{padding:8px 16px}#course-settings nav{padding:8px 12px}#course-settings footer{padding:8px 12px}}
+/* Fit the whole drawing above the persistent action bar at ordinary heights. */
+#panel.rc-runtime .rc-record .maintenance-diagram{width:min(100%,590px,58dvh)}
+#course-settings :is(nav button,.course-settings-actions button,.course-settings-row button[role=switch]){font-size:calc(14px * var(--settings-scale,1))}
+#course-settings .course-settings-row>output{font-size:calc(13px * var(--settings-scale,1))}
+.rc-settings-body label.rc-setting-row{font-size:calc(14px * var(--rc-text-scale,1))}
+@media(max-width:700px){#panel.rc-runtime .rc-record .maintenance-diagram{width:100%}}
+#quality-hud .q-listening-header strong{font-size:calc(clamp(16px,1vw,22px) * var(--q-user-scale,1))}
+#quality-hud :is(.q-listening-cadence,.q-listening-clues){font-size:calc(clamp(14px,.9vw,18px) * var(--q-user-scale,1))}
+@media(max-width:700px){#quality-hud :is(.q-listening-cadence,.q-listening-clues){font-size:calc(13px * var(--q-user-scale,1))}}
+
+/* Result cards grow with their report, with scrolling reserved for overflow. */
+#course-result .course-result-card{height:auto;max-height:100%}
+#course-result .course-result-scroll{flex:0 1 auto}
+
+/* Keyboard editors share the same row and key treatment as primary settings. */
+.rc-settings-body [data-keyboard-fields]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#panel .rc-settings-body [data-keyboard-fields]>label{display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,40%);gap:12px;align-items:center;margin:0;padding:12px;min-width:0;background:#14291c;border:1px solid #8b805755;font:600 calc(14px * var(--rc-text-scale,1))/1.5 'Segoe UI',sans-serif;color:#eee5cb}
+#panel .rc-settings-body [data-keyboard-fields]>label:focus-within{border-color:#ddc28c;background:#26371f}
+.rc-settings-body [data-keyboard-fields] select,#course-settings[data-page=bindings] .course-settings-row button{min-height:44px;min-width:76px;max-width:150px;width:auto;padding:8px 10px;border:1px solid #8b8057;background:#172b20;color:#eee5cb;font:600 14px/1.4 Consolas,monospace}
+#course-settings[data-page=bindings] .course-settings-row button[aria-pressed=true]{background:#4e5130;border-color:#e1cd99;color:#fff1c8}
+.rc-control-help{border-top:1px solid #8b805755;padding:12px 0;margin-top:16px;grid-column:1/-1}
+.rc-control-help>summary{color:#dfc58b;cursor:pointer;font:600 14px/1.5 'Segoe UI',sans-serif;padding:8px 0}
+.rc-control-help>p{max-width:70ch;line-height:1.65}
+
+/* A static survey scale; only the existing input-driven pointer moves. */
+#course-settings .course-look-preview{height:126px;padding:12px 16px;border-color:#8b8057;background:var(--gt-grain),#0b1b13;font:13px/1.4 Consolas,monospace;color:#dfc58b}
+.course-look-ruler{position:absolute;inset:47px 16px 15px;border-top:1px solid #8b8057;background:repeating-linear-gradient(90deg,#ccb58099 0 1px,transparent 1px 5%) left top/100% 9px no-repeat;display:flex;justify-content:space-between;align-items:end}
+.course-look-ruler::after{content:'';position:absolute;left:50%;top:0;height:32px;border-left:1px solid #dfc58b}
+.course-look-ruler b{font:11px/1.5 Consolas,monospace;color:#b9c5b5}
+#course-settings .course-look-preview i{bottom:42px;width:14px;height:26px;background:#dfc58b;transform:translateX(-50%);clip-path:polygon(0 0,100% 0,100% 25%,60% 50%,60% 100%,40% 100%,40% 50%,0 25%)}
+
+@media(max-width:700px){
+ .rc-settings-body [data-keyboard-fields]{grid-template-columns:1fr}
+ #panel .rc-settings-body [data-keyboard-fields]>label{padding:10px;gap:8px}
+ /* Opening settings temporarily replaces the surrounding pause furniture. */
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-footer{display:none}
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-shell,
+ #panel.rc-runtime.rc-brief-shell:not(.rc-loss):has(.rc-settings[open]){height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)}
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-scroll{display:flex;flex-direction:column;flex:1;overflow:hidden;padding:16px;min-height:0}
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-native{flex:1;min-height:0}
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-native>:not(.rc-settings[open]):not(:has(.rc-settings[open])),
+ #panel.rc-runtime:not(.rc-loss):has(.rc-settings[open]) .rc-brief-native>:has(.rc-settings[open])>:not(.rc-settings[open]){display:none!important}
+ #panel.rc-runtime .rc-settings[open]{display:flex;flex-direction:column;flex:1;min-height:0;margin:0;padding:0;border:0;background:none}
+ #panel.rc-runtime .rc-settings[open]>summary{font:600 24px/1.25 Georgia,serif;color:#eee5cb;flex:none;padding:8px 0 12px}
+ #panel.rc-runtime .rc-settings[open]>.rc-settings-tabs{flex:none}
+ /* details wraps its body in an anonymous box, so bound the scroller directly. */
+ #panel.rc-runtime .rc-settings[open]>.rc-settings-body{flex:none;min-height:0;height:calc(100dvh - 260px);max-height:calc(100dvh - 260px);padding:8px 2px;box-sizing:border-box}
+ #panel.rc-runtime .rc-settings[open]>.rc-settings-body fieldset{padding:12px 0;border:0;margin:4px 0 18px}
+ #panel.rc-runtime .rc-settings[open]>.rc-settings-footer{flex:none;padding:10px 0 0}
+}
+/* Art-led defeats: static decoded stills, with one stable quotation per attempt. */
+#panel.rc-runtime.rc-loss .rc-brief-shell{width:min(100%,1920px);max-width:1920px}
+#panel.rc-runtime.rc-loss.rc-brief-shell{width:min(calc(100% - 48px),1920px);max-width:1920px}
+#course-result.rc-loss .course-result-card{width:min(96%,1920px)}
+#course-result.rc-loss .course-result-card>header,
+#course-result.rc-loss .course-result-scroll>:not(.rc-loss-stage),
+#panel.rc-runtime.rc-loss .rc-brief-native>:not(.rc-loss-stage){display:none!important}
+#panel.rc-runtime.rc-loss .rc-brief-native,#course-result.rc-loss .course-result-scroll{display:block}
+#panel.rc-runtime.rc-loss .rc-loss-stage,#course-result.rc-loss .rc-loss-stage{display:grid;grid-template-columns:minmax(0,2.15fr) minmax(300px,1fr);gap:clamp(20px,2vw,40px);align-items:center;width:100%;grid-column:1/-1}
+.rc-loss-stage[hidden]{display:none!important}
+.rc-loss-image,.rc-loss-copy{min-width:0}
+#panel.rc-runtime.rc-loss .rc-outcome-art,#course-result.rc-loss .rc-loss-still{display:block;position:relative;inset:auto;width:100%;height:auto;aspect-ratio:1672/941;max-height:none;min-height:0;margin:0;box-sizing:border-box;border:4px solid #253323;outline:1px solid #8b8057;overflow:hidden;image-rendering:pixelated;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+#panel.rc-runtime.rc-loss .rc-outcome-art img{width:100%;height:100%;object-fit:cover;object-position:center}
+#panel.rc-runtime.rc-loss .rc-loss-copy>header,#course-result.rc-loss .rc-loss-copy>header{display:block;padding:0;margin:0 0 24px;border:0;background:none}
+#panel.rc-runtime.rc-loss .rc-loss-copy :is(h1,h2,#title),#course-result.rc-loss [data-result=title]{font:600 clamp(28px,2vw,42px)/1.12 Georgia,serif;margin:10px 0 0;color:#eee5cb;letter-spacing:-.025em;text-transform:none}
+#course-result.rc-loss [data-result=kicker]{font:11px/1.5 Consolas,monospace;letter-spacing:.12em;color:#ccb580}
+#panel.rc-runtime.rc-loss :is(#defeat-dialogue,#loss-quote,#joe-loss-quote),#course-result.rc-loss .rc-loss-quote{display:block;margin:0 0 24px;padding:0;border:0;background:none;max-width:none;white-space:normal;color:#e9d6a6;font:italic calc(clamp(19px,1.25vw,27px) * var(--rc-text-scale,var(--q-user-scale,1)))/1.45 Georgia,serif;text-align:left}
+.rc-loss-quote::before{content:'Joe';display:block;margin-bottom:8px;font:600 11px/1.5 Consolas,monospace;text-transform:uppercase;letter-spacing:.16em;color:#bfa575}
+#panel.rc-runtime.rc-loss #defeat-dialogue small{display:none}
+#panel.rc-runtime.rc-loss #defeat-line{font:inherit;color:inherit;margin:0;white-space:normal}
+#panel.rc-runtime.rc-loss .rc-loss-tip>*,#course-result.rc-loss .rc-loss-tip>*{font:calc(15px * var(--rc-text-scale,var(--q-user-scale,1)))/1.6 'Segoe UI',sans-serif;color:#bcc8b8;border:0;border-left:2px solid #8b8057;padding:0 0 0 14px;margin:0 0 24px;white-space:normal}
+.rc-loss-details{border-top:1px solid #8b805766;padding-top:12px;font:14px/1.6 'Segoe UI',sans-serif;color:#bcc8b8}
+.rc-loss-details>summary{cursor:pointer;color:#ccb580;padding:6px 0}
+.rc-loss-details:not([open])>:not(summary){display:none!important}
+.rc-loss-details[open]>*{max-width:100%}
+#panel.rc-runtime.rc-loss .rc-loss-details :is(p,#story,#result,#tagline){font-size:14px}
+@media(max-width:1000px){
+ #panel.rc-runtime.rc-loss .rc-loss-stage,#course-result.rc-loss .rc-loss-stage{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr);gap:22px}
+}
+@media(max-width:700px){
+ #panel.rc-runtime.rc-loss.rc-brief-shell{width:calc(100% - 16px)}
+ #panel.rc-runtime.rc-loss .rc-brief-scroll,#course-result.rc-loss .course-result-scroll{padding:16px}
+ #panel.rc-runtime.rc-loss .rc-loss-stage,#course-result.rc-loss .rc-loss-stage{display:flex;flex-direction:column;gap:20px;align-items:stretch}
+ #panel.rc-runtime.rc-loss .rc-outcome-art,#course-result.rc-loss .rc-loss-still{height:min(38dvh,330px);aspect-ratio:auto;object-fit:cover;object-position:center}
+ #panel.rc-runtime.rc-loss[data-chapter=under-green] .rc-outcome-art img{object-position:30% center}
+ #panel.rc-runtime.rc-loss .rc-loss-copy>header,#course-result.rc-loss .rc-loss-copy>header{margin-bottom:18px}
+ #panel.rc-runtime.rc-loss :is(#defeat-dialogue,#loss-quote,#joe-loss-quote),#course-result.rc-loss .rc-loss-quote{margin-bottom:18px;font-size:calc(20px * var(--rc-text-scale,var(--q-user-scale,1)))}
+ #panel.rc-runtime.rc-loss .rc-loss-tip>*,#course-result.rc-loss .rc-loss-tip>*{margin-bottom:18px;font-size:calc(14px * var(--rc-text-scale,var(--q-user-scale,1)))}
+ #panel.rc-runtime.rc-loss .rc-settings[open]>.rc-settings-body{height:auto;max-height:50dvh}
+}

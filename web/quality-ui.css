@@ -157,3 +157,5 @@
 #course-map .course-tool small,#course-map #course-tools h2 small{display:block;}
 #course-map #course-tools .course-tool-rules{display:none;}
 @media(max-width:600px){#course-map{inset:1%;}#course-map header{padding:8px;gap:6px;}#course-map header small{display:none;}#course-map button{font-size:calc(14px * var(--q-user-scale,1));padding:8px;}#course-map .course-map-scroll{grid-template-columns:1fr;gap:12px;padding:8px;}#course-map .course-map-status{font-size:calc(12px * var(--q-user-scale,1));}#course-map .course-map-scroll canvas{width:100%;max-width:468px;}}
+
+#course-result[data-outcome="victory"] nav{grid-template-columns:repeat(2,minmax(0,1fr));}

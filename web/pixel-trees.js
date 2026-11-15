@@ -22,7 +22,7 @@ export function createTrees({root,mesh,geometryOnly=false}){
     const m=new THREE.MeshLambertMaterial({map:geometryOnly?null:Art.texture('rough-cut-needle-sprays-v1',crop),alphaTest:.32,side:THREE.DoubleSide,color:0xc3d0bc});
     m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <alphatest_fragment>','#include <alphatest_fragment>\ndiffuseColor.rgb=pow(max(diffuseColor.rgb,vec3(0.0)),vec3(.72));');};
     m.customProgramCacheKey=()=> 'rough-cut-needle-sprays-v1';
-    m.userData.needleIndex=needlesIndex++;return m;
+    m.userData.needleIndex=needlesIndex++;m.userData.courseHabitat='conifer';return m;
   });
   function limb(r,points,radius,tip=.18){
     const steps=points.length>3?10:3,sides=6,curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),g=new THREE.TubeGeometry(curve,steps,radius,sides,false),p=g.attributes.position;

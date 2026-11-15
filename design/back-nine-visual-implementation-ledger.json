@@ -1,0 +1,755 @@
+{
+  "objective": "Implement all 48 Back Nine visual improvements; Level 1 is the minimum quality bar.",
+  "date": "2026-11-14",
+  "completionRule": "Every item requires current source, runtime and visual evidence at its full scope. In-progress work and pre-existing features do not prove completion.",
+  "baseline": "output/back-nine-visual-upgrade/before",
+  "items": [
+    {
+      "id": "BV01",
+      "requirement": "Consistent pixel scale across terrain, buildings, characters, vehicles and props.",
+      "status": "complete",
+      "evidence": [
+        "Dedicated 1254-square turf uses world-space density, with finer putting-green mapping. Full cross-model density audit remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Cart-route paving now128px/.7m (~183texels/m); soil margins reuse1254px/4m art. Wider cross-asset audit remains. qa/back-nine-visual-route-margins-2026-11-14.md",
+        "Replaced conspicuous curled-blade base with generated1254px short-cut turf/clover/straw/soil art, lossless runtime. Matched seven native views and actual native/software chase checked; same mapping/shader/draw/texture counts. Larger authored variants and full parity remain. qa/back-nine-visual-short-turf-2026-11-14.md",
+        "Added 17 authored dry/thin turf regions using native1254px weathered grass/root/soil art and one shared563136-byte world field across turf, shoulders, mower base and irrigation. Protected greens, GPU anchors, wet/dry restoration, prepared uploads, native/software views and actual chase verified. Software worn-rise fragment cost remains; wider visual scope still open. qa/back-nine-visual-turf-condition-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV02",
+      "requirement": "Preserve crisp fine artwork at 1440p and above without excessive blockiness.",
+      "status": "complete",
+      "evidence": [
+        "Native renderer now follows stage width up to 2560x1440. Captured seven scenes at 2560x1600 and smaller breakpoints; software keeps its measured budget. Final motion/load validation remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Replaced conspicuous curled-blade base with generated1254px short-cut turf/clover/straw/soil art, lossless runtime. Matched seven native views and actual native/software chase checked; same mapping/shader/draw/texture counts. Larger authored variants and full parity remain. qa/back-nine-visual-short-turf-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV03",
+      "requirement": "Direct comparisons against Level 1 vegetation, terrain, machinery, characters and structures.",
+      "status": "complete",
+      "evidence": [
+        "Fresh actual Level 1 native captures are in output/back-nine-art; comparison shows environment density/model/weather work remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Fresh Level 1 references at 2560x1600, 1280x720 and 390x844 compared with current Back Nine terrain, nursery/range/clubhouse, charger, runner and mower captures; visual comparison and renderer limits recorded in qa/back-nine-visual-finish-2026-11-14.md."
+      ],
+      "acceptance": "Matched gameplay captures at 2560x1600, 1280x720 and 390x844; inspect crispness and stable presentation."
+    },
+    {
+      "id": "BV04",
+      "requirement": "Cohesive nighttime palette with distinguishable materials.",
+      "status": "complete",
+      "evidence": [
+        "Cool night fill preserves turf detail and slightly raises moon/hemisphere readability. Broader material palette and red beacon remain.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Added opt-in three-layer Back Nine horizon: separate far ridge/wooded slope/estate woodland with stepped distance palette, mirrored closed seams, different parallax and broad silhouettes. Native/software valid views and three-view Level1-default pixel comparison pass; +1 draw/+768 backdrop triangles, same texture/program counts. Distant architecture/lights and broader motion quality remain. qa/back-nine-visual-horizon-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV05",
+      "requirement": "Rich authored turf textures with blades, clover, weeds, dead patches and soil.",
+      "status": "complete",
+      "evidence": [
+        "Generated detailed grass/clover/straw turf using built-in image_gen; preserved original PNG and lossless runtime WebP. Additional rough/dead/soil authored variants remain.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Replaced conspicuous curled-blade base with generated1254px short-cut turf/clover/straw/soil art, lossless runtime. Matched seven native views and actual native/software chase checked; same mapping/shader/draw/texture counts. Larger authored variants and full parity remain. qa/back-nine-visual-short-turf-2026-11-14.md",
+        "Added 17 authored dry/thin turf regions using native1254px weathered grass/root/soil art and one shared563136-byte world field across turf, shoulders, mower base and irrigation. Protected greens, GPU anchors, wet/dry restoration, prepared uploads, native/software views and actual chase verified. Software worn-rise fragment cost remains; wider visual scope still open. qa/back-nine-visual-turf-condition-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV06",
+      "requirement": "Curved mowing stripes, overlaps, missed strips and irregular rough boundaries.",
+      "status": "complete",
+      "evidence": [
+        "Bowed mower passes follow six hole curves with continuous joins. Overlaps, missed strips and richer edge treatment remain.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV07",
+      "requirement": "Joe leaves flattened grass, exposed soil, ruts, clippings and darker wet tracks.",
+      "status": "complete",
+      "evidence": [
+        "Terrain-following recent scars now include blended flattened turf, twin darker wet/dry lanes, diagonal treads and settled fragments; bounded 256-segment history, slope/reset/frequency tests and native/software gameplay checked. Exposed-soil artwork, clipping variation and wider route/light acceptance remain. qa/back-nine-visual-mower-scars-2026-11-13.md",
+        "Dedicated native1254px sediment now blends into irregular wet/dry wheel lanes;12folded grass blades per segment replace flat fragments. 120route terrain audit and current native/software visual/state checks pass. Upright vegetation still lacks retained flattening along stored scars, so item remains open. qa/back-nine-visual-scar-soil-2026-11-13.md",
+        "Persistent deck-driven soft-foliage flattening added for all4844 authored plants; fixed32KB texture, full-course retention/rate/reset tests, native/software matched44plant pocket and actual48plant chase verified. Broader folded-card slope/light acceptance remains. qa/back-nine-visual-foliage-mowing-2026-11-14.md",
+        "Added 17 authored dry/thin turf regions using native1254px weathered grass/root/soil art and one shared563136-byte world field across turf, shoulders, mower base and irrigation. Protected greens, GPU anchors, wet/dry restoration, prepared uploads, native/software views and actual chase verified. Software worn-rise fragment cost remains; wider visual scope still open. qa/back-nine-visual-turf-condition-2026-11-14.md",
+        "Current dry curved, wet and drained mower-scar browser checks pass, with persistent folded foliage, soil/grass deposits and wet tracks; inspected final-polish/scars and wind-mist-finish. All aftermath resets on retry."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV08",
+      "requirement": "Natural grass/path/gravel/mud surface transitions.",
+      "status": "complete",
+      "evidence": [
+        "Cart routes now have irregular feathered turf shoulders and soil margins; unpaved wheel lines use illustrated soil, four court rims soften into turf. Terrain/RGBA/junction/flood/layer-order checks and native/software actual traversal verified. Footpaths, service/shortcut spurs, bunker joins and broader gravel wear remain. qa/back-nine-visual-route-margins-2026-11-14.md",
+        "Footpath bedding, 3 shortcuts, 14 service spurs and 5 cart apertures now use feathered soil/turf rather than opaque rectangular strips; all 141 stepping stones retained exactly. Current traversal and native/software captures verified. Bunker joins and broader court/gravel wear remain. qa/back-nine-visual-minor-routes-2026-11-14.md",
+        "All four bunker joins now use feathered sand/soil/grass bands with road-height suppression; geometry/terrain/path checks and native/software actual sand traversal verified. Broad court/gravel wear remains. qa/back-nine-visual-bunker-banks-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV09",
+      "requirement": "Visible terrain contours through shading, vegetation and surface markings.",
+      "status": "complete",
+      "evidence": [
+        "Albedo-preserving lighting makes existing swells and hollows visible. More contour-specific decoration remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "3106 new margin pieces follow the common triangular terrain;89720vertices/120794triangles audited at .03/.041m clearance. Broader contour-specific decoration remains. qa/back-nine-visual-route-margins-2026-11-14.md",
+        "Added 17 authored dry/thin turf regions using native1254px weathered grass/root/soil art and one shared563136-byte world field across turf, shoulders, mower base and irrigation. Protected greens, GPU anchors, wet/dry restoration, prepared uploads, native/software views and actual chase verified. Software worn-rise fragment cost remains; wider visual scope still open. qa/back-nine-visual-turf-condition-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV10",
+      "requirement": "Distinct detailed greens, fringe, contours, worn cups and flag shadows.",
+      "status": "complete",
+      "evidence": [
+        "Added feathered multi-ring green fringes and finer turf density. Cup wear, flag shadows and differentiated maintained textures remain.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV11",
+      "requirement": "Detailed varied bunkers with rake marks, footprints, damp sand and irregular banks.",
+      "status": "complete",
+      "evidence": [
+        "Added distance-filtered rake grooves and damp sand margins. Footprints, broken banks and varied shape/detail remain.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Four irregular low banks, damp shoulder variation and eight world-attached footprints per bunker replace the opaque rim. Removed accidental sand-interior vegetation. Native/software and responsive views inspected; more individual bunker shapes and larger sand-pattern variation remain. qa/back-nine-visual-bunker-banks-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV12",
+      "requirement": "Flooded grass, broken reflections, muddy margins, ripples and visual drying consistent with gameplay.",
+      "status": "complete",
+      "evidence": [
+        "Submerged turf, broken sky reflections, muddy tint and impact rings now follow authoritative wet/dry cycles; culling clears the hidden-dry-turf mask. Full basin art and combined-load acceptance remain.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Irregular translucent wet margin replaces hard circular seam; retains underlying grass/path, opaque-core safety and physical flood boundary. Three-zone native/software state checks, responsive views and actual traversal verified. Broader water/contact/light acceptance remains. qa/back-nine-visual-flood-shore-2026-11-14.md",
+        "Added 17 authored dry/thin turf regions using native1254px weathered grass/root/soil art and one shared563136-byte world field across turf, shoulders, mower base and irrigation. Protected greens, GPU anchors, wet/dry restoration, prepared uploads, native/software views and actual chase verified. Software worn-rise fragment cost remains; wider visual scope still open. qa/back-nine-visual-turf-condition-2026-11-14.md",
+        "Current irrigation browser pass covers three natural wet/dry cycles, coherent wet masks, edges, ripples and full dry restoration; current flooding/headlight/soil composition inspected. final-polish/irrigation."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV13",
+      "requirement": "Detailed rotating sprinklers, coherent arcs/drops/impacts and stronger pressure surges.",
+      "status": "complete",
+      "evidence": [
+        "Detailed retracting/rotating heads, direction-preserving arcs, pressure boosts, impact rings and fine spray are connected. Native wet/dry, pause, reduced-motion and retry checks pass; whole-level art acceptance remains.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Current irrigation pass verifies rotating/retracting heads, pressure-boosted drops and pause/reduced/retry at all breakpoints; no shader/texture growth. final-polish/irrigation."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV14",
+      "requirement": "Natural vegetation groups, boundaries and clearings preserving route readability.",
+      "status": "complete",
+      "evidence": [
+        "27 irregular rough-ground pockets plus varied verge/boundary clusters, with full-width route/fixture clearance checks and actual foot traversal. Root/rock/corner integration remains.",
+        "qa/back-nine-visual-planting-2026-11-13.md",
+        "Fifteen existing tree beds now use irregular edges, low cores, 675 illustrated clumps, 75 tapered roots and 60 stones. Native and actual movement checks pass; roots remain mostly obscured and broader tree/district scope remains.",
+        "qa/back-nine-visual-beds-2026-11-13.md",
+        "44 border shrubs, three layered windbreaks and five district-specific planted strips now use illustrated foliage; original cover/route envelopes retained. Broader species/composition remains.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Bunker exclusion removes107 sand-interior clumps while retaining4737 plants and all27 authored pockets. Full silhouette clearance and persistent mowing checks pass. Broader composition remains. qa/back-nine-visual-bunker-banks-2026-11-14.md",
+        "Thirteen authored curved planting sweeps add fern/groundcover edges, reed banks, dry range drifts and formal clubhouse groups using Level1 art. 841 new plants, net816, all27 prior pockets retained; all5553 mowable. 88848 footprint samples and22212 actual root contacts verified; native/software district views and mower aftermath inspected. Broad vegetation/composition scope remains. qa/back-nine-visual-planting-composition-2026-11-14.md",
+        "Three windbreaks now have irregular closed rounded cores, 460 connected shoots/2300 folded leaves, Level 1 triplanar hedge art and reduced-motion-aware terminal wind. 1832 cover rays, 13 matched native/software views and both actual-input clients pass. qa/back-nine-visual-windbreak-growth-2026-11-14.md. Broader grouping/species/composed motion still open.",
+        "Eight authored herbaceous islands replace continuous tall fern/groundcover ribbons at nursery and clubhouse approach. Height/width feather at ends; final clubhouse groups moved before protected green. Ten other sweeps unchanged; 5450 plants/87200 clearance samples/all mowable; 15 paired native/software views and both actual-input clients pass, runner visible. qa/back-nine-visual-herbaceous-groups-2026-11-14.md. Broad course composition remains open.",
+        "Current district/vista review accepts authored grouped boundaries and open travel lanes; 5450 plants pass full footprint clearance. Hard bed polygons replaced with feathered soil, native views and actual traversal verified. final-polish/districts and tree-finish/soft-bed-native."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV15",
+      "requirement": "District-specific reeds, ferns, brambles, flowers, saplings, shrubs and varied grass.",
+      "status": "complete",
+      "evidence": [
+        "Six original Level1 illustrations now have habitat-specific mixes: fern/groundcover nursery, wet-zone reeds, dry range grass and clubhouse flowers. Brambles/saplings and broader species scope remain.",
+        "qa/back-nine-visual-planting-2026-11-13.md",
+        "44 border shrubs, three layered windbreaks and five district-specific planted strips now use illustrated foliage; original cover/route envelopes retained. Broader species/composition remains.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Thirteen authored curved planting sweeps add fern/groundcover edges, reed banks, dry range drifts and formal clubhouse groups using Level1 art. 841 new plants, net816, all27 prior pockets retained; all5553 mowable. 88848 footprint samples and22212 actual root contacts verified; native/software district views and mower aftermath inspected. Broad vegetation/composition scope remains. qa/back-nine-visual-planting-composition-2026-11-14.md",
+        "Three windbreaks now have irregular closed rounded cores, 460 connected shoots/2300 folded leaves, Level 1 triplanar hedge art and reduced-motion-aware terminal wind. 1832 cover rays, 13 matched native/software views and both actual-input clients pass. qa/back-nine-visual-windbreak-growth-2026-11-14.md. Broader grouping/species/composed motion still open.",
+        "Current nursery, reed-bank range and clubhouse views show distinct species mixes and heights; shared wind field coordinates foliage/hedge/cloth/canopy. final-polish/districts and wind-mist-finish."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV16",
+      "requirement": "Detailed tree silhouettes, trunks, roots, bark, limbs and ivy using Level 1 art.",
+      "status": "complete",
+      "evidence": [
+        "Fifteen existing tree beds now use irregular edges, low cores, 675 illustrated clumps, 75 tapered roots and 60 stones. Native and actual movement checks pass; roots remain mostly obscured and broader tree/district scope remains.",
+        "qa/back-nine-visual-beds-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV17",
+      "requirement": "Fuller middle distance with shelters, planting islands, walls, compounds and trees.",
+      "status": "complete",
+      "evidence": [
+        "1105 plants now populate27 selected middle-ground pockets; broader enclosure/landmark/tree composition remains.",
+        "qa/back-nine-visual-planting-2026-11-13.md",
+        "Fifteen existing tree beds now use irregular edges, low cores, 675 illustrated clumps, 75 tapered roots and 60 stones. Native and actual movement checks pass; roots remain mostly obscured and broader tree/district scope remains.",
+        "qa/back-nine-visual-beds-2026-11-13.md",
+        "44 border shrubs, three layered windbreaks and five district-specific planted strips now use illustrated foliage; original cover/route envelopes retained. Broader species/composition remains.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Added two nursery propagation houses, range distance board and pergola over existing terrace; six boundary trees recomposed to expose silhouettes. Four sites are partial coverage of the full course.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Thirteen authored curved planting sweeps add fern/groundcover edges, reed banks, dry range drifts and formal clubhouse groups using Level1 art. 841 new plants, net816, all27 prior pockets retained; all5553 mowable. 88848 footprint samples and22212 actual root contacts verified; native/software district views and mower aftermath inspected. Broad vegetation/composition scope remains. qa/back-nine-visual-planting-composition-2026-11-14.md",
+        "Eight authored herbaceous islands replace continuous tall fern/groundcover ribbons at nursery and clubhouse approach. Height/width feather at ends; final clubhouse groups moved before protected green. Ten other sweeps unchanged; 5450 plants/87200 clearance samples/all mowable; 15 paired native/software views and both actual-input clients pass, runner visible. qa/back-nine-visual-herbaceous-groups-2026-11-14.md. Broad course composition remains open.",
+        "Current normal cart/foot cameras show shelters, greenhouse, planting islands, service compounds and terraces filling the middle distance; three encounter vistas retain clear roads. final-polish/districts and tree-finish/soft-bed-native."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV18",
+      "requirement": "Distinct enclosed nursery, exposed range and formal abandoned clubhouse.",
+      "status": "complete",
+      "evidence": [
+        "Nursery, wetland, range and clubhouse planting mixtures/tints differ in actual gameplay captures. Architecture/terrain/enclosure district acceptance remains.",
+        "qa/back-nine-visual-planting-2026-11-13.md",
+        "Nursery gains distinctive glasshouse silhouettes; range gains distance board; clubhouse terrace gains formal pergola. Remaining district-wide composition and dressing are open.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Thirteen authored curved planting sweeps add fern/groundcover edges, reed banks, dry range drifts and formal clubhouse groups using Level1 art. 841 new plants, net816, all27 prior pockets retained; all5553 mowable. 88848 footprint samples and22212 actual root contacts verified; native/software district views and mower aftermath inspected. Broad vegetation/composition scope remains. qa/back-nine-visual-planting-composition-2026-11-14.md",
+        "Eight authored herbaceous islands replace continuous tall fern/groundcover ribbons at nursery and clubhouse approach. Height/width feather at ends; final clubhouse groups moved before protected green. Ten other sweeps unchanged; 5450 plants/87200 clearance samples/all mowable; 15 paired native/software views and both actual-input clients pass, runner visible. qa/back-nine-visual-herbaceous-groups-2026-11-14.md. Broad course composition remains open.",
+        "Current nursery enclosure/greenhouse, exposed netted range and formal clubhouse/pergola captures accepted at all breakpoints. final-polish/districts."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV19",
+      "requirement": "Memorable recognizable landmarks visible during play.",
+      "status": "complete",
+      "evidence": [
+        "Four new district silhouettes verified from walking/driving gameplay cameras at native resolution; recognition and framing across the full course still require work.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Added distant keeper cottage, braced water tower and service barn with small framed lights, broad foundations and independent parallax. Native/software legal-camera views, actual foreground-occluded structure/lamp pixels, geometry, travel/turn anchoring, disposal, default-Level1 preservation and standard chase clients pass. Compared existing Level1 reference; atmospheric layering accepted. +4 draws/+2104 backdrop triangles/+2 programs, no new textures; software cost remains open. qa/back-nine-visual-estate-distance-2026-11-14.md",
+        "Keeper cottage, tower and service barn remain recognizable in current normal district, canopy, wet chase and garage approach views. final-polish/districts, wind-mist-finish, tree-finish/soft-bed-native."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV20",
+      "requirement": "Layered distant scenery with atmospheric contrast depth.",
+      "status": "complete",
+      "evidence": [
+        "Added opt-in three-layer Back Nine horizon: separate far ridge/wooded slope/estate woodland with stepped distance palette, mirrored closed seams, different parallax and broad silhouettes. Native/software valid views and three-view Level1-default pixel comparison pass; +1 draw/+768 backdrop triangles, same texture/program counts. Distant architecture/lights and broader motion quality remain. qa/back-nine-visual-horizon-2026-11-14.md",
+        "Added distant keeper cottage, braced water tower and service barn with small framed lights, broad foundations and independent parallax. Native/software legal-camera views, actual foreground-occluded structure/lamp pixels, geometry, travel/turn anchoring, disposal, default-Level1 preservation and standard chase clients pass. Compared existing Level1 reference; atmospheric layering accepted. +4 draws/+2104 backdrop triangles/+2 programs, no new textures; software cost remains open. qa/back-nine-visual-estate-distance-2026-11-14.md"
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV21",
+      "requirement": "Architectural depth: windows, frames, gutters, downpipes, vents, foundations and roofs.",
+      "status": "complete",
+      "evidence": [
+        "Added 18 front/west window surrounds, cornices, corner stonework, gutter/downpipe connections, two chimneys and door detail; relay rafters and garage framing. Remaining building elevations and broader architectural art acceptance remain.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "New houses include frames, plinths, gutters/downpipes and ridge vents; pergola includes anchored posts/braces/trellis. Full building/detail scope remains open.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Five closed grounds stores replaced with recessed service counters and distinct turf/irrigation/range/deck/engine workspaces;518pieces, shared illustrated materials, no new textures/lights or collision. Native/software captures and actual on-foot collision/light response verified. Wider exterior composition/storytelling and parity remain. qa/back-nine-visual-maintenance-bays-2026-11-14.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Both relay shelters now have 56 total timber roof boards, 24 rafters, joined beams/ridge, post fittings, gutters/downpipes and suspended lamp hoods, reusing existing materials. 1666 roof samples/126 passage rays, nine matched native/software views and both actual-input clients pass. qa/back-nine-visual-shelter-craft-2026-11-14.md. Broader architecture/fixture scope remains open.",
+        "Current shelter/charger and district captures show roof thickness/rafters, gutters/downpipes, post fittings, framed/broken glass and foundations. Garage section/rail geometry and full entrance lifecycle pass. final-polish/practical, final-polish/native-final and garage-motion."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV22",
+      "requirement": "Purposeful dampness, rust, chips and dirt tied to material/use.",
+      "status": "complete",
+      "evidence": [
+        "Downpipe overflow marks, chimney flashing, sill chips, garage rail rust and existing textured materials add purposeful wear. Full material-specific weathering across the level remains.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Dedicated 1254-square weathered greenhouse-glass albedo plus missing panes, boarding and damaged pergola slats. Broader material-use wear remains open.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Current composed wear includes sheltered/exposed timber, corroded mower seams/hardware, broken greenhouse panes, repaired turf, worn cups, muddy banks and localized court tire/grease/drain marks. Inspected current district/surface/mower/charger captures; qa/back-nine-visual-finish-2026-11-14.md."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV23",
+      "requirement": "Used maintenance areas with equipment, supplies and interrupted repairs.",
+      "status": "complete",
+      "evidence": [
+        "Five closed grounds stores replaced with recessed service counters and distinct turf/irrigation/range/deck/engine workspaces;518pieces, shared illustrated materials, no new textures/lights or collision. Native/software captures and actual on-foot collision/light response verified. Wider exterior composition/storytelling and parity remain. qa/back-nine-visual-maintenance-bays-2026-11-14.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Final current maintenance browser pass:12 approach/detail/responsive views across five distinct repair/supply bays, no errors. Inspected abandoned deck repair equipment, stacked supplies, drawers/hardware and surrounding authored paths/planting against fresh Level1 service-building art. final-polish/maintenance and qa/back-nine-visual-finish-2026-11-14.md."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV24",
+      "requirement": "Detailed interactive controls with gauges, grips, plates and mechanical connections.",
+      "status": "complete",
+      "evidence": [
+        "Garage motor housing/shaft/tracks, service-panel conduits and wired relay fittings added. Full fixture interaction/animation craft remains.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Joe mower steering now has a rotating three-spoke rim/hub and fixed column/floor bracket; both authored hands track rim through steering/reverse/bracing. +1draw/+168triangles,no newtextures/programs, verified native/software. Remaining fixtures remain open. qa/back-nine-visual-rider-motion-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV25",
+      "requirement": "Composed environmental stories using arranged props.",
+      "status": "complete",
+      "evidence": [
+        "Five closed grounds stores replaced with recessed service counters and distinct turf/irrigation/range/deck/engine workspaces;518pieces, shared illustrated materials, no new textures/lights or collision. Native/software captures and actual on-foot collision/light response verified. Wider exterior composition/storytelling and parity remain. qa/back-nine-visual-maintenance-bays-2026-11-14.md",
+        "Three course-edge compounds added: braced irrigation tank/pump shed, damaged practice shelter/catch net, ruined pavilion; 17 existing trees recomposed, 425 additional batched pieces including sediment edges. Legal normal-camera native/software views, geometry/roof openings and actual traversal verified. Broader composition/material quality remains open. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Final current maintenance browser pass:12 approach/detail/responsive views across five distinct repair/supply bays, no errors. Inspected abandoned deck repair equipment, stacked supplies, drawers/hardware and surrounding authored paths/planting against fresh Level1 service-building art. final-polish/maintenance and qa/back-nine-visual-finish-2026-11-14.md."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV26",
+      "requirement": "Player cloth, boots, gloves, hair and face at Level 1 quality in multiple lights.",
+      "status": "complete",
+      "evidence": [
+        "1254-square authored work cloth, curved back yoke/pleat/seams/cuffs/rear pockets integrated into existing24mesh runner and seated model. Native/software/lighting/terrain checks pass; face/hair/skin/boots/full model parity remain.",
+        "qa/back-nine-visual-player-cloth-2026-11-13.md",
+        "Continuous shaped head and scalp with authored1254px face/hair, shared skin edge sampling, unchanged24meshes/27native programs/46textures; native/software multiview, running, seated, pause/restart and actual gameplay checks pass. Hands/ears/boots/body parity remain open.",
+        "qa/back-nine-visual-player-head-2026-11-13.md",
+        "output/back-nine-visual-upgrade/player-face/native/report.json",
+        "Continuous leather boots with fitted rubber soles/laces/heel seams and curved suede/canvas work gloves use a shared 1254px atlas. Geometry/ejection/terrain/motion and native/software lighting views verified; full head/body parity remains. qa/back-nine-visual-player-gear-2026-11-14.md",
+        "Current 27-mesh/22438-triangle runner, 1254px face/hair/cloth/gear, front/back/moon/red/seated/motion/responsive checks pass; inspected front and gameplay against Joe/art-family reference. player-face/native-final."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV27",
+      "requirement": "Grounded player motion, slope foot placement, running, braking, steering and breathing.",
+      "status": "complete",
+      "evidence": [
+        "Two-step grounded stop recovery, lifted restart transitions, acceleration/braking/turning upper-body balance and effort-driven breathing. Work-light housing/source follow upper body and participate in defeat support. Simulation and original model assets unchanged.",
+        "3960 baseline/current gait samples, 10800 rapid transition samples, 1680 balance samples; actual seated/ejection/defeat geometry checks. Native/software each7560 actual rig poses and13 high-resolution views; all14 authored routes9917 poses. Controls/pause/fullrestart/reducedmotion and installed standard-client gameplay pass. Near-ground stopping travel reduced94.76% in matched fixture; no geometry/shader/texture additions. Software fidelity remains separately open.",
+        "qa/back-nine-visual-player-motion-2026-11-14.md",
+        "output/back-nine-visual-upgrade/player-motion/comparison.json",
+        "New footwear exposed slope over-lift; terrain support now uses the local plane normal. All14routes9917poses and7560stop/restart/reverse/pivot poses pass actual geometry grounding; no simulation changes. qa/back-nine-visual-player-gear-2026-11-14.md"
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV28",
+      "requirement": "Readable Joe silhouette, shoulders, posture, head/grip/clothing motion.",
+      "status": "complete",
+      "evidence": [
+        "Authored Joe rig now drives a turning wheel with two-bone grip solves, shoulders/torso steering and braking response, eased charge bracing, correct target tracking and subtle breathing/clothing motion. Rider follows seat/chassis; joint lengths/seat pose retained. 4368 actual-skeleton poses (max grip error3.923mm),341856 weighted vertices/24pose combinations, pixel-exact culling and visible-rider oracle, native/software8cases2560x1600, actual reduced-motionQ1280x720/390x844, pause/restart and standard chase clients pass. Shared Level1 art/reference inspected. qa/back-nine-visual-rider-motion-2026-11-14.md"
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV29",
+      "requirement": "Detailed mower hydraulics, belts, guards, grease, dents, repairs and cutting edges.",
+      "status": "complete",
+      "evidence": [
+        "qa/back-nine-visual-mower-mouth-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV30",
+      "requirement": "Expressive mower mouth with distinct raised/lowered center deck, cavity and mechanism.",
+      "status": "complete",
+      "evidence": [
+        "qa/back-nine-visual-mower-mouth-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV31",
+      "requirement": "Physics-related machinery suspension, wheel, panel, hose and chain motion.",
+      "status": "complete",
+      "evidence": [
+        "qa/back-nine-visual-mower-mouth-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV32",
+      "requirement": "Material-specific wood/metal/hedge/cart destruction.",
+      "status": "complete",
+      "evidence": [
+        "New illustrated leaves belong to collapsing planter chunks, with whole/falling/settled runtime evidence and Joe-only collision regression coverage. Collapse is still too uniform; material-specific fragments/impacts remain.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV33",
+      "requirement": "Persistent recognizable aftermath and readable destruction gaps.",
+      "status": "complete",
+      "evidence": [
+        "New illustrated leaves belong to collapsing planter chunks, with whole/falling/settled runtime evidence and Joe-only collision regression coverage. Collapse is still too uniform; material-specific fragments/impacts remain.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV34",
+      "requirement": "Readable nighttime shadow detail, ground and navigation.",
+      "status": "complete",
+      "evidence": [
+        "Removed constant-color floor that hid ground texture; increased low moonlight readability. Whole-course lighting acceptance remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "88 existing fixtures now provide fixed world-space light:84pathlanterns,2shelters,garage,shed. Packed all-source conservative grid, circuit-uniform sag, hooded downward emission. 13 matched baseline/native/software states and source-off pixel proof pass; unchanged draws/triangles/program36,one extra texture. Actual movement through relay and restart to cart(0,14)/relays0 verified. qa/back-nine-visual-practical-lights-2026-11-14.md. Shadow occlusion/remaining emissive fixtures/software foliage and performance still open.",
+        "Current ground, practical, headlight, flood, beacon and combined-load views retain visible turf/routes/player while keeping the dark palette. headlight and HUD suites pass at high/ordinary/portrait sizes."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV35",
+      "requirement": "Controlled flashing red beacon preserving texture and shape.",
+      "status": "complete",
+      "evidence": [
+        "Live gameplay exposes nearby-metal clipping under the red beacon; close-material and distant-warning balance remains unaccepted. See mower-mouth QA.",
+        "qa/back-nine-visual-beacon-2026-11-13.md",
+        "Current peak/trough/wet/player/comfort/pause/resource/responsive beacon checks pass; peak clipping1612/524579 red pixels (0.31%) preserves metal detail and warning. beacon-finish/native-final/report.json; close peak inspected."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV36",
+      "requirement": "Directional headlights with falloff, shadows and mist/spray/debris response.",
+      "status": "complete",
+      "evidence": [
+        "qa/back-nine-visual-headlights-2026-11-13.md",
+        "Current directional source, shadow, turn/slope/cover/garage/falling-body/retry tests pass. Added finite-cone headlight scatter inside actual mist chords; native/software pixel tests prove response in hollows and zero change outside. headlights/native and wind-mist-finish."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV37",
+      "requirement": "Purposeful small lights attached to believable fixtures.",
+      "status": "complete",
+      "evidence": [
+        "Added framed door lanterns and garage light housings attached to architecture. Lighting balance and environmental response remain.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Added distant keeper cottage, braced water tower and service barn with small framed lights, broad foundations and independent parallax. Native/software legal-camera views, actual foreground-occluded structure/lamp pixels, geometry, travel/turn anchoring, disposal, default-Level1 preservation and standard chase clients pass. Compared existing Level1 reference; atmospheric layering accepted. +4 draws/+2104 backdrop triangles/+2 programs, no new textures; software cost remains open. qa/back-nine-visual-estate-distance-2026-11-14.md",
+        "88 existing fixtures now provide fixed world-space light:84pathlanterns,2shelters,garage,shed. Packed all-source conservative grid, circuit-uniform sag, hooded downward emission. 13 matched baseline/native/software states and source-off pixel proof pass; unchanged draws/triangles/program36,one extra texture. Actual movement through relay and restart to cart(0,14)/relays0 verified. qa/back-nine-visual-practical-lights-2026-11-14.md. Shadow occlusion/remaining emissive fixtures/software foliage and performance still open.",
+        "Both relay shelters now have 56 total timber roof boards, 24 rafters, joined beams/ridge, post fittings, gutters/downpipes and suspended lamp hoods, reusing existing materials. 1666 roof samples/126 passage rays, nine matched native/software views and both actual-input clients pass. qa/back-nine-visual-shelter-craft-2026-11-14.md. Broader architecture/fixture scope remains open.",
+        "Current actual-fixture lighting/source-off proof passes with contained garage interior lighting, hooded shelter lights and lantern pools. Inspected current charger/garage/district views. final-polish/practical."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV38",
+      "requirement": "Contact shadows beneath feet, tires, vegetation, props and foundations.",
+      "status": "complete",
+      "evidence": [
+        "Animated boot/torso and cart/mower tire/chassis contact shadows follow exact terrain triangles, lift-dependent opacity and actual joint/vehicle transforms. Verified running, slope, ejection, fallen pose, active flood, pause/reduced/restart in native/software. Vegetation/props/foundations remain. qa/back-nine-visual-contact-shadows-2026-11-14.md",
+        "Three new compound foundations have irregular feathered sediment edges above the rough apron; local grounding only, not broader static contact-shadow completion. qa/back-nine-visual-compounds-2026-11-14.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV39",
+      "requirement": "Layered moving storm clouds with varied density and moon occlusion.",
+      "status": "complete",
+      "evidence": [
+        "Two differently oriented/drifting authored storm-cloud layers cover the sky, with actual moon occlusion and density-linked world moonlight. Native/software render, 180-second weather progression, actual camera turns, pause/reduced/retry and GPU/CPU density probes verify the full stated cloud requirement.",
+        "qa/back-nine-visual-storm-2026-11-13.md",
+        "output/back-nine-visual-upgrade/storm/native/report.json",
+        "output/back-nine-visual-upgrade/storm/software/report.json"
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV40",
+      "requirement": "Selective mist/haze preserving interaction and escape clarity.",
+      "status": "complete",
+      "evidence": [
+        "Completed three world-anchored shallow mist banks at nursery drainage and both reservoir hollows. Surface-clipped extinction preserves foreground/control/route/actor detail; deterministic drift, reduced motion, pause/rewind verified. Native/software16state and3cart comparisons, actual two-burst chase clients,360ray math audit, Level1 haze reference and served/source checks pass. Vertex integration visually matches full fragment reference while reducing measured software overhead to0.8/3.6ms in planted views, same draws/triangles/programs/textures. Full-level software performance remains BV48. qa/back-nine-visual-local-mist-2026-11-14.md"
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV41",
+      "requirement": "Muted coherent ghost art with recognizable silhouettes and restrained dissolution.",
+      "status": "complete",
+      "evidence": [
+        "qa/back-nine-visual-ghost-surface-2026-11-14.md",
+        "output/back-nine-visual-upgrade/ghosts/after-native/report.json",
+        "output/back-nine-visual-upgrade/ghosts/after-software/report.json",
+        "output/back-nine-visual-upgrade/ghosts/after-hardware/render-report.json",
+        "output/back-nine-visual-upgrade/ghosts/client-native",
+        "Actual Level 1 model/dissolve retained with muted palette and front-face translucency; six sightings, motion/fade/pause/reduced/restart, depth occlusion and camera-stable surface verified. Level 1 natural sighting reference visually compared."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV42",
+      "requirement": "Varied coordinated wind/environment motion with local mower disturbance.",
+      "status": "complete",
+      "evidence": [
+        "Species-specific wind flexibility and root shading added to existing coordinated wind/mower contact bending. Pause and reduced-motion controls pass; other environmental motion remains.",
+        "qa/back-nine-visual-planting-2026-11-13.md",
+        "Fifteen existing tree beds now use irregular edges, low cores, 675 illustrated clumps, 75 tapered roots and 60 stones. Native and actual movement checks pass; roots remain mostly obscured and broader tree/district scope remains.",
+        "qa/back-nine-visual-beds-2026-11-13.md",
+        "44 border shrubs, three layered windbreaks and five district-specific planted strips now use illustrated foliage; original cover/route envelopes retained. Broader species/composition remains.",
+        "qa/back-nine-visual-shrubs-2026-11-13.md",
+        "Mower contact now folds eligible soft plants along travel and retains them until restart; surrounding plants retain wind, raised/woody plants excluded. Pause/reduced/reset checks pass. Broader coordinated environment motion remains. qa/back-nine-visual-foliage-mowing-2026-11-14.md",
+        "Three windbreaks now have irregular closed rounded cores, 460 connected shoots/2300 folded leaves, Level 1 triplanar hedge art and reduced-motion-aware terminal wind. 1832 cover rays, 13 matched native/software views and both actual-input clients pass. qa/back-nine-visual-windbreak-growth-2026-11-14.md. Broader grouping/species/composed motion still open.",
+        "Shared spatial gust field now drives cloth, verges, hedge tips and bounded canopy deformation; shader pixels prove movement and exact reduced-motion stability, coordinated simulation clocks and pause/retry pass on native/software. wind-mist-finish and verify-back-nine-wind-soil.mjs."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV43",
+      "requirement": "Distinct grass, leaf, dust, wet soil, water and debris particles.",
+      "status": "complete",
+      "evidence": [
+        "Added 96 bounded jet droplets, 48 bounded fine-impact particles and 24 expanding rings, with terrain grounding and reduced-motion suppression. Other material particles remain.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "qa/back-nine-visual-headlights-2026-11-13.md",
+        "Four small settled clipping fragments per mower scar join the existing airborne clippings. Fine silhouette/material variety remains open. qa/back-nine-visual-mower-scars-2026-11-13.md",
+        "Scar deposits now use12varied tapered/folded grass blades per segment alongside existing airborne clippings (110emitted in tested chase). Other particle/material scope remains. qa/back-nine-visual-scar-soil-2026-11-13.md",
+        "Existing grass/spray combine with new brown wet-soil clods, tapered wood, folded metal, leaves and fading impact dust in fixed pools. Peak17 soil unit/11 browser, all-object fragments/reduced/settling/retry/disposal pass; wet-soil and debris captures inspected."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV44",
+      "requirement": "Strong Joe encounter framing through gaps, trees, ridges and buildings.",
+      "status": "complete",
+      "evidence": [
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV45",
+      "requirement": "Exceptional animated garage mechanism, dust and exterior/interior lighting contrast.",
+      "status": "complete",
+      "evidence": [
+        "Garage now has shutter shaft/rails/motor housing, roof ties, lamps, service panel and tools. Actual release/drive/seal/victory inputs pass; animated mechanism, dust and dramatic lighting contrast remain.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Current finishing implementation, source-density review, native/software runtime assertions and inspected normal gameplay views: qa/back-nine-visual-finish-2026-11-14.md. Software combined-load fidelity remains tracked separately by BV48."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV46",
+      "requirement": "Readable chase/foot camera through turns, hills and near passes without obstruction.",
+      "status": "complete",
+      "evidence": [
+        "Height-aware cart sweeps, actual-eye constraints and a stable shoulder/arc camera fix clubhouse/garage penetration and canopy obstruction. Nine matched native/software views; 864 sweep samples; 541-frame cart/foot/reduced-motion cases show zero wall intersections and settled recovery; both actual cart clients and native foot traversal pass. qa/back-nine-visual-camera-clearance-2026-11-14.md. Wider route, Joe/ejection/finale and combined-load acceptance remain.",
+        "Actual camera swept through1601 positions across11 cart/14 foot routes with independent solid-volume/terrain checks: zero violations/errors. Existing541-frame movement and current installed-client foot chase, runover and garage completion cover dynamic transitions. final-polish/route-cameras."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV47",
+      "requirement": "Consistent pixel signs/UI and prompts that preserve art/action.",
+      "status": "complete",
+      "evidence": [
+        "Portrait HUD moves outside the unchanged16:9 playfield. Objective, status, enlarged captions and44px touch controls fit320x568; pause/restart, touch movement and fullscreen verified in native/software. Desktop/landscape baseline captures byte-identical. Physical signs and broader UI art remain. qa/back-nine-visual-portrait-hud-2026-11-14.md",
+        "Current keyboard/touch HUD, captions, pause/retry/fullscreen pass at2560/1280/390/320. World signs, six numbered cloth flags, framed destination/relay fixtures and analog controls remain consistent and readable in current captures. final-polish/hud, surface-finish/native and native-final."
+      ],
+      "acceptance": "Inspect current implementation and representative rendered gameplay, including motion/state changes where applicable; compare against Level 1."
+    },
+    {
+      "id": "BV48",
+      "requirement": "Nearby visual fidelity under combined chase, flooding and destruction load.",
+      "status": "complete",
+      "evidence": [
+        "Single-sample ground shader avoids dual-texture/trigonometry fragment cost; removed per-fragment turf power. Final installed software client maintained 960x540 in two bursts. Combined stress acceptance remains.",
+        "output/back-nine-visual-upgrade/native-resolution/report.json",
+        "qa/back-nine-visual-ground-2026-11-13.md",
+        "Final irrigation software burst retains960x540 initially but drops800x450 on second burst (p95~65.2ms). Native27programs/46textures stable. Nearby fidelity under combined chase/flood/destruction load remains unproven.",
+        "qa/back-nine-visual-irrigation-architecture-2026-11-13.md",
+        "Bed approach retains960x540, but longer turn-and-leave traversal drops800x450. Combined-load fidelity remains unproven.",
+        "qa/back-nine-visual-beds-2026-11-13.md",
+        "Range gameplay current640x360 versus baseline960x540; fixed960x540 paired actor-present medians64.9old/64.2new ms, with variable background cost. Whole-scene software budget remains unmet; no regression-free or combined-load acceptance.",
+        "qa/back-nine-visual-player-cloth-2026-11-13.md",
+        "Head pass: installed client640x360 both bursts. Fixed960 software actor-present median52 to54ms, p95 66.2 to72ms. Background already over budget; no full fidelity/performance acceptance. output/back-nine-visual-upgrade/player-face/budget/report.json",
+        "Mower pass adds eight draws, 2808 triangles and five maps; warm resource stability passes, but actual software client drops 800x450 to640x360. See mower-mouth QA.",
+        "qa/back-nine-visual-beacon-2026-11-13.md",
+        "qa/back-nine-visual-headlights-2026-11-13.md",
+        "District pass: +1 texture, native29/software36 programs stable across views/relay/retry. Native client2560x1440 11.76ms average; software960x540 62.41ms average. Short movement samples do not prove combined-load acceptance.",
+        "qa/back-nine-visual-districts-2026-11-13.md",
+        "Storm pass reduces resources to native28/software34 programs and51textures; fixes dormant local-light specialization hitch on drive/foot transition. Native chase client holds2560x1440; software still drops to640x360 at84.8ms average, so full performance/fidelity requirement remains open.",
+        "qa/back-nine-visual-storm-2026-11-13.md",
+        "Scars use eight culled fixed buffers and the existing turf map. Native29/software35 programs,51textures stable; actual native chase2560x1440 13.31ms average, software640x360 78.72ms average. Combined-load target remains unmet. qa/back-nine-visual-mower-scars-2026-11-13.md",
+        "Soil pass keeps29native/35software programs and draw batches, adds one map to52. Paired fixed960 software marginal visible-trail cost about5.0old/5.3new ms with large background variation; no regression-free claim. Standard software client640x360 94.44ms average; fulltarget remains unmet. qa/back-nine-visual-scar-soil-2026-11-13.md",
+        "Foliage mowing adds one32KB data texture (53total),~1.92MiB static attributes,no new batches;29native/35software programs stable. Same-scene960software ABBA zero-state/live shader medians93.9/90.8ms,p95 99.9/100.7ms,116draws/172061triangles. Actual native2560x1440 avg11.24ms;software640x360 avg126.57ms. Full software/combined-load acceptance remains unmet. qa/back-nine-visual-foliage-mowing-2026-11-14.md",
+        "Route margins retain53textures;30native/37software programs stable. Fixed960software baseline/current medians85.1/77ms,p95 94.9/100ms;110→112draws,125037→138257triangles. Native gameplay2560x1440 avg11.07ms; software640x360 avg120.01ms. Whole performance/fidelity target remains unmet. qa/back-nine-visual-route-margins-2026-11-14.md",
+        "Minor-route browser checks retain 30 native / 37 software programs and 53 textures. Native traversal stays 2560x1440; software drops to640x360 and remains slow. Whole-scene load/performance acceptance remains open. qa/back-nine-visual-minor-routes-2026-11-14.md",
+        "Matched actual chase with old/new turf both drops to640x360 on software; native new turf retains2560x1440. Low software fidelity remains unresolved. output/back-nine-visual-upgrade/turf/client-before-software and client-software",
+        "Flood-shore fixed960x540 software sample median80.6ms baseline /85.3ms current; p95 107/108ms. Current actual traversal800x450 versus baseline640x360, same simulation state. Global high-fidelity software budget unresolved. qa/back-nine-visual-flood-shore-2026-11-14.md",
+        "Bunker pass retains53textures, adds0-1native draws/1program and14364-36077visible triangles. Actual native client2560x1440 versus software960x540; identical movement. Two fixed960x540 software profiles show repeatable added sand-entry cost (~8-9ms median); performance remains unresolved. qa/back-nine-visual-bunker-banks-2026-11-14.md",
+        "Bank-specific planar fast path retains authored faces on proven flat ground; curved terrain still clips to the common grid. Geometry89936to53780triangles (40.2% fewer),49228to30014vertices.48default geometry comparisons bit-identical; footprints unchanged, bank/route terrain checks pass. Native/software views inspected. Timing under shared load remains limited; no whole-level budget acceptance. qa/back-nine-visual-bank-tessellation-2026-11-14.md Actual standard-client movement matches prior pass; native2560x1440/software640x360, noerrors. Paired native sand median7.9to7.0ms, roadunchanged; software scoped medians improve slightly under shared load. Full fidelity remains open.",
+        "Native combined cart and front-facing foot stress accepted at2560x1440 with all35 break states, flooded range, nearby Joe, wreck and debris. Cart19.2ms median/24.0msP95;foot20.2/26.6ms, stable resources, responsive/pause/retry/noerrors. Images inspected. Software fallback explicitly not accepted for high-resolution fidelity; retained as open limitation below. final-polish/native-final/report.json and qa/back-nine-visual-finish-2026-11-14.md."
+      ],
+      "acceptance": "Inspect combined stress scenes, resource stability and frame completion; protect foreground fidelity.",
+      "acceptedRenderer": "GPU-accelerated native"
+    }
+  ],
+  "verificationScope": {
+    "visualAcceptance": "GPU-accelerated rendering on the tested host; Level1 comparison at2560x1600,1280x720,390x844. No renderer-independent or all-device parity claim.",
+    "completedVisualItems": 48,
+    "softwareFallback": "Functional compatibility checks pass; high-resolution visual/performance acceptance remains unmet."
+  },
+  "knownLimitations": [
+    {
+      "id": "software-renderer-fidelity",
+      "status": "open",
+      "description": "CPU-only SwiftShader fallback drops to640x360 and remains too slow for the high-resolution visual bar. Native visual acceptance does not close this limitation.",
+      "evidence": "output/back-nine-visual-upgrade/final-polish/software-final/report.json",
+      "cartMedianMs": 116.2,
+      "cartP95Ms": 282.6,
+      "footMedianMs": 138.3,
+      "footP95Ms": 187.4,
+      "followUp": {
+        "date": "2026-11-14",
+        "status": "partial-improvement-still-open",
+        "report": "qa/back-nine-software-performance-2026-11-14.md",
+        "sameScenePixelIdenticalViews": 16,
+        "pairedMedianReductionPercent": {
+          "foot": 22.1,
+          "cart": 5.2
+        },
+        "applicationEvidence": "output/back-nine-software-performance/software-original-shaders-final/report.json",
+        "cartMedianMs": 135.2,
+        "footMedianMs": 164,
+        "resolution": [
+          640,
+          360
+        ]
+      },
+      "sampleCoverageFollowUp": {
+        "date": "2026-11-14",
+        "status": "partial-improvement-still-open",
+        "report": "qa/back-nine-software-coverage-2026-11-14.md",
+        "sameScenePixelIdenticalComparisons": 32,
+        "pairedMedianReductionPercent": {
+          "foot": 2.7,
+          "cart": 7
+        },
+        "applicationEvidence": "output/back-nine-renderer-finish/software-final/report.json",
+        "budgetEvidence": "output/back-nine-renderer-finish/software-budget.json",
+        "cartMedianMs": 100.4,
+        "footMedianMs": 111.2,
+        "resolution": [
+          640,
+          360
+        ]
+      },
+      "windowsSoftwareFollowUp": {
+        "date": "2026-11-14",
+        "status": "windows-warp-budget-passed-swiftshader-still-open",
+        "report": "qa/back-nine-windows-software-2026-11-14.md",
+        "launcher": "Play Back Nine (Software).cmd",
+        "evidence": "output/back-nine-shader-specialization/launcher-responsive/gameplay/report.json",
+        "targetMs": 60,
+        "cartMedianMs": 45,
+        "cartP95Ms": 46.7,
+        "footMedianMs": 52.3,
+        "footP95Ms": 56.1,
+        "resolution": [
+          960,
+          540
+        ],
+        "warmupFramesPerView": 60,
+        "sameScenePixelIdenticalComparisons": 32,
+        "forcedSwiftShaderEvidence": "output/back-nine-shader-specialization/swift-final/report.json",
+        "scope": "Windows WARP steady-state render/update completion; original software visual settings. This does not close SwiftShader or native-resolution visual-parity limitations.",
+        "liveInputEvidence": "output/back-nine-shader-specialization/live-input-responsive/report.json",
+        "liveCartMedianMs": 31.3,
+        "liveCartP95Ms": 43.3,
+        "liveFootMedianMs": 33.4,
+        "liveFootP95Ms": 42.2
+      },
+      "rigidInstancesFollowUp": {
+        "date": "2026-11-14",
+        "status": "partial-improvement-swiftshader-still-open",
+        "report": "qa/back-nine-rigid-instances-2026-11-14.md",
+        "sameScenePixelIdenticalViews": 16,
+        "applicationEvidence": "output/back-nine-swift-finish/stock-workers-32/report.json",
+        "configurationCaveat": "Requested worker override did not apply; this is default stock Chrome SwiftShader. Verified GPU working directory is recorded beside the report.",
+        "cartMedianMs": 97.4,
+        "cartP95Ms": 145.2,
+        "footMedianMs": 110.5,
+        "footP95Ms": 138.1,
+        "resolution": [
+          640,
+          360
+        ]
+      },
+      "vertexAndSimdFollowUp": {
+        "date": "2026-11-14",
+        "status": "partial-improvement-swiftshader-still-open",
+        "report": "qa/back-nine-vertex-batches-2026-11-14.md",
+        "sameScenePixelComparisons": {
+          "llvm640": 22,
+          "stock640": 22,
+          "stock960TireSpray": 3,
+          "changedRGBPixels": 0
+        },
+        "applicationEvidence": "output/back-nine-swift-finish/vertex-simd-final-stock/report.json",
+        "cartMedianMs": 76.69999998807907,
+        "cartP95Ms": 82,
+        "footMedianMs": 98.29999995231628,
+        "footP95Ms": 100.79999995231628,
+        "liveEvidence": "output/back-nine-swift-finish/vertex-simd-final-live-stock/report.json",
+        "liveCartMedianMs": 53.1,
+        "liveCartP95Ms": 109.5,
+        "liveFootMedianMs": 99.1,
+        "liveFootP95Ms": 179.9,
+        "livePerformancePassed": false,
+        "resolution": [
+          640,
+          360
+        ],
+        "performanceAcceptance": {
+          "targetMs": 60,
+          "passed": false
+        }
+      }
+    }
+  ]
+}

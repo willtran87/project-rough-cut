@@ -28,7 +28,7 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
     }
     investigate(candidates);r.setRenderTarget(null);
    }
-   return {changed,maxDelta,suspects,lamp:{position:nearLamp.position.toArray(),power:nearLamp.intensity},lighting:pixelWorld.localLighting.stats()};
+   return {changed,maxDelta,suspects,lamp:nearLamp?{position:nearLamp.position.toArray(),power:nearLamp.intensity}:null,lighting:pixelWorld.localLighting.stats()};
   },process.argv.includes('--stable-sort'));
   await p.evaluate(v=>globalThis.__diagnoseLight=v,process.argv.includes('--diagnose'));
   // Arrival at a lantern facing away, followed by a turn with stationary light.

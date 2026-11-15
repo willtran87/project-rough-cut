@@ -15,26 +15,39 @@ export function sprayFootprint(width,length,depth,projectionY,renderHeight){
 
 export function sprayDrop(jet,seed,time,impactHeight,splash=false){
  const t=fract(time*seed.rate+seed.phase),fade=Math.min(1,t*16,(1-t)*10);
+ // A packet keeps its launch direction for its entire flight. Only a hidden
+ // lifetime wrap changes the next packet; camera turns cannot reseed it.
+ const emitted=time-t/seed.rate,packet=emitted*2.17+jet.start.y*1.9+jet.start.x*.73;
+ const angle=seed.angle+Math.sin(packet)*.85;
  let x,y,height,vx,vy,vh,width,length,alpha;
  if(!splash){
-  const p=jetPoint(jet,t),spread=(.008+Math.pow(t,1.8)*.34)*seed.spread;
-  x=p.x+Math.cos(seed.angle)*spread;y=p.y+Math.sin(seed.angle)*spread;
-  height=p.height+(impactHeight-.12)*t*t+Math.sin(seed.angle*1.7)*spread*.16*Math.sin(Math.PI*t);
-  vx=2*((1-t)*(jet.control.x-jet.start.x)+t*(jet.end.x-jet.control.x));
-  vy=2*((1-t)*(jet.control.y-jet.start.y)+t*(jet.end.y-jet.control.y));
-  vh=2*((1-t)*(jet.control.height-jet.start.height)+t*(jet.end.height-jet.control.height))+2*t*(impactHeight-.12);
-  // A few short ligaments at the lip become rounded droplets downstream.
-  // Low-frequency pressure variation groups the stream without rigid beads.
-  const ligament=seed.spread>.72?(1-t)*(1-t):0;
-  width=seed.size*(.015+seed.spread*.007);
-  length=seed.size*(.018+ligament*.036+(1-t)*.009);
-  const emitted=time-t/seed.rate,pulse=.72+.28*Math.sin(emitted*8.7+jet.start.y*1.9+jet.start.x)**2;
-  alpha=fade*pulse*(.66+seed.spread*.24);
+  const p=jetPoint(jet,t),dx=jet.end.x-jet.start.x,dy=jet.end.y-jet.start.y,d=Math.hypot(dx,dy)||1;
+  const axisX=dx/d,axisY=dy/d;
+  // Narrow at the real nozzle, then a broad, uneven breakup envelope. The
+  // central jet remains readable; satellite drops do not line up as beads.
+  const spread=(.008+t*t*.46)*seed.spread,spreadRate=.92*t*seed.spread;
+  const sway=Math.sin(packet*1.37)*.12,arch=Math.sin(Math.PI*t),archRate=Math.PI*Math.cos(Math.PI*t);
+  const across=Math.sin(angle)*spread+sway*arch;
+  const acrossRate=Math.sin(angle)*spreadRate+sway*archRate;
+  const along=Math.cos(angle)*spread*.26,alongRate=Math.cos(angle)*spreadRate*.26;
+  const lift=Math.sin(angle*1.7)*.065*seed.spread;
+  x=p.x-axisY*across+axisX*along;y=p.y+axisX*across+axisY*along;
+  height=p.height+(impactHeight-.12)*t*t+lift*arch;
+  vx=2*((1-t)*(jet.control.x-jet.start.x)+t*(jet.end.x-jet.control.x))-axisY*acrossRate+axisX*alongRate;
+  vy=2*((1-t)*(jet.control.y-jet.start.y)+t*(jet.end.y-jet.control.y))+axisX*acrossRate+axisY*alongRate;
+  vh=2*((1-t)*(jet.control.height-jet.start.height)+t*(jet.end.height-jet.control.height))+2*t*(impactHeight-.12)+lift*archRate;
+  // Intermittent short filaments tear into smaller round drops, rather than
+  // giving every particle the same pale circular silhouette.
+  const ligament=seed.spread>.68?(1-t)*(1-t):0;
+  width=seed.size*(.011+seed.spread*.011);
+  length=seed.size*(.017+ligament*.039+(1-t)*.008);
+  const pulse=.68+.32*Math.sin(packet*2.1)**2;
+  alpha=fade*pulse*(.48+seed.spread*.42);
  }else{
   // Gravity-driven fan at the actual jet landing; follows incoming momentum.
   const dx=jet.end.x-jet.control.x,dy=jet.end.y-jet.control.y,d=Math.hypot(dx,dy)||1;
-  vx=dx/d*(.35+seed.spread*.65)+Math.cos(seed.angle)*.55;
-  vy=dy/d*(.35+seed.spread*.65)+Math.sin(seed.angle)*.55;
+  vx=dx/d*(.35+seed.spread*.65)+Math.cos(angle)*.55;
+  vy=dy/d*(.35+seed.spread*.65)+Math.sin(angle)*.55;
   const launch=.85+seed.spread*1.25,age=t*2*launch/9.8;
   x=jet.end.x+vx*age;y=jet.end.y+vy*age;
   height=impactHeight+launch*age-4.9*age*age;vh=launch-9.8*age;

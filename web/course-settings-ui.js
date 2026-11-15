@@ -2,10 +2,11 @@
 (() => {
   const shell=document.getElementById('game-shell'),panel=document.createElement('section');
   panel.id='course-settings';panel.hidden=true;panel.setAttribute('aria-label','Settings');
-  panel.innerHTML='<div class="course-settings-card"><header><div><small data-settings-context></small><h1>Settings</h1></div><button type="button" data-settings-command="return">Return</button></header><nav aria-label="Settings categories"></nav><div class="course-settings-scroll"><div class="course-settings-rows"></div><section class="course-settings-presets" hidden><h2>Camera presets</h2><div></div><div class="course-look-preview" aria-label="Drag to test horizontal look"><span>Drag here to test look</span><i></i></div></section><p class="course-settings-help"></p></div><footer><p role="status" data-settings-status></p><div class="course-settings-actions"></div><small data-settings-hint></small></footer></div>';
+  panel.innerHTML='<div class="course-settings-card"><header><div><small data-settings-context></small><h1>Settings</h1></div><button type="button" data-settings-command="return">Return</button></header><nav aria-label="Settings categories"></nav><div class="course-settings-scroll"><div class="course-settings-rows"></div><section class="course-settings-presets" hidden><h2>Camera presets</h2><div></div><div class="course-look-preview" aria-label="Drag to test horizontal look"><span>Drag to test horizontal look</span><div class="course-look-ruler" aria-hidden="true"><b>Left</b><b>Center</b><b>Right</b></div><i aria-hidden="true"></i></div></section><p class="course-settings-help"></p></div><footer><p role="status" data-settings-status></p><div class="course-settings-actions"></div><small data-settings-hint></small></footer></div>';
   shell.append(panel);let api=null,layout='',selected='',wasOpen=false;
   const rows=panel.querySelector('.course-settings-rows'),nav=panel.querySelector('nav'),actions=panel.querySelector('.course-settings-actions'),scroller=panel.querySelector('.course-settings-scroll'),presets=panel.querySelector('.course-settings-presets');
-  const command=(label,name,run)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.settingsCommand=name;b.onclick=run;return b;};
+  const sentence=label=>label===label.toUpperCase()?label.charAt(0)+label.slice(1).toLowerCase().replace(/\bjoe\b/g,'Joe').replace(/\bhud\b/g,'HUD'):label;
+  const command=(label,name,run)=>{const b=document.createElement('button');b.type='button';b.textContent=sentence(label);b.dataset.settingsCommand=name;b.onclick=run;return b;};
   panel.querySelector('[data-settings-command="return"]').onclick=()=>api?.back();
   for(const [i,label]of ['Standard','Calm','Fixed view'].entries())presets.querySelector('div').append(command(label,'preset-'+i,()=>api.preset(i)));
   const preview=panel.querySelector('.course-look-preview');let pointer=null,lastX=0;
@@ -13,11 +14,12 @@
   preview.onpointermove=e=>{if(pointer!==e.pointerId)return;api.preview((e.clientX-lastX)*1120/Math.max(1,preview.clientWidth));lastX=e.clientX;};
   preview.onpointerup=preview.onpointercancel=preview.onlostpointercapture=()=>{pointer=null;};
   function hide(){
-    panel.hidden=true;wasOpen=false;pointer=null;
+    if(!panel.hidden)panel.hidden=true;wasOpen=false;pointer=null;
     const comfort=document.getElementById('controls-launch');if(comfort&&panel.contains(comfort))shell.append(comfort);
   }
+  let signature='';
   function render(data,controls){
-    api=controls;panel.hidden=false;panel.style.setProperty('--settings-scale',data.scale);panel.dataset.page=data.page;
+    api=controls;const next=JSON.stringify(data);if(!panel.hidden&&signature===next)return;signature=next;panel.hidden=false;panel.style.setProperty('--settings-scale',data.scale);panel.dataset.page=data.page;
     panel.querySelector('h1').textContent=data.page==='bindings'?'Key bindings':'Settings';
     panel.querySelector('[data-settings-context]').textContent=data.context;
     panel.querySelector('[data-settings-command="return"]').textContent=data.page==='bindings'?'Back to settings':'Return';
@@ -30,7 +32,7 @@
       const categoryButton=nav.querySelector('[aria-current="true"]');if(categoryButton)nav.scrollLeft=Math.max(0,categoryButton.offsetLeft-nav.offsetLeft-(nav.clientWidth-categoryButton.offsetWidth)/2);
       for(const row of data.rows){
         const label=document.createElement('label');label.className='course-settings-row';label.dataset.setting=row.id;
-        const title=document.createElement('span');title.textContent=row.label;label.append(title);
+        const title=document.createElement('span');title.textContent=sentence(row.label);label.append(title);
         let control;
         if(row.type==='slider'){
           // Saved defaults/presets can lie between adjustment steps (72% mix,
@@ -42,7 +44,7 @@
           control=document.createElement('button');control.type='button';control.onclick=()=>row.type==='binding'?api.capture(row.index):api.change(row.index);
           if(row.type!=='binding')control.setAttribute('role','switch');
         }
-        control.id='course-setting-'+row.id;control.dataset.settingIndex=row.index;control.setAttribute('aria-label',row.label);
+        control.id='course-setting-'+row.id;control.dataset.settingIndex=row.index;control.setAttribute('aria-label',sentence(row.label));
         control.onfocus=()=>api.select(row.index);label.htmlFor=control.id;label.append(control);rows.append(label);
       }
       actions.append(command(data.page==='bindings'?'Reset keys':'Reset category','reset',()=>api.reset()));

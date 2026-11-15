@@ -1,10 +1,13 @@
+import {featureBreakPose} from './back-nine-break-pose.js';
 import {addCourseFeatureCraft} from './chase-feature-craft.js';
+import {planterPlants} from './back-nine-shrub-craft.js';
 import {terrainHeight} from './course-terrain.js';
 import {isDestructibleFeature,featurePose} from './course-destruction-state.js';
+import {buildMaintenanceBay} from './back-nine-maintenance-bays.js';
 // Authored solid landmarks, merged into the existing spatial/material batches.
 // Shared pixel maps, opaque surfaces, no new lights, animation or draw loop.
-export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cylinder,sphere,circle,scene,batchVehicleParts}){
- const destructibles=[];let current=null;
+export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cylinder,sphere,circle,scene,batchVehicleParts,addPlant}){
+ const destructibles=[],maintenanceBays=[];let current=null,plantedStrips=0,foliageClumps=0;
  // Preserve the existing detailed models. Only crushable fixtures leave the
  // permanent spatial batches; three material-batched chunks can fold/scatter.
  function put(g,type,x,y,z,sx=1,sy=1,sz=1,ry=0){
@@ -47,12 +50,11 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
    // Most former loose trailers become orderly grounds stores. Their visible
    // walls occupy the same solid footprint, so the branching lanes stay fair.
    if(f.id!=='reservoir-trailer'){
-    box('masonry',x,.35,z,4.8,.7,6.2);box(f.id==='abandoned-repair'?'weatherboard':'stucco',x,1.6,z,4.7,2.2,6.1);
+    box('masonry',x,.35,z,4.8,.7,6.2);
+    maintenanceBays.push(buildMaintenanceBay({THREE,f,box,put,cylinder}));
     for(const side of [-1,1]){box('iron',x+side*2.32,1.45,z,.1,2.5,6.12);box('weatherboard',x+side*2.34,2.8,z,.16,.18,6.25);}
     const roof=new THREE.BoxGeometry(5,.12,3.25);for(const side of [-1,1]){const g=roof.clone();g.rotateX(side*.16);put(g,'roof',x,3.03,z+side*1.55);g.dispose();}roof.dispose();
-    box('iron',x,3.3,z,5,.1,.16);box('iron',x,1.42,z+3.065,2.7,2.2,.04);
-    for(let n=0;n<7;n++)box('paint',x, .5+n*.29,z+3.094,2.55,.24,.015);
-    box('brass',x+.8,1.36,z+3.12,.05,.27,.04);box('paint',x-1.75,2,z+3.1,.45,.24,.025);
+    box('iron',x,3.3,z,5,.1,.16);box('paint',x-1.75,2,z+3.1,.45,.24,.025);
     for(let n=0;n<3;n++)box('iron',x+2.39,2-n*.12,z-1.6,.025,.045,.8);
     // A common architectural kit ties the stores back to the clubhouse.
     for(const side of [-1,1]){box('stone',x+side*2.2,1.53,z+3.08,.18,2.35,.16);box('iron',x+side*2.4,2.86,z,.09,.09,6.3);box('iron',x+side*2.38,1.47,z-2.8,.075,2.75,.075);}
@@ -76,7 +78,8 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
    if(f.id!=='clubhouse-fall'){
     // Formal low planting strips define lanes without repeated storm wreckage.
     box('masonry',x,.23,z,9.9,.46,1.9);box('rough',x,.47,z,9.5,.025,1.65);
-    for(let i=0;i<8;i++)put(sphere,'leaf',x-4.2+i*1.2,.92,z,.83,.66,.83);
+    for(let i=0;i<8;i++)put(sphere,'leaf',x-4.2+i*1.2,.60,z,.52,.22,.54);
+    if(addPlant){plantedStrips++;for(const p of planterPlants(f)){addPlant(p,put);foliageClumps++;}}
     for(const side of [-1,1])box('stone',x,.5,z+side*.94,10,.08,.13);
     continue;
    }
@@ -96,20 +99,37 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
   }
  }
  current=null;
- for(const d of destructibles)for(const chunk of d.chunks)batchVehicleParts(chunk);unit.dispose();
+ for(const d of destructibles){
+  d.bounds=[];for(const chunk of d.chunks){batchVehicleParts(chunk);const bounds=new THREE.Box3();chunk.traverse(m=>{if(m.isMesh){m.geometry.computeBoundingBox();bounds.union(m.geometry.boundingBox);}});d.bounds.push(bounds);}
+ }unit.dispose();
  // One deliberate damaged patch foreshadows Joe; the rest of the estate is kept.
  for(const d of COURSE.decisions.filter(d=>d.id==='service-approach')){const x=d.wide.x+5,z=-d.entry.y+4;
   for(const side of [-1,1]){box('wet',x+side*.7,.046,z,.18,.008,5.4,.12);box('wood',x+side*.9,.12,z-1.3,.12,.12,1.1,side*.65);}
   box('wood',x,.09,z-2,.1,.1,2.1,.55);box('rust',x+.3,.13,z-1.1,.16,.05,.09);
  }
  tire.dispose();log.dispose();pipe.dispose();rim.dispose();
- let broken=0;
+ let broken=0;const corner=new THREE.Vector3();
  return {count:COURSE.features.length,update(run,reduced=false){
   broken=0;
-  for(const {feature:source,chunks} of destructibles){
+  for(const d of destructibles){
+   const {feature:source,chunks,bounds}=d;
    const f=featurePose(run,source);
-   const s=run.destruction?.features?.[f.id],active=s?.brokenAt!=null,t=active?(reduced?1:Math.min(1,Math.max(0,(run.time-s.brokenAt)/.7))):0,e=t*t*(3-2*t);if(active)broken++;
-   chunks.forEach((g,i)=>{const side=i-1;g.position.set(f.x+e*(s?.dx||0)*(s?.power||0)*1.4+side*e*.35,terrainHeight(f.x,f.y)+.025*e,-f.y-e*(s?.dy||0)*(s?.power||0)*1.4);g.scale.set(1+e*.08,1-e*.94,1+e*.06);g.rotation.set(0,side*e*.18,0);});
+   const s=run.destruction?.features?.[f.id],active=s?.brokenAt!=null; if(active)broken++;
+   const age=active?(reduced?.85:Math.min(.85,Math.max(0,run.time-s.brokenAt))):-1;
+   const poseKey=[f.x,f.y,active,age,s?.dx,s?.dy,s?.power,reduced].join(':');
+   if(d.poseKey===poseKey)continue;d.poseKey=poseKey;
+   chunks.forEach((g,i)=>{
+    if(!active){g.position.set(f.x,terrainHeight(f.x,f.y),-f.y);g.scale.set(1,1,1);g.rotation.set(0,0,0);return;}
+    const p=featureBreakPose(f,i,Math.max(0,run.time-s.brokenAt),s,reduced);
+    g.position.set(f.x+p.x,0,-f.y+p.z);g.scale.set(p.scaleX,p.scaleY,p.scaleZ);g.rotation.set(p.pitch,p.yaw,p.roll);g.updateMatrix();
+    // Support every transformed chunk corner on the real terrain, including
+    // long rails and compressed roofs on sloping fairways.
+    let support=-Infinity;const b=bounds[i];
+    if(!b.isEmpty())for(const x of [b.min.x,b.max.x])for(const y of [b.min.y,b.max.y])for(const z of [b.min.z,b.max.z]){
+     corner.set(x,y,z).applyMatrix4(g.matrix);support=Math.max(support,terrainHeight(corner.x,-corner.z)-corner.y);
+    }
+    g.position.y=(Number.isFinite(support)?support:terrainHeight(f.x,f.y))+.025+p.bounce;
+   });
   }
- },stats:()=>({total:destructibles.length,broken})};
+ },stats:()=>({total:destructibles.length,broken,plantedStrips,foliageClumps,maintenanceBays})};
 }

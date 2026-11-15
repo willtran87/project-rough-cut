@@ -9,7 +9,7 @@ const percentile=(a,q)=>{const s=a.slice().sort((a,b)=>a-b);return s[Math.min(s.
 const raf=warmed.flatMap(s=>s.raf),heapGrowth=last.heap.usedSize-first.heap.usedSize;
 const produced=warmed.slice(1).map((s,i)=>({start:warmed[i].wall,end:s.wall,frames:s.graphics.frames-warmed[i].graphics.frames,fps:(s.graphics.frames-warmed[i].graphics.frames)/(s.wall-warmed[i].wall)}));
 const requestedView=r.viewport&&r.preferences?{viewport:r.viewport,preferences:r.preferences}:null;
-const ceiling=requestedView?(()=>{const v=r.viewport,scale=Math.min(1,(label==='software'?960:1600)/v.width)*r.preferences.resolution;return [Math.round(v.width*scale),Math.round(v.height*scale)];})():null;
+const ceiling=requestedView?(()=>{const v=r.viewport,cap=label==='software'?(r.renderPolicy?.softwareWidthCap??960):(r.renderPolicy?.hardwareWidthCap??1600),scale=Math.min(1,cap/v.width)*r.preferences.resolution;return [Math.round(v.width*scale),Math.round(v.height*scale)];})():null;
 const checks={
  allRoutes:new Set(r.result.completed.map(s=>s.scenario)).size===4,
  routeOutcomes:r.result.completed.every(s=>s.mode==='complete'&&s.error<.001&&(s.expected

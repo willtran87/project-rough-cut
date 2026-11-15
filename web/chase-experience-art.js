@@ -28,7 +28,7 @@ export function createExperienceArt({scene,materials,box,put,cylinder,batchVehic
  const texture=new THREE.CanvasTexture(canvas);texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.colorSpace=THREE.SRGBColorSpace;
  const signMaterial=new THREE.MeshBasicMaterial({map:texture});
  for(const c of controls){const index=c.kind==='water'?0:c.kind==='cart'?1:2,g=new THREE.PlaneGeometry(1.12,.44),uv=g.attributes.uv;for(let n=0;n<uv.count;n++)uv.setXY(n,(uv.getX(n)+index%2)/2,(uv.getY(n)+(index<2?1:0))/2);const sign=new THREE.Mesh(g,signMaterial);sign.position.set(0,2.12,.051);c.root.add(sign);}
- const birdGeometry=new THREE.BoxGeometry(1,1,1),birds=new THREE.InstancedMesh(birdGeometry,materials.iron,36),debris=new THREE.InstancedMesh(birdGeometry,materials.leaf,24),dummy=new THREE.Object3D();birds.frustumCulled=debris.frustumCulled=false;scene.add(birds,debris);birds.count=debris.count=0;
+ const birdGeometry=new THREE.BoxGeometry(1,1,1),birds=new THREE.InstancedMesh(birdGeometry,materials.iron,36),debris=new THREE.InstancedMesh(birdGeometry,materials.leaf,24),dummy=new THREE.Object3D();birds.userData.rigidInstanceBounds=debris.userData.rigidInstanceBounds=true;birds.frustumCulled=debris.frustumCulled=false;scene.add(birds,debris);birds.count=debris.count=0;
  let birdsVisible=0,fragments=0;
  return {update(run,reduced=false){
   controls.forEach(c=>{const s=c.kind==='exit'?run.exitRelease:run.tactics,used=c.kind==='exit'?s?.released:!!(s?.used&(1<<c.index)),hold=c.kind==='exit'?(s?.hold||0)/1.3:s?.near===c.index?(s.hold||0)/.9:0;

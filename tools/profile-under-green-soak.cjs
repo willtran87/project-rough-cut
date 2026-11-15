@@ -2,6 +2,7 @@
 // inputs from the existing map-aware QA pilot; this is not a human playtest.
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {gameModule,sceneModule,instrumentGame,instrumentScene}=require('./under-green-soak-hooks.cjs');
 const software=process.argv.includes('--software'),seconds=Number(process.argv.find(a=>a.startsWith('--seconds='))?.split('=')[1]||300);
 const label=software?'software':'hardware',out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/soak';
 const audioVoiceCapacity=16; // Eight outlet sources and eight non-water voices.
@@ -14,10 +15,15 @@ assert(preferences.fov>=45&&preferences.fov<=85&&preferences.resolution>=.5&&pre
 const percentile=(a,q)=>{const s=a.slice().sort((a,b)=>a-b);return s[Math.min(s.length-1,Math.floor(s.length*q))]||0;};
 (async()=>{
  assert(seconds>=10&&seconds<=3600);fs.mkdirSync(out,{recursive:true});
+ // Validate source markers before launching; a missing hook must fail clearly,
+ // rather than silently profiling the wrong loop or timing out during startup.
+ const gameSource=instrumentGame(fs.readFileSync('web/under-green.js','utf8'));
+ const sceneSource=instrumentScene(fs.readFileSync('web/under-green-scene.js','utf8'));
  const {traverse}=await import('./probe-under-green-folded.mjs'),{createRun,step}=await import('../web/under-green-sim.js');
  const tapes=[];
- for(const options of [{dodge:true},{wet:true,dodge:true},{sprint:true,dodge:true},{cp:3,dodge:true}]){
-  const inputTape=[],expected=traverse({...options,inputTape}),r=createRun(options.cp||0);r.mode='playing';
+ const view={fov:preferences.fov,aspect:width/height};
+ for(const options of [{dodge:true},{wet:true,dodge:true},{sprint:true,dodge:true},{wet:true,sprint:true,dodge:true}]){
+  const inputTape=[],expected=traverse({...options,inputTape,view}),r=createRun();r.mode='playing';
   for(const row of inputTape)step(r,{...row.input,lookX:Math.atan2(Math.sin(row.yaw-r.player.yaw),Math.cos(row.yaw-r.player.yaw))});
   assert.equal(expected.mode,'complete','Profiling fixture must escape');
   assert.equal(r.mode,expected.mode);assert(Math.hypot(r.player.x-expected.p.x,r.player.y-expected.p.y)<.001);
@@ -34,15 +40,16 @@ const percentile=(a,q)=>{const s=a.slice().sort((a,b)=>a-b);return s[Math.min(s.
    proto.fenceSync=function(...args){const f=add.apply(this,args);if(f)live.add(f);__soakFences.live=live.size;__soakFences.max=Math.max(__soakFences.max,live.size);return f;};
    proto.deleteSync=function(f){live.delete(f);__soakFences.live=live.size;return remove.call(this,f);};
   });
-  await p.route('**/under-green.js',route=>{
-   const source=fs.readFileSync('web/under-green.js','utf8')
-    .replace('function input(dt=1/60){','function input(dt=1/60){if(window.__soakInput)return window.__soakInput(run);')
-    .replace('if(test)window.__underGreen={','if(true)window.__underGreen={');
-   return route.fulfill({contentType:'application/javascript',body:source});
-  });
-  await p.route('**/under-green-scene.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-scene.js','utf8').replace(' return {draw,drainJoeFootsteps:',' window.__soakRenderer=renderer;return {draw,drainJoeFootsteps:')}));
-  const load=Date.now();await p.goto('http://127.0.0.1:4187/under-green.html');await p.waitForFunction(()=>window.__soakRenderer&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
-  const readyMs=Date.now()-load;await p.click('#primary');
+  const hooks={game:0,scene:0};
+  await p.route(gameModule,route=>{hooks.game++;return route.fulfill({contentType:'application/javascript',body:gameSource});});
+  await p.route(sceneModule,route=>{hooks.scene++;return route.fulfill({contentType:'application/javascript',body:sceneSource});});
+  const load=Date.now();await p.goto('http://127.0.0.1:4187/under-green.html');await p.waitForFunction(()=>window.__soakRenderer&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
+  assert(hooks.game>0&&hooks.scene>0,'Production instrumentation was not loaded');
+  const readyMs=Date.now()-load;
+  if(await p.evaluate(()=>JSON.parse(render_game_to_text()).opening.active))await p.keyboard.press('Escape');
+  if(await p.evaluate(()=>__underGreen.run.mode!=='playing'))await p.click('#primary');
+  if(await p.evaluate(()=>JSON.parse(render_game_to_text()).opening.active))await p.keyboard.press('Escape');
+  await p.waitForFunction(()=>__underGreen.run.mode==='playing');
   await p.evaluate(async({tapes,seconds})=>{
    const {createRun}=await import('./under-green-sim.js'),{createLocalTelemetry}=await import('./local-telemetry.js');
    const s=window.__soak={started:performance.now(),seconds,scenario:0,cursor:0,completed:[],errors:[],raf:[],longTasks:[],last:performance.now(),done:false,gc:false};
@@ -56,7 +63,9 @@ const percentile=(a,q)=>{const s=a.slice().sort((a,b)=>a-b);return s[Math.min(s.
     return {...row.input,lookX:Math.atan2(Math.sin(row.yaw-r.player.yaw),Math.cos(row.yaw-r.player.yaw))};
    };
    new PerformanceObserver(list=>{for(const e of list.getEntries())if(!s.gc)s.longTasks.push({start:e.startTime-s.started,duration:e.duration});}).observe({type:'longtask',buffered:false});
-   function sample(now){if(s.done)return;if(!s.gc&&now-s.last<1000)s.raf.push(now-s.last);s.last=now;requestAnimationFrame(sample);}requestAnimationFrame(sample);
+   // A queued RAF timestamp can precede the post-GC performance.now() reset.
+   // Discard that discontinuity rather than recording a negative frame time.
+   function sample(now){if(s.done)return;const elapsed=now-s.last;if(!s.gc&&elapsed>0&&elapsed<1000)s.raf.push(elapsed);s.last=now;requestAnimationFrame(sample);}requestAnimationFrame(sample);
    s.timer=setInterval(()=>{
     const r=__underGreen.run;
     if(['complete','caught'].includes(r.mode)){
@@ -105,11 +114,13 @@ const percentile=(a,q)=>{const s=a.slice().sort((a,b)=>a-b);return s[Math.min(s.
   const coverage=seconds<240||new Set(result.completed.map(r=>r.scenario)).size===4,queue=!software||samples.every(s=>s.fences.max<=1);
   const report={method:'Production captureBuffer=false; real RAF/fixed-step simulation; verified map-aware input tapes; GC before sampled heap (GC gaps excluded from RAF samples); 30-second samples. Stability comparison starts after first complete route to allow first-time uploads. Local desktop/software evidence, not physical-device qualification.',label,seconds,readyMs,drainMs,passed:errors.length===0&&plateau&&voices&&coverage&&queue&&!samples.some(s=>s.contextLost)&&heapGrowth<5*1048576,samples,result,heapGrowth,resourcesStable:plateau,voicesStable:voices,errors};
   report.audioVoiceCapacity=audioVoiceCapacity;
+  report.instrumentation=hooks;
+  report.renderPolicy={hardwareWidthCap:2560,softwareWidthCap:960};
   report.viewport=viewport;report.preferences=preferences;report.browserVersion=browser.version();
   fs.writeFileSync(`${out}/${label}.json`,JSON.stringify(report,null,2));
   assert.deepEqual(errors,[]);assert(plateau,'Renderer resources grew after warmup');assert(voices,'Audio voice count changed');assert(heapGrowth<5*1048576,'Post-GC heap grew by 5MiB');assert(!samples.some(s=>s.contextLost));
   if(software)assert(samples.every(s=>s.fences.max<=1),'Software GPU queue grew');
-  if(seconds>=240)assert(new Set(result.completed.map(r=>r.scenario)).size===4,'Full-route/checkpoint scenarios were not all exercised');
+  if(seconds>=240)assert(new Set(result.completed.map(r=>r.scenario)).size===4,'All four entrance-start route scenarios were not exercised');
   console.log(JSON.stringify({label,passed:true,completed:result.completed.length,heapGrowth,resourcesStable:plateau,voicesStable:voices,errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

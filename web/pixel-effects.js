@@ -7,14 +7,15 @@ import { createGhostSightings, createGhostFeedback } from './ghost-motion.js?v=2
 import { createOriginalFeatures } from './original-features.js?v=20261108-exit-cues';
 import { courseLook } from './course-atmosphere.js';
 import { courseMistHabitat, mistDistanceFade } from './course-mist-field.js?v=20261113-visual-pass';
+import {lightHazeAlpha,lightHazeFade} from './course-light-haze.js';
 
 const clamp=THREE.MathUtils.clamp,random=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 // Tiny nearest-filtered masks, cut out rather than layered translucent volumes.
 // All marks are drawn from simulation evidence; this module never writes to it.
 function mask(kind){
-  const c=document.createElement('canvas');c.width=kind==='trail'?128:64;c.height=64;
-  const g=c.getContext('2d',{willReadFrequently:true}),image=g.createImageData(c.width,64);
-  for(let y=0;y<64;y++)for(let x=0;x<c.width;x++){
+  const c=document.createElement('canvas');c.width=kind==='trail'||kind==='shaft'?128:64;c.height=kind==='shaft'?128:64;
+  const g=c.getContext('2d',{willReadFrequently:true}),image=g.createImageData(c.width,c.height);
+  for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
     const u=(x%64+.5)/32-1,v=(y+.5)/32-1,r=Math.hypot(u,v),noise=random(x+y*67);
     let a=0;
     if(kind==='trail'){
@@ -23,7 +24,7 @@ function mask(kind){
     }
     if(kind==='mist'){const bend=Math.sin(u*5)*.16+Math.sin(u*13)*.05,body=Math.max(0,1-u*u)**2*Math.exp(-(((v-bend)*3.4)**2));a=Math.floor(body*(.7+noise*.3)*12)/12;}
     if(kind==='ripple'){const angle=Math.atan2(v,u),rim=.84+Math.sin(angle*7)*.025+Math.sin(angle*13)*.012;a=Math.abs(r-rim)<.025&&noise>.28&&Math.sin(angle*5+1)>.05?1:0;}
-    if(kind==='shaft')a=Math.abs(u)<(.18+(v+1)*.32)?Math.floor(Math.max(0,1-Math.abs(u)/(.18+(v+1)*.32))*(1-v*v)*5)/5:0;
+    if(kind==='shaft')a=lightHazeAlpha(x,y,c.width);
     if(kind==='echo')a=Math.abs(u)<.45&&y%16<9?1:0;
     if(kind==='beam')a=v>-.95&&Math.abs(u)<(v+1)*.43&&noise>.82?1:0;
     const i=(y*c.width+x)*4;image.data[i]=image.data[i+1]=image.data[i+2]=kind==='trail'?Math.round(a*255):255;image.data[i+3]=Math.round(a*255);
@@ -71,7 +72,16 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
   batches.mist.material.customProgramCacheKey=()=> 'course-local-mist-v1';
   const ghostMap=Art.texture('rough-cut-shadow-joe-v1',[232,42,547,1476]);
   batch('figures',null,{map:ghostMap,transparent:true,opacity:.24,alphaTest:.035});
-  batch('shafts','shaft',{transparent:true,opacity:.15,alphaTest:.012});
+  const shafts=batch('shafts','shaft',{transparent:true,opacity:.075,alphaTest:.001});
+  const shaftFade=new THREE.InstancedBufferAttribute(new Float32Array(limits.shafts).fill(1),1);
+  shaftFade.setUsage(THREE.DynamicDrawUsage);shafts.geometry.setAttribute('shaftFade',shaftFade);
+  shafts.material.onBeforeCompile=shader=>{
+    shader.vertexShader='attribute float shaftFade;\nvarying float vShaftFade;\n'+shader.vertexShader;
+    shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvShaftFade=shaftFade;');
+    shader.fragmentShader='varying float vShaftFade;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <alphatest_fragment>','diffuseColor.a*=vShaftFade;\n#include <alphatest_fragment>');
+  };
+  shafts.material.customProgramCacheKey=()=> 'course-light-haze-v1';
   batch('echo','echo',{transparent:true,opacity:.55,alphaTest:.04});
   const ghost=createGhostJoe(root,{softFade:true}),ghostMotion=createCourseGhostMotion({blockers,ponds,height:woodlandHeight}),ghostDissolve=createGhostDissolve(),mistCells=[];
   const original=createOriginalFeatures(root,{software,scale,xScale,blockers,ponds});
@@ -85,7 +95,7 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
     const mesh=batches[name];if(mesh.count>=limits[name])return false;
     sphere.center.set(x,y,z);sphere.radius=Math.max(w,h)*.75;
     if(!frustum.intersectsSphere(sphere))return false;
-    position.set(x,y,z);size.set(w,h,1);matrix.compose(position,q,size);mesh.setMatrixAt(mesh.count,matrix);mesh.setColorAt(mesh.count,color.set(tint));if(name==='mist')mistFade.setX(mesh.count,fade);mesh.count++;return true;
+    position.set(x,y,z);size.set(w,h,1);matrix.compose(position,q,size);mesh.setMatrixAt(mesh.count,matrix);mesh.setColorAt(mesh.count,color.set(tint));if(name==='mist')mistFade.setX(mesh.count,fade);if(name==='shafts')shaftFade.setX(mesh.count,fade);mesh.count++;return true;
   }
   function update(frame,camera,coverage=0){
     const f=frame.fx||{},enabled=f.enabled!==false;
@@ -186,7 +196,7 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
         if(lamp.power<.2)continue;
         const d=(lamp.x-px)**2+(lamp.z-pz)**2;if(d>144)continue;
         rotation.setFromEuler(euler.set(0,Math.atan2(px-lamp.x,pz-lamp.z),0));
-        emit('shafts',lamp.x,1.45+woodlandHeight(lamp.x,lamp.z),lamp.z,1.3,2.6,color.set(lamp.color||0xffedbb).multiplyScalar(lamp.power),rotation);
+        emit('shafts',lamp.x,1.67+woodlandHeight(lamp.x,lamp.z),lamp.z,1.3,2.9,color.set(lamp.color||0xffedbb).multiplyScalar(lamp.power),rotation,lightHazeFade(Math.sqrt(d),lamp.power));
         for(let i=0;i<(software?1:3);i++){const a=time*(1+i*.2)+lamp.x*13+i*2;emit('flecks',lamp.x+Math.cos(a)*.16,lamp.y+Math.sin(a*1.3)*.10,lamp.z+Math.sin(a)*.16,.027,.012,color.set(lamp.color||0xffedbb).multiplyScalar(lamp.power),camera.quaternion);}
       }
       if(cold&&!frame.reducedMotion){const phase=(time%3.6)/3.6;if(phase<.4){position.set(.12,-.25,-.65-phase*.9).applyQuaternion(camera.quaternion).add(camera.position);emit('mist',position.x,position.y,position.z,.18+phase*.45,.08,0x536762,camera.quaternion);}}
@@ -292,7 +302,7 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
     if(ghostTear && modelAnchor){position.set(modelAnchor.x,modelAnchor.y+1.1,modelAnchor.z).project(camera);ghostTear.focusY=clamp((position.y+1)*.5,.22,.78);}
     if(modelAnchor&&!ghost.stats().ready)emit('figures',modelAnchor.x,modelAnchor.y+1.15,modelAnchor.z,.85,2.3,0xa5c7b5,camera.quaternion);
     batches.figures.material.opacity=apparitionAlpha;
-    markKind.needsUpdate=markFade.needsUpdate=mistFade.needsUpdate=true;
+    markKind.needsUpdate=markFade.needsUpdate=mistFade.needsUpdate=shaftFade.needsUpdate=true;
     for(const mesh of Object.values(batches)){mesh.visible=mesh.count>0;if(mesh.count){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}}
     const cloud=1-clamp(coverage,0,.85)*.18,blackout=horror.lightFailureSeconds>0?.82:1;
     moon.intensity=baseMoon*cloud*blackout*blend('power')*(f.nightfall?.moonScale??1);

@@ -7,7 +7,7 @@ import {terrainHeight} from './course-terrain.js';
 // Familiar Level 1 groundskeepers, with the same muted palette on face and
 // clothes. Two prepared models are reused across six sightings, never enemies.
 export async function createCourseGhosts(scene){
- const ghosts=[createGhostJoe(scene,{muted:true}),createGhostJoe(scene,{muted:true})];
+ const ghosts=[createGhostJoe(scene,{muted:true,softFade:true}),createGhostJoe(scene,{muted:true,softFade:true})];
  await Promise.all(ghosts.map(g=>g.ready));let visible=[],owner=null,last=0,behaviors=[];
  return {update(run,actor,reduced=false){
   if(owner!==run){owner=run;last=run.time;behaviors=COURSE_GHOSTS.map((_,i)=>({clock:run.time+variationChoice(run,'ghost-offset',i,24),kind:i===1||i===3?'watch':i===(variationChoice(run,'guide-site')?5:2)?'guide':'patrol',phase:'walking',age:0,used:false}));}
@@ -29,7 +29,7 @@ export async function createCourseGhosts(scene){
    g.show({x:p.x,y:terrainHeight(p.x,p.y),z:-p.y,yaw:-p.yaw},fade,{time:t,phase:p.phase,walkWeight:reduced||!walking?0:.9,distance:p.travel,resolve:.2,bodyLean:reduced||!walking?0:.04,headNod:guide?-.13:0,torsoTurn:guide?Math.max(-.45,Math.min(.45,Math.atan2(Math.sin(gaze),Math.cos(gaze)))):0,sway:reduced||!walking?0:Math.sin(p.phase*Math.PI*2)*.013,headYaw:Math.max(-.4,Math.min(.4,Math.atan2(Math.sin(gaze),Math.cos(gaze))))});
    if(g.stats().visible)visible.push({site:p.i,x:p.x,y:p.y,yaw:p.yaw,speed:reduced||!walking?0:p.speed,travel:p.travel,alpha:fade,behavior:p.b.kind,phase:p.b.phase});
   });
- },stats:()=>({ready:ghosts.every(g=>g.stats().ready),errors:ghosts.map(g=>g.stats().error).filter(Boolean),capacity:2,sites:COURSE_GHOSTS.length,visible,palette:'muted-green',headMatchesBody:true,routeLengths:GHOST_ROUTES.map(r=>r.length)}),
+ },stats:()=>({ready:ghosts.every(g=>g.stats().ready),errors:ghosts.map(g=>g.stats().error).filter(Boolean),capacity:2,sites:COURSE_GHOSTS.length,visible,palette:'muted-green',headMatchesBody:true,surface:'body-attached-dissolve',models:ghosts.map(g=>g.stats()),routeLengths:GHOST_ROUTES.map(r=>r.length)}),
  warm(){ghosts.forEach((g,i)=>g.show({x:i*2,y:0,z:-10,yaw:0},.6,{walkWeight:.6,phase:.2}));},
  dispose(){ghosts.forEach(g=>g.dispose());}};
 }

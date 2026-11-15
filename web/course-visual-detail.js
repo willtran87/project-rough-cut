@@ -1,10 +1,11 @@
 import * as THREE from './vendor/three/three.module.js';
 import {mergeGeometries} from './vendor/three/addons/utils/BufferGeometryUtils.js';
 import {woodlandHeight} from './pixel-landscape.js';
+import {createCourseRangePennant} from './course-range-pennant.js';
 
 // Bounded, cosmetic details. No scenery inside the playable boundary acquires
 // collision, and no mark or clipping changes the game's hearing/cover evidence.
-export function createCourseVisualDetail(world,data,{scale=.16,xScale=.1152,software=false}={}){
+export function createCourseVisualDetail(world,data,{scale=.16,xScale=.1152,software=false,wind=null}={}){
  const root=new THREE.Group();root.name='CourseVisualDetail';world.add(root);
  const ownedGeometry=[],ownedMaterials=[],motions=[],lamps=[],parts=[];
  const box=new THREE.BoxGeometry(1,1,1),dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);ownedGeometry.push(box);
@@ -29,11 +30,11 @@ export function createCourseVisualDetail(world,data,{scale=.16,xScale=.1152,soft
  piece(signRoot,0,1.65,0,.10,3.3,.10);piece(signRoot,.55,3.15,0,1.2,.075,.075);
  const sign=new THREE.Group();sign.position.set(.65,3.02,0);signRoot.add(sign);piece(sign,0,-.15,0,.025,.3,.025);piece(sign,0,-.49,0,.95,.44,.065,timber);
  const warning=material(THREE.MeshLambertMaterial,{color:0xb8a366});for(const angle of [-.7,.7])piece(sign,0,-.49,.037,.033,.34,.008,warning).rotation.z=angle;motions.push({node:sign,kind:'sign'});
- const pole=new THREE.Group();pole.position.set(14.8,woodlandHeight(14.8,-89),-89);root.add(pole);piece(pole,0,2.7,0,.065,5.4,.065);
- const flagGeometry=new THREE.PlaneGeometry(1.5,.66,8,3);flagGeometry.translate(.75,-.33,0);const flagPoints=flagGeometry.attributes.position;for(let i=0;i<flagPoints.count;i++)if(flagPoints.getX(i)>1.49)flagPoints.setX(i,1.5-(i%4)*.09);flagGeometry.computeVertexNormals();ownedGeometry.push(flagGeometry);
- const flagMaterial=material(THREE.MeshLambertMaterial,{color:0x898879,side:THREE.DoubleSide});const flag=new THREE.Mesh(flagGeometry,flagMaterial);flag.position.y=5.1;pole.add(flag);motions.push({node:flag,kind:'flag'});
- const clock={value:0};flagMaterial.onBeforeCompile=s=>{s.uniforms.detailClock=clock;s.vertexShader='uniform float detailClock;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed.z+=position.x*.10*sin(detailClock*1.8-position.x*3.0);');};flagMaterial.customProgramCacheKey=()=> 'course-range-flag-v1';
- for(const [x,y,z,power]of [[-16.7,2.2,-34.2,7],[14.4,2.4,-50.4,5]]){const light=new THREE.PointLight(0xffbb76,power,7,2);light.name='CourseWarmWindowSpill';light.position.set(x,y,z);root.add(light);lamps.push(light);}
+ const clock={value:0},pennant=createCourseRangePennant(root,data,{scale,xScale,wind});if(pennant)motions.push({node:pennant.flag,kind:'flag'});
+ // The clubhouse's west-facing upper window is at (14.11, 2.85, -51.5).
+ // Place its existing spill just above/beyond the sill rather than inside the wall:
+ // the facade can then receive the room light as the player crosses the course.
+ for(const [x,y,z,power]of [[-16.7,2.2,-34.2,7],[13.88,2.42,-51.5,5]]){const light=new THREE.PointLight(0xffbb76,power,7,2);light.name='CourseWarmWindowSpill';light.position.set(x,y,z);root.add(light);lamps.push(light);}
  const capacity=software?32:64,clippings=new THREE.InstancedMesh(box,material(THREE.MeshLambertMaterial,{color:0x9aaa64}),capacity);clippings.name='CourseMowerClippings';clippings.frustumCulled=false;clippings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(clippings);clippings.count=0;
  const trackGeometry=new THREE.PlaneGeometry(1,1,4,1);trackGeometry.rotateX(-Math.PI/2);ownedGeometry.push(trackGeometry);
  const fades=new THREE.InstancedBufferAttribute(new Float32Array(32),1);fades.setUsage(THREE.DynamicDrawUsage);trackGeometry.setAttribute('cutFade',fades);
@@ -50,7 +51,7 @@ export function createCourseVisualDetail(world,data,{scale=.16,xScale=.1152,soft
   const dt=last===null||frame.paused?0:Math.min(.1,Math.max(0,frame.time-last));last=frame.time;time+=dt;
   const reduced=frame.reducedMotion||frame.fx?.enabled===false,detail=(frame.fx?.density??1)>0;
   if(reduced)pool.forEach(p=>p.born=-100);
-  clock.value=reduced?0:time;sign.rotation.z=reduced?0:Math.sin(time*.71)*.045+Math.sin(time*1.37)*.012;
+  clock.value=reduced?0:time;sign.rotation.z=reduced?0:wind?wind.signAngle(-15,-38):Math.sin(time*.71)*.045+Math.sin(time*1.37)*.012;
   const j=frame.joe,h=j.effectHeading||0,dx=Math.cos(h),dz=-Math.sin(h),x=j.x*xScale+dx*.82,z=-j.y*scale+dz*.82;
   const distance=previous?Math.hypot(x-previous.x,z-previous.z):0,moving=dt>0&&distance>.001&&distance<1&&(j.effectSpeed||0)>.4;previous={x,z};
   if(moving&&canCut(x,z)&&detail){
@@ -60,5 +61,5 @@ export function createCourseVisualDetail(world,data,{scale=.16,xScale=.1152,soft
   let active=0;for(const p of pool){const age=time-p.born;if(age<0||age>.85||reduced||!detail)continue;const xx=p.x+p.vx*age,zz=p.z+p.vz*age;dummy.position.set(xx,woodlandHeight(xx,zz)+Math.max(.025,.14+p.up*age-2.8*age*age),zz);dummy.rotation.set(p.spin+age*8,p.spin,age*5);const fade=Math.min(1,(.85-age)*6);dummy.scale.set(.025*fade,.065*fade,.012*fade);dummy.updateMatrix();clippings.setMatrixAt(active++,dummy.matrix);}clippings.count=active;clippings.visible=active>0;if(active)clippings.instanceMatrix.needsUpdate=true;
   while(marks.length&&time-marks[0].born>12)marks.shift();let count=0;for(const m of marks){dummy.position.set(m.x,woodlandHeight(m.x,m.z)+.014,m.z);dummy.rotation.set(0,m.h-Math.PI/2,0);dummy.scale.set(1.05,1,.52);dummy.updateMatrix();tracks.setMatrixAt(count,dummy.matrix);fades.setX(count++,Math.min(1,(12-time+m.born)/3));}tracks.count=count;tracks.visible=detail&&count>0;if(count){tracks.instanceMatrix.needsUpdate=true;fades.needsUpdate=true;}
  }
- return {update,stats:()=>({landmarks:3,movingProps:motions.length,clock:clock.value,clippings:clippings.count,clippingCapacity:capacity,emitted,cutStrips:tracks.count,windowLights:lamps.length}),dispose(){root.removeFromParent();clippings.dispose();tracks.dispose();ownedGeometry.forEach(g=>g.dispose());ownedMaterials.forEach(m=>m.dispose());}};
+ return {update,stats:()=>({landmarks:3,movingProps:motions.length,clock:clock.value,clippings:clippings.count,clippingCapacity:capacity,emitted,cutStrips:tracks.count,windowLights:lamps.length,pennant:pennant?.stats()}),dispose(){pennant?.dispose();root.removeFromParent();clippings.dispose();tracks.dispose();ownedGeometry.forEach(g=>g.dispose());ownedMaterials.forEach(m=>m.dispose());}};
 }

@@ -1,0 +1,34 @@
+# Back Nine directional headlights — partial visual upgrade
+
+This advances BV36, BV43 and BV48 within the full 48-item objective. It does not establish whole-level visual parity or complete all headlight/atmosphere work.
+
+## Changes
+
+- Replaced the player's floating omnidirectional lamp with a warm spotlight. Vehicle mode follows the midpoint of the cart's actual lenses, including terrain pitch and body motion; on foot it follows a visible clipped work light attached to the runner's body, including the fall animation. Rear camera glances do not turn the body-mounted light. Added an independent warm mower spotlight at its actual lamp height. Each vehicle's closely spaced lamp pair uses one broad source.
+- Added two 256-square shadow maps. Their filtered index lists share immutable opaque-cover positions with the beacon; each map submits only cover inside its finite cone. Static intensity/time changes do not rebuild shadows. Source rotation, translation, moving doors and retry do. The red beacon retains its own cube map and near-field treatment.
+- Kept the authored turf's nighttime floor, but added actual shadowed headlight illumination above it so weaker light no longer disappears into that floor. Floodwater uses the same treatment. Tire spray now uses a lit material; existing sprinkler droplets and mower clippings already receive Lambert lighting.
+- Back Nine explicitly opts into point-plus-spot exclusion for distant static batches and pine groups. Shared defaults remain unchanged for other scenes. Software verge lighting now uses the lamps' actual directions, penumbra and finite ranges.
+- Software Lambert shaders reject fragments outside a spotlight's squared cone/range before normalization and reuse one inverse length inside it. Back-facing zero-contribution fragments skip the shadow lookup. Native shading keeps Three's regular spotlight calculation. The optimization retains both lights, their ranges and shadow maps.
+
+## Verification
+
+- `verify-back-nine-headlight-rules.mjs` passes actual cover-ray comparisons across three locations, reversed cones, stationary caching, moving doors, foot facing, retry, sloped lens attachment, preparation and disposal. Existing local-light-culling tests pass. Current `verify-back-nine.mjs` passes all twelve routes and its movement, terrain, pursuit, visibility and full-restart checks.
+- Native browser verification passes at a 2560×1600 viewport (actual scene 2560×1440), plus 1280×720 and 390×844. Inspected driving, close Joe, hedge illumination, wet ground, work-light attachment, falling and responsive images. Native warm resources remain 29 programs / 55 textures / 2,311 buffer allocations through the tested sequence, including pause and failure retry. Prior scene: 27 / 51 / 2,305. The work light adds three small meshes; shadow submissions are additional to ordinary visible-scene draw counters.
+- Software browser verification passes the same pose/resource/lifecycle assertions with 35 programs / 55 textures / 2,311 allocations. Prior scene: 33 / 51 / 2,305. No browser errors in successful final runs.
+- `verify-back-nine-headlight-lighting.cjs`, native and software, proves both cart and mower light are blocked by the real windbreak: covered ground equals the lamp-off reference, while disabling occlusion produces positive illumination on the same samples. Forward ground lights up; side/rear samples remain unchanged; rotating the source with a fixed camera and fixed culling transfers illumination to the former rear. The initial software ground sample was too distant to survive quantization; closer points behind the same hedge establish positive contribution without weakening the assertion.
+- Software optimization comparisons are in `software-optimization-comparison.json`. Three full-frame comparisons retain mean absolute channel differences below 0.003 on the 0–255 scale; fewer than 0.04% of pixels change. These captures are visually consistent, not bit-identical. Separate pixel proofs retain exact covered/off equality and positive unoccluded response.
+
+- Installed standard gameplay client completed three retreat/turn/stop bursts on both renderers. Native RTX 3090 retained 2560×1440 throughout; final measured average 11.96 ms / p95 16.2 ms within this short fixture. Software fell 800×450→640×360; final average 77.4 ms / p95 109.9 ms. Both end with player near (-3.58,72.46), Joe tracking and launching a charge; no error artifacts. Native page 0/page 2 and software page 2 inspected. This is a short pursuit check, not a whole-level or combined-load frame-rate guarantee. The wrapper now supports explicit --native-renderer while retaining its default software path.
+- Twelve current production/test source hashes are verified in source-manifest.json. No agents, commit or deployment; the existing 4187 server is retained.
+
+## Evidence and remaining work
+
+Evidence is under `output/back-nine-visual-upgrade/headlights/`: `baseline-source`, `native`, `native-before`, `software`, `software-before`, `native-lighting`, `software-lighting`, and `software-unoptimized`, `client-native`, and `client-software`.
+
+The initial software implementation measured roughly 99 ms at fixed 960×540; a short optimized run measured 58 ms, and broader sequences measured 72–85 ms. The previous scene measured about 45 ms. Measurements use GPU fences; earlier `gl.finish()` timings are not valid completion timings. Sequence history and system load affect these numbers. A further fragment-projection trial measured about 61 ms in the short fixture, with no demonstrated advantage over the 58 ms result; it was rejected and the previous shader retained. Trial source/report are archived under `trials`. Software frame budget and combined-load visual fidelity remain unresolved; the lighting is not performance-neutral.
+
+The front-facing actor close-up and elevated pixel-proof cameras are diagnostic views. They do not update all world culling for those custom angles; background gaps there are not evidence of a normal gameplay terrain regression. Normal gameplay cameras and the installed client are required for scene acceptance.
+
+Still open: volumetric response through selective mist, broader terrain/tree/dynamic-object shadow coverage, full shadow reception on software foliage, stronger long-distance composition, portrait HUD coverage, and the remaining 48-item ledger requirements. No simulation, collision, pursuit, checkpoint, bell or interaction rules changed.
+
+One baseline attempt intercepted the pine JSON manifest with an overly broad JavaScript route; the test now matches `.js` precisely. A transient spray-material initialization-order error was corrected before the successful final native run. An optimization trial exposed GLSL variable redeclarations after loop unrolling; explicit local scopes fixed it, and final software compilation/pixel checks pass.

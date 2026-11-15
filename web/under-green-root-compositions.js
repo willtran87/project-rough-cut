@@ -1,5 +1,7 @@
 import * as THREE from './vendor/three/three.module.js';
 import {KEEPER_NICHES} from './under-green-keeper-layout.js';
+import {buildRootEntryDamage} from './under-green-root-entry.js';
+import {buildGalleryRootCanopy} from './under-green-gallery-canopy.js';
 
 // Coordinates describe actual boundary walls. Long quiet intervals and one
 // dominant root per composition replace uniformly distributed root curtains.
@@ -32,41 +34,41 @@ export function reservedRootWall(w){
 }
 
 export function buildDrainRootCompositions({root,put,materials,lowDetail,growth=null}){
- const block=new THREE.BoxGeometry(1,1,1),soil=new THREE.IcosahedronGeometry(1,1);
+ const soil=new THREE.IcosahedronGeometry(1,1);
  // Damp soil is pinched beneath displaced mortar, with a subdued dry upper
  // lip. Reuse the existing mud material/batches rather than add another pass.
  const soilColors=[];for(let i=0;i<soil.attributes.position.count;i++){const y=soil.attributes.position.getY(i),tone=.68+Math.max(0,y)*.15;soilColors.push(tone,tone*.94,tone*.81);}
  soil.setAttribute('color',new THREE.Float32BufferAttribute(soilColors,3));
  materials.rootCrevice=new THREE.MeshLambertMaterial({color:0x151b13});
- let forks=0,hairs=0,embeddedEntries=0,soilPockets=0;
+ let forks=0,hairs=0,embeddedEntries=0,soilPockets=0;const entries=[];
  for(let ci=0;ci<ROOT_COMPOSITIONS.length;ci++){
   const c=ROOT_COMPOSITIONS[ci],vertical=c.axis==='x',face=c.boundary+c.side*.125;
   const wall={vertical,face,side:c.side,boundary:c.boundary,maxIntrusion:.20};
   const point=(along,height,normal=.125)=>new THREE.Vector3(vertical?c.boundary+c.side*normal:along,height,-(vertical?along:c.boundary+c.side*normal));
+  // Start inside the wall so the limb emerges through construction instead of
+  // ending in a visible blunt stump laid against an intact surface.
   const main=[point(c.along-c.lean*.5,c.top,.03),point(c.along-c.lean*.2,c.top*.84),point(c.along+c.lean*.6,c.top*.65),point(c.along+c.lean,c.top*.4),point(c.along+c.lean*.7,.62),point(c.along+c.lean*.5,.035)];
-  root(main,.46,wall,{taper:.35,branchPoints:BRANCH_SHAPES[ci].map(limb=>main[limb.from])});
+  root(main,.46,wall,{taper:.35,buriedStart:true,branchPoints:BRANCH_SHAPES[ci].map(limb=>main[limb.from])});
   for(const limb of BRANCH_SHAPES[ci]){
    root([main[limb.from],...limb.p.map(([u,v])=>point(c.along+u*c.span,v*c.top))],limb.r,wall,{taper:.80});forks++;
   }
   // A returning, thinner root crosses and wraps the dominant limb, while its
   // flattened depth remains within the same wall-clearance allowance.
-  if(ci!==3)root([point(c.along+c.span*.55,c.top),point(c.along+c.span*.18,c.top*.76,.18),point(c.along-c.span*.28,c.top*.56,.18),point(c.along+c.lean*.8,c.top*.32),point(c.along+.25,.15)],ci===1?.25:.16,wall);
+  if(ci!==3)root([point(c.along+c.span*.55,c.top),point(c.along+c.span*.18,c.top*.76,.18),point(c.along-c.span*.28,c.top*.56,.18),point(c.along+c.lean*.8,c.top*.32),point(c.along+.25,.15)],ci===1?.25:.16,wall,{buriedStart:true});
   // Actual broken mortar and lifted brick pieces surround the entry. The dark
   // crevice is small, opaque and high on the wall; never a false doorway.
-  const entry=main[1],entryAlong=vertical?-entry.z:entry.x;
+  const entry=new THREE.CatmullRomCurve3(main).getPointAt(ci===3?.075:.10),entryAlong=vertical?-entry.z:entry.x;
+  const damage=buildRootEntryDamage({c,entryAlong,height:entry.y,seed:ci,point,put});
+  entries.push({id:c.id,along:entryAlong,height:entry.y,...damage});
   const crack=new THREE.Shape();
   for(let i=0;i<14;i++){
-   const a=i/14*Math.PI*2,r=i%3===0?1:.8,px=Math.cos(a)*.54*r,py=Math.sin(a)*.39*r;
+   const a=i/14*Math.PI*2,r=i%3===0?1:.8,px=Math.cos(a)*.54*r,py=Math.min(Math.sin(a)*.39*r,damage.ceiling-entry.y);
    if(i===0)crack.moveTo(px,py);else crack.lineTo(px,py);
   }
-  crack.closePath();const gap=new THREE.ShapeGeometry(crack),at=point(entryAlong,entry.y,.112);
+  crack.closePath();const gap=new THREE.ShapeGeometry(crack),at=point(entryAlong,entry.y,damage.receiver+.002);
   put(gap,'rootCrevice',at.x,at.y,at.z,1,1,1,0,vertical?c.side*Math.PI/2:c.side===1?Math.PI:0);gap.dispose();
-  for(let i=0;i<6;i++){
-   const a=i*1.13+ci*.37,loc=point(entryAlong+Math.cos(a)*(.45+i%2*.1),entry.y+Math.sin(a)*.37,.138),width=.13+i%3*.047;
-   put(block,c.material,loc.x,loc.y,loc.z,vertical?.085:width,.08+i%2*.04,vertical?width:.085,vertical?Math.sin(a)*.17:0,0,vertical?0:Math.sin(a)*.17);
-  }
   for(let i=0;i<3;i++){
-   const along=entryAlong+(i-1)*.34+(ci%2?.045:-.035),at=point(along,entry.y-.28-i%2*.085,.141);
+   const along=entryAlong+(i-1)*.34+(ci%2?.045:-.035),at=point(along,entry.y-.28-i%2*.085,damage.receiver+.031);
    put(soil,'mudBank',at.x,at.y,at.z,vertical?.038:.17,.075+i%2*.035,vertical?.17:.038);soilPockets++;
   }
   embeddedEntries++;
@@ -84,8 +86,7 @@ export function buildDrainRootCompositions({root,put,materials,lowDetail,growth=
   const points=[];for(let i=0;i<10;i++){const t=i/9,a=branch*Math.PI*2/3+t*3.7;points.push(new THREE.Vector3(-1.8+Math.cos(a)*.29,3.9-t*3.86,-15+Math.sin(a)*.29));}
   root(points,.105,null,{taper:.32});
  }
- // Two asymmetric ceiling forks carry that pillar's silhouette into the vault.
- for(const side of [-1,1])root([trunk[0],new THREE.Vector3(-1.8+side*.7,3.78,-15.2),new THREE.Vector3(-1.8+side*1.15,3.9,-16.1),new THREE.Vector3(-1.8+side*1.35,4.14,-16.8)],side<0?.23:.29,null,{taper:.8});
- block.dispose();soil.dispose();
- return {compositions:ROOT_COMPOSITIONS.map(c=>({id:c.id,axis:c.axis,boundary:c.boundary,along:c.along,span:c.span})),forks,hairs,embeddedEntries,soilPockets,pillar:{x:-1.8,y:15,w:1,d:1},maximumWallIntrusion:.20,maximumUpperIntrusion:.32,upperIntrusionStartsAt:2.3};
+ const galleryCanopy=buildGalleryRootCanopy({root,put,lowDetail});
+ soil.dispose();
+ return {compositions:ROOT_COMPOSITIONS.map(c=>({id:c.id,axis:c.axis,boundary:c.boundary,along:c.along,span:c.span})),entries,forks,hairs,embeddedEntries,soilPockets,galleryCanopy,pillar:{x:-1.8,y:15,w:1,d:1},maximumWallIntrusion:.20,maximumUpperIntrusion:.32,upperIntrusionStartsAt:2.3};
 }

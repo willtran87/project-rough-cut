@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three/three.module.js';
 import { GLTFLoader } from './vendor/three/addons/loaders/GLTFLoader.js';
+import { courseGhostSurfaceGLSL } from './course-ghost-surface.js';
 
 // Baked poses of the original textured Joe: one mesh, no animation mixer,
 // shadows, collision, or AI. Level 1 opts into smooth translucent fades.
@@ -22,13 +23,20 @@ export function createGhostJoe(parent,{muted=false,softFade=false}={}){
       if(!o.geometry.attributes._ghost_wheel)o.geometry.setAttribute('_ghost_wheel',new THREE.BufferAttribute(new Float32Array(o.geometry.attributes.position.count*3),3));
       const source=o.material,map=source.map;
       if(map){map.magFilter=THREE.NearestFilter;map.minFilter=THREE.NearestMipmapLinearFilter;map.needsUpdate=true;}
-      material=new THREE.MeshBasicMaterial({map,side:THREE.DoubleSide,color:0xffffff,transparent:softFade,depthWrite:!softFade,forceSinglePass:true});
+      // A muted apparition needs its outside silhouette, not bright rear
+      // triangles accumulating through the torso and mower during a fade.
+      material=new THREE.MeshBasicMaterial({map,side:muted&&softFade?THREE.FrontSide:THREE.DoubleSide,color:0xffffff,transparent:softFade,depthWrite:!softFade,forceSinglePass:true});
       material.onBeforeCompile=s=>{
+        if(softFade){
+          s.vertexShader='varying vec3 ghostSurface;\n'+s.vertexShader;
+          s.fragmentShader='varying vec3 ghostSurface;\n'+s.fragmentShader;
+        }
         s.uniforms.ghostFade=fade;
         s.uniforms.ghostTravel=travel;
         s.uniforms.ghostResolve=resolve;s.uniforms.ghostPosture=posture;s.uniforms.ghostHeadRotation=headRotation;s.uniforms.ghostSecondary=secondary;s.uniforms.ghostTorsoRotation=torsoRotation;
         s.vertexShader='attribute vec3 _ghost_wheel;\nuniform float ghostTravel;\nuniform vec2 ghostPosture;\nuniform mat3 ghostHeadRotation;\nuniform vec3 ghostSecondary;\nuniform vec2 ghostTorsoRotation;\nvarying float ghostShade;\nvarying float ghostHeight;\nvarying float ghostFace;\n'+s.vertexShader;
         s.vertexShader=s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+          ${softFade?'ghostSurface=position;':''}
           vec3 ghostNormal=normal;
           if(_ghost_wheel.y>.01){
             float a=-ghostTravel/_ghost_wheel.y,c=cos(a),s=sin(a);
@@ -57,10 +65,11 @@ export function createGhostJoe(parent,{muted=false,softFade=false}={}){
           transformed.z-=max(0.0,position.y-.70)*ghostPosture.y;`);
         s.fragmentShader='uniform float ghostFade;\nuniform float ghostResolve;\nvarying float ghostShade;\nvarying float ghostHeight;\nvarying float ghostFace;\n'+s.fragmentShader;
         s.fragmentShader=s.fragmentShader.replace('#include <alphatest_fragment>',`#include <alphatest_fragment>
+          ${softFade?courseGhostSurfaceGLSL:`
           vec2 cell=mod(floor(gl_FragCoord.xy),4.0);
           float threshold=mod(cell.x*2.0+cell.y*3.0,4.0)*.25+mod(cell.x+cell.y*2.0,4.0)*.0625;
           float face=smoothstep(1.28,1.50,ghostHeight);
-          ${softFade?'float lowerBody=1.0-smoothstep(.28,1.48,ghostHeight); float grain=.94+.06*sin(floor(gl_FragCoord.x*.5)*2.3+floor(gl_FragCoord.y*.5)*1.7); diffuseColor.a*=smoothstep(lowerBody*.20,1.0,ghostFade)*grain; if(diffuseColor.a<.002)discard;':'if(ghostFade*min(1.85,1.0+ghostResolve*(.65+.20*face))<=threshold)discard;'}
+          if(ghostFade*min(1.85,1.0+ghostResolve*(.65+.20*face))<=threshold)discard;`}
           float ink=dot(diffuseColor.rgb,vec3(.299,.587,.114));
           vec3 pale=mix(vec3(.70,.92,.82),vec3(.90,.96,1.0),ghostResolve);
           vec3 dark=mix(vec3(.025,.08,.085),vec3(.045,.10,.13),ghostResolve);
@@ -71,7 +80,7 @@ export function createGhostJoe(parent,{muted=false,softFade=false}={}){
           diffuseColor.rgb=mix(dark,pale,tone)*mix(ghostShade,max(.78,ghostShade),ghostResolve);`);
       };
       if(muted){const compile=material.onBeforeCompile;material.onBeforeCompile=s=>{compile(s);s.fragmentShader=s.fragmentShader.replace('vec3 pale=mix(vec3(.70,.92,.82),vec3(.90,.96,1.0),ghostResolve);','vec3 pale=vec3(.24,.34,.29);').replace('diffuseColor.rgb=mix(dark,pale,tone)', 'tone=mix(tone,min(tone,.66),smoothstep(1.35,1.50,ghostHeight)); diffuseColor.rgb=mix(dark,pale,tone)');};}
-      material.customProgramCacheKey=()=> 'pixel-ghost-joe-attention-v7'+(muted?'-muted':'')+(softFade?'-soft-fade':'');
+      material.customProgramCacheKey=()=> 'pixel-ghost-joe-attention-v7'+(muted?'-muted':'')+(softFade?'-body-dissolve-v2':'');
       source.dispose();o.material=material;o.castShadow=o.receiveShadow=false;
       state.triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;
     });

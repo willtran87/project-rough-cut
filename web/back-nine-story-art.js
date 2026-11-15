@@ -1,3 +1,4 @@
+import {buildRelayCraft} from './back-nine-relay-craft.js';
 import {buildUtilityArt} from './chase-utility-art.js';
 import {garageHoldRatio} from './chase-garage.js';
 import {STAFF_CART_BODY} from './staff-cart-layout.js';
@@ -53,6 +54,7 @@ export function buildCourseStoryArt({THREE,box,put,cylinder,pitchedRoof,batchVeh
  // Relay stations live on the existing shelter posts and overhead truss.
  // The cart drives through the induction loop; stopping for the log is optional.
  const utilityArt=buildUtilityArt({THREE,box,put,batchVehicleParts,scene});
+ const relayCraft=buildRelayCraft({THREE,COURSE,box,put,cylinder,batchVehicleParts,scene});
  const relays=[];
  for(const [i,c]of COURSE.checkpoints.entries()){
   for(const side of [-1,1]){box('brass',c.x+side*2.5,.035,-c.y,.06,.025,7);box('iron',c.x+side*3.7,2,-c.y-4,.24,.8,.24);box('paint',c.x+side*3.7,1.82,-c.y-3.86,.18,.3,.015);for(let n=0;n<4;n++)box('iron',c.x+side*3.7,1.9-n*.04,-c.y-3.845,.13,.014,.008);}
@@ -83,5 +85,5 @@ export function buildCourseStoryArt({THREE,box,put,cylinder,pitchedRoof,batchVeh
  for(const x of [-26.7,-19.3])box('paint',x,.102,-807,.06,.009,8);
  box('paint',-23,.102,-811,7.45,.009,.06);
  batchVehicleParts(garage);const meter=garage.children.find(o=>o.isMesh),segmentIndices=meter.geometry.index.count/12;let circuits=0,holdBars=0;
- return {update(run,reducedMotion=false){utilityArt.update(run,reducedMotion);for(let i=0;i<relays.length;i++){const r=relays[i],done=(run.checkpoint||0)>i;r.off.visible=!done;r.on.visible=done;r.log.visible=!(run.story?.collected&(1<<i));const remaining=run.service?.remaining[i]??(run.story?.collected&(1<<i)?0:25);r.meter.geometry.setDrawRange(0,Math.ceil(remaining/5)*r.barIndices);r.charge.visible=remaining>0;}circuits=Math.max(0,Math.min(2,run.checkpoint||0));holdBars=circuits===2?Math.floor(garageHoldRatio(run)*8):0;meter.geometry.setDrawRange(0,(circuits*2+holdBars)*segmentIndices);},stats:()=>({utility:utilityArt.stats(),chargeBars:relays.map(r=>r.meter.geometry.drawRange.count/r.barIndices),garage:{circuits,holdBars}}),count:relays.length};
+ return {update(run,reducedMotion=false){utilityArt.update(run,reducedMotion);relayCraft.update(run);for(let i=0;i<relays.length;i++){const r=relays[i],done=(run.checkpoint||0)>i;r.off.visible=!done;r.on.visible=done;r.log.visible=!(run.story?.collected&(1<<i));const remaining=run.service?.remaining[i]??(run.story?.collected&(1<<i)?0:25);r.meter.geometry.setDrawRange(0,Math.ceil(remaining/5)*r.barIndices);r.charge.visible=remaining>0;}circuits=Math.max(0,Math.min(2,run.checkpoint||0));holdBars=circuits===2?Math.floor(garageHoldRatio(run)*8):0;meter.geometry.setDrawRange(0,(circuits*2+holdBars)*segmentIndices);},stats:()=>({controls:relayCraft.stats(),utility:utilityArt.stats(),chargeBars:relays.map(r=>r.meter.geometry.drawRange.count/r.barIndices),garage:{circuits,holdBars}}),count:relays.length};
 }

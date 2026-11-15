@@ -1,3 +1,4 @@
+import {setPipeJointFrame} from './under-green-pipe-finish.js';
 import * as THREE from './vendor/three/three.module.js';
 import {OBSTACLES,LEVER} from './under-green-layout.js';
 import {createMachinerySurfaces} from './under-green-machinery-surfaces.js';
@@ -8,7 +9,7 @@ import {createMachinerySurfaces} from './under-green-machinery-surfaces.js';
 export async function prepareDrainMachinery(materials){
  const surfaces=await createMachinerySurfaces(),sets=surfaces.sets;
  for(const [name,color,source,shine,specular]of [
-  ['machinePaint',0xd4d1b9,sets.paint,24,0x748174],['machineIron',0x81877f,sets.metal,18,0x515b53],
+  ['machinePaint',0xdfd9c3,sets.paint,24,0x748174],['machineIron',0xa9afa2,sets.metal,18,0x515b53],
   ['machineSteel',0xd0cbbb,sets.metal,65,0x92998b],['machineRust',0xc5b29a,sets.rust,10,0x423c31],
   ['machineRed',0xe8ddd2,sets.red,32,0x706052]
  ]){
@@ -22,6 +23,15 @@ export async function prepareDrainMachinery(materials){
 
 export function buildDrainPump({box,put}){
  const machine=OBSTACLES.find(o=>o.id==='pump-machine'),x=machine.x,z=-machine.y;
+ // Small cast edge breaks catch the practical lamp while retaining broad,
+ // dark iron faces. The bevel is inset inside the original part envelope.
+ const castBlock=(w,h,d,b)=>{
+  const s=new THREE.Shape(),xx=w/2-b,yy=h/2-b;
+  s.moveTo(-xx,-yy);s.lineTo(xx,-yy);s.lineTo(xx,yy);s.lineTo(-xx,yy);s.closePath();
+  const g=new THREE.ExtrudeGeometry(s,{depth:d-2*b,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:b,bevelThickness:b});
+  g.translate(0,0,-d/2+b);return g;
+ };
+ const foot=castBlock(.27,.24,.32,.018),skid=castBlock(.25,.18,2.88,.015);
  const cylinder=(type,px,h,pz,r,length,axis='z',segments=24)=>{
   const g=new THREE.CylinderGeometry(r,r,length,segments);
   // Close machinery uses one native tile per metre, including circular caps.
@@ -45,21 +55,31 @@ export function buildDrainPump({box,put}){
  };
  // Independent cast feet with rust pockets, seated on two heavy skids.
  for(const side of [-1,1]){
-  box('machineIron',x+side*.71,.09,z,.25,.18,2.88);
+  // The barrel's curved underside sits above its outboard feet. Cast saddles
+  // bridge that gap and bed into the housing instead of leaving it floating.
+  const saddleShape=new THREE.Shape();
+  saddleShape.moveTo(side*.415,.43);saddleShape.lineTo(side*.685,.43);
+  saddleShape.lineTo(side*.45,.85);saddleShape.lineTo(side*.33,.85);saddleShape.closePath();
+  const saddle=new THREE.ExtrudeGeometry(saddleShape,{depth:.26,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:.008,bevelThickness:.008});
+  put(skid,'machineIron',x+side*.71,.09,z);
   for(const dz of [-.91,.76]){
    box('machineRust',x+side*.64,.235,z+dz,.43,.11,.43);
-   box('machinePaint',x+side*.55,.36,z+dz,.27,.24,.32);
+   put(foot,'machinePaint',x+side*.55,.36,z+dz);
+   put(saddle,'machinePaint',x,0,z+dz-.13);
    cylinder('machineSteel',x+side*.78,.31,z+dz,.045,.05,'y',6);
   }
+  saddle.dispose();
  }
+ foot.dispose();skid.dispose();
  // Motor barrel, cooling fins and rear fan cowl. Shaft and coupling join the
  // volute instead of disappearing into a generic rectangular housing.
  cylinder('machinePaint',x,.99,z-.59,.51,1.38);
+ const fin=castBlock(.035,.105,1.14,.006);
  for(let i=0;i<16;i++){
   const a=i*Math.PI/8;
-  const g=new THREE.BoxGeometry(.035,.105,1.14);
-  put(g,'machinePaint',x+Math.sin(a)*.54,.99+Math.cos(a)*.54,z-.64,1,1,1,0,0,-a);g.dispose();
+  put(fin,'machinePaint',x+Math.sin(a)*.54,.99+Math.cos(a)*.54,z-.64,1,1,1,0,0,-a);
  }
+ fin.dispose();
  cylinder('machineIron',x,.99,z-1.31,.56,.16);
  ring('machineSteel',x,.99,z-1.397,.5,.018);
  for(let i=-3;i<=3;i++){
@@ -104,7 +124,8 @@ export function buildDrainPump({box,put}){
  const curve=new THREE.CatmullRomCurve3(points,false,'centripetal');
  const pipe=new THREE.TubeGeometry(curve,56,.145,12,false);
  const uv=pipe.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*curve.getLength(),uv.getY(i)*Math.PI*.145*2);
- pipe.userData.preserveDrainUV=true;put(pipe,'machineRust',0,0,0);pipe.dispose();
+ setPipeJointFrame(pipe,[outlet.x,outlet.z,0,5]);
+ pipe.userData.preserveDrainUV=true;put(pipe,'pipeSurface',0,0,0);pipe.dispose();
  for(const height of [1.65,2.55])flange(outlet.x,height,outlet.z,'y',.235);
  // A roof hanger and saddle support the elevated line, above all tool paths.
  box('machineIron',x+.49,3.99,-LEVER.y-.5,.035,.32,.035);

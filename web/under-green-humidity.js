@@ -64,7 +64,7 @@ export function createDrainHumidity({scene,camera,lamps}){
     alpha.setX(count,p.alpha*fade);color.copy(base);
     // Small local color shifts follow the same fixed practical sources and
     // flicker as the world. Air scattering needs no 17-light surface shader.
-    lamps.forEach((lamp,i)=>{const d=Math.hypot(lamp.x-p.x,lamp.y-p.y,(lamp.height??2.8)-p.height);if(d>7)return;lampColor.setHex(lamp.color??(i%3===1?0x79c8c5:0xe9b575));const gain=(1-d/7)**2*dampLampLevel(run.time,i,reduced)*.045;color.r+=lampColor.r*gain;color.g+=lampColor.g*gain;color.b+=lampColor.b*gain;});
+    lamps.forEach((lamp,i)=>{const d=Math.hypot(lamp.x-p.x,lamp.y-p.y,(lamp.height??2.8)-p.height);if(d>7)return;lampColor.setHex(lamp.color??(i%3===1?0x79c8c5:0xe9b575));const gain=(1-d/7)**2*dampLampLevel(run.time,i,reduced)*.045*(lamp.power??1);color.r+=lampColor.r*gain;color.g+=lampColor.g*gain;color.b+=lampColor.b*gain;});
     mesh.setColorAt(count++,color);
    }
    mesh.count=count;mesh.visible=enabled&&count>0;if(count){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;alpha.needsUpdate=true;}
