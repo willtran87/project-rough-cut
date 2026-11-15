@@ -19,5 +19,16 @@ r=createRun(3);r.mode='playing';Object.assign(r.player,{x:SLUICE.x,y:SLUICE.y+1,
 // All movement below uses ordinary controls with live Joe, no placement hooks.
 function walkRun(cp=0,pressure='standard',optional=false){const run=traverse({cp,pressure,optional,dodge:true});assert.equal(run.mode,'complete',JSON.stringify(run));assert(run.j.walk>10);if(optional)assert(run.evidence);return run;}
 const runs=[];for(const pressure of ['steady','standard','relentless'])runs.push(walkRun(0,pressure));for(const cp of [1,2,3])runs.push(walkRun(cp));runs.push(walkRun(0,'standard',true));checks.push('Live-Joe completion with ordinary sidesteps against committed attacks from fresh start and all checkpoints, three pressure settings, optional evidence');
-r=createRun(2,true);assert.deepEqual(readSave(JSON.stringify(snapshot(r))),{checkpoint:2,lessonCrossed:true,bunkerRouteObserved:false,bypass:true,evidence:true,completed:false,difficulty:'standard'});assert.equal(readSave('bad json'),null);assert.equal(readSave('{"version":19}'),null);checks.push('Versioned save roundtrip and malformed-save recovery');
+r=createRun(2,true);
+assert.deepEqual(readSave(JSON.stringify(snapshot(r))),{completed:false,evidence:false,difficulty:'standard'});
+assert.equal(snapshot(r).version,4);
+r.mode='complete';
+assert.deepEqual(readSave(JSON.stringify(snapshot(r))),{completed:true,evidence:true,difficulty:'standard'});
+for(const version of [1,2,3]){
+ const legacy={version,checkpoint:2,lessonCrossed:true,bypass:true,evidence:true,difficulty:'relentless'};
+ assert.deepEqual(readSave(JSON.stringify(legacy)),{completed:false,evidence:false,difficulty:'relentless'});
+ assert.deepEqual(readSave(JSON.stringify({...legacy,completed:true})),{completed:true,evidence:true,difficulty:'relentless'});
+}
+assert.equal(readSave('bad json'),null);assert.equal(readSave('{"version":19}'),null);
+checks.push('Version 4 saves retain completion and preferences; partial attempts and legacy checkpoints do not resume');
 fs.mkdirSync('output/under-green',{recursive:true});fs.writeFileSync('output/under-green/simulation.json',JSON.stringify({passed:true,checks,runs},null,2));console.log(JSON.stringify({passed:true,checks,runs:runs.map(({p,j,reached,...run})=>run)},null,2));

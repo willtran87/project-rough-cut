@@ -21,10 +21,11 @@ function readUtf8(relativePath) {
 
 function collectRuntimeAssetReferences(...sources) {
   const references = new Set();
-  const pattern = /["'](?:\.\/)?assets\/([^"']+\.(?:png|webp|avif))["']/gu;
+  const pattern = /["'`](?:\.\/)?assets\/([^"'`]+\.(?:png|webp|avif))["'`]/gu;
   for (const source of sources) {
     for (const match of source.matchAll(pattern)) {
-      references.add(match[1]);
+      // Template placeholders are resolved by the explicit dynamic-image manifest.
+      if (!match[1].includes('${')) references.add(match[1]);
     }
   }
   return [...references].sort();
@@ -431,8 +432,20 @@ for (const requiredGate of [
 }
 
 // Chapter entry pages may own images directly (for example ending art).
-const runtimeModules=fs.readdirSync(webRoot).filter(name=>/\.(?:js|html)$/.test(name)).map(name=>fs.readFileSync(path.join(webRoot,name),'utf8'));
+const runtimeModules=fs.readdirSync(webRoot,{recursive:true,withFileTypes:true})
+  .filter(entry=>entry.isFile()&&/\.(?:js|html|css|json)$/.test(entry.name))
+  .map(entry=>fs.readFileSync(path.join(entry.parentPath||entry.path,entry.name),'utf8'));
 const runtimeReferences = collectRuntimeAssetReferences(indexHtml, gameJs, dialogueJs,...runtimeModules);
+// Computed URLs cannot be enumerated by a literal scan. Keep their finite input
+// sets reviewable and subject to the same existence/header checks as literals.
+const dynamicImages=JSON.parse(readUtf8('tools/runtime-dynamic-images.json'));
+for(const group of dynamicImages){
+  requireCondition(fs.existsSync(path.join(repositoryRoot,group.source)),`Missing dynamic-image owner: ${group.source}`);
+  for(const reference of group.images){
+    requireCondition(!reference.includes('..')&&!path.isAbsolute(reference),`Invalid dynamic image path: ${reference}`);
+    if(!runtimeReferences.includes(reference))runtimeReferences.push(reference);
+  }
+}
 // Content-addressed terrain images are referenced by their checked-in manifest.
 const terrainManifest=JSON.parse(readUtf8('web/assets/baked/terrain.json'));
 for(const [key,file]of Object.entries(terrainManifest)){

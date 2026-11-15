@@ -41,7 +41,7 @@ node tools/verify-release.mjs
 node tools/verify-campaign-preferences.mjs
 ```
 
-The release verifier checks static contracts, selected script syntax, discovered runtime images and action fixtures. It does not execute every chapter or qualify gameplay/performance. **It fails in the current documentation-audit snapshot**: the literal `web/assets/menu/${id}-scene.webp` is treated as a missing asset, and 54 images are reported as unreferenced. Its static collector does not resolve all dynamic image references. The reported images need classification before deletion; this documentation task did not alter assets or the verifier. Details: [audit report](../qa/documentation-audit-2026-11-15.md).
+The release verifier checks static contracts, selected script syntax, discovered runtime images and action fixtures. It does not execute every chapter or qualify gameplay/performance. The November 15 publication preparation fixed dynamic-image collection: recursive JS/HTML/CSS/JSON scanning is supplemented by `tools/runtime-dynamic-images.json` for computed URLs. All declared images must exist and pass image-header checks. Eight unused images are preserved under `assets/archive/runtime-20261115/` instead of shipped. The current gate passes with 137 referenced images and 90 validated action fixtures; see [publication notes](../qa/campaign-publication-2026-11-15.md).
 
 Simulation suites (no browser server required):
 
@@ -83,7 +83,7 @@ Source art lives in `assets/` and `art-source/`; deployed runtime assets live in
 
 The checked-in [Pages workflow](../.github/workflows/deploy-pages.yml) runs on a push to `main` affecting `web/**` or the workflow, and supports manual dispatch. It checks out source, runs `node tools/verify-release.mjs`, uploads `web/` as the Pages artifact and deploys it. There is no separate build command in this workflow.
 
-The old `gh-pages` branch was archived and removed in the [September 27 release](../qa/release-2026-09-27.md). Local source changes are not automatically the published build. The current static-verifier failure must be resolved before this workflow can pass its gate; documentation changes do not certify or initiate a release.
+The old `gh-pages` branch was archived and removed in the [September 27 release](../qa/release-2026-09-27.md). Local source changes are not automatically the published build. The static verifier must pass before deployment. Documentation changes alone do not certify or initiate a release.
 
 For an explicitly requested deployed-site comparison, the verifier also supports:
 

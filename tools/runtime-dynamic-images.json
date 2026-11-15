@@ -1,0 +1,83 @@
+[
+  {
+    "source": "web/chapter-links.js",
+    "images": [
+      "menu/night-order-scene.webp",
+      "menu/night-order-thumb.webp",
+      "menu/back-nine-scene.webp",
+      "menu/back-nine-thumb.webp",
+      "menu/under-green-scene.webp",
+      "menu/under-green-thumb.webp",
+      "menu/final-cut-scene.webp",
+      "menu/final-cut-thumb.webp"
+    ]
+  },
+  {
+    "source": "web/back-nine-scene.js",
+    "images": [
+      "optimized/back-nine-glass-v1.webp",
+      "optimized/back-nine-short-turf-v2.webp",
+      "optimized/back-nine-weathered-turf-v1.webp",
+      "optimized/back-nine-storm-density-v1.webp"
+    ]
+  },
+  {
+    "source": "web/back-nine-mower-finish.js",
+    "images": [
+      "optimized/back-nine-mower-paint-v1.png",
+      "optimized/back-nine-mower-steel-v1.png",
+      "optimized/back-nine-mower-rust-v1.png"
+    ]
+  },
+  {
+    "source": "web/final-cut-scene.js",
+    "images": [
+      "optimized/final-cut-ground-materials-v1.webp",
+      "optimized/final-cut-industrial-materials-v1.webp",
+      "optimized/final-cut-stone-materials-v1.webp",
+      "optimized/final-cut-reed-clumps-v1.webp",
+      "optimized/final-cut-rough-clumps-v1.webp"
+    ]
+  },
+  {
+    "source": "web/under-green-crafted-surfaces.js",
+    "images": [
+      "under-green/surfaces-v1.png",
+      "under-green/surfaces-industrial-v1.png",
+      "under-green/surfaces-masonry-v3.png",
+      "under-green/masonry-field-v4.png",
+      "under-green/sediment-field-v1.png",
+      "under-green/paving-field-v3.png",
+      "under-green/bunker-earth-sand-v1.png",
+      "under-green/range-painted-steel-v2.png"
+    ]
+  },
+  {
+    "source": "web/under-green-keeper-timber.js",
+    "images": [
+      "under-green/keeper-timber-v1.png"
+    ]
+  },
+  {
+    "source": "web/final-cut-story.js",
+    "images": [
+      "optimized/final-cut-story/01-final-review.webp",
+      "optimized/final-cut-story/02-joe-review.webp",
+      "optimized/final-cut-story/03-load-limit.webp",
+      "optimized/final-cut-story/04-caught.webp",
+      "optimized/final-cut-story/05-ground-gives.webp",
+      "optimized/final-cut-story/06-public-road.webp"
+    ]
+  },
+  {
+    "source": "web/final-cut-joe-finish.js",
+    "images": [
+      "optimized/joe-expressions-v1/search.webp",
+      "optimized/joe-expressions-v1/attack.webp",
+      "optimized/joe-expressions-v1/frustrated.webp",
+      "optimized/joe-expressions-v1/panic.webp",
+      "optimized/joe-garments-v1/skin.webp",
+      "optimized/joe-garments-v1/collar.webp"
+    ]
+  }
+]
