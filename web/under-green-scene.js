@@ -69,7 +69,7 @@ import {groupDrainSurfaceLights} from './under-green-light-groups.js';
 import {buildGalleryRender} from './under-green-gallery-render.js';
 import {galleryRoofPanelGeometry,isGalleryRoofPanel,galleryRoofFinishPut} from './under-green-gallery-roof.js';
 import {FLOORS,OBSTACLES,WATERS,LEVER,NOTE,SLUICE,GATE,onFloor,floorLayout,covered,waterState,distance,district} from './under-green-course.js';
-import {createTrimmerJoe} from './under-green-actor.js';
+import {createTrimmerJoe,preloadTrimmerJoe} from './under-green-actor.js';
 import {createDrainWater} from './under-green-water.js';
 import {prepareJoeNavigation} from './under-green-navigation.js';
 import {prepareDrainRendering} from './under-green-render-preparation.js';
@@ -111,6 +111,9 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  const presentationDelay=()=>software?Math.max(0,1000/60-(performance.now()-renderStarted)):0;
  const scene=new THREE.Scene();scene.fog=new THREE.Fog('#050d0f',14,43);scene.background=new THREE.Color('#050d0f');const camera=new THREE.PerspectiveCamera(58,16/9,.06,200);
  const fillLights=createDrainFillLights(scene),{playerLight}=fillLights;
+ // Independent downloads start together so they overlap the atlas decode and
+ // scene construction instead of queueing behind each stage.
+ preloadTrimmerJoe();const craftedAsset=createCraftedDrainSurfaces(),keeperTimberAsset=loadKeeperTimber();craftedAsset.catch(()=>{});keeperTimberAsset.catch(()=>{});
  onProgress('Preparing wet stone and root galleries…');await Promise.all(['rough-cut-architecture-surfaces-v1','rough-cut-course-ground-v4','rough-cut-needle-sprays-v1'].map(Art.source));
  if(Art.stats().errors.length)throw Error('Course texture could not load. Reload to retry.');
  let drawCalls=0,triangles=0;
@@ -137,7 +140,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   materials[key]=materials.stone.clone();materials[key].color.setHex(color);materials[key].map=surfaces.textures[surface];materials[key].bumpMap=materials[key].map;
  }
  for(const [key,map]of [['rootStone',illustrated.stone],['bunkerStone',illustrated.stone],['pumpStone',illustrated.concrete],['rangeStone',illustrated.metal]]){materials[key].map=map;materials[key].bumpMap=map;}
- const [crafted,machinerySurfaces,keeperTimber]=await Promise.all([createCraftedDrainSurfaces(),prepareDrainMachinery(materials),loadKeeperTimber()]);
+ const [crafted,machinerySurfaces,keeperTimber]=await Promise.all([craftedAsset,prepareDrainMachinery(materials),keeperTimberAsset]);
  const pipeFinish=prepareDrainPipeFinish(materials,machinerySurfaces);
  const hardwareFinish=finishDrainHardware(materials,machinerySurfaces);
  const timberFinish=finishDrainTimber(materials,keeperTimber);

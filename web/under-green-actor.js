@@ -13,9 +13,16 @@ import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 const WALK_CYCLE=1.1,BAKED_CYCLE=.46/.62,HIP_FORWARD=.12,HIP_DROP=.04;
 // Joe's shipped skinned model and original face/materials; the mower was
 // removed in the existing rider asset. The scythe is physical articulated art.
+const JOE_MODEL='./assets/models/joe-riding-pixel.glb';let joeModelBytes=null;
+// The walk-cycle shadow bake and the live actor each need their own parsed
+// rig, but the file is downloaded once and can start before scene building.
+export function preloadTrimmerJoe(){
+ if(!joeModelBytes){joeModelBytes=fetch(JOE_MODEL).then(response=>{if(!response.ok)throw Error('Joe could not load. Reload to retry.');return response.arrayBuffer();});joeModelBytes.catch(()=>{});}
+ return joeModelBytes;
+}
 export async function createTrimmerJoe(scene,materials){
  const root=new THREE.Group();scene.add(root);
- const gltf=await new GLTFLoader().loadAsync('./assets/models/joe-riding-pixel.glb');
+ const gltf=await new GLTFLoader().parseAsync(await preloadTrimmerJoe(),'./assets/models/');
  const finish=createJoeSurfaceFinish();
  const actor=gltf.scene;root.add(actor);let chest=null,head=null;const bones=new Map();
  let skinMap=null;actor.traverse(o=>{if(o.material?.name==='Skin')skinMap=o.material.map;});

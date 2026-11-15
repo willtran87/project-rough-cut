@@ -4,6 +4,14 @@ import {JOE_GARMENT_VERTEX,JOE_GARMENT_POSITION,JOE_GARMENT_FRAGMENT,joeGarmentF
 
 // The riding rig retains Level 1's body maps and face-mask vertex channel.
 // Apply the same material language without changing its skinning or cab pose.
+const JOE_FINISH_JOBS=[...['search','attack','frustrated','panic'].map(name=>({name,folder:'joe-expressions-v1'})),...['skin','collar'].map(name=>({name,folder:'joe-garments-v1'}))];
+let joeFinishMaps=null;
+// Network and decode can overlap scene construction; material setup still
+// happens in finishFinalCutJoe once the rider's own maps are known.
+export function preloadFinalCutJoeFinish(){
+ if(!joeFinishMaps){const loader=new THREE.TextureLoader();joeFinishMaps=JOE_FINISH_JOBS.map(({name,folder})=>{const map=loader.loadAsync(new URL(`./assets/optimized/${folder}/${name}.webp`,import.meta.url).href);map.catch(()=>{});return map;});}
+ return joeFinishMaps;
+}
 export async function finishFinalCutJoe(actor){
  const originals=new Set(),materials=new Set(),textures=new Set(),skeletons=new Set();
  let skinMap=null,faceMap=null,faceMeshes=0,expression={from:'search',to:'search',blend:1};
@@ -13,10 +21,10 @@ export async function finishFinalCutJoe(actor){
    originals.add(m);if(m.map)textures.add(m.map);if(m.name==='Skin')skinMap=m.map;if(m.name==='Face')faceMap=m.map;
   }
  });
- const expressionMaps={scrutiny:faceMap},surfaceMaps={},loader=new THREE.TextureLoader();
- const jobs=[...['search','attack','frustrated','panic'].map(name=>({name,folder:'joe-expressions-v1',target:expressionMaps})),...['skin','collar'].map(name=>({name,folder:'joe-garments-v1',target:surfaceMaps}))];
- const loaded=await Promise.allSettled(jobs.map(async({name,folder,target})=>{
-  const map=await loader.loadAsync(new URL(`./assets/optimized/${folder}/${name}.webp`,import.meta.url).href);
+ const expressionMaps={scrutiny:faceMap},surfaceMaps={},pending=preloadFinalCutJoeFinish();
+ const jobs=JOE_FINISH_JOBS.map(job=>({...job,target:job.folder==='joe-garments-v1'?surfaceMaps:expressionMaps}));
+ const loaded=await Promise.allSettled(jobs.map(async({name,target},index)=>{
+  const map=await pending[index];
   map.colorSpace=faceMap.colorSpace;map.flipY=faceMap.flipY;map.wrapS=faceMap.wrapS;map.wrapT=faceMap.wrapT;
   map.offset.copy(faceMap.offset);map.repeat.copy(faceMap.repeat);map.center.copy(faceMap.center);map.rotation=faceMap.rotation;
   if(target===surfaceMaps){map.wrapS=map.wrapT=THREE.RepeatWrapping;map.offset.set(0,0);map.repeat.set(1,1);map.center.set(0,0);map.rotation=0;}

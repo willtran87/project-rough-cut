@@ -42,13 +42,34 @@ export function terrainSlope(x,y,yaw){
 
 // Ground-only tessellation, at construction time. Existing textured patches
 // follow the same height function instead of floating as flat disks over hills.
+// Vertex welding compares every component at five decimal places. The integer
+// below identifies the same class as Number#toFixed(5) did when the key was a
+// string: toFixed rounds the exact value, so a product within float error of a
+// rounding boundary defers to it, and a negative value that prints as
+// "-0.00000" stays distinct from zero.
+function weldUnit(v){
+ const s=v*1e5;let r=Math.round(s);
+ if(r!==r)return 1e15;
+ if(Math.abs(Math.abs(s-Math.floor(s))-.5)<1e-4){const text=v.toFixed(5);r=Math.round(Number(text)*1e5);if(r===0)return text.charCodeAt(0)===45?.5:0;return r;}
+ return r===0?(v<0?.5:0):r;
+}
 export function contourGround(THREE,g,{retainFlatTriangles=false}={}){
  const p=g.attributes.position,u=g.attributes.uv,color=g.attributes.color,idx=g.index,positions=[],uvs=[],colors=[],indices=[],cache=new Map();
+ // cache maps a hash to the newest vertex id; welded holds each vertex's
+ // rounded components and chain links ids sharing a hash. Equality is always
+ // decided on the full rounded tuple, never on the hash.
+ const width=5+(color?color.itemSize:0),welded=[],chain=[],unit=new Array(width);
  // Default callers retain the established raised-border normal field.
  // Authored bunker banks opt into their original planar triangles wherever
  // the underlying terrain is provably flat; curved terrain stays tessellated.
  let horizontal=true;for(let i=1;i<p.count;i++)if(Math.abs(p.getY(i)-p.getY(0))>1e-7){horizontal=false;break;}
- function vertex(a){const key=a.map(v=>v.toFixed(5)).join(',');if(cache.has(key))return cache.get(key);const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)colors.push(...a.slice(5,5+color.itemSize));cache.set(key,id);return id;}
+ function vertex(a){
+  let hash=a.length;for(let k=0;k<a.length;k++){const r=unit[k]=weldUnit(a[k]);hash=Math.imul(hash^(r*2|0),0x9e3779b1);hash^=hash>>>15;}
+  const head=cache.get(hash);
+  if(a.length===width)for(let id=head;id!==undefined;id=chain[id]){let same=true;for(let k=0,o=id*width;k<width;k++)if(welded[o+k]!==unit[k]){same=false;break;}if(same)return id;}
+  const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)colors.push(...a.slice(5,5+color.itemSize));
+  for(let k=0;k<width;k++)welded.push(unit[k]);chain.push(head);cache.set(hash,id);return id;
+ }
  function clip(poly,dist){
   const out=[];if(!poly.length)return out;
   let a=poly.at(-1),da=dist(a);
