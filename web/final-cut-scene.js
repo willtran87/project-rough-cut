@@ -11,7 +11,7 @@ import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import * as Art from './pixel-art.js';
 import {collapsePose} from './final-cut-ending.js';
 import {createFinalCutJoe} from './final-cut-joe.js';
-import {finishFinalCutJoe} from './final-cut-joe-finish.js';
+import {finishFinalCutJoe,preloadFinalCutJoeFinish} from './final-cut-joe-finish.js';
 import {ARRIVAL_WALLS,OVERLOOK,OVERLOOK_RAMPS,BAY,ACCESS,OVERLOOK_ACCESS,ACCESS_GATE,ACCESS_FENCE,groundHeight} from './final-cut-arrival-layout.js';
 import {WALLS,REFUGES,SECTORS,BREAKABLES,PUMP,BELL,NOTE,BALL_BASKETS,SWALE,LANES,clamp,isCut,inside,distance,lineClear} from './final-cut-course.js';
 import {MAX_WORLD_BALLS,flightPoint} from './final-cut-balls.js';
@@ -46,6 +46,9 @@ import {createRefugeLighting} from './final-cut-refuge-lighting.js';
 
 export async function createFinalCutScene(canvas,onProgress=()=>{}){
  onProgress('Preparing the championship grounds…');
+ // Start the rider model and his finish maps now so their download and decode
+ // overlap the atlas loads and static scene construction below.
+ const riderAsset=new GLTFLoader().loadAsync('./assets/models/joe-riding-pixel.glb');riderAsset.catch(()=>{});preloadFinalCutJoeFinish();
  await Promise.all(['rough-cut-architecture-surfaces-v1','rough-cut-needle-sprays-v1','rough-cut-verge-atlas-v1','final-cut-reed-clumps-v1','final-cut-rough-clumps-v1','final-cut-stone-materials-v1','final-cut-ground-materials-v1','final-cut-industrial-materials-v1','rough-cut-night-sky-v2','rough-cut-moon-v1','rough-cut-cloud-atlas-v2','rough-cut-far-ridge-v1','rough-cut-distant-treeline-v1','rough-cut-distant-clubhouse-v1'].map(Art.source));
  if(Art.stats().errors.length)throw Error('Course materials could not load. Reload to retry.');
  const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:true});renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -304,7 +307,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  const hydraulics=createFinalCutHydraulics(body,materials,audit);
  const boss=createFinalCutBoss(body,wings,wheels);
  const headlights=createFinalCutHeadlights(renderer,body,{software});
- const gltf=await new GLTFLoader().loadAsync('./assets/models/joe-riding-pixel.glb'),rider=gltf.scene;
+ const gltf=await riderAsset,rider=gltf.scene;
  rider.traverse(o=>{if(o.name==='MowerRigidBody'||o.name.startsWith('Wheel'))o.visible=false;if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});
  const joeFinish=await finishFinalCutJoe(rider);joeFinish.prepare(renderer);
  rider.position.set(0,1.05,.05);body.add(rider);

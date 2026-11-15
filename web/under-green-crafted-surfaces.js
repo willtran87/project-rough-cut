@@ -8,7 +8,9 @@ export async function createCraftedDrainSurfaces(){
  const sets={},owned=[],sources=[];
  const texture=(canvas,color=true)=>{const t=new THREE.CanvasTexture(canvas);t.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=color?THREE.NearestFilter:THREE.LinearFilter;t.minFilter=color?THREE.NearestMipmapLinearFilter:THREE.LinearMipmapLinearFilter;owned.push(t);return t;};
  const hash=n=>{const v=Math.sin(n*127.1+43.71)*43758.5453;return v-Math.floor(v);};
- const definitions=[['surfaces-v1.png',[null,'bark',null,null]],['surfaces-industrial-v1.png',[null,null,null,'sand']],['surfaces-masonry-v3.png',[null,null,'concrete','tile']],['masonry-field-v4.png',['masonry'],1],['sediment-field-v1.png',['mud'],1],['paving-field-v3.png',['floor'],1]];
+ // Bark, sand and concrete/tile ship as the exact tiles formerly cut from
+ // three 2x2 atlases; the unused quadrants are archived outside the bundle.
+ const definitions=[['surfaces-bark-v1.png',['bark'],1],['surfaces-sand-v1.png',['sand'],1],['surfaces-concrete-tile-v3.png',['concrete','tile'],2,1],['masonry-field-v4.png',['masonry'],1],['sediment-field-v1.png',['mud'],1],['paving-field-v3.png',['floor'],1]];
  definitions.push(['bunker-earth-sand-v1.png',['bankSoil','bankSand'],2,1]);
  // A full four-metre painted-steel field replaces the two-metre repeating
  // peel strip. Quiet coating between unequal corrosion islands lets the

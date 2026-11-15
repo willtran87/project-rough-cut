@@ -42,9 +42,9 @@
   {
     "source": "web/under-green-crafted-surfaces.js",
     "images": [
-      "under-green/surfaces-v1.png",
-      "under-green/surfaces-industrial-v1.png",
-      "under-green/surfaces-masonry-v3.png",
+      "under-green/surfaces-bark-v1.png",
+      "under-green/surfaces-sand-v1.png",
+      "under-green/surfaces-concrete-tile-v3.png",
       "under-green/masonry-field-v4.png",
       "under-green/sediment-field-v1.png",
       "under-green/paving-field-v3.png",

@@ -113,6 +113,9 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  const scarSoilAsset=loadMowerScarSoil();scarSoilAsset.catch(()=>{});
  Art.source('rough-cut-needle-sprays-v1');Art.source('rough-cut-verge-atlas-v1');
  const riderAsset=loader.loadAsync('./assets/models/joe-riding-pixel.glb');riderAsset.catch(()=>{});
+ // The course ghosts are created after the scene is built; warm their model
+ // in the HTTP cache now so that late request does not wait on the network.
+ fetch('./assets/models/ghost-joe.glb?v=20261107-motion').then(response=>response.ok?response.arrayBuffer():null).catch(()=>{});
  const surfaceAssets=loadBakedCourseSurfaces();surfaceAssets.catch(()=>{});
  const backdrop=createParallax({travelScale:.08,showEstate:false,storm:.97,night:.92,stormCanopy:true,estateHorizon:true});
  const glassMap=Art.texture('back-nine-glass-v1',null,null,true);

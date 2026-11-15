@@ -69,7 +69,7 @@ const opening=createOpeningStory({slides:BACK_NINE_SLIDES,storageKey:'rough-cut.
  onSlide:(_slide,index)=>{openingSlide=index;audio.intro(index,true,settings);},
  finish:()=>{openingActive=false;if(run.mode==='briefing')prepareBriefArt();audio.intro(openingSlide,false,settings);keys.clear();touch.clear();accumulator=0;last=performance.now();uiMode='';paintUI();prepareCourse();if(ready)$('primary').focus({preventScroll:true});},
 });
-function showOpening(){if(openingActive)return;openingActive=true;keys.clear();touch.clear();setHidden('panel',true);setHidden('defeat-tableau',true);$('panel').dataset.defeat='false';setHidden('hud',true);setHidden('touch',true);$('dread').style.opacity='0';opening.open();}
+function showOpening(){if(openingActive)return;openingActive=true;prefetchBackNineCourse();keys.clear();touch.clear();setHidden('panel',true);setHidden('defeat-tableau',true);$('panel').dataset.defeat='false';setHidden('hud',true);setHidden('touch',true);$('dread').style.opacity='0';opening.open();}
 function freshRound(){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;save();world?.resetCamera();uiMode='';needsDraw=true;if(!opening.shouldSkip())showOpening();else{paintUI();prepareCourse();}}
 function save(){if(run.mode==='complete')RCProgression.complete('back-nine');if(!writeRecord(SAVE,{version:2,variationSeed:run.variation.seed,completed:run.mode==='complete',unlocked:true,escape:run.mode==='complete'?run.escape:null})){run.message='Browser storage is unavailable. This attempt can still be played.';run.messageTime=4;}}
 function input(){
@@ -187,6 +187,7 @@ window.render_game_to_text=()=>JSON.stringify({mode:openingActive?'back_nine_ope
 // expose observation/time stepping but no teleport or completion command.
 if(new URLSearchParams(location.search).has('test'))window.__backNine={get run(){return run;},set run(v){run=v;events=v.events.length;world?.resetCamera();uiMode='';needsDraw=true;},simulate,render,whenPresented,COURSE};
 import {createMenuFrameGate} from './menu-frame-gate.js';
+import {prefetchBackNineCourse} from './back-nine-prefetch.js';
 const menuFrameDue=createMenuFrameGate();let idleUIKey='';
 function frame(now){
  const delta=Math.min(.1,(now-last)/1000);last=now;
