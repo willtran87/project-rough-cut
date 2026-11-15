@@ -55,5 +55,7 @@ export function fadingWaterInstances(scene,capacity,texture,{color=0x99988d,opac
  // Explicit layering prevents a large transparent flood plane from sorting
  // over contact ripples. Opaque walls and actors still depth-test normally.
  mesh.renderOrder=2;material.forceSinglePass=true;scene.add(mesh);
- return {mesh,alphas,finish(count){mesh.count=count;mesh.visible=count>0;if(count){mesh.instanceMatrix.needsUpdate=true;alphas.needsUpdate=true;}},dispose(){geometry.dispose();material.dispose();mesh.removeFromParent();}};
+ // Callers fill instances contiguously from zero, so only the live prefix is
+ // uploaded; the remainder of the pool is never drawn while count excludes it.
+ return {mesh,alphas,finish(count){mesh.count=count;mesh.visible=count>0;if(count){const matrices=mesh.instanceMatrix;matrices.clearUpdateRanges();matrices.addUpdateRange(0,count*16);matrices.needsUpdate=true;alphas.clearUpdateRanges();alphas.addUpdateRange(0,count);alphas.needsUpdate=true;}},dispose(){geometry.dispose();material.dispose();mesh.removeFromParent();}};
 }
