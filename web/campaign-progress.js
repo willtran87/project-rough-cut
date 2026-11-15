@@ -37,6 +37,10 @@
   if(id==='back-nine'||id==='under-green')return {id:'final-cut',href:`./final-cut.html?from=${id==='back-nine'?'garage':'drain'}`};
   return null;
  }
+ // The menu's main action continues the story only into a chapter whose card is
+ // still locked: that first entry is what unlocks it. Once the next chapter can
+ // be selected, the main action launches the chapter the player selected.
+ function continuation(id,p=state()){const target=next(id,p);return target&&!available(target.id,p)?target:null;}
  function complete(id,route){const p=state();if(!ids.includes(id))return;if(id==='night-order'&&!['shed','drain'].includes(route))return;p.completed[id]=true;p.entered[id]=true;p.current=id;if(id==='night-order'){p.exits[route]=true;p.lastExit=route;}save(p);}
  function enter(id){const p=state();if(!available(id,p))return false;p.entered[id]=true;p.current=id;save(p);return true;}
  function admit(id){
@@ -48,6 +52,6 @@
  }
  const reason=id=>id==='back-nine'?'Escape Night Order through the shed, then continue into this route.':id==='under-green'?'Escape Night Order through the drain, then continue into this route.':'Finish either Chapter 02 route, then continue into the final round.';
  function menuHref(id){if(!available(id))return null;const p=state();return `./${id}.html${p.completed[id]?'?replay=1':''}`;}
- window.RCProgression={state,available,next,complete,enter,admit,reason,menuHref};
+ window.RCProgression={state,available,next,continuation,complete,enter,admit,reason,menuHref};
  state();
 })();

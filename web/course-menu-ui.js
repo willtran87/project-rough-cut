@@ -63,7 +63,7 @@
   panel.querySelector('.course-menu-main').hidden=clock;panel.querySelector('.course-clocked-out').hidden=!clock;
   if(!nav.children.length)data.actions.slice(0,2).forEach((action,i)=>{const b=document.createElement('button');b.type='button';b.onclick=()=>api.activate(i);b.dataset.menuAction=i;b.innerHTML='<strong></strong><small></small>';b.onfocus=()=>api.select(i);nav.append(b);});
   for(const b of panel.querySelectorAll('[data-menu-action]')){const i=Number(b.dataset.menuAction);b.querySelector('strong').textContent=data.actions[i].label;b.querySelector('small').textContent=i===2?chapter.title:data.actions[i].description;b.dataset.selected=String(data.selected===i);}
-  const progress=RCProgression.state(),next=RCProgression.next(chapter.id,progress);
+  const progress=RCProgression.state(),next=(RCProgression.continuation||RCProgression.next)(chapter.id,progress);
   start.hidden=clock;start.disabled=!RCProgression.available(chapter.id,progress);start.querySelector('strong').textContent=next?'Continue story':progress.completed[chapter.id]?'Replay chapter':data.actions[2].label;start.querySelector('small').textContent=next?RCChapterSelect.chapter(next.id).title:chapter.title;start.setAttribute('aria-label',start.textContent.trim());
   replay.hidden=clock||!next;replay.textContent='Replay chapter · R / RB';replay.setAttribute('aria-label','Replay '+chapter.title+' from the start');
   nav.children[0].setAttribute('aria-controls','chapter-links');

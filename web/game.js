@@ -60914,13 +60914,18 @@ import { createCourseAnnouncement } from './course-announcement.js';
     beginGameplayPerformanceWindow();
   }
 
+  /** The locked next chapter that Start continues into, if any; otherwise Start launches the selected chapter. */
+  function menuContinuation(id) {
+    return (RCProgression.continuation || RCProgression.next)(id);
+  }
+
   function activateMenu(forceReplay=false) {
     switch (state.menuIndex) {
       case 0:
         window.RCCourseMenu?.openChapters();
         break;
       case 2:
-        if(!forceReplay){const next=RCProgression.next(RCChapterSelect.selected().id);if(next){window.location.assign(next.href);return;}}
+        if(!forceReplay){const next=menuContinuation(RCChapterSelect.selected().id);if(next){window.location.assign(next.href);return;}}
         if(window.RCChapterSelect?.selected().href){const href=RCProgression.menuHref(RCChapterSelect.selected().id);if(href)window.location.assign(href);return;}
         loadAssetPhase("course");
         loadAssetPhase("results");
@@ -63942,7 +63947,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         window.RCChapterSelect?.shift(1);
       }
       if (pressed(5)) {
-        if(RCProgression.next(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
+        if(menuContinuation(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
       }
       if (pressed(4))window.RCCourseMenu?.toggleDetails();
     } else if (state.mode === "settings") {
@@ -64147,7 +64152,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         enterMenu();
         event.preventDefault();
       } else if (event.code === "KeyR" && !event.repeat) {
-        if(RCProgression.next(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
+        if(menuContinuation(RCChapterSelect.selected().id))clubhouseControls.replay();else toggleOvertimeAudit();
         event.preventDefault();
       } else if (event.code === "ArrowDown") {
         state.menuIndex = (state.menuIndex + 1) % MENU_ITEMS.length;

@@ -36,7 +36,10 @@ const out=process.env.FLOW_EVIDENCE||'output/campaign-flow';fs.mkdirSync(out,{re
  await open();assert(await page.locator('[data-chapter="back-nine"]').isEnabled());assert(await page.locator('[data-chapter="final-cut"]').isDisabled());
  await page.locator('.course-menu-start').click();await page.waitForURL('**/final-cut.html?from=garage');await page.waitForFunction(()=>window.render_game_to_text,null,{timeout:180000});
  assert(await page.evaluate(()=>RCProgression.available('final-cut')));checks.push('Finale unlocks only on continuation from completed Chapter 02');
- await open();await page.locator('[data-chapter="back-nine"]').click();await page.getByRole('button',{name:'Replay The Back Nine from the start'}).click();await page.waitForURL('**/back-nine.html?replay=1');checks.push('Earned chapter replay is available only from the main menu');
+ await open();await page.locator('[data-chapter="back-nine"]').click();
+ // With the finale already unlocked, Start launches the selected chapter; the separate replay command is only for a locked continuation.
+ assert(await page.locator('[data-clubhouse-command="replay"]').isHidden());{const label=await page.locator('.course-menu-start').innerText();assert(label.includes('Replay chapter')&&label.includes('The Back Nine'),label);}
+ await page.locator('.course-menu-start').click();await page.waitForURL('**/back-nine.html?replay=1');checks.push('Start launches the selected chapter once its continuation is unlocked; earned replay is available only from the main menu');
  await open();await page.evaluate(()=>{__flow.resetFirstHole();__flow.completeHole('drain');__flow.enterMenu();__flow.render();});
  await page.locator('.course-menu-start').click();await page.waitForURL('**/under-green.html?from=drain');await page.waitForFunction(()=>window.render_game_to_text,null,{timeout:120000});assert(await page.evaluate(()=>RCProgression.available('under-green')));
  await page.evaluate(()=>localStorage.setItem('rough-cut.under-green-opening.v1',JSON.stringify({skip:true})));
