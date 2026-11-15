@@ -32,13 +32,7 @@ const settings=readRecord;
 const shared=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce)').matches),spatialStore=RCSpatialPreferences.create(),feel=RCFoundation.readComfort(),mouseLook=createMouseLook();
 let spatial=spatialStore.get();
 const bindings=actionBindings('onFoot',shared.keyboardBindings,shared.keyboardBindingsVersion||0),label=id=>keyLabel(bindings[id]);
-// Honor the requested E action key even when an old/custom Enter binding remains.
-if(bindings.interact==='Enter'){
- const conflict=Object.keys(bindings).find(id=>id!=='interact'&&bindings[id]==='KeyE');
- if(conflict)bindings[conflict]='Enter';
- bindings.interact='KeyE';shared.keyboardBindings={...bindings};shared.keyboardBindingsVersion=3;
- patchRecord(CAMPAIGN_KEY,{keyboardBindings:{...bindings},keyboardBindingsVersion:3});
-}
+// actionBindings retires a saved Enter binding in every chapter, so interact is never Enter here.
 const down=id=>keys.has(bindings[id]),deviceGain=device=>clamp(Number(spatial[device])||1,.25,2),deadzone=clamp(Number(shared.stickDeadzone)||.22,.1,.3),horizontalSign=shared.invertLook?-1:1;
 const legacyComfort=settings('rough-cut.under-green-comfort.v1');
 // A prior chapter-only mute stays local until the player chooses campaign mute.

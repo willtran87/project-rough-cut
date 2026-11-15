@@ -3,7 +3,9 @@ export const CONTROL_PROFILES=Object.freeze({
  onFoot:{move_up:'KeyW',move_down:'KeyS',move_left:'KeyA',move_right:'KeyD',sprint:'ShiftLeft',crouch:'KeyC',focus:'KeyR',look_back:'KeyQ',interact:'KeyE',chip:'Space',controls:'KeyH'},
  chase:{move_up:'KeyW',move_down:'KeyS',move_left:'KeyA',move_right:'KeyD',brake:'Space',look_back:'KeyQ',interact:'KeyE'}
 });
-const reserved=new Set(['Escape','KeyF','Tab','CapsLock','MetaLeft','MetaRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
+// Enter confirms menus and activates focused buttons, so it is never an action
+// key. It was the interact default before E; saved profiles may still hold it.
+const reserved=new Set(['Escape','Enter','KeyF','Tab','CapsLock','MetaLeft','MetaRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
 export function bindingCodeAllowed(code){return typeof code==='string'&&code.length>0&&code.length<=32&&!reserved.has(code)&&!/^F\d{1,2}$/.test(code)&&code!=='Unidentified';}
 export function actionBindings(profile,overrides={},version=3){
  const defaults=CONTROL_PROFILES[profile];if(!defaults)throw Error('Unknown control profile: '+profile);
@@ -11,9 +13,15 @@ export function actionBindings(profile,overrides={},version=3){
  const legacy=profile==='onFoot'&&version<3;
  const base=legacy?{...defaults,focus:'KeyQ',look_back:'KeyR'}:defaults;
  const result=Object.fromEntries(Object.entries(base).map(([id,code])=>[id,bindingCodeAllowed(overrides[id])?overrides[id]:code]));
- // Older saves can contain only changed keys or unrelated custom controls.
- // Retire the old Enter default without discarding those controls or stealing E.
- if(legacy&&version<2&&result.interact==='Enter'&&!Object.entries(result).some(([id,code])=>id!=='interact'&&code==='KeyE'))result.interact='KeyE';
+ // A saved Enter binding has already fallen back to its action's default
+ // above (interact returns to E). If the player had put another action on that
+ // key, move that action to its own default when free, so one retired key does
+ // not discard the rest of their custom controls.
+ for(const id of Object.keys(result)){
+  if(overrides[id]!=='Enter')continue;
+  const other=Object.keys(result).find(action=>action!==id&&result[action]===result[id]);
+  if(other&&!Object.values(result).includes(base[other]))result[other]=base[other];
+ }
  // Migrate the former default pair together; retain deliberately remapped keys.
  if(legacy&&result.focus==='KeyQ'&&result.look_back==='KeyR')Object.assign(result,{focus:'KeyR',look_back:'KeyQ'});
  return new Set(Object.values(result)).size===Object.keys(result).length?result:{...defaults};
