@@ -1,12 +1,12 @@
 # Rough Cut: Golf-Course Horror and Joe Pursuit Game Quality Checklist
 
-> **Document status — July 29, 2026:** This is the living production checklist for **Rough Cut**. The project has moved beyond concepting into a browser-playable vertical slice. The status section below records what exists now; the comprehensive checklist that follows remains the target for the full game.
+> **Scope update — November 15, 2026:** The checklist below preserves the July 29 vertical-slice baseline and full-game design targets. Its checked boxes and “current” headings are historical assertions, not a fresh acceptance audit of the local four-chapter game. Use the [current overview](../README.md), [documentation index](README.md), and chapter-specific QA evidence for implementation status.
 >
-> **Current milestone:** A polished first-pass of Hole 1, “The Pilot,” with the “Here’s Joey!” opening, two complete escape routes with vulnerable Final Filing commitments, three curated Night Orders, an aimed golf-chip system, recoverable stealth pursuit, Joe’s patrol/investigate/search/chase AI, generated pixel-art assets, route-aware win states, a generated capture state, adaptive HUD, true pause flow, persistent audio/presentation/key-binding settings, letter-only live File Projection, course grading, personal records, a target-driven after-action replay hub, and automated browser verification.
+> Since that baseline, the browser game gained fixed 3D presentation, The Back Nine, Under the Green and The Final Cut. Night Order now has one playable layout, and the animated opening cannot be skipped. Shared controls and chapter selection have also changed. These changes do not automatically satisfy the remaining full-game or human/device acceptance items below.
 
 ## Status Legend and Use
 
-- `[x]` means the feature is implemented and browser-verified in the current vertical slice.
+- `[x]` records implementation/browser verification claimed by the historical baseline; revalidate it against current source before using it as release acceptance.
 - `[ ]` means the item is planned, incomplete, or still needs production-level validation.
 - “Prototype constraint” identifies a deliberate simplification that should not silently become the final design.
 - The detailed quality checklist below is primarily a **full-game acceptance checklist**. An unchecked item does not necessarily mean the vertical slice is broken.
@@ -23,7 +23,7 @@
 - [x] Avoid turning the player into an action hero. Survival depends on route choice, timing, attention management, and environmental knowledge.
 - [x] Use “**Here’s Joey!**” as the opening punchline and threat, delivered through subtitles and visual performance rather than a synthetic character voice.
 
-## Current Playable Vertical Slice
+## Historical Playable Vertical Slice (July 29 baseline)
 
 ### Implemented Story Premise
 

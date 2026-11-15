@@ -1,0 +1,45 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const out='output/final-cut/outcome',url='http://127.0.0.1:4187/final-cut.html?test';
+fs.mkdirSync(out,{recursive:true});
+(async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],layouts=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ const ready=p=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000}),tick=(ms=0,p=page)=>p.evaluate(ms=>advanceTime(ms),ms),read=(p=page)=>p.evaluate(()=>JSON.parse(render_game_to_text()));
+ // Explicit completed-machine fixtures isolate the result UI; E still performs the real road interaction.
+ async function finish(fields={},p=page){await p.evaluate(async fields=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:2,won:true,...fields});r.mode='aftermath';Object.assign(r.player,{x:0,y:103,yaw:0});__finalCut.run=r;},fields);await tick(0,p);await p.keyboard.press('e');await tick(17,p);assert.equal((await read(p)).mode,'final_cut_complete');await p.locator('#ending-image').evaluate(img=>img.decode());if(await p.locator('#final-cut-story').evaluate(d=>d.open))await p.locator('[data-story=skip]').click();}
+ await page.goto(url);await ready(page);await tick();
+ await finish();assert.equal((await read()).outcome.id,'survived');assert.match(await page.locator('#result').innerText(),/withdraws Joe’s course-control access/);assert.equal(await page.locator('#outcome-records li').count(),0);
+ await page.screenshot({path:out+'/survived-2560.png'});
+ await finish({route:'garage',evidenceVersion:2,crewLogs:2});assert.deepEqual((await read()).outcome.records.map(r=>r.id),['crew-clubhouse']);assert.match(await page.locator('#outcome-route').innerText(),/service garage/);
+ await finish({route:'drain',evidenceVersion:2,groundskeeper:true,loadLimit:true,priorEvidence:3});
+ assert.deepEqual((await read()).outcome.records.map(r=>r.id),['load-limit','groundskeeper','change-requests']);assert.match(await page.locator('#outcome-route').innerText(),/keeper’s sluice/);
+ const original=await read();
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
+  await page.setViewportSize({width,height});await tick();await page.locator('#panel').evaluate(el=>el.scrollTop=0);await page.screenshot({path:`${out}/documented-${width}.png`});
+  const geometry=await page.evaluate(()=>{const panel=document.querySelector('#panel'),nodes=[...document.querySelectorAll('#outcome-records li,.outcome-facts dd,#show-credits')].filter(e=>e.getClientRects().length);return {overflow:panel.scrollWidth>panel.clientWidth+1||document.documentElement.scrollWidth>innerWidth,contentsFit:nodes.every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1;}),artRatio:document.querySelector('#ending-image').naturalWidth/document.querySelector('#ending-image').naturalHeight};});assert(!geometry.overflow&&geometry.contentsFit);assert(geometry.artRatio>1.7&&geometry.artRatio<1.9);
+  await page.locator('#show-credits').scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/records-${width}.png`});
+  await page.locator('#show-credits').click();assert.equal((await read()).resultView,'credits');await page.locator('#panel').evaluate(el=>el.scrollTop=0);await page.screenshot({path:`${out}/credits-${width}.png`});
+  const license=await page.request.get('http://127.0.0.1:4187/vendor/three/LICENSE');assert(license.ok());assert.match(await license.text(),/MIT License/);
+  await page.locator('#show-notice').click();assert.equal((await read()).resultView,'notice');await page.locator('#panel').evaluate(el=>el.scrollTop=0);await page.screenshot({path:`${out}/notice-${width}.png`});
+  assert.match(await page.locator('#post-credits').innerText(),/ACCOUNT CLOSED/);await page.locator('#notice-skip').click();assert.equal((await read()).resultView,'summary');
+  const after=await read();assert.equal(after.runFacts.elapsed,original.runFacts.elapsed);assert.deepEqual(after.ending,original.ending);assert.equal(after.completed,true);layouts.push({width,height,...geometry});
+ }
+ checks.push('Survival-only, individual crew and drainage/local-record outcomes; all result/credits/optional-notice layouts at four sizes; no simulation advancement or victory loss');
+ await page.setViewportSize({width:1280,height:720});await page.locator('#mastery summary').click();assert.equal(await page.locator('#mastery-list li').count(),3);assert(!await page.locator('#mastery-list').innerText().then(s=>s.includes('Earned')));await page.screenshot({path:out+'/mastery-1280.png'});await page.locator('#mastery summary').click();
+ await page.locator('#show-credits').focus();await page.keyboard.press('Enter');assert.equal((await read()).resultView,'credits');await page.keyboard.press('Tab');await page.keyboard.press('Enter');assert.equal((await read()).resultView,'notice');await page.keyboard.press('Escape');assert.equal((await read()).resultView,'summary');
+ await page.evaluate(()=>{window.pad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[pad];});await tick(50);
+ const button=async n=>{await page.evaluate(n=>{pad.buttons[n].pressed=true;},n);await tick(17);await page.evaluate(n=>{pad.buttons[n].pressed=false;},n);await tick(17);};
+ await page.locator('#show-credits').focus();await button(0);assert.equal((await read()).resultView,'credits');await button(13);await button(0);assert.equal((await read()).resultView,'notice');await button(1);assert.equal((await read()).resultView,'summary');await button(0);assert.equal((await read()).resultView,'credits');await button(9);assert.equal((await read()).resultView,'summary');await page.evaluate(()=>navigator.getGamepads=()=>[]);await tick(17);
+ checks.push('Keyboard Tab/Enter/Escape and gamepad A/D-pad/B/Start reach and leave optional content without starting a new run');
+ await page.reload();await ready(page);await tick();assert.equal((await read()).mode,'final_cut_complete');assert.deepEqual((await read()).outcome.records,original.outcome.records);
+ await page.locator('#primary').click();await tick(17);const replay=await read();assert.equal(replay.mode,'final_cut_playing');assert.equal(replay.runFacts.captures,0);assert(replay.runFacts.eligible);assert.notEqual(replay.runFacts.id,original.runFacts.id);assert(replay.loadLimit&&replay.groundskeeper);
+ // A normal reload immediately after a ball throw must keep the history even before a mowing pass ends.
+ await page.evaluate(()=>Object.assign(__finalCut.run.player,{x:16,y:5,yaw:0}));await page.keyboard.press('Space');await tick(17);const thrown=await read();assert.equal(thrown.stats.balls,1);await page.reload();await ready(page);await tick();const restored=await read();assert.equal(restored.stats.balls,1);assert.equal(restored.runFacts.id,thrown.runFacts.id);assert(restored.runFacts.elapsed>=thrown.runFacts.elapsed);
+ await page.evaluate(()=>localStorage.setItem('rough-cut.final-cut-career.v1',JSON.stringify({mastery:{bad:true}})));await finish();assert.equal((await read()).mode,'final_cut_complete');
+ checks.push('Completed reload preserves records/art; replay begins fresh history; immediate post-throw reload retains history; malformed career mastery does not break result rendering');
+ const touch=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),t=await touch.newPage();t.on('pageerror',e=>errors.push(e.message));await t.goto(url);await ready(t);await tick(0,t);await finish({route:'garage',evidenceVersion:2,crewLogs:3},t);
+ await t.locator('#show-credits').tap();assert.equal((await read(t)).resultView,'credits');await t.locator('#show-notice').tap();assert.equal((await read(t)).resultView,'notice');await t.locator('#notice-skip').tap();assert.equal((await read(t)).resultView,'summary');await touch.close();checks.push('Real touch taps open credits/notice and skip safely in portrait');
+ const denied=await browser.newContext();await denied.addInitScript(()=>{Storage.prototype.getItem=()=>{throw Error('denied');};Storage.prototype.setItem=()=>{throw Error('denied');};});const d=await denied.newPage();d.on('pageerror',e=>errors.push(e.message));await d.goto(url);await ready(d);await tick(0,d);await finish({},d);assert.match(await d.locator('#save-note').innerText(),/Storage is unavailable/);await d.locator('#show-credits').click();assert.equal((await read(d)).resultView,'credits');await denied.close();checks.push('Storage denial keeps the escape/result/credits usable and clearly reports unsaved progress');
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,layouts,errors},null,2));console.log(JSON.stringify({passed:true,checks,layouts,errors},null,2));
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

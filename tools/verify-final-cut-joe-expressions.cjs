@@ -1,0 +1,34 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const software=process.argv.includes('--software'),root=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/final-cut/joe-expressions',out=`${root}/${software?'software':'hardware'}`;
+const hook=`window.__expressionAudit={
+ view(kind){const head=new THREE.Vector3(...joeActor.stats().head),orientation=body.getWorldQuaternion(new THREE.Quaternion());const side=kind==='side';camera.position.copy(head).add(new THREE.Vector3(side?.75:0,.15,side?-.65:-1.05).applyQuaternion(orientation));camera.lookAt(head.clone().add(new THREE.Vector3(0,.12,-.03).applyQuaternion(orientation)));camera.updateMatrixWorld(true);renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;},
+ resources(){return expressionTextures.map(t=>({width:t.image.width,height:t.image.height,flipY:t.flipY,colorSpace:t.colorSpace,filter:t.magFilter,live:gl.isTexture(renderer.properties.get(t).__webglTexture)}));},
+ release(){const handles=expressionTextures.map(t=>renderer.properties.get(t).__webglTexture).filter(Boolean);const before=handles.filter(t=>gl.isTexture(t)).length;joeFinish.dispose();return {before,after:handles.filter(t=>gl.isTexture(t)).length};}
+};`;
+(async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('joeFinish.prepare(renderer);'));
+ await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('joeFinish.prepare(renderer);','const expressionTextures=[],initTexture=renderer.initTexture;renderer.initTexture=t=>{expressionTextures.push(t);return initTexture.call(renderer,t);};joeFinish.prepare(renderer);renderer.initTexture=initTexture;').replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__expressionAudit&&JSON.parse(render_game_to_text()).ready);
+ const fixture=async(kind)=>p.evaluate(async kind=>{
+  const {createRun}=await import('./final-cut-sim.js'),{capturePresentation}=await import('./final-cut-defeat.js');
+  const r=kind.startsWith('panic')||kind==='aftermath'?createRun({checkpoint:2,ending:{age:kind==='panic' ? 2 : kind==='panic-transition'?.4:6.5}}):createRun({checkpoint:1});
+  r.mode=r.won?'aftermath':'playing';Object.assign(r.player,{x:0,y:56,yaw:Math.PI,pitch:-.22});
+  if(!r.won)Object.assign(r.rig,{x:0,y:50,yaw:0,phase:kind==='search'?'turn':kind==='attack-transition'?'announce':kind==='frustrated'?'disengage':'pass',age:kind==='attack-transition'?.14:.3,deployment:1,speed:0,evidence:'observed player'});
+  else Object.assign(r.player,{x:r.rig.x+Math.sin(r.rig.yaw)*6,y:r.rig.y+Math.cos(r.rig.yaw)*6,yaw:r.rig.yaw+Math.PI,pitch:-.22});
+  if(kind==='scrutiny'){r.failure=capturePresentation(r,{kind:'chassis',id:'chassis'});r.mode='caught';}
+  __finalCut.run=r;await advanceTime(0);return JSON.parse(render_game_to_text()).graphics.joeFinish;
+ },kind);
+ const shot=async(name,view)=>{if(view)await p.evaluate(view=>__expressionAudit.view(view),view);await p.screenshot({path:`${out}/${name}.png`});const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));views.push({name,graphics:s.graphics});assert(s.graphics.joe.handError<.05);assert(s.graphics.joe.footError<.05);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));};
+ const poses=['search','attack-transition','attack','frustrated','panic-transition','panic','aftermath','scrutiny'];
+ for(const kind of poses){await fixture(kind);await shot(kind,'face');await p.evaluate(()=>__finalCut.draw());await shot(kind+'-encounter');if(['search','attack','panic'].includes(kind))await shot(kind+'-side','side');}
+ await fixture('attack-transition');await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(0));const paused=await p.screenshot(),pauseState=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.joeFinish.expression);await p.evaluate(()=>advanceTime(700));assert((await p.screenshot()).equals(paused));assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.joeFinish.expression),pauseState);await p.keyboard.press('Escape');
+ const deterministic=await p.evaluate(async()=>{const {joeExpression}=await import('./final-cut-joe-expression.js'),{createRun,snapshot}=await import('./final-cut-sim.js');const r=createRun({checkpoint:2,ending:{age:2}}),a=joeExpression(r),b=joeExpression(createRun(snapshot(r)));return {a,b};});assert.deepEqual(deterministic.a,deterministic.b);
+ await fixture('attack');await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=reducedMotion]').check();await p.click('#primary');await fixture('attack');assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.joeFinish.expression),{from:'attack',to:'attack',blend:1});await shot('reduced-motion-attack','face');
+ for(const [width,height]of [[1920,1080],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await fixture('attack');await shot('attack-'+width,'face');await p.evaluate(()=>__finalCut.draw());await shot('encounter-'+width);}
+ for(const kind of poses)await fixture(kind);const a=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);for(const kind of poses)await fixture(kind);const z=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);assert.equal(a.textures,z.textures);assert.equal(a.geometries,z.geometries);
+ const resources=await p.evaluate(()=>__expressionAudit.resources());assert.equal(resources.length,z.joeFinish.textures);assert(resources.length>=10);assert(resources.every(t=>t.live));assert.equal(z.joeFinish.expressionMaps,5);
+ const disposal=await p.evaluate(()=>__expressionAudit.release());assert.equal(disposal.before,resources.length);assert.equal(disposal.after,0);assert.deepEqual(errors,[]);
+ fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,resources,disposal,deterministic,errors,warm:{geometries:z.geometries,textures:z.textures}},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,disposal,errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

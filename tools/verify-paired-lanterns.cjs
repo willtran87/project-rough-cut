@@ -1,0 +1,25 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{
+const software=process.argv.includes('--software'),out='output/paired-lanterns-20261108/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];
+p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__lamps={sample:updateGlows,anchors:()=>glowAnchors.map(a=>({x:a.position.x,z:a.position.z,phase:a.phase,intensity:a.intensity})),pools:()=>Array.from(glowFloor.instanceColor.array),programs:()=>renderer.info.programs.length};'}));
+await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__lanternGame={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
+try{
+await p.goto('http://127.0.0.1:4187');await p.locator('canvas').click();await p.keyboard.press('Space');await p.waitForFunction(()=>window.__lanternGame&&JSON.parse(render_game_to_text()).assets.course.ready);
+await p.evaluate(()=>{const t=__lanternGame,s=t.state;t.resetFirstHole();Object.assign(s,{mode:'first_hole',manualTime:true,transitionAlpha:0,guidedHints:false});s.hole.tutorialVisible=false;s.hole.practiceDrill.active=false;Object.assign(s.hole.joe,{x:100,y:700,mode:'patrol',patrolPause:9999});Object.assign(s.player,{x:0,y:1,yaw:0,pitch:-.10});t.render();});
+await p.waitForFunction(()=>RCScene3D.stats().ready,null,{timeout:90000});
+const pure=await p.evaluate(async()=>{const m=await import('./lantern-layout.js');const straight=m.lanternPairs([{x:0,z:0},{x:0,z:-30}]),split=m.lanternPairs([{x:0,z:0},{x:0,z:-7},{x:0,z:-30}]);const samples=Array.from({length:600},(_,i)=>m.lanternFlicker(i/60,2));return {straight,split,min:Math.min(...samples),max:Math.max(...samples),steady:[m.lanternFlicker(0,2,true),m.lanternFlicker(20,8,true)]};});
+const rounded=v=>JSON.parse(JSON.stringify(v,(_,x)=>typeof x==='number'?Number(x.toFixed(8)):x));assert.deepEqual(rounded(pure.straight),rounded(pure.split));assert(pure.min>=.72&&pure.max<=1&&pure.max-pure.min>.1);assert.deepEqual(pure.steady,[1,1]);
+const stats=await p.evaluate(()=>RCScene3D.stats()),pairs=stats.pathLanterns.pairs;assert(pairs.length>=3);for(const pair of pairs){assert(Math.abs((pair.lamps[0].x+pair.lamps[1].x)/2-pair.center.x)<1e-8);assert(Math.abs((pair.lamps[0].z+pair.lamps[1].z)/2-pair.center.z)<1e-8);}
+const sample=async(time,steady)=>p.evaluate(({time,steady})=>{__lamps.sample({time,reducedMotion:steady});return {anchors:__lamps.anchors(),pools:__lamps.pools()};},{time,steady});
+const a=await sample(2,false),c=await sample(2.5,false);assert.notDeepEqual(a,c);assert.deepEqual(await sample(2,false),a);assert.deepEqual(await sample(0,true),await sample(99,true));
+for(const s of [a,c])for(let i=0;i<s.anchors.length;i++)assert(Math.abs(s.anchors[i].intensity-s.pools[i*3])<1e-6,'Pool and flame envelope agree');
+const programs=await p.evaluate(()=>__lamps.programs());
+for(const [name,x,y,yaw]of [['paired',0,1,0],['bend',0,108,0],['close',-8,8,-.3]]){await p.evaluate(({x,y,yaw})=>{const t=__lanternGame;Object.assign(t.state.player,{x,y,yaw,pitch:-.13});t.state.time+=.31;t.state.hole.elapsed+=.31;t.render();},{x,y,yaw});await p.evaluate(async()=>{await RCScene3D.whenPresented();});await p.screenshot({path:out+'/'+name+'.png'});}
+for(const [w,h]of [[1280,720],[844,390]]){await p.setViewportSize({width:w,height:h});await p.evaluate(()=>{Object.assign(__lanternGame.state.player,{x:0,y:1,yaw:0,pitch:-.1});__lanternGame.render();});await p.screenshot({path:out+'/paired-'+w+'.png'});}
+assert.equal(await p.evaluate(()=>__lamps.programs()),programs,'Flicker must not compile a shader on first use');assert.deepEqual(errors,[]);
+fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,pairs,glows:stats.glows,pure,samples:[a,c],programs,errors},null,2));console.log(JSON.stringify({passed:true,software,pairs:pairs.length,glows:stats.glows,programs,errors}));
+}finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {createRun,updateRun} from '../web/back-nine-sim.js';
+import {updateTension,pursuitMultiplier} from '../web/back-nine-tension.js';
+const make=()=>{const r=createRun();r.mode='driving';r.grace=0;r.cart.speed=12;r.cart.y=60;r.joe.y=30;return r;};
+const tick=(r,seconds,visible=true)=>{for(let i=0;i<seconds*60;i++){r.time+=1/60;updateTension(r,1/60,visible);}};
+const r=make();tick(r,7.1);assert.equal(r.tension.phase,'windup');assert.equal(pursuitMultiplier(r,'path',0,30),.94);
+tick(r,1.9);assert.equal(r.tension.phase,'windup','At least two seconds of warning');tick(r,.4);assert.equal(r.tension.phase,'surge');tick(r,.5);
+assert(pursuitMultiplier(r,'path',0,30)>1);assert.equal(pursuitMultiplier(r,'wet',0,30),1);assert.equal(pursuitMultiplier(r,'path',1,30),1);assert.equal(pursuitMultiplier(r,'path',0,5),1);
+r.cart.speed=0;assert.equal(pursuitMultiplier(r,'path',0,30),1);r.cart.speed=12;tick(r,3);assert.equal(r.tension.phase,'recover');assert(r.tension.cooldown>8);
+const hidden=make();tick(hidden,20,false);assert.equal(hidden.tension.phase,'stalk');assert.equal(hidden.tension.beats,0);
+const lost=make();tick(lost,7.1);tick(lost,.1,false);assert.equal(lost.tension.phase,'recover','Lost sight cancels acceleration plan');
+const safe=make();tick(safe,7.1);safe.checkpoint=1;safe.grace=2;tick(safe,.1);assert.equal(safe.tension.phase,'breather');assert.equal(safe.tension.surge,0);assert(safe.tension.motorGain<.3);tick(safe,5);assert.notEqual(safe.tension.phase,'surge');
+const omens=make();omens.cart.y=170;tick(omens,2.5);assert.equal(omens.tension.zoneMask,1);assert(omens.tension.lightDip>.65&&omens.tension.lightDip<=.72);tick(omens,6);assert.equal(omens.tension.lightDip,0);tick(omens,10);assert.equal(omens.tension.lightDip,0,'No repeated power loss from waiting in place');
+const paused=make();tick(paused,7.1);paused.mode='paused';const before=JSON.stringify(paused);updateRun(paused,{throttle:1},1/60);assert.equal(JSON.stringify(paused),before);
+const finish=make();tick(finish,7.1);finish.cart.y=790;tick(finish,.1);assert.equal(finish.tension.phase,'recover');
+console.log('PASS: warned surge, straight-road safety gates, cooldown, lost-sight cancellation, checkpoint respite, bounded one-shot lighting, pause and finish protection');

@@ -1,0 +1,20 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{const out='output/back-nine-chase-drama',b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
+ const started=Date.now();await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});const readyMS=Date.now()-started;
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
+  await p.setViewportSize({width,height});assert(!/on foot|keep running|cart fails/i.test(await p.locator('#panel').innerText()));
+  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await p.screenshot({path:`${out}/guide-${width}.png`});
+ }
+ await p.setViewportSize({width:2560,height:1600});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+ await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js');const r=createRun();r.mode='driving';r.time=20;r.grace=0;Object.assign(r.cart,{x:0,y:80,speed:9,health:30,hits:5});Object.assign(r.joe,{x:0,y:60,speed:12});r.panic.phase='panic';r.panic.serial=1;__backNine.run=r;});
+ await p.evaluate(()=>advanceTime(800));let driving=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(driving.audio.score.playing);assert.equal(driving.audio.voices,12);
+ await p.evaluate(()=>{const r=__backNine.run;r.impact={serial:30,age:.08,strength:1,side:1,front:0,yaw:r.cart.yaw,x:r.cart.x,y:r.cart.y,damaged:true};r.events.push({type:'contact',time:r.time,damage:30});r.joe.ram.phase='lineup';r.joe.ram.age=.8;__backNine.render();});await p.evaluate(()=>__backNine.whenPresented());
+ assert(!/RAM INCOMING|CHARGE INCOMING|HEALTH|damage/i.test(await p.locator('#caption').innerText()));assert(Number(await p.locator('#impact-edge').evaluate(e=>e.style.opacity))>0);await p.screenshot({path:`${out}/impact-2560.png`});
+ await p.keyboard.press('Escape');await p.locator('#chase-sound-captions').evaluate(e=>{e.checked=true;e.dispatchEvent(new Event('change'));});await p.locator('#chase-music').evaluate(e=>{e.value='0.25';e.dispatchEvent(new Event('input'));});await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(0));assert.match(await p.locator('#sound-caption').innerText(),/Metal buckles/);
+ await p.evaluate(async()=>{const {leaveBrokenCart}=await import('./chase-player.js');const r=__backNine.run;leaveBrokenCart(r);});await p.evaluate(()=>advanceTime(1200));await p.keyboard.press('Escape');await p.click('#review-guide');assert(await p.locator('#guide-foot').isVisible());assert.match(await p.locator('#guide-controls').innerText(),/run/);await p.screenshot({path:`${out}/revealed-controls-2560.png`});
+ await p.locator('#chase-reduced').evaluate(e=>{e.checked=true;e.dispatchEvent(new Event('change'));});await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(0));assert.equal(await p.locator('#impact-edge').evaluate(e=>e.style.opacity),'0');
+ await p.reload();await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});assert.equal(await p.locator('#chase-music').inputValue(),'0.25');assert(await p.locator('#chase-reduced').isChecked());assert.deepEqual(errors,[]);
+ fs.writeFileSync(`${out}/browser.json`,JSON.stringify({passed:true,readyMS,driving,errors},null,2));console.log(JSON.stringify({passed:true,readyMS,voices:driving.audio.voices,checks:['responsive guide hides twist','live score','silent ram and damage banners','optional sound descriptions','saved music setting','on-foot pause help','reduced impact effect'],errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

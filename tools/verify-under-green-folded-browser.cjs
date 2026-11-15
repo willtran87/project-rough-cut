@@ -1,0 +1,21 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const assert=require('node:assert/strict'),fs=require('fs');
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ fs.mkdirSync('output/under-green/folded',{recursive:true});
+ await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
+ const shot=async name=>{await p.evaluate(()=>advanceTime(0));await p.screenshot({path:`output/under-green/folded/${name}.png`});};
+ async function place(x,y,yaw=0,time=2,cp=1){await p.evaluate(async({x,y,yaw,time,cp})=>{const {createRun}=await import('./under-green-sim.js');const {rangeY}=await import('./under-green-layout.js');if(x>6&&y<=41)y=rangeY(y);const r=createRun(cp);r.mode='playing';r.time=time;Object.assign(r.player,{x,y,yaw,grace:0});__underGreen.clearInput();__underGreen.run=r;await advanceTime(0);},{x,y,yaw,time,cp});}
+ const clearance=await p.evaluate(async()=>{const {solid,BOUNDS}=await import('./under-green-course.js'),points=[];for(let y=BOUNDS.minY+1;y<BOUNDS.maxY;y+=1.5)for(let x=BOUNDS.minX+.5;x<BOUNDS.maxX;x+=1)if(!solid({x,y},.3))points.push({x,y});return {points:points.length,hits:__underGreen.inspectClearance(points)};});
+ fs.writeFileSync('output/under-green/folded/clearance.json',JSON.stringify(clearance,null,2));
+ for(const [name,x,y,yaw,time,cp]of [['spillway',0,57,0,2,1],['bunker',-20,70,Math.PI,1,1],['pump',-17,38,-Math.PI/2,45,1],['junction',-8,40,Math.PI/2,45,2],['range',12,36,Math.PI,48,2],['island',12,23.5,Math.PI,60,3],['keeper',12,3,0,60,3]]){await place(x,y,yaw,time,cp);await shot(name+'-2560');}
+ const lever=await p.evaluate(async()=>{const {LEVER}=await import('./under-green-course.js');return LEVER;});
+ await place(lever.x-1.7,lever.y,Math.PI/2,45,1);assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).action?.id,'bypass');await p.keyboard.press('e');await p.evaluate(()=>advanceTime(17));let state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(state.bypass);assert.equal(state.checkpoint,2);await shot('pump-operated-2560');
+ // Real keyboard movement crosses the newly drained, east-facing outlet.
+ await place(3,38,Math.PI/2,45,2);await p.keyboard.down('w');await p.evaluate(()=>advanceTime(2500));await p.keyboard.up('w');state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(state.player.x>11);assert.equal(state.waterHits,0);checks.push('Pump input saves CP2; ordinary eastward movement crosses the drained physical outlet');
+ await place(12,23.5,Math.PI,60,2);await p.evaluate(()=>advanceTime(17));state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.checkpoint,3);assert.equal(state.waters.find(w=>w.id==='range-b').x,12);checks.push('Middle landing records CP3 and exposes relocated range outlets');
+ await place(14.65,3,Math.PI,60,3);await p.keyboard.press('e');await p.evaluate(()=>advanceTime(1500));state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.mode,'under_green_aftermath');await shot('secured-2560');await p.evaluate(()=>advanceTime(4600));assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).mode,'under_green_complete');checks.push('Relocated gate physically secures the keeper room and reaches aftermath/result');
+ for(const [width,height]of [[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await place(12,36,Math.PI,48,2);await shot(`range-${width}`);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ assert.deepEqual(errors,[]);assert.deepEqual(clearance.hits,[]);
+ fs.writeFileSync('output/under-green/folded/browser.json',JSON.stringify({passed:true,checks,clearance,errors},null,2));console.log(JSON.stringify({passed:true,checks,samples:clearance.points,errors}));
+}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

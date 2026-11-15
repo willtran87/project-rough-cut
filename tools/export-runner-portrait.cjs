@@ -1,0 +1,6 @@
+const fs=require('node:fs'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{const browser=await chromium.launch({headless:true});try{
+ const page=await browser.newPage();await page.route('**/runner-materials.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/player-face/baseline-source/runner-materials.js','utf8')}));await page.route('**/__runner-map-probe',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><title>Runner texture export</title>'}));await page.goto('http://127.0.0.1:4187/__runner-map-probe');
+ const data=await page.evaluate(async()=>{const T=await import('./vendor/three/three.module.js'),{runnerMaterials}=await import('./runner-materials.js');const m=runnerMaterials({cloth:new T.MeshLambertMaterial(),skin:new T.MeshLambertMaterial()},null);return {face:m.materials.face.map.image.toDataURL(),hair:m.materials.hair.map.image.toDataURL()};});
+ const out='output/back-nine-visual-upgrade/player-face';fs.mkdirSync(out,{recursive:true});for(const [name,url]of Object.entries(data))fs.writeFileSync(`${out}/original-${name}.png`,Buffer.from(url.split(',')[1],'base64'));console.log({exported:Object.keys(data)});
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

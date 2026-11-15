@@ -1,0 +1,1687 @@
+{
+  "objective": "Implement all 72 items in final-cut-visual-upgrade-plan-2026-11-13.md",
+  "status": "active",
+  "baseline": "output/final-cut/visual-foundation/before/report.json",
+  "items": [
+    {
+      "id": "FV01",
+      "priority": "P0",
+      "title": "Create a matched Level 1 reference sheet.",
+      "requirement": "Compare opening vistas, buildings, ground, vegetation, Joe, machinery and night lighting at matching camera distance, field of view and exposure.",
+      "status": "in_progress",
+      "implementation": [
+        "tools/capture-final-cut-reference.cjs"
+      ],
+      "evidence": [
+        "output/final-cut/level-one-comparison/report.json"
+      ],
+      "remaining": "Twelve native chapter captures and comparison gallery added. Building viewpoints corrected after occlusion inspection. Framebuffer dimensions, aspect ratio, illumination and building distances differ; normalize before acceptance, add machinery craft reference and inspect all pairs.",
+      "notes": "Twelve native chapter captures and comparison gallery added. Building viewpoints corrected after occlusion inspection. Framebuffer dimensions, aspect ratio, illumination and building distances differ; normalize before acceptance, add machinery craft reference and inspect all pairs."
+    },
+    {
+      "id": "FV02",
+      "priority": "P0",
+      "title": "Support a genuine high-resolution render tier.",
+      "requirement": "Add tested 1920/2560-width rendering options where hardware supports them; the current desktop cap is 1600 pixels. Keep a deliberate performance fallback.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-visual-settings.js",
+        "web/final-cut.html",
+        "web/final-cut.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/report.json",
+        "output/final-cut/visual-foundation/software/report.json"
+      ],
+      "remaining": "",
+      "notes": "Hardware 1600/1920/2560 tiers, five real framebuffer sizes, preference persistence and 960 software fallback verified."
+    },
+    {
+      "id": "FV03",
+      "priority": "P0",
+      "title": "Standardize pixel size across assets.",
+      "requirement": "Set consistent visible pixel density for close hero objects, normal scenery and distant backgrounds so surfaces belong to one art style.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-surfaces.js",
+        "web/final-cut-machine-finish.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-paving.js",
+        "web/final-cut-joe-finish.js",
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json",
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "Metre-scale projection now includes non-instanced scale. Finish hero/foliage pixel-density comparisons and document the complete hierarchy.",
+      "notes": "Metre-scale projection now includes non-instanced scale. Finish hero/foliage pixel-density comparisons and document the complete hierarchy. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open. Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV04",
+      "priority": "P0",
+      "title": "Replace noisy surface grain with authored pixel clusters.",
+      "requirement": "Use deliberate shadow groups, edge highlights, material grain and clustered wear; reduce random speckling on broad surfaces.",
+      "status": "in_progress",
+      "implementation": [
+        "assets/environment/final-cut/industrial-materials-v1.png",
+        "web/final-cut-scene.js",
+        "web/final-cut-machine-finish.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-paving.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-joe-finish.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json",
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "Estate and hero machine use authored clustered materials. Continue water/soil noise, character treatment and full motion comparison.",
+      "notes": "Broad clustered estate materials replaced random grain. Mower-specific atlas, masonry repetition, water/soil noise and character textures still need review. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open. Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV05",
+      "priority": "P0",
+      "title": "Separate material identities.",
+      "requirement": "Steel, painted enamel, rubber, wood, stone, glass and wet turf need distinct color ramps, highlights and wear patterns.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-machine-finish.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-turf-layout.js",
+        "web/final-cut-ground-finish.js",
+        "web/final-cut-joe-finish.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "output/final-cut/visual-foundation/accepted-hardware/mower.png",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/turf-condition/layout.json",
+        "output/final-cut/turf-condition/hardware/report.json",
+        "output/final-cut/turf-condition/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json",
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "Distinct enamel, steel, rubber, brass, timber, plaster and slate are integrated. Glass and terrain wetness/material response remain.",
+      "notes": "Distinct enamel, steel, rubber, brass, timber, plaster and slate are integrated. Glass and terrain wetness/material response remain. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open. Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV06",
+      "priority": "P0",
+      "title": "Keep pixel detail stable in motion.",
+      "requirement": "Tune texture sampling and distance detail so fine patterns stay crisp without crawling, sparkling or turning into mush.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-surfaces.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-paving.js",
+        "web/final-cut-joe-finish.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/report.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json",
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "Nearest pixel sampling, mipmaps, bounded anisotropy and stable GPU resource counts verified through camera rotation. Longer movement/detail-distance review remains.",
+      "notes": "Nearest pixel sampling, mipmaps, bounded anisotropy and stable GPU resource counts verified through camera rotation. Longer movement/detail-distance review remains. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open. Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV07",
+      "priority": "P0",
+      "title": "Replace the flat sky with layered pixel artwork.",
+      "requirement": "Introduce the richness of Level 1's sky through cloud banks, restrained stars, color gradients and a distant horizon.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/parallax-scene.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/overlook.png",
+        "output/final-cut/visual-foundation/accepted-hardware/sky.png",
+        "output/final-cut/visual-foundation/routes/direct-overlook.png"
+      ],
+      "remaining": "",
+      "notes": "Reused Level 1 authored stars, clouds, sky and horizon in a separately rendered far scene."
+    },
+    {
+      "id": "FV08",
+      "priority": "P1",
+      "title": "Give the moon authored surface detail.",
+      "requirement": "Use crater clusters, a restrained halo and cloud occlusion; replace the current plain bright disc.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/parallax-scene.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/sky.png",
+        "output/final-cut/visual-foundation/accepted-hardware/report.json"
+      ],
+      "remaining": "",
+      "notes": "Detailed moon with actual cloud coverage; directional light follows moon bearing and coverage, independent of camera yaw."
+    },
+    {
+      "id": "FV09",
+      "priority": "P1",
+      "title": "Build a layered estate skyline.",
+      "requirement": "Add varied woodland crowns, distant rooflines and service structures beyond the arena, with coherent atmospheric depth.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-landscape.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/overlook.png"
+      ],
+      "remaining": "Layered ridge, woodland and distant estate added. Additional service skyline silhouettes and near/far foliage coherence remain.",
+      "notes": "Layered ridge, woodland and distant estate added. Additional service skyline silhouettes and near/far foliage coherence remain."
+    },
+    {
+      "id": "FV10",
+      "priority": "P0",
+      "title": "Rebalance the nighttime values.",
+      "requirement": "Separate cool moonlit forms, warm safe areas and darker threat zones while keeping playable routes readable.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-refuge-lighting.js",
+        "tools/verify-final-cut-refuge-lighting.cjs",
+        "tools/verify-final-cut-refuge-fixtures.mjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "output/final-cut/visual-foundation/routes/direct-overlook.png",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-refuge-lighting-2026-11-13.md",
+        "output/final-cut/refuge-lighting/hardware/report.json",
+        "output/final-cut/refuge-lighting/software/report.json",
+        "output/final-cut/refuge-lighting/fixtures.json",
+        "output/final-cut/refuge-lighting/routes/browser.json",
+        "output/final-cut/refuge-lighting/sightlines-refreshed/report.json",
+        "output/final-cut/refuge-lighting/client/state-0.json"
+      ],
+      "remaining": "Reduced flat ambient wash, cool moon, warm refuge downlights and dark arrival staging. Complete value/readability audit after other art changes remains.",
+      "notes": "Reduced flat ambient wash, cool moon, warm refuge downlights and dark arrival staging. Complete value/readability audit after other art changes remains. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Three supported entrance downlights now illuminate the refuge aprons with real masonry shadows. All57 fitting parts connect to the existing roofs above2.21m. Conservative light-frustum culling preserves exact native/software pixels; pump reed shadows refresh while static maps cache. Five viewport sizes, doorway movement, pause, resource stability and physical fixture checks pass. See qa/final-cut-visual-refuge-lighting-2026-11-13.md. Native local light cost is measured; variable and unacceptable absolute software cost leaves FV71 open. Final all-three-route pass has four heard redirects, zero captures/errors and77 screenshots. All48 concealment pairs also pass with every light shadow explicitly refreshed after each rig-visibility toggle. Installed client2121 completed and its fresh gameplay screenshot/state were inspected. All jobs terminal; six source/test snapshots match."
+    },
+    {
+      "id": "FV11",
+      "priority": "P0",
+      "title": "Ground objects with contact shadows.",
+      "requirement": "Strengthen tire, wall, step, pipe, furniture and foliage contact using bounded shadows or baked shading.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-reeds.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-refuge-lighting.js",
+        "tools/verify-final-cut-refuge-lighting.cjs",
+        "tools/verify-final-cut-refuge-fixtures.mjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/mower.png",
+        "output/final-cut/visual-foundation/occlusion.json",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-refuge-lighting-2026-11-13.md",
+        "output/final-cut/refuge-lighting/hardware/report.json",
+        "output/final-cut/refuge-lighting/software/report.json",
+        "output/final-cut/refuge-lighting/fixtures.json",
+        "output/final-cut/refuge-lighting/routes/browser.json",
+        "output/final-cut/refuge-lighting/sightlines-refreshed/report.json",
+        "output/final-cut/refuge-lighting/client/state-0.json"
+      ],
+      "remaining": "Hardware bounded 2048 moon shadows added. Reeds cast matching animated shadows. Software contact shading and every prop contact still require review.",
+      "notes": "Hardware bounded 2048 moon shadows added. Reeds cast matching animated shadows. Software contact shading and every prop contact still require review. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Three supported entrance downlights now illuminate the refuge aprons with real masonry shadows. All57 fitting parts connect to the existing roofs above2.21m. Conservative light-frustum culling preserves exact native/software pixels; pump reed shadows refresh while static maps cache. Five viewport sizes, doorway movement, pause, resource stability and physical fixture checks pass. See qa/final-cut-visual-refuge-lighting-2026-11-13.md. Native local light cost is measured; variable and unacceptable absolute software cost leaves FV71 open. Final all-three-route pass has four heard redirects, zero captures/errors and77 screenshots. All48 concealment pairs also pass with every light shadow explicitly refreshed after each rig-visibility toggle. Installed client2121 completed and its fresh gameplay screenshot/state were inspected. All jobs terminal; six source/test snapshots match."
+    },
+    {
+      "id": "FV12",
+      "priority": "P1",
+      "title": "Finish every light fixture.",
+      "requirement": "Give lamps housings, lenses, guards, mounts and believable illumination on nearby surfaces.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-lighting.js",
+        "web/final-cut-rig.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-refuge-lighting.js",
+        "tools/verify-final-cut-refuge-lighting.cjs",
+        "tools/verify-final-cut-refuge-fixtures.mjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "tools/verify-final-cut-lamps.cjs",
+        "output/final-cut/lamps/hardware/report.json",
+        "output/final-cut/lamps/software/report.json",
+        "qa/final-cut-visual-lamps-2026-11-13.md",
+        "output/final-cut/lighting/hardware/report.json",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-refuge-lighting-2026-11-13.md",
+        "output/final-cut/refuge-lighting/hardware/report.json",
+        "output/final-cut/refuge-lighting/software/report.json",
+        "output/final-cut/refuge-lighting/fixtures.json",
+        "output/final-cut/refuge-lighting/routes/browser.json",
+        "output/final-cut/refuge-lighting/sightlines-refreshed/report.json",
+        "output/final-cut/refuge-lighting/client/state-0.json"
+      ],
+      "remaining": "Mower, apron, cab and refuge entrance fixtures are finished for their local passes. Remaining flood/beacon fixtures, their nearby illumination and matched Level1 acceptance remain open.",
+      "notes": "Three physically mounted caged refuge downlights added. Exterior lamps, floodlights and remaining fixture finish still pending. Five mower fixtures now have recessed ribbed lenses, reflector rims, cages, visors, mounts and shared authored metal. Headlamp light origins derive from visible shared dimensions; wing geometry stays in existing envelopes. Hardware/software checks cover 16 cardinal phase poses, four saved collapse ages and pause. Headlamp assemblies now participate in chassis contact. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Three supported entrance downlights now illuminate the refuge aprons with real masonry shadows. All57 fitting parts connect to the existing roofs above2.21m. Conservative light-frustum culling preserves exact native/software pixels; pump reed shadows refresh while static maps cache. Five viewport sizes, doorway movement, pause, resource stability and physical fixture checks pass. See qa/final-cut-visual-refuge-lighting-2026-11-13.md. Native local light cost is measured; variable and unacceptable absolute software cost leaves FV71 open. Final all-three-route pass has four heard redirects, zero captures/errors and77 screenshots. All48 concealment pairs also pass with every light shadow explicitly refreshed after each rig-visibility toggle. Installed client2121 completed and its fresh gameplay screenshot/state were inspected. All jobs terminal; six source/test snapshots match."
+    },
+    {
+      "id": "FV13",
+      "priority": "P1",
+      "title": "Refine the mower's moving light.",
+      "requirement": "Improve headlight shape, surface response, intervening shadows and restrained atmospheric scatter, with light origins matching the actual lamps.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-lamps.js",
+        "web/final-cut-lighting.js",
+        "web/final-cut-rig.js",
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "tools/verify-final-cut-lamps.cjs",
+        "output/final-cut/lamps/hardware/report.json",
+        "output/final-cut/lamps/software/report.json",
+        "qa/final-cut-visual-lamps-2026-11-13.md",
+        "output/final-cut/lighting/hardware/report.json",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-headlight-finish-2026-11-13.md",
+        "output/final-cut/headlight-finish/hardware/report.json",
+        "output/final-cut/headlight-finish/software/report.json",
+        "output/final-cut/headlight-finish/routes/browser.json",
+        "output/final-cut/headlight-finish/sightlines/report.json",
+        "output/final-cut/lighting/software/report.json",
+        "output/final-cut/headlight-finish/client/state-0.json",
+        "output/final-cut/headlight-finish/hardware/cost.json",
+        "output/final-cut/headlight-finish/software/cost.json"
+      ],
+      "remaining": "Physical origins, detailed fixtures, moving shadows, shaped reflector and calibrated near/far surface response are implemented. Restrained atmospheric scattering and its occlusion/motion/performance acceptance remain; full Level1 and rendering-budget gates are still open.",
+      "notes": " Five mower fixtures now have recessed ribbed lenses, reflector rims, cages, visors, mounts and shared authored metal. Headlamp light origins derive from visible shared dimensions; wing geometry stays in existing envelopes. Hardware/software checks cover 16 cardinal phase poses, four saved collapse ages and pause. Headlamp assemblies now participate in chassis contact. Headlight finish reduces full output240 to48 and adds one shared128x128 reflector profile. Same-surface hardware/software comparisons show zero all-channel clipping at3m/6m versus83–87% originally; working light remains visibly stronger than lamps-off at24m. Shadow lifecycle, reveal, three input routes and48 concealment comparisons pass. Installed client40685 passes and fresh shot/state inspected. Isolated960x540 profile cost: hardware indistinguishable within batch noise; software about3.04% above already-unacceptable~1081ms no-profile baseline. See FV71; scattering still outstanding."
+    },
+    {
+      "id": "FV14",
+      "priority": "P2",
+      "title": "Add localized atmospheric layers.",
+      "requirement": "Use low mist near the swale and distant haze, with stronger staging during major beats; preserve every approach cue and visibility contract.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Use low mist near the swale and distant haze, with stronger staging during major beats; preserve every approach cue and visibility contract."
+    },
+    {
+      "id": "FV15",
+      "priority": "P0",
+      "title": "Break up the flat, striped arena appearance.",
+      "requirement": "Make fairway, fringe, service lanes and rough read as an authored championship hole with purposeful variation.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-ground-finish.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-course-contour.js",
+        "web/final-cut-turf-layout.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/turf-condition/layout.json",
+        "output/final-cut/turf-condition/hardware/report.json",
+        "output/final-cut/turf-condition/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json"
+      ],
+      "remaining": "Finer short-turf material scale, restrained fairway/fringe separation and physical-path material transitions integrated. Complete authored-hole composition and matched Level 1 review remain.",
+      "notes": " Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open."
+    },
+    {
+      "id": "FV16",
+      "priority": "P1",
+      "title": "Add shallow terrain shape.",
+      "requirement": "Introduce coherent drainage falls, berms and worn depressions; share geometry heights with feet, wheels, movement and effects.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Introduce coherent drainage falls, berms and worn depressions; share geometry heights with feet, wheels, movement and effects."
+    },
+    {
+      "id": "FV17",
+      "priority": "P1",
+      "title": "Finish path and ground transitions.",
+      "requirement": "Add irregular gravel margins, buried curbs, soil lips and turf encroachment so paths do not look laid on top of the world.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-verges.js",
+        "web/final-cut-ground-finish.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-course-contour.js",
+        "web/final-cut-foundation-layout.js",
+        "web/final-cut-turf-layout.js",
+        "web/final-cut-paving.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/accepted/ground.png",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-foundation-beds-2026-11-13.md",
+        "output/final-cut/foundation-beds/layout.json",
+        "output/final-cut/foundation-beds/hardware/report.json",
+        "output/final-cut/foundation-beds/software/report.json",
+        "output/final-cut/foundation-beds/routes/browser.json",
+        "output/final-cut/foundation-beds/sightlines/report.json",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/turf-condition/layout.json",
+        "output/final-cut/turf-condition/hardware/report.json",
+        "output/final-cut/turf-condition/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json"
+      ],
+      "remaining": "World-anchored gravel margins, soil aprons, planted edges and flush edging integrated with actual slabs. Review all remaining aprons/junctions and raised arrival transitions before final acceptance.",
+      "notes": "Irregular gravel margins and refuge litter transitions added. Finish buried curb/soil lips and inspect every apron and path junction. Foundation-bed refinement: replaces roots buried inside masonry with18authored beds/202grounded crowns and matching litter; service/route slabs and doors clear. Native/software18views/five sizes, actual strafe/pause/resource stability verified. No overall Level1/performance claim. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open."
+    },
+    {
+      "id": "FV18",
+      "priority": "P1",
+      "title": "Author distinct ground materials.",
+      "requirement": "Differentiate close-cut turf, standing rough, exposed earth, compacted service dirt, gravel and saturated ground.",
+      "status": "in_progress",
+      "implementation": [
+        "assets/environment/final-cut/ground-materials-v1.png",
+        "web/final-cut-ground-layout.js",
+        "web/final-cut-ground-finish.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-course-contour.js",
+        "web/final-cut-turf-layout.js",
+        "web/final-cut-paving.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/ground.png",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/hardware/report.json",
+        "output/final-cut/paving-finish/software/report.json",
+        "output/final-cut/turf-condition/layout.json",
+        "output/final-cut/turf-condition/hardware/report.json",
+        "output/final-cut/turf-condition/software/report.json",
+        "output/final-cut/paving-finish/routes/browser.json",
+        "output/final-cut/paving-finish/sightlines/report.json",
+        "output/final-cut/paving-finish/client/state-0.json"
+      ],
+      "remaining": "Standing rough, short turf, gravel, exposed soil and root/leaf bed materials integrated. Saturated mud, swale transitions and compacted service-surface identity still need review.",
+      "notes": "Ground earth now supplies static worn approaches and margins; pictured grooves are pre-existing groundskeeping, not live vehicle tracks. Mud integration, saturated response and complete service-surface review remain. Turf/paving pass: 19 authored dry/damp/worn regions, true earth source, world-aligned half-bond limestone flags with clustered stone detail, narrow joints and sparse edge chips. Final paving native/software 19 views each at five sizes, real strafe, exact pause and resource stability pass. Full-level parity and rendering budget remain open."
+    },
+    {
+      "id": "FV19",
+      "priority": "P1",
+      "title": "Make the mower leave readable evidence.",
+      "requirement": "Tie flattened turf, cut direction, clipping deposits and tire marks to actual vehicle travel and mowing state.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Tie flattened turf, cut direction, clipping deposits and tire marks to actual vehicle travel and mowing state."
+    },
+    {
+      "id": "FV20",
+      "priority": "P1",
+      "title": "Make the swale visually change as it floods.",
+      "requirement": "Progress through damp soil, darkened turf, shallow pooling and displaced mud, with readable pixel reflections and shore edges.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Progress through damp soil, darkened turf, shallow pooling and displaced mud, with readable pixel reflections and shore edges."
+    },
+    {
+      "id": "FV21",
+      "priority": "P0",
+      "title": "Rebuild the grass screens as natural reed stands.",
+      "requirement": "Vary clump height, thickness and edges so the current tall, uniform walls become believable vegetation while still fully concealing Joe.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-reeds.js",
+        "assets/environment/final-cut/reed-clumps-v1.png"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/reeds-fixed/report.json",
+        "output/final-cut/visual-foundation/reeds-software/report.json",
+        "output/final-cut/visual-foundation/occlusion.json",
+        "output/final-cut/visual-reeds/sightlines-dense/occlusion.json",
+        "output/final-cut/visual-reeds/final-software/occlusion.json",
+        "output/final-cut/visual-reeds/final-hardware/overlook.png",
+        "output/final-cut/visual-rough-stone/shared-sightlines-final/report.json"
+      ],
+      "remaining": "",
+      "notes": "Replaced the broad procedural screen blades with three authored reed clumps on fixed bent geometry. Layered height, three depth planes and tapered margins preserve a natural crown. All 48 near/far, offset and crouched hardware sightlines plus four software pairs are pixel-identical with/without the hidden mower. Corrected expanded 48-view audit now uses the actual shared 22.8m cardinal corridor and passes all pairs; prior hardcoded-coordinate evidence is superseded."
+    },
+    {
+      "id": "FV22",
+      "priority": "P1",
+      "title": "Introduce a coherent planting vocabulary.",
+      "requirement": "Use several grass, sedge, fern and low shrub forms appropriate to the estate, placed in purposeful groups.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-verges.js",
+        "web/final-cut-reeds.js"
+      ],
+      "evidence": [
+        "output/final-cut/level-one-comparison/final-cut-vegetation.png",
+        "output/final-cut/visual-reeds/motion/close-east.png",
+        "output/final-cut/visual-reeds/motion/walk-along-east.png"
+      ],
+      "remaining": "",
+      "notes": "Five Level 1 verge forms and three authored reed variants form the estate planting vocabulary. Verge groups now have uneven crowns, dominant local species and deliberate gaps rather than uniformly spaced shrubs. Close and walking views inspected."
+    },
+    {
+      "id": "FV23",
+      "priority": "P1",
+      "title": "Improve individual plant silhouettes.",
+      "requirement": "Give leaves taper, bends, broken tips and varied orientations; remove obvious repeated star/cross shapes.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-reeds.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-verges.js",
+        "web/final-cut-rough.js",
+        "web/assets/optimized/final-cut-rough-clumps-v1.webp"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/ground.png",
+        "output/final-cut/level-one-comparison/final-cut-vegetation.png",
+        "output/final-cut/visual-rough-stone/accepted/report.json",
+        "qa/final-cut-visual-rough-stone-2026-11-13.md"
+      ],
+      "remaining": "",
+      "notes": "Three authored standing-rough variants replace plain crossed blades; bent rooted silhouettes, matching depth/wind, real crouch/strafe, partial/full cuts and restored state inspected at native resolution."
+    },
+    {
+      "id": "FV24",
+      "priority": "P1",
+      "title": "Add layered vegetation at ground level.",
+      "requirement": "Place roots, dead leaves, small stones and short growth around existing boundaries without disguising traversable space.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-verges.js",
+        "web/final-cut-ground-finish.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-course-contour.js",
+        "web/final-cut-foundation-layout.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/accepted/pavilion.png",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-foundation-beds-2026-11-13.md",
+        "output/final-cut/foundation-beds/layout.json",
+        "output/final-cut/foundation-beds/hardware/report.json",
+        "output/final-cut/foundation-beds/software/report.json",
+        "output/final-cut/foundation-beds/routes/browser.json",
+        "output/final-cut/foundation-beds/sightlines/report.json"
+      ],
+      "remaining": "",
+      "notes": "Authored leaf, shallow root and small-stone detail is blended into ground under grouped existing short-growth vegetation at refuge foundations and estate boundaries. No new obstacles, cover or ground-height changes. World anchoring, strafe and hardware/software close views inspected. Foundation-bed refinement: replaces roots buried inside masonry with18authored beds/202grounded crowns and matching litter; service/route slabs and doors clear. Native/software18views/five sizes, actual strafe/pause/resource stability verified. No overall Level1/performance claim."
+    },
+    {
+      "id": "FV25",
+      "priority": "P1",
+      "title": "Make vegetation respond to the machine.",
+      "requirement": "Bend stalks around the chassis and wings, part them during emergence, and let survivors settle after the pass.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-verges.js",
+        "web/final-cut-plant-contact.js",
+        "web/final-cut-reeds.js",
+        "web/final-cut-sim.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/ambush-hardware/report.json",
+        "output/final-cut/visual-reeds/contact.json",
+        "output/final-cut/visual-reeds/motion/report.json"
+      ],
+      "remaining": "",
+      "notes": "Reeds and verge plants use actual body and deployed-reel contact with a bounded simulation history, rooted bend and analytic 3.6-second settling. No reaction in the empty wing wake or hidden staging travel. Tests cover four headings, 30/60/120Hz, two seconds without presentation, repeated draws, pause and run replacement; browser contact and recovery verified."
+    },
+    {
+      "id": "FV26",
+      "priority": "P1",
+      "title": "Distinguish ambient wind from the attack tell.",
+      "requirement": "Use coherent background wind and a stronger localized disturbance whose direction and timing remain obvious when needed.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-reeds.js",
+        "web/final-cut-verges.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/reeds-fixed/report.json",
+        "output/final-cut/visual-foundation/reeds-software/report.json",
+        "output/final-cut/visual-estate/ambush-hardware/report.json",
+        "output/final-cut/visual-estate/ambush-software/report.json",
+        "output/final-cut/visual-reeds/contacts-hardware/report.json",
+        "output/final-cut/visual-reeds/final-software/report.json"
+      ],
+      "remaining": "",
+      "notes": "Coherent low-amplitude wind is separate from the stronger localized committed-entry tell and from physical contact. Setup travel does not bend visible plants. Four directional rustles, spatial audio, pause and muted/reduced warnings pass; reduced mode suppresses ambient oscillation while preserving the cue."
+    },
+    {
+      "id": "FV27",
+      "priority": "P0",
+      "title": "Give each refuge its own silhouette and identity.",
+      "requirement": "Make the bunker solid and defensive, the pump shelter functional and damp, and the pavilion ceremonial and neglected.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-architecture-layout.js",
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-roof-detail.js",
+        "web/final-cut-balls.js",
+        "web/final-cut-foundation-layout.js",
+        "web/final-cut-verges.js",
+        "web/final-cut-ground-finish.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/accepted/pavilion.png",
+        "output/final-cut/level-one-comparison/final-cut-building.png",
+        "qa/final-cut-visual-roof-identity-2026-11-13.md",
+        "output/final-cut/roof-identity/hardware/report.json",
+        "output/final-cut/roof-identity/software/report.json",
+        "output/final-cut/roof-identity/routes/browser.json",
+        "output/final-cut/roof-identity/geometry.json",
+        "qa/final-cut-visual-foundation-beds-2026-11-13.md",
+        "output/final-cut/foundation-beds/layout.json",
+        "output/final-cut/foundation-beds/hardware/report.json",
+        "output/final-cut/foundation-beds/software/report.json",
+        "output/final-cut/foundation-beds/routes/browser.json",
+        "output/final-cut/foundation-beds/sightlines/report.json"
+      ],
+      "remaining": "Foundation beds and distinct roof/interior identities are integrated. Finish exterior value/composition hierarchy and close material scale, then matched Level 1 refuge acceptance.",
+      "notes": "Distinct low bunker, corrugated pump and steeper ceremonial pavilion profiles are integrated. Functional/damp pump dressing and neglected pavilion character still need refinement. Pump cabinet and physically connected feed now have differentiated industrial construction; see qa/final-cut-visual-pump-craft-2026-11-13.md. Broader damp shelter and neglected pavilion character remain. Roof identity pass: pavilion rise2.65m with framed shuttered gables/finials; pump has fitted passive ridge monitor. Physical pitched ball bounds replace flat-ceiling-only coverage. Native/software/five-size views,441sign rays,48concealment pairs and3uninterrupted routes pass; no full Level1/performance acceptance. Foundation-bed refinement: replaces roots buried inside masonry with18authored beds/202grounded crowns and matching litter; service/route slabs and doors clear. Native/software18views/five sizes, actual strafe/pause/resource stability verified. No overall Level1/performance claim."
+    },
+    {
+      "id": "FV28",
+      "priority": "P1",
+      "title": "Bring roofs up to Level 1 construction quality.",
+      "requirement": "Upgrade broad panels with overlapping slates or corrugated sheets, thickness, ridge caps, varied edges and selective damage.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-architecture-layout.js",
+        "web/final-cut-roof-detail.js",
+        "web/final-cut-balls.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/bunker.png",
+        "output/final-cut/visual-foundation/accepted-hardware/report.json",
+        "output/final-cut/visual-estate/accepted/pavilion.png",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "output/final-cut/visual-timber/accepted/report.json",
+        "output/final-cut/visual-timber/software/report.json",
+        "qa/final-cut-visual-roof-identity-2026-11-13.md",
+        "output/final-cut/roof-identity/hardware/report.json",
+        "output/final-cut/roof-identity/software/report.json",
+        "output/final-cut/roof-identity/routes/browser.json",
+        "output/final-cut/roof-identity/geometry.json"
+      ],
+      "remaining": "Roof construction now includes overlapping/chipped slates, folded corrugation, caps, gutters, framed tall pavilion gables and pump monitor. Final close material-scale/variation/weathering and matched Level 1 craft acceptance remain.",
+      "notes": "Shelter roofs now include84 chipped slates, seating variation, six open gutters/outlets, finished fascia and pump-specific fasteners. Garage/bay roof review and final ridge/material comparison against Level1 remain. Roof identity pass: pavilion rise2.65m with framed shuttered gables/finials; pump has fitted passive ridge monitor. Physical pitched ball bounds replace flat-ceiling-only coverage. Native/software/five-size views,441sign rays,48concealment pairs and3uninterrupted routes pass; no full Level1/performance acceptance."
+    },
+    {
+      "id": "FV29",
+      "priority": "P1",
+      "title": "Finish timber construction.",
+      "requirement": "Add convincing joints, braces, plank ends, restrained warping, exposed grain and hardware where the player can see them.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-course.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "output/final-cut/visual-timber/accepted/report.json",
+        "output/final-cut/visual-timber/software/report.json",
+        "output/final-cut/visual-timber/bounds.json",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-timber/client-final/state-0.json"
+      ],
+      "remaining": "",
+      "notes": "Long-axis grain, transverse cut-end rings/checks with distance fade, per-piece phase, millimetre bowed boards, tied rafters/brace plates, pegs/fasteners and fascia completed. Actual corner bearing heights correct two floating posts; shared sight/ball bounds preserve physical truth. Close views of all three shelters and real strafe inspected on hardware/software. Overall Level1 parity remains the separate FV67/FV72 gate."
+    },
+    {
+      "id": "FV30",
+      "priority": "P1",
+      "title": "Add selective masonry relief.",
+      "requirement": "Give corners, coping and near-camera stones real depth, with irregular mortar and moss collecting in plausible locations.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-masonry.js",
+        "web/assets/optimized/final-cut-stone-materials-v1.webp"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/accepted/pump.png",
+        "output/final-cut/visual-rough-stone/accepted/report.json",
+        "output/final-cut/visual-rough-stone/masonry-bounds.json",
+        "output/final-cut/visual-rough-stone/final-hardware/report.json",
+        "qa/final-cut-visual-rough-stone-2026-11-13.md"
+      ],
+      "remaining": "",
+      "notes": "Authored stone families, irregular block lengths, aligned courses, finished short ends, separate coping and localized lower moss; all 73 physical wall/body envelopes verified. Six close approaches and full routes inspected; overall building/style acceptance remains separate."
+    },
+    {
+      "id": "FV31",
+      "priority": "P1",
+      "title": "Complete shelter interiors.",
+      "requirement": "Add roof undersides, joists, mounted lighting, service recesses and purposeful stored equipment while keeping every interaction clear.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-surfaces.js",
+        "web/final-cut-refuge-layout.js",
+        "web/final-cut-refuge-interiors.js",
+        "web/final-cut-course.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/pump.png",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "qa/final-cut-visual-refuge-interiors-2026-11-13.md",
+        "output/final-cut/refuge-interiors/geometry.json",
+        "output/final-cut/refuge-interiors/hardware/report.json",
+        "output/final-cut/refuge-interiors/software/report.json",
+        "output/final-cut/refuge-interiors/routes-final/browser.json"
+      ],
+      "remaining": "",
+      "notes": "Purposeful grit chest, pump service storage/tools/hoses/damp, starter cabinet/cup/cards/pennants complete existing joists, underside, fixtures and service recesses. Precise furniture/raised-object bounds, all doors, actual input, native/software/five sizes, pause, disposal and three routes verified; see QA for exact source timing. Whole-level art and performance acceptance remain open."
+    },
+    {
+      "id": "FV32",
+      "priority": "P1",
+      "title": "Refine the grandstand and championship dressing.",
+      "requirement": "Improve seating variation, fasteners, rail connections, fabric, scattered remnants and the silhouette of the empty stands.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Improve seating variation, fasteners, rail connections, fabric, scattered remnants and the silhouette of the empty stands."
+    },
+    {
+      "id": "FV33",
+      "priority": "P1",
+      "title": "Make the pump and irrigation hardware a visual centerpiece.",
+      "requirement": "Finish gauges, flanges, valves, supports and staining, and show the physical change caused by operating the bypass.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-pump-hardware.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-estate-detail.js",
+        "web/final-cut-irrigation.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-pump-craft-2026-11-13.md",
+        "output/final-cut/pump-craft/hardware/report.json",
+        "output/final-cut/pump-craft/software/report.json",
+        "output/final-cut/pump-craft/irrigation/report.json",
+        "output/final-cut/pump-craft/routes/browser.json",
+        "output/final-cut/pump-craft/disposal/report.json"
+      ],
+      "remaining": "Finish damp service-room dressing and localized contact/wear around the broader irrigation installation; complete the pump-shelter composition and compare at ordinary play distance against Level1. Existing downstream manifold/nozzle presentation still needs final material/effect-origin acceptance with FV56.",
+      "notes": "Formed service cabinet, barrel hinges, recessed louvres, one authored pixel dial/needle, guarded state telltale, connected cylindrical feed, six bolted flange joints and supported pipe run integrated. Duplicate decorative gauge removed. Saved pump/water state owns needle and indicator; E/Enter, pause/reload, both collapse headings, reduced motion, three complete routes and disposal pass. Native/software five-size captures inspected. See pump-craft QA."
+    },
+    {
+      "id": "FV34",
+      "priority": "P0",
+      "title": "Integrate signage into the architecture.",
+      "requirement": "Reduce competing oversized labels; use consistent physical brackets, lettering, weathering and a hierarchy that keeps crucial directions legible.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-scene.js",
+        "web/final-cut-sign-art.js",
+        "tools/verify-final-cut-signage.cjs",
+        "tools/verify-final-cut-sign-mounts.cjs",
+        "tools/verify-final-cut-sign-disposal.cjs",
+        "tools/profile-final-cut-signage.cjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-estate/accepted/pavilion.png",
+        "output/final-cut/level-one-comparison/final-cut-building.png",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "output/final-cut/visual-timber/accepted/report.json",
+        "output/final-cut/visual-timber/software/report.json",
+        "qa/final-cut-visual-signage-2026-11-13.md",
+        "output/final-cut/signage/hardware/report.json",
+        "output/final-cut/signage/software/report.json",
+        "output/final-cut/signage/mounts/report.json",
+        "output/final-cut/signage/disposal/report.json",
+        "output/final-cut/signage/routes/browser.json",
+        "output/final-cut/signage/comparison.html",
+        "output/final-cut/signage/client/state-0.json",
+        "output/final-cut/signage/final-client/state-0.json"
+      ],
+      "remaining": "None for the current signage requirement. Broader estate identity, terrain, lighting, UI and Level 1 parity remain separate open items.",
+      "notes": "Smaller hierarchy, reduced duplicate boards and physical backings/fasteners added. Pavilion name and bell-post occlusion corrected and inspected. Review weathering, all viewing angles and compact-distance readability. Pavilion XVIII plaque moved ahead of the obstructing king-post trim and visually verified. Pavilion XVIII plaque moved ahead of the obstructing king-post trim and visually verified. Final signage pass: fitted pixel-grid lettering, distinct identity/direction/warning/paper treatments, restrained rim wear, real light response, scoreboard face48.2%smaller, duplicate pump board consolidated. Sponsor pole occlusion and fork support corrected;441near-surface rays clear. Native/software21views each/five sizes and full receipt/E pickup/pause checks pass, all3routes and48concealmentpairs pass,4mutabletexture lifetimes verified. Final clients and7source hashes retained. FV34 complete; full visual/performance acceptance remains open."
+    },
+    {
+      "id": "FV35",
+      "priority": "P0",
+      "title": "Finalize the industrial hero silhouette.",
+      "requirement": "Unify the hood, cab, wheels, chassis and wide cutting banks into one convincing heavy machine with aggressively exaggerated proportions; retain the non-demonic direction.",
+      "status": "pending",
+      "implementation": [
+        "web/final-cut-hydraulic-layout.js",
+        "web/final-cut-hydraulics.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-hydraulics-2026-11-13.md",
+        "qa/final-cut-visual-formed-panels-2026-11-13.md"
+      ],
+      "remaining": "Unify the hood, cab, wheels, chassis and wide cutting banks into one convincing heavy machine with aggressively exaggerated proportions; retain the non-demonic direction.",
+      "notes": " Hydraulic construction now has shared detailed fittings/sleeves, verified physical endpoints and corrected inner-front-tire clearance; broader item remains open. Formed-panel pass verified manufactured shapes, physical supports and final three-route completion; see qa/final-cut-visual-formed-panels-2026-11-13.md. Broader requirement remains open."
+    },
+    {
+      "id": "FV36",
+      "priority": "P1",
+      "title": "Give body panels manufactured shape.",
+      "requirement": "Use folded edges, pressed panels, curved fenders, recessed seams and intentional gaps to replace remaining box-like forms.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-bodywork.js",
+        "web/final-cut-rig.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-engine.js",
+        "web/final-cut-engine-motion.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-sim.js",
+        "web/final-cut-machine-finish.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-engine-2026-11-13.md",
+        "qa/final-cut-visual-formed-panels-2026-11-13.md",
+        "tools/verify-final-cut-formed-panels.cjs",
+        "output/final-cut/formed-panels/detail/report.json",
+        "output/final-cut/formed-panels/software/report.json",
+        "output/final-cut/formed-panels/hardware/report.json",
+        "output/final-cut/formed-panels/routes-final/browser.json",
+        "output/final-cut/bodywork/hardware/report.json",
+        "output/final-cut/folding/browser.json",
+        "output/final-cut/formed-panels/client/state-0.json"
+      ],
+      "remaining": "",
+      "notes": "Manufactured chassis and wing panels completed: crowned folded canopy with four actual post contacts and mounted light, pressed hood/service lids, recessed console and engine bands, curved fenders, chamfered wing decks and pressed rear panels. Thirteen merged meshes/3308 triangles/one shared material. Actual bounds, 322 transfer poses, folding/collapse/pause/reload, hardware/software direct visibility and five sizes, all three real-input routes and installed client verified. Broader silhouette and material polish remain under FV35/FV37; no overall Level1 parity claim."
+    },
+    {
+      "id": "FV37",
+      "priority": "P0",
+      "title": "Author close-up mower pixel materials.",
+      "requirement": "Create coherent paint chips, grease, oxidation, oil runs and polished contact edges around the actual mechanism instead of evenly distributed wear.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-machine-finish.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-bodywork.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-formed-panels-2026-11-13.md"
+      ],
+      "remaining": "Shared authored metre-scale materials, component-edge wear, seam dirt, filler oil and dedicated identification plates implemented. Further engine/hydraulic wear, oxidation placement and close comparison remain.",
+      "notes": " Formed-panel pass verified manufactured shapes, physical supports and final three-route completion; see qa/final-cut-visual-formed-panels-2026-11-13.md. Broader requirement remains open."
+    },
+    {
+      "id": "FV38",
+      "priority": "P1",
+      "title": "Finish the tires and wheels.",
+      "requirement": "Refine tread profile, sidewalls, hub depth, lug nuts and terrain-specific dirt, keeping visible radius and roll physically consistent.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-tires.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-wheel-travel.js",
+        "web/final-cut-machine-finish.js",
+        "web/final-cut-ending.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "output/final-cut/visual-hero/wheel-rules.json",
+        "output/final-cut/visual-hero/accepted/wheel-contact.json",
+        "output/final-cut/visual-hero/software/wheel-contact.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json"
+      ],
+      "remaining": "",
+      "notes": "Molded tread/sidewalls, detailed hubs/lugs, terrain-specific deposits, .85m loaded radius, independent wheel travel, continuous slab support and phase/film restoration verified. Hardware/software24pose cylinder/fender audit minclearance21.78mm,maxgap3.09mm; fullroutes and final installed client pass. Wider chassis weight and matched Level1 acceptance remain separate requirements."
+    },
+    {
+      "id": "FV39",
+      "priority": "P1",
+      "title": "Make the cutting assemblies unmistakably dangerous.",
+      "requirement": "Improve reel depth, blade edge highlights, bedknives, bearings, guards and dense shadow between moving parts.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Improve reel depth, blade edge highlights, bedknives, bearings, guards and dense shadow between moving parts."
+    },
+    {
+      "id": "FV40",
+      "priority": "P1",
+      "title": "Finish hydraulic routing and connections.",
+      "requirement": "Make hoses terminate at fittings, show clamps and sleeve changes, and animate piston travel and hose flex from the actual wing state.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-hydraulic-layout.js",
+        "web/final-cut-hydraulics.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-hydraulics-2026-11-13.md",
+        "output/final-cut/hydraulics/rules.json",
+        "output/final-cut/hydraulics/hardware/report.json",
+        "output/final-cut/hydraulics/software/report.json",
+        "output/final-cut/hydraulic-finish/hardware/report.json",
+        "output/final-cut/hydraulic-finish/software/report.json",
+        "output/final-cut/hydraulic-finish/routes/browser.json",
+        "output/final-cut/hydraulic-finish/sightlines/report.json",
+        "output/final-cut/hydraulic-finish/client/state-0.json",
+        "output/final-cut/hydraulic-finish/source/manifest.json"
+      ],
+      "remaining": "",
+      "notes": "Physical manifold, hex fittings, crimps, ribbed sleeves, clamps and pin retainers derive from shared folding layout. Fixed-length hoses/rods and actual cap endpoints verified; authored finish uses per-instance metre scaling. Corrected existing sharp inner-wheel steering overlap by moving mounts back.30m and routing hose slack higher. Hardware/software,322transfers,all3routes,48concealment views andinstalledclient pass. See QA for scope and exact receipts."
+    },
+    {
+      "id": "FV41",
+      "priority": "P1",
+      "title": "Fill out the engine and undercarriage.",
+      "requirement": "Add credible axles, transmission housings, radiator depth, exhaust connections and service access within the shared clearance envelope.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-engine.js",
+        "web/final-cut-engine-motion.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-sim.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-engine-2026-11-13.md",
+        "output/final-cut/engine/hardware/report.json",
+        "output/final-cut/engine/software/report.json",
+        "output/final-cut/engine/routes/browser.json",
+        "output/final-cut/engine/sightlines/report.json",
+        "output/final-cut/engine/client/state-0.json",
+        "output/final-cut/engine/source/manifest.json"
+      ],
+      "remaining": "",
+      "notes": "Open engine service vents reveal ribbed power unit, heat exchanger and pipework; front radiator has recessed core and two simulation-owned fans. Channel frame, mounted engine, axles/differentials, transmission/shaft and coolant connections fit unchanged physical envelopes. Hardware/software actual visibility, bounds, save/pause/shutdown, 322 transfer poses, all3routes, 48concealed views and installed client pass. See QA for exact scope and receipts."
+    },
+    {
+      "id": "FV42",
+      "priority": "P2",
+      "title": "Give the vehicle convincing weight.",
+      "requirement": "Add restrained suspension travel, acceleration pitch and wing inertia that follow motion and preserve contact and clearance.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Add restrained suspension travel, acceleration pitch and wing inertia that follow motion and preserve contact and clearance."
+    },
+    {
+      "id": "FV43",
+      "priority": "P1",
+      "title": "Polish the continuous driving animation.",
+      "requirement": "Synchronize wheel steering, tread travel, control movement, Joe's lean and mechanical vibration through fast rolling turns.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-wheel-travel.js",
+        "web/final-cut-machinery.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-ending.js",
+        "web/final-cut-engine.js",
+        "web/final-cut-engine-motion.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-sim.js",
+        "web/final-cut-hydraulic-layout.js",
+        "web/final-cut-hydraulics.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "qa/final-cut-visual-engine-2026-11-13.md",
+        "qa/final-cut-visual-hydraulics-2026-11-13.md"
+      ],
+      "remaining": "Actual per-wheel path distances drive inner/outer rotation through rolling turns; phases survive collapse/reload and pause. Finish coordinated control/lean/vibration art review and all-angle motion acceptance.",
+      "notes": " Engine pass adds visible ventilated depth and simulation-owned fan state; final geometry remains within the unchanged authoritative envelopes. Full item remains open for its broader finish/acceptance work. Hydraulic construction now has shared detailed fittings/sleeves, verified physical endpoints and corrected inner-front-tire clearance; broader item remains open."
+    },
+    {
+      "id": "FV44",
+      "priority": "P2",
+      "title": "Stage a stronger emergence from concealment.",
+      "requirement": "Coordinate reed movement, glimpses of metal, lamp reveal, debris and the full silhouette around the committed charge; avoid revealing the next approach prematurely.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Coordinate reed movement, glimpses of metal, lamp reveal, debris and the full silhouette around the committed charge; avoid revealing the next approach prematurely.",
+      "notes": " Opening marker occlusion is resolved by moving only the initial parked rig to the course side (x24.6). Hardware/software real-input reveal passes; all48later cardinal concealment comparisons remain identical with hidden rig shown/removed. See qa/final-cut-visual-opening-staging-2026-11-13.md."
+    },
+    {
+      "id": "FV45",
+      "priority": "P0",
+      "title": "Bring Joe's face to the same pixel-art standard.",
+      "requirement": "Improve eyes, brow, cheek planes, mouth and stubble so he reads at ordinary play distance and survives close inspection.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-joe-finish.js",
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json",
+        "qa/final-cut-visual-joe-expressions-2026-11-13.md",
+        "output/final-cut/joe-expressions/hardware/report.json",
+        "output/final-cut/joe-expressions/software/report.json",
+        "output/final-cut/joe-expressions/rules.json",
+        "output/final-cut/joe-expressions/routes/browser.json",
+        "output/final-cut/joe-expressions/sightlines/report.json",
+        "output/final-cut/joe-expressions/client/state-0.json",
+        "output/final-cut/joe-expressions/source/final-hashes.json"
+      ],
+      "remaining": "Improve eyes, brow, cheek planes, mouth and stubble so he reads at ordinary play distance and survives close inspection.",
+      "notes": " Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV46",
+      "priority": "P1",
+      "title": "Create distinct readable expressions.",
+      "requirement": "Differentiate searching concentration, attack commitment, frustration, loss-screen scrutiny and his reaction to the ground giving way.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-joe-expression.js",
+        "web/final-cut-joe-finish.js",
+        "web/final-cut-scene.js",
+        "assets/enemies/joe/final-cut-expressions-v1/manifest.json"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-joe-expressions-2026-11-13.md",
+        "output/final-cut/joe-expressions/hardware/report.json",
+        "output/final-cut/joe-expressions/rules.json",
+        "output/final-cut/joe-expressions/software/report.json",
+        "output/final-cut/joe-expressions/routes/browser.json",
+        "output/final-cut/joe-expressions/sightlines/report.json",
+        "output/final-cut/joe-expressions/client/state-0.json",
+        "output/final-cut/joe-expressions/source/final-hashes.json"
+      ],
+      "remaining": "Actor search/attack/frustration/alarm and capture scrutiny are connected. Finish and verify the separate loss-screen scrutiny artwork; complete normal-distance/cinematic continuity acceptance.",
+      "notes": "Four native 1254-square generated expression variants preserve the original identity/UV layout; lossless packaging and phase-clock transitions. Native28views/five sizes, exact pause, GPU release and8actual cardinal capture/escape sequences pass. Broader visual/performance gates remain."
+    },
+    {
+      "id": "FV47",
+      "priority": "P1",
+      "title": "Light Joe as a character.",
+      "requirement": "Use restrained cab/dashboard bounce and directional light to preserve his facial planes without making him glow through concealment.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-joe-finish.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "",
+      "notes": " Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Explicit local character-lighting requirement accepted: face and grips gain restrained illumination, physical sources follow the moving rig, and concealment remains pixel-identical. Face/clothing/acting and global parity/performance are separate unfinished requirements. Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV48",
+      "priority": "P1",
+      "title": "Improve clothing and body surfaces.",
+      "requirement": "Give his established sweater, checked collar, trousers and boots deliberate folds, texture, wear and a consistent pixel scale.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-joe-finish.js",
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-joe-finish-2026-11-13.md",
+        "output/final-cut/joe-finish/reference.json",
+        "output/final-cut/joe-finish/pose-parity.json",
+        "output/final-cut/joe-finish/hardware/report.json",
+        "output/final-cut/joe-finish/software/report.json",
+        "output/final-cut/joe-finish/routes/browser.json",
+        "output/final-cut/joe-finish/sightlines/report.json",
+        "output/final-cut/joe-finish/cab-lighting/report.json",
+        "output/final-cut/joe-finish/cab-lighting-software/report.json",
+        "output/final-cut/joe-finish/client/state-0.json"
+      ],
+      "remaining": "Give his established sweater, checked collar, trousers and boots deliberate folds, texture, wear and a consistent pixel scale.",
+      "notes": " Joe now retains Level1 body-map identity and its blue collar/face-skin blend/perceptual48-step material treatment.26native/software views each and exact26-pose before/after parity pass; actor GPU textures release. Facial artwork, expressions, clothing wear and full Level1 acceptance remain unfinished."
+    },
+    {
+      "id": "FV49",
+      "priority": "P1",
+      "title": "Polish hands, grips and seated movement.",
+      "requirement": "Show fingers gripping controls, arm effort, shoulder turns and supported boots while retaining the verified contact behavior.",
+      "status": "pending",
+      "implementation": [
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json"
+      ],
+      "remaining": "Show fingers gripping controls, arm effort, shoulder turns and supported boots while retaining the verified contact behavior.",
+      "notes": " Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md."
+    },
+    {
+      "id": "FV50",
+      "priority": "P1",
+      "title": "Add character to boarding and dismount.",
+      "requirement": "Refine weight shifts, hand support, hesitation and urgency around the already-clear animation path.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-arrival-layout.js",
+        "web/final-cut-arrival.js",
+        "web/final-cut-drive.js",
+        "web/final-cut-transfer.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js"
+      ],
+      "evidence": [
+        "qa/final-cut-visual-opening-staging-2026-11-13.md",
+        "output/final-cut/reveal/hardware/report.json",
+        "output/final-cut/reveal/software/report.json",
+        "output/final-cut/transfer/lifecycle/report.json",
+        "output/final-cut/transfer/current/report.json",
+        "output/final-cut/visual-reeds/sightlines/report.json",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json"
+      ],
+      "remaining": "Character expression, hand effort, deliberate urgency/acting and matched Level 1 visual acceptance remain. Boarding route, physical support and initial scene illumination have advanced.",
+      "notes": "New visible parking position, diagonal bay walk, deliberate ground-foot settling before boarding and terrain-consistent pelvis handoff implemented. Version4 arrival saves migrate old walk/climb progress. Actual322pose triangle/support sweep and fivephase continuity/lifecycle checks pass. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md."
+    },
+    {
+      "id": "FV51",
+      "priority": "P0",
+      "title": "Replace oversized cut-grass shapes.",
+      "requirement": "Use appropriately scaled stubble, clipped blades and small clumps with crisp authored silhouettes.",
+      "status": "complete",
+      "implementation": [
+        "web/final-cut-scene.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/ground.png",
+        "output/final-cut/visual-rough-stone/accepted/report.json"
+      ],
+      "remaining": "",
+      "notes": "Cut leaves now 3.5-5.1 cm high with narrow blade width, preserving the actual cut footprint; oversized star remnants removed. Mowing simulation regression passed."
+    },
+    {
+      "id": "FV52",
+      "priority": "P1",
+      "title": "Improve reel-driven grass ejection.",
+      "requirement": "Emit clippings from the actual cutting units with believable direction, speed, lighting and settling.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Emit clippings from the actual cutting units with believable direction, speed, lighting and settling."
+    },
+    {
+      "id": "FV53",
+      "priority": "P1",
+      "title": "Add terrain-aware tire effects.",
+      "requirement": "Produce dry dust, wet spray or displaced mud only where speed and ground conditions justify them.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Produce dry dust, wet spray or displaced mud only where speed and ground conditions justify them."
+    },
+    {
+      "id": "FV54",
+      "priority": "P2",
+      "title": "Add restrained engine and exhaust effects.",
+      "requirement": "Use pixel-shaped soot, brief load-related puffs and subtle heat treatment without obscuring Joe or smearing the artwork.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Use pixel-shaped soot, brief load-related puffs and subtle heat treatment without obscuring Joe or smearing the artwork."
+    },
+    {
+      "id": "FV55",
+      "priority": "P1",
+      "title": "Improve destructible furniture aftermath.",
+      "requirement": "Show distinct timber, fabric and metal fragments with readable break points, grounded resting poses and persistent damage.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Show distinct timber, fabric and metal fragments with readable break points, grounded resting poses and persistent damage."
+    },
+    {
+      "id": "FV56",
+      "priority": "P1",
+      "title": "Connect the water effects to the machinery.",
+      "requirement": "Make bypass flow, pipe rupture, splashes and the approaching mower's disturbance visibly share the same water state.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Make bypass flow, pipe rupture, splashes and the approaching mower's disturbance visibly share the same water state."
+    },
+    {
+      "id": "FV57",
+      "priority": "P2",
+      "title": "Build the bogging into a visual climax.",
+      "requirement": "Stage turf deformation, weight transfer, wheel churn, wing loading, rupture and shutdown as a coherent physical sequence.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Stage turf deformation, weight transfer, wheel churn, wing loading, rupture and shutdown as a coherent physical sequence."
+    },
+    {
+      "id": "FV58",
+      "priority": "P2",
+      "title": "Finish the persistent wreck tableau.",
+      "requirement": "Leave embedded wheels, folded vegetation, displaced mud, settling water and fading machine light that tell the story after motion stops.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Leave embedded wheels, folded vegetation, displaced mud, settling water and fading machine light that tell the story after motion stops."
+    },
+    {
+      "id": "FV59",
+      "priority": "P1",
+      "title": "Bring the splash art into exact visual continuity.",
+      "requirement": "Match the final mower design, Joe's appearance, architecture and palette in the existing high-resolution pixel-art opening.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Match the final mower design, Joe's appearance, architecture and palette in the existing high-resolution pixel-art opening."
+    },
+    {
+      "id": "FV60",
+      "priority": "P1",
+      "title": "Polish the intro's visual storytelling.",
+      "requirement": "Give each frame a clear focal point and narrative purpose; use restrained layered motion and crisp transitions where useful.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Give each frame a clear focal point and narrative purpose; use restrained layered motion and crisp transitions where useful.",
+      "notes": " Opening marker occlusion is resolved by moving only the initial parked rig to the course side (x24.6). Hardware/software real-input reveal passes; all48later cardinal concealment comparisons remain identical with hidden rig shown/removed. See qa/final-cut-visual-opening-staging-2026-11-13.md."
+    },
+    {
+      "id": "FV61",
+      "priority": "P1",
+      "title": "Strengthen the loss artwork and expression.",
+      "requirement": "Make Joe's gaze, posture and the visible industrial threat carry the failure scene, with readable retry text and suitable framing.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Make Joe's gaze, posture and the visible industrial threat carry the failure scene, with readable retry text and suitable framing."
+    },
+    {
+      "id": "FV62",
+      "priority": "P1",
+      "title": "Polish the win cutscene around physical cause and effect.",
+      "requirement": "Show why the machine fails and how Joe reacts, matching the playable collapse and dismount.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Show why the machine fails and how Joe reacts, matching the playable collapse and dismount."
+    },
+    {
+      "id": "FV63",
+      "priority": "P2",
+      "title": "Give the road ending a distinct visual release.",
+      "requirement": "Use wider breathing room, distant traffic and a deliberate change in light and composition to contrast with the enclosed course.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Use wider breathing room, distant traffic and a deliberate change in light and composition to contrast with the enclosed course."
+    },
+    {
+      "id": "FV64",
+      "priority": "P1",
+      "title": "Maintain state and asset continuity.",
+      "requirement": "Keep wetness, machine damage, grass condition, clothing and major landmarks consistent across gameplay and story imagery.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Keep wetness, machine damage, grass condition, clothing and major landmarks consistent across gameplay and story imagery."
+    },
+    {
+      "id": "FV65",
+      "priority": "P0",
+      "title": "Match Level 1's interface craft.",
+      "requirement": "Refine type, spacing, frames, palette and hierarchy across HUD, pause, captions and outcome screens, including compact layouts.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Refine type, spacing, frames, palette and hierarchy across HUD, pause, captions and outcome screens, including compact layouts."
+    },
+    {
+      "id": "FV66",
+      "priority": "P1",
+      "title": "Keep warning graphics clear within the richer scene.",
+      "requirement": "Preserve directional grass cues, important prompts and mute/reduced-motion equivalents while reducing competition from decorative text.",
+      "status": "pending",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Preserve directional grass cues, important prompts and mute/reduced-motion equivalents while reducing competition from decorative text."
+    },
+    {
+      "id": "FV67",
+      "priority": "P0",
+      "title": "Use matched comparison views as the acceptance bar.",
+      "requirement": "Judge final-level opening, shelter, grass, mower, Joe and ending shots against Level 1 references; texture size and object count alone do not establish parity.",
+      "status": "in_progress",
+      "implementation": [],
+      "evidence": [],
+      "remaining": "Judge final-level opening, shelter, grass, mower, Joe and ending shots against Level 1 references; texture size and object count alone do not establish parity."
+    },
+    {
+      "id": "FV68",
+      "priority": "P1",
+      "title": "Review every improvement in motion.",
+      "requirement": "Inspect approaches, strafing, rapid turns, cutting, boarding, capture and aftermath from front, side, rear and close views.",
+      "status": "in_progress",
+      "implementation": [
+        "tools/verify-final-cut-visual-foundation.cjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/routes/browser.json",
+        "output/final-cut/visual-foundation/reeds-fixed/report.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "output/final-cut/visual-hero/accepted/report.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md"
+      ],
+      "remaining": "Full routes, four approaches, shadowed emergence and camera sweep reviewed for this pass. Repeat complete motion/angle audit after remaining implementation.",
+      "notes": "Full routes, four approaches, shadowed emergence and camera sweep reviewed for this pass. Repeat complete motion/angle audit after remaining implementation."
+    },
+    {
+      "id": "FV69",
+      "priority": "P1",
+      "title": "Verify real resolution and responsive composition.",
+      "requirement": "Check 2560x1600, 1920x1080, 1280x720, 844x390 and 390x844; report internal render size separately from screenshot dimensions.",
+      "status": "in_progress",
+      "implementation": [
+        "tools/verify-final-cut-visual-foundation.cjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/report.json",
+        "output/final-cut/visual-foundation/software/report.json",
+        "output/final-cut/visual-rough-stone/final-hardware/report.json",
+        "output/final-cut/visual-rough-stone/accepted/report.json",
+        "output/final-cut/visual-ground/accepted/report.json",
+        "output/final-cut/visual-ground/software/report.json",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "output/final-cut/visual-timber/accepted/report.json",
+        "output/final-cut/visual-timber/software/report.json",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-timber/client-final/state-0.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "output/final-cut/visual-hero/accepted/report.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md"
+      ],
+      "remaining": "Five viewports and actual framebuffer sizes pass; no horizontal overflow. Repeat final full-scene/story/UI audit after remaining changes.",
+      "notes": "Five viewports and actual framebuffer sizes pass; no horizontal overflow. Repeat final full-scene/story/UI audit after remaining changes."
+    },
+    {
+      "id": "FV70",
+      "priority": "P1",
+      "title": "Preserve physical and visual truth.",
+      "requirement": "Recheck collision, wheel/foot contact, boarded poses, cover, four-direction concealment and visible effect origins after geometry changes.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-reeds.js",
+        "web/final-cut-lamps.js",
+        "web/final-cut-lighting.js",
+        "web/final-cut-rig.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-arrival-layout.js",
+        "web/final-cut-arrival.js",
+        "web/final-cut-drive.js",
+        "web/final-cut-transfer.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-engine.js",
+        "web/final-cut-engine-motion.js",
+        "web/final-cut-bodywork.js",
+        "web/final-cut-boss.js",
+        "web/final-cut-sim.js",
+        "web/final-cut-hydraulic-layout.js",
+        "web/final-cut-hydraulics.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/routes/browser.json",
+        "output/final-cut/visual-foundation/occlusion.json",
+        "output/final-cut/visual-estate/routes/browser.json",
+        "output/final-cut/visual-estate/occlusion.json",
+        "output/final-cut/visual-reeds/sightlines-dense/occlusion.json",
+        "output/final-cut/visual-reeds/routes/browser.json",
+        "output/final-cut/visual-reeds/contact.json",
+        "output/final-cut/visual-rough-stone/masonry-bounds.json",
+        "output/final-cut/visual-rough-stone/shared-sightlines-final/report.json",
+        "output/final-cut/visual-rough-stone/routes/browser.json",
+        "qa/final-cut-visual-timber-2026-11-13.md",
+        "output/final-cut/visual-timber/accepted/report.json",
+        "output/final-cut/visual-timber/software/report.json",
+        "output/final-cut/visual-timber/bounds.json",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-timber/client-final/state-0.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "output/final-cut/visual-hero/accepted/report.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "tools/verify-final-cut-lamps.cjs",
+        "output/final-cut/lamps/hardware/report.json",
+        "output/final-cut/lamps/software/report.json",
+        "qa/final-cut-visual-lamps-2026-11-13.md",
+        "output/final-cut/lighting/hardware/report.json",
+        "qa/final-cut-visual-opening-staging-2026-11-13.md",
+        "output/final-cut/reveal/hardware/report.json",
+        "output/final-cut/reveal/software/report.json",
+        "output/final-cut/transfer/lifecycle/report.json",
+        "output/final-cut/transfer/current/report.json",
+        "output/final-cut/visual-reeds/sightlines/report.json",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-engine-2026-11-13.md",
+        "qa/final-cut-visual-hydraulics-2026-11-13.md",
+        "qa/final-cut-visual-formed-panels-2026-11-13.md"
+      ],
+      "remaining": "New masonry stays inside actual collider envelopes; rough partial/full mowing and restoration, corrected concealment and three full routes pass. Final all-scene wheel/foot/boarded contact and effect-origin audit remains after future changes.",
+      "notes": "Current estate pass preserves three full routes and eight exact concealed-mower image pairs across hardware/software. Full final contact audit remains required after terrain, machine and character work. Five mower fixtures now have recessed ribbed lenses, reflector rims, cages, visors, mounts and shared authored metal. Headlamp light origins derive from visible shared dimensions; wing geometry stays in existing envelopes. Hardware/software checks cover 16 cardinal phase poses, four saved collapse ages and pause. Headlamp assemblies now participate in chassis contact. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Engine pass adds visible ventilated depth and simulation-owned fan state; final geometry remains within the unchanged authoritative envelopes. Full item remains open for its broader finish/acceptance work. Hydraulic construction now has shared detailed fittings/sleeves, verified physical endpoints and corrected inner-front-tire clearance; broader item remains open. Formed-panel pass verified manufactured shapes, physical supports and final three-route completion; see qa/final-cut-visual-formed-panels-2026-11-13.md. Broader requirement remains open."
+    },
+    {
+      "id": "FV71",
+      "priority": "P1",
+      "title": "Measure the complete rendering cost.",
+      "requirement": "Set budgets from baseline frame time, texture memory, shadows, foliage overdraw and worst-case effects; preserve coherent lower-quality art.",
+      "status": "in_progress",
+      "implementation": [
+        "tools/verify-final-cut-visual-foundation.cjs",
+        "web/final-cut-reeds.js",
+        "tools/verify-final-cut-reed-culling.cjs",
+        "tools/profile-final-cut-software.cjs",
+        "web/final-cut-reed-culling.js",
+        "web/final-cut-scene.js",
+        "web/visible-indices.js",
+        "tools/profile-final-cut-shading.cjs",
+        "tools/profile-final-cut-masonry-culling.cjs",
+        "tools/verify-final-cut-masonry-culling.cjs",
+        "tools/verify-final-cut-static-disposal.cjs",
+        "tools/profile-final-cut-light-branches.cjs",
+        "tools/profile-final-cut-static-culling.cjs",
+        "tools/verify-final-cut-static-culling.cjs",
+        "tools/verify-final-cut-static-tier.cjs",
+        "web/final-cut-refuge-lighting.js",
+        "tools/verify-final-cut-refuge-lighting.cjs",
+        "tools/verify-final-cut-refuge-fixtures.mjs"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/accepted-hardware/report.json",
+        "output/final-cut/visual-rough-stone/final-hardware/report.json",
+        "output/final-cut/visual-ground/profile-hardware.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "output/final-cut/visual-ground/profile-software.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "output/final-cut/visual-hero/accepted/report.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "qa/final-cut-visual-headlight-finish-2026-11-13.md",
+        "output/final-cut/headlight-finish/hardware/cost.json",
+        "output/final-cut/headlight-finish/software/cost.json",
+        "qa/final-cut-visual-reed-culling-2026-11-13.md",
+        "output/final-cut/reed-culling/hardware/report.json",
+        "output/final-cut/reed-culling/software/report.json",
+        "output/final-cut/reed-culling/sightlines/report.json",
+        "output/final-cut/reed-culling/batched/hardware/report.json",
+        "output/final-cut/reed-culling/batched/software/report.json",
+        "output/final-cut/reed-culling/batched/software-cost/report.json",
+        "output/final-cut/reed-culling/batched/tier.json",
+        "output/final-cut/reed-culling/batched/sightlines/report.json",
+        "output/final-cut/reed-culling/batched/client/state-0.json",
+        "output/final-cut/reed-culling/batched/client-tier/state-0.json",
+        "qa/final-cut-visual-masonry-culling-2026-11-13.md",
+        "output/final-cut/masonry-culling/hardware-forced/report.json",
+        "output/final-cut/masonry-culling/software/report.json",
+        "output/final-cut/masonry-culling/tier.json",
+        "output/final-cut/masonry-culling/disposal/report.json",
+        "output/final-cut/masonry-culling/client/state-0.json",
+        "output/final-cut/masonry-culling/software-cost/report.json",
+        "qa/final-cut-visual-static-culling-2026-11-13.md",
+        "output/final-cut/static-culling/software/report.json",
+        "output/final-cut/static-culling/hardware-forced/report.json",
+        "output/final-cut/static-culling/tier.json",
+        "output/final-cut/static-culling/disposal/report.json",
+        "output/final-cut/static-culling/software-cost/report.json",
+        "output/final-cut/static-culling/client/state-0.json",
+        "qa/final-cut-visual-refuge-lighting-2026-11-13.md",
+        "output/final-cut/refuge-lighting/hardware/report.json",
+        "output/final-cut/refuge-lighting/software/report.json",
+        "output/final-cut/refuge-lighting/fixtures.json",
+        "output/final-cut/refuge-lighting/routes/browser.json",
+        "output/final-cut/refuge-lighting/sightlines-refreshed/report.json",
+        "output/final-cut/refuge-lighting/client/state-0.json",
+        "qa/final-cut-visual-turf-paving-2026-11-13.md",
+        "output/final-cut/paving-finish/profile-hardware.json",
+        "output/final-cut/paving-finish/profile-software.json"
+      ],
+      "remaining": "Complete presented-frame hardware/software profiling, worst-case effects, texture memory and final budgets remain. Warmed resource stability is verified but does not prove frame pacing.",
+      "notes": "Previous JS draw plus gl.finish call timings exclude asynchronous presentation completion; they are not GPU/FPS acceptance. Hero tires add 7072 triangles per wheel with one shared geometry/material and no new texture. Final performance gate remains open. Isolated headlight-finish study at960x540: hardware~3.5–3.8ms; software no-profile~1081ms/profile~1114ms with moving shadows refreshed. Absolute software cost is unacceptable and predates the reflector. Investigate dominant materials/lights/draws before adding scattering; no full performance acceptance. Reed sections now retain all225180triangles/3753clumps while independently culling camera and shadow frusta. Hardware/software22views each have exact culled/unculled framebuffer equivalence; all48concealmentpairs and simulation-driven contact recovery pass. Isolated cost and installed-client receipts pending; FV71 is not complete. Initial36-draw section prototype superseded by one shared index buffer compacted independently before each camera/shadow draw. Original triangle order retained, no added draw calls, tighter box queries save~0.5M submittedtriangles in tested views. Revised acceptance and uncontended cost pending; prior section-prototype timing was contaminated by concurrent UnderGreen jobs. FINAL reed optimization is software-only after measured hardware overhead. Single-draw per-camera/light index compaction preserves everyplant/triangle; final hardware/software22views each and48concealmentpairs pass. Isolated paired softwarecost1083.95->1029.2ms(~5.05percent),99draws unchanged,triangles-25.35percent. Productionhardware exactlymatchesoriginalpixels/draws. Final client63369 andpost-tier91055 pass. Softwareabsolute cost remainsunacceptable; FV71notcomplete. See final reed-culling QA for supersededprototype distinction. Software masonry now uses75spatial batches for all7576unchangedpieces. Hardware retains5batches. Final28old/new andculled/fullview comparisons areexact; actualwalllightocclusion/reload and85uploadedstaticbufferdisposals pass. Installed98676 passes. Isolatedcost5112pending; fullperformance remainsopen. Finalisolatedmasonry5112 (allactivecastinglightsrefreshed) old1248.7/1256.3ms,new745.5/745.9ms(~40.46percentgain);triangles1864436->682340(-63.4percent),draws132->194. Allownedjobs terminal. Absolute~746msstillfailsperformance; finalQA/snapshots retained. Static scenery pass preserves 4349 original non-masonry instances, partitions software batches except coincident metal fittings, and leaves hardware byte-identical. All culling comparisons exact; tiny original/regrouped edge differences documented. Final isolated three-view render/readback cost improves 6.84–13.38%; absolute software costs still fail performance acceptance. Full three routes and installed client pass. See qa/final-cut-visual-static-culling-2026-11-13.md. Three supported entrance downlights now illuminate the refuge aprons with real masonry shadows. All57 fitting parts connect to the existing roofs above2.21m. Conservative light-frustum culling preserves exact native/software pixels; pump reed shadows refresh while static maps cache. Five viewport sizes, doorway movement, pause, resource stability and physical fixture checks pass. See qa/final-cut-visual-refuge-lighting-2026-11-13.md. Native local light cost is measured; variable and unacceptable absolute software cost leaves FV71 open. Final all-three-route pass has four heard redirects, zero captures/errors and77 screenshots. All48 concealment pairs also pass with every light shadow explicitly refreshed after each rig-visibility toggle. Installed client2121 completed and its fresh gameplay screenshot/state were inspected. All jobs terminal; six source/test snapshots match. Paving ABBA with synchronous full readback: native deck4.9ms before/current4.9–5.9, pump5.3–5.4/current5.4–5.9; software deck356.8–364.5/current362.1–390.4, pump226.1–226.4/current230.0–230.4. No full budget acceptance; turf incremental cost not isolated."
+    },
+    {
+      "id": "FV72",
+      "priority": "P1",
+      "title": "Require a complete visual acceptance pass.",
+      "requirement": "Resolve flat placeholder forms, inconsistent materials, visible repetitions, light leaks, floating props, clipping and story/game mismatches across all full routes.",
+      "status": "in_progress",
+      "implementation": [
+        "web/final-cut-arrival-layout.js",
+        "web/final-cut-arrival.js",
+        "web/final-cut-drive.js",
+        "web/final-cut-transfer.js",
+        "web/final-cut-maintenance-light.js",
+        "web/final-cut-scene.js",
+        "web/final-cut-cab-lighting.js",
+        "web/final-cut-lamps.js"
+      ],
+      "evidence": [
+        "output/final-cut/visual-foundation/routes/browser.json",
+        "output/final-cut/visual-estate/routes/browser.json",
+        "qa/final-cut-visual-estate-2026-11-13.md",
+        "output/final-cut/visual-rough-stone/routes/browser.json",
+        "qa/final-cut-visual-rough-stone-2026-11-13.md",
+        "output/final-cut/visual-ground/routes/browser.json",
+        "qa/final-cut-visual-ground-2026-11-13.md",
+        "output/final-cut/visual-timber/routes-final/browser.json",
+        "output/final-cut/visual-timber/client-final/state-0.json",
+        "qa/final-cut-visual-hero-2026-11-13.md",
+        "output/final-cut/visual-hero/accepted/report.json",
+        "output/final-cut/visual-hero/software/report.json",
+        "output/final-cut/visual-hero/client/state-0.json",
+        "qa/final-cut-visual-wheel-contact-2026-11-13.md",
+        "qa/final-cut-visual-lamps-2026-11-13.md",
+        "output/final-cut/lighting/hardware/report.json",
+        "qa/final-cut-visual-opening-staging-2026-11-13.md",
+        "output/final-cut/reveal/hardware/report.json",
+        "output/final-cut/reveal/software/report.json",
+        "output/final-cut/transfer/lifecycle/report.json",
+        "output/final-cut/transfer/current/report.json",
+        "output/final-cut/visual-reeds/sightlines/report.json",
+        "qa/final-cut-visual-maintenance-light-2026-11-13.md",
+        "output/final-cut/maintenance-light/hardware/report.json",
+        "output/final-cut/maintenance-light/software/report.json",
+        "qa/final-cut-visual-cab-lighting-2026-11-13.md",
+        "output/final-cut/cab-lighting/hardware/report.json",
+        "output/final-cut/cab-lighting/software/report.json",
+        "qa/final-cut-visual-formed-panels-2026-11-13.md",
+        "output/final-cut/static-culling/routes/browser.json"
+      ],
+      "remaining": "Three current routes pass; authored rough and masonry are verified. Overall acceptance still requires terrain, close machinery/character craft, effects, story/UI, matched Level 1 views and remaining gates.",
+      "notes": "Three current routes pass; authored rough and masonry are verified. Overall acceptance still requires terrain, close machinery/character craft, effects, story/UI, matched Level 1 views and remaining gates. Final timber pass completes all3input routes with4heard ball redirects, both crossings, pump/bell/collapse/road, no captures/errors. Joe fixture is reed-occluded and is not close visual acceptance. Opening marker occlusion is resolved by moving only the initial parked rig to the course side (x24.6). Hardware/software real-input reveal passes; all48later cardinal concealment comparisons remain identical with hidden rig shown/removed. See qa/final-cut-visual-opening-staging-2026-11-13.md. Current lamp source passes all3full input-driven routes with four heard redirects, pump/bell/collapse/road and zero captures/errors; initial overlook marker composition is resolved by the subsequent opening-staging pass. Opening maintenance fixture illuminates the walk and steps with a real shadow-casting spotlight; final seating fades the circuit before marker startup. Hardware framebuffer, actor-shadow, pause/reload/reduced-motion checks pass; later concealment and all three full routes pass. See qa/final-cut-visual-maintenance-light-2026-11-13.md. Final hardware/software targeted checks and standard installed client pass; software retains coarser shadow edges. Full character/art/performance acceptance remains open. Cab spotlight and instrument fill now follow the physical ceiling fixture/panel, reveal, concealment and ending. Four-mesh instrument cluster has live speed/deployment needles. Final hardware/software, 322 transfer poses, 48 concealed views, reveal, all three routes and installed client pass. See qa/final-cut-visual-cab-lighting-2026-11-13.md. Formed-panel pass verified manufactured shapes, physical supports and final three-route completion; see qa/final-cut-visual-formed-panels-2026-11-13.md. Broader requirement remains open."
+    }
+  ],
+  "counts": {
+    "in_progress": 28,
+    "complete": 19,
+    "pending": 25
+  },
+  "currentMilestone": "Joe expression artwork integrated and verified: native/software28views,8cardinal capture/escape sequences,11ending restores,3fullroutes,48concealment pairs and installed gameplay client pass. All owned jobs terminal. Full72scope active.",
+  "nextMilestone": "Finish Joe neck/garment transitions and consistent character pixel detail, then align loss-screen scrutiny and story continuity with the runtime actor/mower. Preserve all remaining72-item environment/machinery/effects/UI/performance/acceptance requirements."
+}

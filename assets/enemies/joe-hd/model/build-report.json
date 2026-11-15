@@ -1,0 +1,12 @@
+{
+  "meshes": 6,
+  "vertices": 71551,
+  "triangles": 141248,
+  "bones": 17,
+  "action": "PushWalk",
+  "frames": 37,
+  "duration": 1.2,
+  "gaitDistance": 0.7419354838709677,
+  "unweightedVertices": 0,
+  "file": "C:\\Users\\Will\\Projects\\project-rough-cut\\web\\assets\\models\\joe-pixel-rig.glb"
+}

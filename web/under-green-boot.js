@@ -1,0 +1,2 @@
+window.RCChapterLaunch=RCLaunchScreens.mount(document.getElementById('panel'),'under-green');
+if(RCProgression.admit('under-green'))try{await import('./under-green.js?v=20261115-progression');}catch(error){console.error(error);document.getElementById('loading').textContent='The chapter could not load: '+error.message;const b=document.getElementById('primary');b.disabled=false;b.textContent='Retry loading';b.onclick=()=>location.reload();}

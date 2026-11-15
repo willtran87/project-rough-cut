@@ -1,0 +1,64 @@
+import {interactionEligible} from './interaction-rules.js';
+import {sluiceObstruction,sluiceObstructionMessage,SLUICE_COMMITMENT} from './under-green-sluice.js';
+import {LEVER,NOTE,SLUICE,distance,lineClear,gateBlocks,keeperInside} from './under-green-course.js';
+import {validateInteractions,freezeAuthored} from './under-green-authoring.js';
+
+/** @type {import('./under-green-authoring.js').InteractionDefinition[]} */
+export const INTERACTIONS=freezeAuthored([
+ {id:'bypass',target:LEVER,name:'pump lever',label:'Redirect the irrigation',detail:'Drain the onward channel. The bypass stays open.'},
+ {id:'note',target:NOTE,name:'record',label:'Take the groundskeeper’s record',detail:'Read it safely in Pause.'},
+ {id:'gate',target:SLUICE,name:'sluice release',label:'Close the keeper’s sluice',detail:'Keep Joe outside and the threshold clear. Stay inside until the barrier seals.'}
+].map(control=>({...control,height:control.target.height??1.15,reach:1.8,feedbackReach:3.2,facing:.82})));
+validateInteractions(INTERACTIONS);
+
+function visibleWithin(run,control,reach=control.reach){
+ return interactionEligible(run.player,control.target,{
+  reach,height:control.height,facing:control.facing,yaw:run.player.yaw+(run.player.rearAngle||0),
+  blocked:(a,b)=>!lineClear(a,b,0,gateBlocks(run.gate,run.player.eyeHeight??1.65))
+ });
+}
+
+function enabled(run,id){
+ if(id==='bypass')return !run.bypass;
+ if(id==='note')return !run.evidence;
+ return run.bypass&&keeperInside(run.player);
+}
+
+export function nearbyAction(run){
+ if(run.finished)return null;
+ const control=INTERACTIONS.find(c=>enabled(run,c.id)&&visibleWithin(run,c));
+ if(!control)return null;
+ // Report a queried interlock at the visible control. Do not broadcast hidden
+ // occupancy before Use or carry this transient information into a save.
+ const obstruction=control.id==='gate'&&run.sluiceBlocked&&sluiceObstruction(run);
+ if(obstruction)return {id:'gate',label:'Sluice blocked',detail:sluiceObstructionMessage(obstruction)};
+ return {id:control.id,label:control.id==='gate'&&run.closing?'Sluice closing…':control.label,detail:control.id==='gate'&&run.closing?SLUICE_COMMITMENT:control.detail};
+}
+
+// Failed Use is explained only on request. A wider reach may identify a visible
+// control, but never enables it or reveals one through cover/behind the camera.
+function unavailableReason(run){
+ const control=INTERACTIONS.find(c=>visibleWithin(run,c,c.feedbackReach));
+ if(!control)return 'Face a control and move within reach.';
+ if(distance(run.player,control.target)>control.reach)return `Move closer to the ${control.name}.`;
+ if(control.id==='bypass'&&run.bypass)return 'The bypass is already open. Follow the drained onward route.';
+ if(control.id==='note'&&run.evidence)return 'The groundskeeper’s record is already kept. Read it in Pause.';
+ if(control.id==='gate'){
+  if(!run.bypass)return 'Open the red pump-house bypass before sealing this sluice.';
+  if(!keeperInside(run.player))return 'Step fully inside the keeper’s room, then face the release.';
+ }
+ return 'Face a control and move within reach.';
+}
+
+export function interactionFeedback(run){
+ if(run.finished||!['playing','aftermath'].includes(run.mode))return null;
+ // An accepted operation remains the player's current task while they glance
+ // back at the moving gate. No unseen occupancy is disclosed by this reminder.
+ if(run.closing)return {kind:'interaction',priority:85,text:SLUICE_COMMITMENT};
+ const action=nearbyAction(run);
+ // The requested interlock or active closure needs an actionable answer.
+ // Ordinary motor captions must not hide it; strikes and water recovery win.
+ if(action)return {kind:'interaction',priority:action.id==='gate'&&run.sluiceBlocked&&sluiceObstruction(run)?85:50,text:action.detail};
+ if(run.useFeedbackUntil>run.time)return {kind:'interaction',priority:55,text:unavailableReason(run)};
+ return null;
+}

@@ -1,0 +1,102 @@
+@font-face{font-family:UGMono;src:local('Consolas')}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#091412;color:#e4e7d5;font-family:Arial,sans-serif}button,a,input,select{touch-action:manipulation}button,a{color:inherit}button{background:#19332d;border:1px solid #82927b;padding:.7rem 1rem;font:600 .85rem UGMono,monospace;cursor:pointer;border-radius:3px}button:hover,button:focus-visible,a:focus-visible{outline:2px solid #e6bb75;outline-offset:3px}button:disabled{opacity:.5;cursor:wait}a{text-underline-offset:4px}button[hidden],[hidden]{display:none!important}#shell{position:relative;width:100%;height:100%;overflow:hidden}#game{display:block;width:100%;height:100%;outline:none;touch-action:none}#hud{position:absolute;inset:0;pointer-events:none}#objective-card{position:absolute;left:24px;top:24px;padding:14px 18px;background:#0b1b18e6;border-left:3px solid #c9aa70;max-width:min(450px,66vw)}small,.eyebrow{font:12px UGMono,monospace;letter-spacing:.13em;color:#b5cbbd}#objective-card strong{display:block;font-size:16px;line-height:1.45;margin:6px 0}#record-status{font:12px UGMono,monospace;color:#a7baa8}.hud-tools{position:absolute;right:24px;top:24px;display:flex;gap:8px;pointer-events:auto}.hud-tools button{background:#0b1b18d9}#reticle{position:absolute;left:50%;top:50%;font:28px monospace;transform:translate(-50%,-50%);color:#eee9cd;text-shadow:0 1px 2px #000}#water-read{position:absolute;right:24px;top:100px;background:#0b1b18ed;border:1px solid #657b6f;width:240px;padding:14px}#water-read strong{display:block;font:700 17px UGMono,monospace;margin:8px 0;color:#a9d4b5}#water-read[data-danger=true] strong{color:#efb373}#water-read span{display:block;font-size:13px;line-height:1.4;color:#c6d0c4}progress{width:100%;height:8px;accent-color:#d5b478;margin-bottom:8px}#bottom{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);text-align:center;width:min(720px,90%)}#caption{background:#0b1b18df;padding:10px 16px;border-radius:3px;font-size:16px;line-height:1.4;margin:0 auto 10px;width:fit-content}#caption:empty{display:none}#use{pointer-events:auto;background:#d6bd88;color:#10241c;max-width:100%;margin-bottom:10px}#hint{display:block;text-shadow:0 2px 3px #000;letter-spacing:.02em;color:#e7e6cb;font-size:12px}#panel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#07110fe8,#07110fa8);overflow:auto;padding:40px}.panel-art{position:fixed;inset:0;background:linear-gradient(90deg,#07110fea 12%,#07110fa0 57%,#07110f3b),url('./assets/optimized/rough-cut-drain-escape-tableau-v1.webp') center/cover;pointer-events:none}.panel-body{position:relative;width:min(920px,100%);margin:auto;padding:32px 40px;background:#101f1ce8;border:1px solid #63786b;box-shadow:0 25px 100px #0008}.eyebrow{color:#ccac75;font-size:11px}h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(38px,5vw,68px);letter-spacing:-.03em;margin:16px 0}#tagline{font-family:Georgia,serif;font-size:23px;line-height:1.4;color:#c1cfc2;margin:0 0 26px}#guide{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:22px}#guide div{border-top:1px solid #71836d;padding-top:14px}#guide b{font:12px UGMono,monospace;letter-spacing:.08em;color:#d8ba83}#guide p{font-size:14px;line-height:1.6;color:#c1ccc0;margin:8px 0}details{border-top:1px solid #40564a;padding:13px 0;font-size:14px;line-height:1.6}summary{cursor:pointer;color:#d4c7a3}label{display:inline-flex;align-items:center;gap:12px;margin:6px 20px 6px 0}select{background:#19332d;color:#eee9cd;padding:5px}#loading{font:13px UGMono,monospace;color:#bdcca9}#result{font-size:18px;line-height:1.6;max-width:650px}#save-note{font-size:12px;color:#99ae9d;line-height:1.5}.actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:20px 0}.actions #primary{background:#d8bd86;color:#10231a;font-size:14px;padding:14px 24px}.actions a{font-size:13px}.chapters{display:flex;gap:22px;flex-wrap:wrap;font:11px UGMono,monospace;border-top:1px solid #40564a;padding-top:15px;margin-top:22px}.chapters span{color:#ccac75}#touch{position:absolute;inset:auto 14px 14px;display:flex;justify-content:space-between;align-items:end;pointer-events:none;gap:12px}#touch button{pointer-events:auto;touch-action:none;user-select:none;background:#11271ddc;min-height:45px;min-width:46px}.pad{display:grid;grid-template-columns:repeat(3,46px);gap:3px}.pad button:first-child{grid-column:2}.pad button:nth-child(2){grid-row:2;grid-column:1}.pad button:nth-child(3){grid-row:2;grid-column:2}.pad button:nth-child(4){grid-row:2;grid-column:3}body.touch #bottom{bottom:122px}body.touch #hint{display:none}body[data-mode=caught] .panel-body{border-color:#9e6852}body[data-mode=caught] h1{color:#e6b99b}@media(max-width:700px){#panel{padding:14px}.panel-body{padding:24px}#guide{grid-template-columns:1fr;gap:8px}#guide p{margin:4px 0}h1{font-size:43px}#tagline{font-size:20px;margin-bottom:18px}#objective-card{left:12px;top:12px;padding:10px;max-width:calc(100% - 110px)}#objective-card strong{font-size:13px}.hud-tools{right:12px;top:12px;flex-direction:column;gap:5px}.hud-tools button{font-size:11px;padding:7px}#water-read{right:12px;top:130px;width:185px;padding:10px}#water-read strong{font-size:15px}#water-read small{font-size:10px}#water-read span{font-size:11px}#caption{font-size:13px;padding:8px}#touch>div:last-child{display:flex;flex-direction:column;gap:4px}#touch>div:last-child button{padding:7px;min-height:36px}}@media(max-height:500px){#panel{padding:12px}.panel-body{padding:20px 25px}h1{font-size:38px;margin:10px 0}#tagline{font-size:18px;margin-bottom:14px}#guide{gap:15px;grid-template-columns:repeat(3,1fr)}#guide p{font-size:12px}#objective-card{top:10px;left:12px;max-width:48%;padding:8px 12px}#objective-card strong{font-size:12px;margin:3px 0}#objective-card small,#record-status{font-size:10px}.hud-tools{top:10px;right:12px}#water-read{top:65px;right:12px;width:190px;padding:8px}#water-read span{font-size:11px}#water-read strong{font-size:14px;margin:4px 0}#bottom{bottom:10px}body.touch #bottom{bottom:95px;width:55%}#caption{font-size:12px}#touch>div:last-child{flex-direction:row}#touch button{min-height:38px;padding:7px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+@media(max-width:700px) and (min-height:501px){body.touch #bottom{bottom:182px}}
+
+#pursuit{display:block;margin:0 auto 8px;color:#ffd597;font-size:12px;letter-spacing:.04em;text-shadow:0 2px 3px #000}#pursuit:empty{display:none}body.water-hit #hud{box-shadow:inset 0 0 55px #74bfc080}#water-read[data-danger=false] strong{color:#a7efb6}
+
+#water-read[data-danger=false][data-action=wait] strong{color:#ffd18b}
+
+/* Preserve the crossing view: one message and a compact bank-state strip. */
+#caption[data-kind=danger]{border-left:3px solid #eab17c;color:#ffe3bd}
+#paused-objective{border-left:2px solid #c9aa70;padding-left:12px;line-height:1.5;color:#d6dfcb}
+@media(max-width:700px){
+ body.crossing #objective-card strong,body.crossing #record-status{display:none}
+ body.crossing #objective-card{padding:8px 10px;max-width:calc(100% - 110px)}
+ #water-read{left:12px;right:12px;top:82px;width:auto;padding:8px 10px}
+ #water-read strong{font-size:13px;line-height:1.35;margin:0 0 4px}
+ #water-read progress{height:4px;display:block;margin:0}
+ #water-read small,#water-read span{display:none}
+ #water-read[data-lesson=true] span{display:block;font-size:12px;margin-top:7px;line-height:1.4}
+ #caption{font-size:14px;line-height:1.4;max-width:100%}
+}
+@media(max-height:500px){
+ #water-read{top:68px;left:12px;right:auto;width:min(360px,calc(100% - 24px));padding:7px 10px}
+ #water-read small,#water-read span{display:none}
+ #water-read strong{font-size:13px;margin:0 0 4px}
+ #water-read progress{height:4px;display:block;margin:0}
+ body.crossing #objective-card strong,body.crossing #record-status{display:none}
+}
+
+/* Controller focus remains visible after programmatic DOM navigation. */
+#panel[data-gamepad=true] :focus{outline:3px solid #f4d38c;outline-offset:4px}
+
+.controller-menu-help{display:none;font-size:13px;line-height:1.5;color:#f4d38c}#panel[data-gamepad=true] .controller-menu-help{display:block}
+
+#touch [data-key=sprint][aria-pressed=true]{background:#cbb77b;color:#101c14;border-color:#f4d38c}
+/* Keep the speed toggle and actions large enough for a thumb. */
+#touch>div:last-child button,#touch .pad button{min-height:44px;min-width:44px}
+#focus-state{display:block;margin-top:5px;color:#f4d38c;font-size:11px}
+#touch [data-key=focus][aria-pressed=true]{background:#cbb77b;color:#101c14;border-color:#f4d38c}
+/* Two compact columns preserve the look area while exposing every on-foot action. */
+#touch>div.touch-actions{display:grid;grid-template-columns:repeat(2,minmax(54px,1fr));gap:4px}
+#touch>div.touch-actions [data-key=use]{grid-column:1/-1}
+@media(max-height:500px){
+ #touch>div.touch-actions{grid-template-columns:repeat(5,minmax(44px,1fr))}
+ #touch>div.touch-actions [data-key=use]{grid-column:auto}
+}
+@media(max-width:700px) and (min-height:501px){body.touch #bottom{bottom:216px}}
+
+#caption{font-size:calc(14px * var(--caption-scale,1));background:rgba(7,26,21,var(--caption-opacity,.78))}
+@media(max-width:700px),(max-height:500px){#caption{font-size:calc(13px * var(--caption-scale,1))}}
+
+.resolution-setting{display:grid;gap:6px;width:100%;max-width:420px}.resolution-setting span{display:flex;align-items:center;gap:12px}.resolution-setting input{flex:1;min-width:0}.resolution-setting output{min-width:4ch}.resolution-help{margin-top:0;color:#bacaba;font-size:12px}
+#local-playtest{margin-top:20px}#local-playtest label{display:grid;gap:7px;margin:16px 0}#local-playtest textarea,#local-playtest select{box-sizing:border-box;width:100%;max-width:100%;font:inherit;color:inherit;background:#0c201c;border:1px solid #768e7c;padding:10px}#local-playtest textarea{resize:vertical;min-height:70px}#local-playtest p{font-size:13px;line-height:1.5}#local-playtest button{min-height:44px}#local-playtest textarea:focus-visible,#local-playtest select:focus-visible{outline:2px solid #f2d69b;outline-offset:3px}
+.on-foot-settings{min-width:0;width:100%;box-sizing:border-box;border:1px solid #637366;padding:12px;margin:12px 0}.on-foot-settings legend{padding:0 6px}.on-foot-settings p{font-size:12px;color:#bacaba}.camera-setting{display:grid;gap:6px;width:100%;max-width:420px}.camera-setting span{display:flex;align-items:center;gap:12px}.camera-setting input{flex:1;min-width:0}.camera-setting output{min-width:5ch;text-align:right}
+#keyboard{min-width:0;margin:16px 0;padding:12px;border:1px solid #637366}
+#keyboard [data-keyboard-fields]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px}
+#comfort #keyboard label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;min-width:0;min-height:44px}
+#keyboard select{min-width:90px;max-width:55%;min-height:44px;padding:6px;background:#12251d;color:#edf0df;border:1px solid #9eac92;font:inherit}
+#keyboard option:disabled{color:#819086}
+#keyboard button{margin-top:12px;min-height:44px}
+#keyboard p{font-size:13px;line-height:1.5}
+#keyboard [data-keyboard-status]{min-height:1.4em}
+@media(max-width:700px){#keyboard [data-keyboard-fields]{grid-template-columns:1fr}}
+
+/* The physical bank signal owns the central view. On portrait crossings keep
+   only the actionable water row above it; the lesson still owns its caption. */
+@media(max-width:700px) and (min-height:501px){
+ body.crossing #objective-card{top:56px;background:none;border:0;padding:0}
+ body.crossing #district{display:none}
+ body.crossing #focus-state{margin-top:0}
+ #water-read{top:12px;right:110px;width:auto}
+ #water-read[data-lesson=true] span{display:none}
+ /* The offer already names Listen. Its second line must not overlap a
+    duplicate listening label underneath the compact portrait water row. */
+ body.crossing.walking-option #focus-state{display:none}
+}
+
+/* The release prompt already states the next action. Keep its physical button
+   visible on compact screens; restore the objective when the player leaves. */
+@media(max-width:700px),(max-height:500px){
+ body.at-release #objective-card,body[data-mode=aftermath] #objective-card{padding:8px 12px;width:auto;right:110px}
+ body.at-release #objective,body.at-release #record-status,
+ body[data-mode=aftermath] #objective,body[data-mode=aftermath] #record-status{display:none}
+}
+
+/* Darken the scene edges only; prompts and menus remain above this layer. */
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 38%,rgba(0,3,2,.13) 67%,rgba(0,3,2,.46) 100%)}
+/* Defeat art stays intact above the readable retry controls at every aspect. */
+#defeat-art{position:relative;margin:0;width:100%;height:clamp(200px,56dvh,1000px);flex:none;background:#050b09}
+#defeat-art img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+body[data-mode=caught] #panel{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;padding:0;background:#080f0d}
+body[data-mode=caught] .panel-art{display:none}
+body[data-mode=caught] .panel-body{width:min(1200px,100%);margin:0 auto;padding:20px 30px;border-width:1px 0 0;box-shadow:none}
+body[data-mode=caught] h1{font-size:clamp(28px,3vw,43px);margin:8px 0}
+body[data-mode=caught] #tagline{display:none}
+body[data-mode=caught] #result{font-size:16px;line-height:1.4;margin:8px 0;max-width:none}
+body[data-mode=caught] #retry-advice,body[data-mode=caught] #retry-progress{font-size:13px;line-height:1.5;margin:6px 0;color:#bac7b9}
+body[data-mode=caught] .actions{margin:14px 0}
+body[data-mode=caught] .chapters,body[data-mode=caught] #save-note,body[data-mode=caught] #replay-intro,body[data-mode=caught] .controller-menu-help{display:none}
+body[data-mode=intro] #hud,body[data-mode=intro] #touch{display:none}
+@media(max-width:700px){#defeat-art{height:clamp(210px,35dvh,400px)}body[data-mode=caught] .panel-body{padding:18px}body[data-mode=caught] #result{font-size:14px}}
+@media(max-height:500px) and (min-width:701px){body[data-mode=caught] #panel{flex-direction:row}#defeat-art{width:52%;height:100%;position:sticky;top:0}body[data-mode=caught] .panel-body{width:48%;padding:14px 18px}body[data-mode=caught] h1{font-size:28px}}

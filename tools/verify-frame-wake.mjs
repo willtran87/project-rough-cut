@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {createFrameWake} from '../web/frame-wake.js';
+let active=true,calls=0,id=0;const timers=new Map();
+const wake=createFrameWake(()=>{calls++;wake.request();},()=>active,{set:(fn,delay)=>{timers.set(++id,{fn,delay});return id;},clear:id=>timers.delete(id)});
+const fire=()=>{const [key,value]=timers.entries().next().value;timers.delete(key);value.fn();};
+wake.request();wake.request();assert.equal(timers.size,1);assert.equal(wake.pending(),true);assert.equal(timers.values().next().value.delay,4);
+fire();assert.equal(calls,1);assert.equal(timers.size,1,'callback can schedule one next completion check');
+wake.cancel();assert.equal(timers.size,0);assert.equal(wake.pending(),false);
+wake.request(12);assert.equal(timers.values().next().value.delay,12);
+active=false;fire();assert.equal(calls,1);assert.equal(timers.size,0);wake.request();assert.equal(timers.size,0);
+active=true;wake.request(0);assert.equal(timers.values().next().value.delay,1);wake.cancel();wake.cancel();
+console.log('Frame wake: single pending timer, reentrancy, cancellation, inactive suppression and bounded delay passed.');

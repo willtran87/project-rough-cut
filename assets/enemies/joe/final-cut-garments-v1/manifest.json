@@ -1,0 +1,24 @@
+{
+  "generator": "Built-in image_gen",
+  "processing": "Native pixels preserved, lossless WebP packaging; no resize or artwork alteration",
+  "assets": [
+    {
+      "name": "skin",
+      "source": "assets\\enemies\\joe\\final-cut-garments-v1\\skin.png",
+      "runtime": "web\\assets\\optimized\\joe-garments-v1\\skin.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1513258,
+      "sha256": "81011cfa72cab7ef8cafe9288a239c95c2d1b6d6ff5db5f4d924221ff5655090"
+    },
+    {
+      "name": "collar",
+      "source": "assets\\enemies\\joe\\final-cut-garments-v1\\collar.png",
+      "runtime": "web\\assets\\optimized\\joe-garments-v1\\collar.webp",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2032470,
+      "sha256": "02783524004c4aa82413002f1539f735a4398a59d76f16d5610ec230b1520848"
+    }
+  ]
+}

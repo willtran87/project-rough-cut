@@ -1,0 +1,37 @@
+/* Same paper/brass, monospace hierarchy as Level 1's Night Order guide. */
+:root{font-family:'Courier New',monospace;}
+#panel{font-family:'Courier New',monospace;}#panel h1{color:#ebd4a1;}#panel .actions #primary{background:#cbb77b;color:#101c14;border-color:#d8bd7c;font-weight:bold;}
+#chapter-caption{color:#adbfaf;font-size:.9em;max-width:28ch;}
+#panel[data-guide="true"] .bn-heading{display:grid;grid-template-columns:.9fr 1.1fr;gap:5%;align-items:center;margin-bottom:1.25em;}
+#brief-art{margin:0;height:clamp(140px,20vh,290px);overflow:hidden;border:1px solid #8d936f;background:linear-gradient(140deg,#172c27,#081511);position:relative;}
+#brief-image{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 25%;}
+#brief-art::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 35px #020b0870;pointer-events:none;}
+#brief-art[data-failed="true"] img{display:none;}
+#panel[data-guide="true"] #panel-footer{background:#081714;border-top:1px solid #465241;z-index:1;}
+#panel[data-guide="true"]{position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,1500px);max-height:94dvh;padding:clamp(18px,2.8vw,46px);font:clamp(14px,1.12vw,21px)/1.45 'Courier New',monospace;color:#e3e6d6;background:linear-gradient(120deg,#081c18fa,#06100efa);border:1px solid #85906c;box-shadow:0 0 0 100vmax #020b08e8;z-index:30;}
+#panel[data-guide="true"] #title{font:700 clamp(30px,3vw,55px)/1.05 'Courier New',monospace;letter-spacing:-.03em;color:#ebd4a1;margin:.3em 0 .6em;}
+#panel[data-guide="true"] #eyebrow{font-size:.8em;color:#c7c39d;letter-spacing:.12em;}
+#panel[data-guide="true"] #loading-art,#panel[data-guide="true"] #story,#panel[data-guide="true"] #controls{display:none;}
+#back-nine-guide{display:grid;grid-template-columns:1fr 1.1fr;gap:0 5%;}
+#back-nine-guide h2{font-size:1.12em;color:#ebd4a1;margin:0 0 .55em;}
+#back-nine-guide p{margin:.5em 0;}
+#guide-goal{display:block;border-left:3px solid #d7b36f;padding:.65em .8em;background:#b4ae5b12;color:#f1d496;margin:1em 0;font-size:.9em;}
+.bn-route ol{padding-left:1.5em;margin:0;}.bn-route li{padding:0 0 .7em .25em;}.bn-route li::marker{color:#d1b873;font-weight:bold;}.bn-route li span{display:block;color:#adbfaf;font-size:.9em;}.bn-route li[data-complete="true"]{color:#9eb8a2;}.bn-route li[data-complete="true"] span{color:#a6c8ab;}
+.bn-optional{border-top:1px solid #465241;margin-top:.5em;padding-top:.55em;font-size:.86em;color:#b4c3b5;}.bn-optional summary{font-size:1em;margin:0;color:#d1c39f;cursor:pointer;}.bn-optional summary:focus-visible{outline:2px solid #ebd4a1;outline-offset:4px;}
+#guide-controls{grid-column:1/-1;border-top:1px solid #465241;padding-top:.9em;font-size:.85em;color:#b4c3b5;}
+#panel[data-guide="true"] .actions{margin-top:.8em;gap:12px;}#panel[data-guide="true"] button,#panel[data-guide="true"] a{font:inherit;font-size:.87em;min-height:44px;}
+#panel[data-guide="true"] #primary{background:#cbb77b;color:#101c14;border-color:#d8bd7c;font-weight:bold;}
+#panel[data-guide="true"] #checkpoint-note{font:.8em/1.4 'Courier New',monospace;margin-bottom:0;color:#a9bba9;}#panel[data-guide="true"] #loading{font-size:.85em;}
+@media(max-width:620px){#back-nine-guide{grid-template-columns:1fr;gap:18px;}#panel[data-guide="true"]{font-size:14px;padding:20px;max-height:96dvh;}#panel[data-guide="true"] #title{font-size:31px;}#guide-controls{margin-top:0;}#panel[data-guide="true"] .actions{gap:8px;}#panel[data-guide="true"] .actions button,#panel[data-guide="true"] .actions a{flex:1;text-align:center;}}
+@media(max-height:540px) and (min-width:621px){#panel[data-guide="true"]{font-size:12px;padding:16px 22px;max-height:96dvh;}#panel[data-guide="true"] #title{font-size:27px;margin:.2em 0 .5em;}#back-nine-guide{gap:0 3%;}#guide-goal{margin:.7em 0;}#panel[data-guide="true"] .actions{margin-top:.5em;}#panel[data-guide="true"] button,#panel[data-guide="true"] a{min-height:36px;}#guide-controls{padding-top:.6em;}}
+@media(max-width:620px){#panel[data-guide="true"] .bn-heading{grid-template-columns:1fr;gap:12px;}#brief-art{height:155px;}#chapter-caption{max-width:none;}}
+@media(max-height:540px) and (min-width:621px){#brief-art{height:120px;}#panel[data-guide="true"] .bn-heading{margin-bottom:.8em;}}
+
+#panel[data-guide="true"] .bn-heading:has(#brief-art[hidden]){display:block;}
+
+/* Scroll the reading area, not the action bar: text never sits under buttons. */
+#panel[data-guide="true"]{display:flex;flex-direction:column;overflow:hidden;}
+#panel[data-guide="true"] #panel-content{overflow:auto;min-height:0;scrollbar-gutter:stable;padding-right:8px;}
+#panel[data-guide="true"] #panel-footer{position:static;flex-shrink:0;padding:.6em 0 0;}
+
+#panel-footer #guide-controls{border:0;padding:0;margin:0 0 .7em;line-height:1.4;}

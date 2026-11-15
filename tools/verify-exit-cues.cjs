@@ -1,0 +1,32 @@
+// Controlled positioning tests exit presentation against actual Use/cancel/win.
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+(async()=>{
+ const software=process.argv.includes('--software'),out='output/environment-exits-20261108/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+ const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__exit={state,resetFirstHole,render,actions:NIGHT_ORDER_ACTIONS,shed:SHED_EXIT,drain:DRAIN_EXIT};\n  window.advanceTime = (milliseconds) => {')}));
+ await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__exitGpu=()=>({programs:renderer.info.programs.length,textures:renderer.info.memory.textures,cues:objectiveCues?.stats(),environment:environmentGuidance?.stats()});'}));
+ const render=async()=>{await p.evaluate(()=>__exit.render());await p.evaluate(async()=>RCScene3D.whenPresented());};
+ const cue=route=>p.evaluate(route=>RCScene3D.stats().objectiveCues.exits.find(e=>e.route===route),route);
+ const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
+ const position=async(route,distance)=>{await p.evaluate(({route,distance})=>{const t=__exit,s=t.state,a=t[route];Object.assign(s.player,{x:a.x,y:a.y-distance,yaw:0,pitch:0});Object.assign(s.hole.joe,{x:100,y:20,mode:'patrol',patrolPause:9999});s.hole.hasLineOfSight=false;s.hole.detection=0;s.hole.statusRequest.active=false;s.keys.clear();},{route,distance});await tick(17);await render();};
+ const reset=async()=>{await p.evaluate(()=>{const t=__exit,s=t.state;t.resetFirstHole();Object.assign(s,{mode:'first_hole',manualTime:true,transitionAlpha:0,guidedHints:false});const h=s.hole;h.tutorialVisible=false;h.practiceDrill.active=false;h.elapsed=100;h.messageTimer=h.zoneBannerTimer=h.controlHintTimer=0;t.render();});await p.waitForFunction(()=>{__exit.render();return RCScene3D.stats().ready},null,{timeout:90000});};
+ try{
+  await p.goto('http://127.0.0.1:4187');await p.locator('canvas').click();await p.keyboard.press('Space');await p.waitForFunction(()=>window.__exit&&JSON.parse(render_game_to_text()).assets.course.ready);
+  for(const route of ['shed','drain']){
+   await reset();await position(route,38);await p.screenshot({path:out+'/'+route+'-locked-approach.png'});const before=await p.evaluate(()=>__exitGpu());assert.equal(before.cues.signs,15);assert.equal(before.cues.visibleSigns,1);assert.equal(before.environment.batches,1);assert.equal(before.cues.batches,2);assert(before.cues.depthTest&&before.cues.depthWrite);
+   await position(route,16);await p.keyboard.press('e');await tick(17);assert.equal((await cue(route)).phase,'locked');assert(!await p.evaluate(()=>__exit.state.hole.escapeFiling.active));
+   await p.evaluate(route=>{__exit.state.hole[route==='shed'?'keyCollected':'drainUnlocked']=true;},route);await render();assert.equal((await cue(route)).phase,'checks');await p.keyboard.press('e');await tick(17);assert(!await p.evaluate(()=>__exit.state.hole.escapeFiling.active));
+   await p.evaluate(()=>{const h=__exit.state.hole;h.keyCollected=h.drainUnlocked=false;h.nightOrderActionsCompleted=__exit.actions.map(a=>a.id);});await render();assert.equal((await cue(route)).phase,'access');await p.screenshot({path:out+'/'+route+'-needs-access.png'});
+   await p.evaluate(route=>{__exit.state.hole[route==='shed'?'keyCollected':'drainUnlocked']=true;},route);await render();assert.equal((await cue(route)).phase,'ready');assert.equal((await cue(route==='shed'?'drain':'shed')).phase,'access');
+   await p.evaluate(()=>{__exit.state.hole.keyCollected=__exit.state.hole.drainUnlocked=true;});await position(route,38);assert.equal((await cue('shed')).phase,'ready');assert.equal((await cue('drain')).phase,'ready');await p.screenshot({path:out+'/'+route+'-ready-approach.png'});
+   for(const [width,height]of [[1280,720],[844,390]]){await p.setViewportSize({width,height});await position(route,38);await p.screenshot({path:out+'/'+route+'-ready-'+width+'.png'});}
+   await p.setViewportSize({width:2560,height:1600});await position(route,16);await p.keyboard.press('e');await tick(17);await render();assert.equal((await cue(route)).phase,'filing');assert.equal((await cue(route==='shed'?'drain':'shed')).phase,'ready');await p.screenshot({path:out+'/'+route+'-filing.png'});
+   await p.keyboard.down('w');await tick(100);await p.keyboard.up('w');await render();assert.equal((await cue(route)).phase,'ready');
+   await position(route,16);await p.keyboard.press('e');await tick(17);const remaining=await p.evaluate(()=>{const f=__exit.state.hole.escapeFiling;return(f.duration-f.progress)*1000+35;});await tick(remaining);await render();assert.equal((await cue(route)).phase,'opening');await p.screenshot({path:out+'/'+route+'-opening.png'});
+   const after=await p.evaluate(()=>__exitGpu());assert.equal(after.environment.exits.find(e=>e.route===route).phase,'opening');assert.equal(after.programs,before.programs);assert.equal(after.textures,before.textures);await tick(6500);assert.equal(await p.evaluate(()=>__exit.state.mode),'victory');results.push({route,before,after,win:true});
+  }
+  await reset();await p.evaluate(()=>{const s=__exit.state;s.reducedMotion=true;s.effectsDensity=0;s.hole.nightOrderActionsCompleted=__exit.actions.map(a=>a.id);s.hole.keyCollected=s.hole.drainUnlocked=true;});await position('shed',23);const beforePause=await p.evaluate(()=>__exitGpu());await p.evaluate(()=>{__exit.state.mode='paused';advanceTime(5000);__exit.state.mode='first_hole';});await render();assert.equal((await p.evaluate(()=>__exitGpu())).cues.updates,beforePause.cues.updates);assert.equal((await cue('shed')).phase,'ready');
+  assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,results,errors},null,2));console.log(JSON.stringify({passed:true,software,errors}));
+ }finally{await b.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

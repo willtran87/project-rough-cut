@@ -1,0 +1,29 @@
+# Campaign danger-message priority
+
+This pass advances Under the Green review items 22, 35, 38, 41 and 44 through their shared presentation requirements. It does not complete the 44-item goal or claim unfamiliar-player, listening or physical-device acceptance.
+
+## Findings and changes
+
+The retained Level 1 probe (`output/campaign-message-priority/before.json`) showed **MOWER WITHIN REACH / MOVE AWAY NOW** together with **THE ENGINE STUTTERS**. The primary instruction was already correct, but the optional ambient caption competed with it. The DOM HUD now suppresses that secondary caption while the existing close-contact escape warning is active. Ordinary pursuit still displays opted-in sound descriptions. Existing sealing, aiming, interaction and capture behavior is unchanged.
+
+Back Nine already places objectives, sealing and defeat ahead of dialogue. Its established physical charge presentation and optional engine descriptions remain intact; no routine charge banner or trimmer-style capture rule was added. Under the Green retains its observed-threat adapter and essential close-strike priority over valid interactions and checkpoint messages.
+
+Final Cut now exists in the worktree and is an applicable consumer of the campaign presentation requirement. Its HUD previously displayed milestone text and dialogue independently during a nearby committed cutting pass, while its optional threat row could be disabled. The new local `final-cut-messages.js` adapter uses the shared message selector to supply one essential cutting-strip warning. It uses the existing rig dimensions, heading, deployed-pass state and physical line clearance. Only an approaching committed pass within a two-second contact envelope qualifies; it does not predict a future target selection or change simulation behavior. Ordinary hint text, optional threat text and dialogue yield during that warning. Safe aftermath messages and dialogue remain available.
+
+This is a presentation envelope, not a guarantee that every late entry can be rescued. Movement, collision, enemy speed, attack commitment, saves and chapter outcomes were not changed by this pass. Concurrent Final Cut collision work in the existing tree was preserved.
+
+## Evidence
+
+- `tools/verify-campaign-message-priority.cjs`: passes actual rendered HUD checks across Level 1, Back Nine, Under the Green and Final Cut. The finale test changes mute/threat/subtitle preferences through ordinary settings UI. Essential advice remains with sound muted and optional threat captions off. A 250 ms reaction followed by actual A input while facing the rig moves perpendicular to the pass and survives; standing still in the same fixture is captured. Safe aftermath retains its event and dialogue.
+- `tools/verify-final-cut-messages.mjs`: passes 12 live-simulation cases across both pass directions and 30/60/120 Hz. Ordinary walking after a 250 ms reaction clears the strip from the warning boundary; the matching idle cases are captured. Additional checks exclude receding, distant, adjacent, raised-reel, paused, won and physically occluded fixtures; crouching does not suppress a dangerous cutting pass. Presentation leaves simulation state unchanged.
+- The first shelter fixture incorrectly aimed through the pump shelter's open eastern entrance. It was corrected to the existing western masonry wall; the runtime clearance rule was not weakened to satisfy the test.
+- `tools/verify-quiet-messages.mjs` and `tools/verify-quiet-messages-browser.cjs`: pass separate optional sound-caption behavior, objective/sealing/defeat priority, dialogue interruptions/cooldown, settings persistence and existing Back Nine caption layouts.
+- Existing `tools/verify-final-cut.mjs` and `tools/verify-final-cut-browser.cjs`: pass committed-pass and physical-contact rules, ordinary movement, pause, pump activation/reload, bell/trap traversal, road escape and persistent completion.
+- Full-page Level 1 and finale captures inspected at **2560×1600, 1280×720, 844×390 and 390×844**. Finale mobile captures use actual browser touch input to activate the touch presentation. The danger sentence fits on screen and clears the controls. Level 1 retains its existing landscape stage inside the portrait viewport; this is not a portrait-stage redesign.
+- Browser reports contain no page errors. Artifacts: `output/campaign-message-priority/verified.json`, `finale-rules.json`, `level-one-*.png`, `finale-*.png`, and the existing quiet-message/finale reports.
+
+The standard finale client completed three iterations; latest screenshot/state inspected at 6.12 seconds, ready/playing with 19.968 m traveled and no error artifacts. The four- and six-iteration raw Level 1 attempts ended with a first-hole state but zero travel and a stale menu canvas while SwiftShader preparation remained active; neither is accepted as gameplay verification. A headed rerun through the existing `tools/verify-presented-client.mjs --level-one` adapter waits for scene readiness and the briefing, then runs the installed standard client. Its final screenshot, full-page capture and state were inspected: first-hole gameplay, renderer ready, preparation finished, story closed, 83 course units traveled, no error artifacts. All these runs terminated. Standard canvas captures omit the DOM HUD, so full-page browser captures remain the presentation evidence.
+
+## Remaining work
+
+The specific cross-chapter priority cases above are verified. They are not a complete audit of every caption, target, setting or control in the campaign. Final Cut's broader information/prompt and shared-consumer coverage, remaining Under the Green encounter/presentation acceptance, sustained performance and unfamiliar-player/headphone/physical-device sessions remain open. The two-second warning needs player evaluation; automated evasion establishes feasibility, not comprehension or fear.

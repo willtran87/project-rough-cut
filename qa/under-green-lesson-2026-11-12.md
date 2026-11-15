@@ -1,0 +1,22 @@
+# Under the Green — protected crossing and coaching retirement
+
+The protected crossing now records near-bank approach, channel entry and far-bank clearance. Completing that sequence retires introductory coaching and immediately persists the fact, even before checkpoint 1. This is evidence of a crossing, not a claim that the player understood it.
+
+`under-green-lesson.js` owns the local observation. Transient approach/entry flags are not serialized. A strict optional `lessonCrossed` boolean extends the existing save payload; old saves beyond checkpoint 0 infer the already-passed lesson. Retry, reload, explicit restart and completion replay retain coaching history. Restart/replay still reset the bypass and other world progression independently. Essential phase/pressure signals remain visible; the expanded portrait lesson advice retires. The full briefing remains available.
+
+Water guidance now advertises a dry route only where the authored crossing has one. Insufficient-window advice describes the current pace rather than always saying “walk.” Protected recovery no longer claims Joe is moving while his phase is absent.
+
+The root outlet's initial phase changes from offset 1 to 8; its twelve-second cycle, safe-window duration, physical consequences and player speeds remain unchanged. A straight ordinary walking approach previously waited 6.98 seconds and now waits zero. Sprint approach waits 1.48 seconds; crouched approach waits zero. Arbitrary late arrivals can still wait a cycle. This adjustment does not guarantee an opening whenever a player arrives or impose a tutorial wait.
+
+## Verification
+
+- `tools/verify-under-green-lesson.mjs`: 72 arrival-phase × stance cases cross safely, save once and keep Joe absent; available openings impose no compulsory wait. Tests cover an actual missed opening, incomplete/reversed crossings, a skipped fixture position, strict save parsing, legacy checkpoint migration and advice for outlets without detours. Three entrance approaches pass in `output/under-green/lesson/approaches.json`.
+- `tools/verify-under-green-lesson-browser.cjs`: actual W movement from the entrance clears the crossing without a water hit; the browser saves completion at checkpoint 0. Reload/retry/restart/replay preserve coaching history while respecting independent world resets. Terminal menu fixtures test lifecycle, not attack collision. A real missed crossing verifies recovery guidance while Joe is absent. The initial recovery assertion sampled after displacement had ended; the test now samples the actual recovery interval, without extending gameplay recovery to satisfy it.
+- Before/after screenshots inspected at **2560×1600, 1280×720, 844×390 and 390×844**. Smaller layouts use CDP touch events to activate real touch-mode UI, with assertions that controls are visible. A CSS-class-only first capture was rejected because the runtime correctly restored keyboard mode. Portrait explanatory text retires after crossing; phase feedback remains. Touch controls and captions leave the route's central view visible. These are simulated viewport/input checks, not physical-device acceptance.
+- Existing rules, build-browser, outcome and encounters regressions pass. Five checkpoint-1 routes complete through ordinary movement across dry/wet/sprint and all pressure settings, preserving physical body/tool clearance and observed-route memory.
+- Full-route dry, wet and sprint pilots complete without water hits or solid overlap: 75.23, 87.25 and 50.75 seconds respectively (`output/under-green/lesson/full-routes.json`). These planners have complete map knowledge; they are not unfamiliar-player times or proof of fun/fear.
+- Standard web-game client completed after the final runtime change. Latest `standard-client/shot-0.png` and `state-0.json` inspected: loaded gameplay, 5.75 seconds, lesson crossed, checkpoint 0, zero water hits. No console-error artifact. Full-page browser captures provide the DOM HUD evidence absent from the client's canvas screenshot.
+
+## Remaining acceptance
+
+First-time comprehension, preference for the new cadence, encounter tension, human listening, physical-device ergonomics and sustained performance remain open in the full 44-item goal. Shared Focus/interaction/coaching audits and broader presentation work also remain. The lesson completion fact stays local to Under the Green; no other chapter inherits irrigation mechanics or a new movement profile.

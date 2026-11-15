@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createFinalCutVoice} from '../web/final-cut-voice.js';
+const events=[],param=()=>({value:0,setTargetAtTime(){}}),node=()=>({connect(){},disconnect(){}});let active=0,peak=0;
+const context={currentTime:0,createGain:()=>({...node(),gain:param()}),createStereoPanner:()=>({...node(),pan:param()}),createBiquadFilter:()=>({...node(),frequency:param()}),decodeAudioData:async()=>({duration:3}),createBufferSource:()=>{let running=false;return {...node(),start(when,offset){running=true;active++;peak=Math.max(peak,active);events.push(offset);},stop(){if(running)active--;running=false;}};}};
+let resolve;const assets=new Promise(done=>resolve=done),voice=createFinalCutVoice(context,node(),assets),owner={};
+let frame={owner,line:{id:'opening',started:0},time:0,active:true,danger:false,pan:0,level:1,clear:true};voice.update(frame);voice.update({...frame,time:1});resolve({clips:new Map([['opening',new ArrayBuffer(1)],['missed',new ArrayBuffer(1)],['blocked',new ArrayBuffer(1)]]),errors:[]});await voice.ready;voice.update({...frame,time:1.1});assert.equal(events.length,0);
+frame={...frame,line:{id:'missed',started:1.1},time:1.1};voice.update(frame);assert.equal(active,1);voice.update({...frame,active:false,time:1.3});assert.equal(active,0);voice.update({...frame,time:1.5});assert.equal(active,1);assert(Math.abs(events.at(-1)-.4)<1e-8);voice.update({...frame,time:1.6,danger:true});assert.equal(active,0);voice.update({...frame,time:1.7});assert.equal(active,0);
+voice.update({...frame,line:{id:'blocked',started:2},time:2});assert.equal(active,1);voice.update({...frame,owner:{},line:{id:'opening',started:2},time:2});assert.equal(active,1);assert.equal(peak,1);voice.dispose();assert.equal(active,0);voice.update(frame);assert.equal(active,0);
+const checks=['Delayed decode past the start window never begins stale speech','Pause resumes from the remaining offset; danger cancels rather than postpones','Line and run replacement never overlap sources; disposal stops and ignores future updates'];
+fs.mkdirSync('output/final-cut/drama',{recursive:true});fs.writeFileSync('output/final-cut/drama/voice.json',JSON.stringify({passed:true,checks,peak,offsets:events},null,2));console.log(JSON.stringify({passed:true,checks,peak,offsets:events}));

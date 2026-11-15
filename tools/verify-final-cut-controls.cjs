@@ -1,0 +1,32 @@
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/final-cut';p.on('pageerror',e=>errors.push(e.message));
+ const ready=()=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000}),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
+ await p.goto('http://127.0.0.1:4187/final-cut.html?test');await ready();await tick(0);await p.locator('#comfort summary').click();
+ await p.locator('[data-binding=interact]').selectOption('KeyT');await p.locator('[data-campaign=reducedMotion]').check();await p.locator('[data-campaign=subtitleSize]').fill('1.4');
+ assert.equal((await read()).bindings.interact,'KeyT');
+ for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await tick(0);await p.screenshot({path:`${out}/settings-${width}.png`});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ await p.reload();await ready();await tick(0);assert.equal((await read()).bindings.interact,'KeyT');assert((await read()).preferences.reduced);await p.click('#primary');
+ await p.evaluate(()=>{Object.assign(__finalCut.run.player,{x:8.5,y:38,yaw:Math.atan2(-.5,1)});});await tick(0);assert.match(await p.locator('#use').innerText(),/^T/);
+ await p.keyboard.press('e');await tick(17);assert(!(await read()).pump);await p.keyboard.press('t');await tick(17);assert((await read()).pump);checks.push('Real settings remap, persisted T prompt/action, old E inactive, four settings layouts');
+ await p.evaluate(()=>{Object.assign(__finalCut.run.player,{x:16,y:8,yaw:0});window.pad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[pad];});await tick(17);
+ await p.evaluate(()=>{pad.axes[1]=-1;pad.buttons[7].pressed=true;pad.buttons[6].pressed=true;});await tick(500);assert(Math.abs((await read()).player.speed-2.4)<.02);assert((await read()).player.focus);
+ await p.evaluate(()=>{pad.buttons[6].pressed=false;});await tick(500);assert(Math.abs((await read()).player.speed-6.08)<.02);checks.push('Gamepad left-stick/RT movement; LT listening overrides sprint');
+ await p.evaluate(()=>{pad.axes[1]=0;pad.buttons[7].pressed=false;pad.buttons[9].pressed=true;});await tick(17);assert.equal((await read()).mode,'final_cut_paused');
+ await p.evaluate(()=>{pad.buttons[9].pressed=false;});await tick(17);await p.evaluate(()=>{pad.buttons[9].pressed=true;});await tick(17);assert.equal((await read()).mode,'final_cut_playing');await p.evaluate(()=>navigator.getGamepads=()=>[]);await tick(17);checks.push('Gamepad Start pause/resume and held-input boundary');
+ await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun();r.mode='playing';Object.assign(r.player,{x:0,y:26});Object.assign(r.rig,{phase:'pass',x:7,y:26,yaw:-Math.PI/2,direction:-1,deployment:1});__finalCut.run=r;});await tick(1800);assert.equal((await read()).mode,'final_cut_caught');await p.screenshot({path:`${out}/caught-390.png`});await p.click('#primary');assert.equal((await read()).mode,'final_cut_playing');assert.equal((await read()).checkpoint,0);checks.push('Real blade defeat and immediate retry');
+ // Separate real touch context; diagnostics place only a safe test location.
+ const context=await b.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true}),t=await context.newPage();t.on('pageerror',e=>errors.push(e.message));
+ await t.goto('http://127.0.0.1:4187/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.locator('#primary').tap();
+ const cdp=await context.newCDPSession(t),contacts=new Map(),ttick=ms=>t.evaluate(ms=>advanceTime(ms),ms),tread=()=>t.evaluate(()=>JSON.parse(render_game_to_text()));
+ const center=async s=>{const r=await t.locator(s).boundingBox();assert(r);return {x:r.x+r.width/2,y:r.y+r.height/2};};
+ const start=async(id,point)=>{contacts.set(id,point);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[...contacts].map(([id,p])=>({id,...p}))});};
+ const end=async id=>{const point=contacts.get(id);contacts.delete(id);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:contacts.size?[{id,...point}]:[]});};
+ await ttick(0);await start(1,await center('[data-key=forward]'));await start(2,await center('[data-key=focus]'));await ttick(500);assert(Math.abs((await tread()).player.speed-2.4)<.02);await end(2);await ttick(300);assert(Math.abs((await tread()).player.speed-3.84)<.02);await end(1);await ttick(100);assert.equal((await tread()).player.speed,0);
+ await start(1,await center('[data-key=forward]'));await start(2,await center('[data-key=sprint]'));await ttick(300);assert(Math.abs((await tread()).player.speed-6.08)<.02);contacts.clear();await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await ttick(100);assert.equal((await tread()).player.speed,0);checks.push('Real simultaneous touch movement/focus/run, correct partial release and cancellation');
+ for(const [width,height]of [[844,390],[390,844]]){await t.setViewportSize({width,height});await ttick(0);await t.screenshot({path:`${out}/touch-${width}.png`});assert(await t.evaluate(()=>[...document.querySelectorAll('#touch button')].every(e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44;})));}
+ await p.setViewportSize({width:2560,height:1600});await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun();r.mode='playing';Object.assign(r.player,{x:0,y:18,yaw:Math.atan2(10,8)});Object.assign(r.rig,{phase:'announce',x:10,y:26,yaw:-Math.PI/2,direction:-1,deployment:1});__finalCut.run=r;});await tick(0);
+ await p.screenshot({path:`${out}/rig-2560.png`});
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/controls.json',JSON.stringify({passed:true,checks,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

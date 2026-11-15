@@ -1,0 +1,31 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const context={window:{}};
+vm.runInNewContext(fs.readFileSync('web/spatial-preferences.js','utf8'),context);
+const api=context.window.RCSpatialPreferences,plain=v=>JSON.parse(JSON.stringify(v)),checks=[];
+let raw=null,blocked=false;
+const storage=()=>({getItem(){if(blocked)throw Error('blocked');return raw;},setItem(key,value){if(blocked)throw Error('blocked');assert.equal(key,api.key);raw=value;}});
+for(const invalid of [null,'broken','[]','null','42','{"mouse":"2","controller":null,"acceleration":1}']){
+ raw=invalid;assert.deepEqual(plain(api.create(storage).get()),plain(api.defaults));
+}
+assert.equal(api.normalize({mouse:Infinity}).mouse,1);
+raw='{"extension":{"keep":true},"mouse":1.2}';
+const a=api.create(storage),b=api.create(storage);
+assert.equal(a.set('fov',100),true);assert.equal(a.get().fov,85);
+assert.equal(b.set('controller',-9),true);assert.equal(b.get().controller,.25);
+assert.equal(b.get().fov,85);assert.equal(JSON.parse(raw).mouse,1.2);
+assert.deepEqual(JSON.parse(raw).extension,{keep:true});
+a.set('touch',1.5);assert.equal(a.get().controller,.25);
+const before=raw;
+for(const [key,value]of [['mouse',NaN],['mouse',Infinity],['mouse','2'],['acceleration',1],['unknown',1],['__proto__',true]])assert.equal(a.set(key,value),false);
+assert.equal(raw,before);const copy=a.get();copy.mouse=99;assert.equal(a.get().mouse,1.2);
+checks.push('Default/malformed/type validation, clamping, copy isolation and interleaved-store field preservation');
+const events=[],unsubscribe=a.subscribe((values,name,saved)=>events.push({values:plain(values),name,saved}));
+blocked=true;assert.equal(a.set('mouse',1.75),false);assert.equal(a.get().mouse,1.75);
+assert.equal(a.set('acceleration',true),false);assert.equal(a.get().acceleration,true);
+blocked=false;raw=JSON.stringify({...JSON.parse(raw),fov:73,external:'keep'});
+assert.equal(a.set('resolution',.75),true);const recovered=JSON.parse(raw);
+assert.equal(recovered.mouse,1.75);assert.equal(recovered.acceleration,true);assert.equal(recovered.fov,73);assert.equal(recovered.external,'keep');
+assert.deepEqual(events.map(e=>e.saved),[false,false,true]);unsubscribe();a.set('mouse',1);assert.equal(events.length,3);
+checks.push('Unavailable-storage session changes, recovery flush, latest-field preservation and subscription lifecycle');
+assert.equal(api.format('fov',73),'73°');assert.equal(api.format('mouse',1.25),'1.25×');assert.equal(api.format('resolution',.75),'75%');
+console.log(JSON.stringify({passed:true,checks}));

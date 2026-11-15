@@ -1,0 +1,14 @@
+{
+  "generator": "Built-in image_gen",
+  "skinEditTarget": "assets/enemies/joe-hd/model/skin.png",
+  "assets": {
+    "skin": {
+      "generatedSource": "C:\\Users\\Will\\.codex\\generated_images\\01a1cfc2-b271-7992-8d8d-f7a723d9e393\\exec-981c1369-20bb-4b16-90ac-060364887697.png",
+      "prompt": "Use case: precise-object-edit. Edit target: supplied square skin texture used on Joe's neck, hands and the side of his face in a high-resolution pixel-art horror game. Create a seamless tileable skin albedo swatch. Preserve the existing warm peach/tan skin palette and deliberately authored small pixel clusters. Remove the entire beard/stubble band and all large dark specks: this texture is for clean neck and hands, not facial hair. Replace with finely clustered, low-contrast pores, subtle warm/cool skin variation, and tiny restrained freckles evenly distributed. Flat neutral lighting, no highlights or cast shadows, no broad gradients, wrinkles, borders, text or recognizable body parts. All four edges must tile without a seam. Density must suit a 25 cm wide skin surface: very fine high-resolution pixel art, no blocky checker pattern, no smooth photographic blur. One square material tile only. The original detailed facial expression texture remains a separate asset."
+    },
+    "collar": {
+      "generatedSource": "C:\\Users\\Will\\.codex\\generated_images\\01a1cfc2-b271-7992-8d8d-f7a723d9e393\\exec-37e80d34-a14e-4525-a231-ec1bb6488c13.png",
+      "prompt": "Use case: stylized-concept. Create one square seamless tileable albedo texture for Joe's blue-gray checked office shirt collar and cuffs in a high-resolution pixel-art horror game. Muted slate-blue and pale desaturated blue-gray fine cotton weave, with understated narrow navy and warm off-white check lines forming a regular small windowpane/tattersall check. Approximately 16 complete check repeats across the tile, consistent squares aligned horizontally and vertically, finely authored pixel clusters and individual short thread highlights. The material covers a 25 cm square in the game, so checks should be about 1.5 cm wide and the weave much finer. Restrained worn cotton, modest color contrast, believable fabric. Flat neutral lighting, no garment shapes, folds, shadows, perspective, edging, borders, lettering or additional objects. All four edges must tile seamlessly. Crisp high-resolution pixel art, not a photograph or smooth painted fabric. Output one square tile."
+    }
+  }
+}

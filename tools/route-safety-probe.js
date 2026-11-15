@@ -1,5 +1,12 @@
 /* Injected only by the ordinary-input QA player. Read-only: choose a waypoint
  * using the same static collision geometry and live Joe position as the map. */
+window.__courseProbeEncounters = () => {
+  const h=state.hole,d=h.tensionDirector,e=h.engagement.experience;
+  return {time:h.elapsed,queue:e.queue.map(b=>({id:b.id,ready:b.ready,distance:worldDistance(state.player,b)})),clear:e.aftermathClearSeconds,
+    protected:suspenseProtected(),distance:worldDistance(h.joe,state.player),mode:h.joe.mode,los:h.hasLineOfSight,detection:h.detection,
+    message:h.message,messageTimer:h.messageTimer,captions:h.captions.map(c=>({category:c.category,text:c.text})),
+    relief:d.reliefSeconds,accent:d.accentCooldown,pending:!!d.pendingIntercept,silent:!!d.silentStalk,cover:!!d.coverAudit,omen:!!d.omen};
+};
 window.__courseProbeSafeWaypoint = (goal) => {
   const p=state.player,j=state.hole.joe,dist=worldDistance(p,j);
   if(dist>58)return goal;

@@ -1,0 +1,32 @@
+# Final Cut — surface footsteps and controller feedback
+
+Implemented the remaining FC63 feedback features: surface-specific footsteps and adjustable controller vibration for nearby committed cutting passes and machinery failure. Both have independent 0–100% controls in Controls & comfort, with 0 disabling that output. Defaults are 80% footstep volume and 35% vibration. Physical-controller feel and human mix acceptance remain unverified, so FC63 stays Partial.
+
+## Footsteps
+
+`final-cut-footsteps.js` replaces the old time-gated generic noise pulse with contacts based on actual travelled distance, at 1.4 m intervals. The surface query follows the existing raised overlook/ramps, arrival paving, rotated ground slabs, service paths, road, standing/cut rough and the swale's east-to-west wetting front. Raised paving takes precedence over damp ground. The sluice's visible shallow channel has a wet contact; the rest of the passage retains paving.
+
+Five profiles vary cutoff, envelope, duration and level: turf, rough, paving, road and wet turf. Wet contacts have a second soft tail. Crouch/listening reduce contact force; left/right contacts have restrained pan variation. The existing looping step-noise voice is reused, leaving fourteen continuous audio voices. Master/effects volume and mute still apply, in addition to the new footstep control. Stopping at a wall, looking, muted/paused intervals, context suspension, run replacement and discontinuous diagnostic movement cannot accumulate delayed contacts.
+
+`render-final-cut-footsteps.cjs` renders the actual envelope helper through native OfflineAudioContext nodes with the production noise source settings. All five audible profiles have nonzero finite output, peak below 0.007 in the raw voice test, and a silent tail; volume zero produces exact silence. Paving has more high-frequency crossings than turf. These are signal checks, not a listening judgment. `output/final-cut/feedback/footstep-audition.wav` contains two contacts each in this order: turf, rough, paving, road, wet. It excludes the surrounding game mix and master/effects-bus attenuation. Separate WAVs are also available.
+
+## Vibration and lifecycle
+
+`final-cut-feedback.js` measures distance to the actual rig part footprints, including deployed cutters. A committed pass within 5 m produces a gentle 110 ms dual-rumble effect, attenuated by distance and the player's strength setting, with at most one refresh per 100 ms of real time. Turns, distant machines and won runs do not produce close-pass vibration. The actual manifold-rupture and shutdown events produce brief, distance-attenuated pulses, bounded at 220 ms. They are supplementary and never affect detection, damage, movement or completion.
+
+The implementation follows the [W3C Gamepad haptic interface](https://www.w3.org/TR/gamepad/#gamepadhapticactuator-interface), checks dual-rumble support when advertised, and uses reset when stopping an active effect. Unsupported/rejected actuators are ignored without throwing into gameplay or repeatedly retrying. No phone vibration or independent playback timer is introduced. Pause, blur, hidden document, disconnection, input clear, zero strength and page departure cancel output. Vibration remains independent of sound mute and reduced camera motion, as stated beside the control.
+
+Feedback preferences use a separate chapter key and the existing preference writer. Storage failure preserves live session changes and pending writes; the next successful edit saves them without deleting unrelated fields. New run/restore input clearing establishes the event baseline before the first simulation step: a fresh rupture immediately after restore may play, while an already-completed rupture is not replayed.
+
+## Verification
+
+- `verify-final-cut-feedback.mjs`: six groups pass. Surface fixtures cover dry/wet/raised/cut states; actual simulation movement produces matching cadence at 30/60/120 Hz. Two seconds pressing against the real closed course rail produces no false contacts. Actuator tests cover distance/phase, rate/strength bounds, cancellation, one-shot events, unsupported/rejected APIs and malformed preferences.
+- `verify-final-cut-feedback-browser.cjs`, D3D11 and `--software`: five groups pass, zero browser errors. Real keyboard movement produces paving contacts; master/effects zero and mute disable them without replay. Native sliders operate by keyboard and persist after actual reload. An instrumented Gamepad actuator receives effects through the real input/update path. Pause, blur, hidden-document and disconnect behavior, simulation-emitted rupture, checkpoint-boundary suppression, output-off settings and storage failure/recovery pass. This instrumented actuator is not physical-controller validation.
+- Inspected settings captures at 2560 × 1600, 1280 × 720, 844 × 390 and 390 × 844. Labels, range controls, current percentages and explanatory text fit; short views scroll within the existing panel. Software portrait capture also inspected.
+- `verify-final-cut-voice.mjs` passes three speech-lifecycle groups; this pass does not add or overlap speech sources.
+- The uninterrupted original-plan bank route passes through normal Gamepad API handlers: 131.5616 simulated seconds, zero captures, zero throws, nine screenshots, zero browser errors. A prior-completion fixture only unlocks Replay; the route itself has no player placement or state mutation. This is a map-aware automated chapter run, not an unfamiliar-player or full-campaign session.
+- Installed develop-web-game client passes in `output/final-cut/feedback/client-verified/`. Latest screenshot and state inspected: 6.5 simulated seconds, eleven actual contacts, last surface paving, fourteen continuous voices, rig waiting, no controller output without a controller, no captured browser errors. All owned test/client processes finished with exit 0 after the corrected test fixture.
+
+The initial browser collapse test put the player over 40 m from its artificially relocated rupture, so the expected pulse correctly did not fire. The test now places the aftermath fixture by the swale. No production distance limit was weakened to satisfy it.
+
+Remaining: physical controller/browser combinations and subjective strength, human listening and machinery/footstep balance, broader input ergonomics, full campaign/device runs, and the still-open staging, art, performance and horror/engagement requirements in the original 72-item plan. No completion claim is made for the entire finale.

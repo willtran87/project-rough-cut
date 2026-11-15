@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {createActorWetness} from '../web/under-green-actor-wetness.js';
+import {createRun} from '../web/under-green-sim.js';
+const finish=createActorWetness(),r=createRun();r.mode='playing';r.joe.phase='walk';
+const feet=[{x:0,y:8,height:.002},{x:.2,y:8,height:.002}];
+finish.update(r,feet);assert(finish.stats().feet.every(f=>f.current===-1&&f.fade===0));
+r.elapsed=48;r.time=1;finish.update(r,feet);assert(finish.stats().feet.every(f=>f.current===.38&&f.fade===1));
+const wet=finish.stats();finish.update(r,feet);assert.deepEqual(finish.stats(),wet,'Repeated render does not age wetness');
+r.elapsed=80;r.time=2;finish.update(r,feet);assert(finish.stats().feet.every(f=>f.current===-1&&f.fade>.95&&f.mudTop>=.4));
+r.time=48;finish.update(r,feet);assert(finish.stats().feet.every(f=>f.fade===0&&f.mudTop>=.4),'Dampness dries, deposited sediment remains');
+const fresh=createRun();fresh.mode='playing';fresh.joe.phase='walk';finish.update(fresh,[{x:-2.2,y:12,height:.002},feet[1]]);assert.equal(finish.stats().feet[0].current,.012);assert.equal(finish.stats().feet[1].current,-1,'Puddle contact is per foot');assert.equal(finish.stats().feet[1].mudTop,.13,'Retry clears flood history');
+fresh.time=.1;Object.assign(fresh.joe,{phase:'water-recovery',x:0,y:23});finish.update(fresh,feet);assert.equal(finish.stats().arms,1,'Real dangerous channel wets cuffs/hands');
+fresh.time=1;fresh.joe.phase='walk';finish.update(fresh,feet);assert(finish.stats().arms<1&&finish.stats().arms>.9);
+fresh.mode='paused';const paused=finish.stats();finish.update(fresh,feet);assert.deepEqual(finish.stats(),paused);
+console.log(JSON.stringify({passed:true,perFootContact:true,sharedWaterSurfaces:true,dryingAndResidue:true,jetContact:true,retryReset:true}));

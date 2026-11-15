@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {createTouchRunControl} from '../web/touch-run-control.js';
+const run=createTouchRunControl();
+assert(run.press(1,false));assert(run.active);assert(!run.press(2,false));assert(!run.release(2));assert(run.active);run.release(1);assert(!run.active);
+run.press(1,true);run.release(1);assert(run.active);assert(!run.release(1,true));assert(run.active,'Automatic capture loss after normal release must not undo the toggle');
+run.press(2,true);assert(!run.active);run.release(2);assert(!run.active);
+run.press(3,true);run.release(3,true);assert(!run.active);
+run.press(4,true);run.reset();assert(!run.active);assert.equal(run.pointer,null);
+const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};
+const context={window:{},localStorage:storage};vm.runInNewContext(fs.readFileSync('web/foundation.js','utf8'),context);
+const foundation=context.window.RCFoundation,key='rough-cut.feel.v1';
+data.set(key,JSON.stringify({cameraBob:.2,extension:'keep'}));const initial=foundation.readComfort();assert.equal(initial.touchSprintToggle,false);
+data.set(key,JSON.stringify({cameraBob:.4,touchSprintToggle:true,extension:'keep'}));
+assert(foundation.saveComfort({...initial,cameraRoll:true}));let saved=JSON.parse(data.get(key));assert.equal(saved.cameraBob,.4);assert(saved.touchSprintToggle);assert.equal(saved.extension,'keep');
+const current=foundation.readComfort();assert(foundation.saveComfort({...current,touchSprintToggle:false}));assert.equal(JSON.parse(data.get(key)).touchSprintToggle,false);
+const old=data.get(key);assert(foundation.saveComfort({...current,touchSprintToggle:false}));assert.equal(old,data.get(key));
+storage.setItem=()=>{throw Error('Unavailable');};assert.equal(foundation.saveComfort({...current,touchSprintToggle:true}),false);
+storage.setItem=(k,v)=>data.set(k,v);assert(foundation.saveComfort({...current,touchSprintToggle:true}));assert(JSON.parse(data.get(key)).touchSprintToggle);
+for(const invalid of ['null','[]','{bad']){data.set(key,invalid);assert.equal(foundation.readComfort().touchSprintToggle,false);}
+const result={passed:true,checks:['Owned hold/toggle contacts and interrupted release','Normal release followed by capture loss retains the selection','Reset clears run selection without creating motion','Comfort changed-field saves preserve newer cross-chapter values/unknown fields and retry failed storage']};
+fs.mkdirSync('output/touch-run',{recursive:true});fs.writeFileSync('output/touch-run/rules.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

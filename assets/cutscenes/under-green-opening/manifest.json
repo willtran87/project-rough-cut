@@ -1,0 +1,30 @@
+[
+  {
+    "source": "assets\\cutscenes\\under-green-opening\\01-below-the-fairway.png",
+    "size": [
+      1672,
+      941
+    ]
+  },
+  {
+    "source": "assets\\cutscenes\\under-green-opening\\02-the-keepers-route.png",
+    "size": [
+      1672,
+      941
+    ]
+  },
+  {
+    "source": "assets\\cutscenes\\under-green-opening\\03-he-knows-the-way.png",
+    "size": [
+      1672,
+      941
+    ]
+  },
+  {
+    "source": "assets\\cutscenes\\defeat\\under-green-scythe-loss-v1.png",
+    "size": [
+      1672,
+      941
+    ]
+  }
+]

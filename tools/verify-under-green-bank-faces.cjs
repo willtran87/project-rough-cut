@@ -1,0 +1,48 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
+const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass74/${software?'software':'hardware'}`;
+const fixtures=[['dry-corridor',-29.5,65,Math.PI,.15],['dry-return',-30,55,0,.1],['shoring-repair',-30,65.4,Math.PI,.7],['north-shoring',-20,72.6,Math.PI,.65],['west-spill',-30.5,62.8,-Math.PI/2,.1],['inner-spill',-29.4,65.6,Math.PI/2,-.05],['repair',-29.2,60.8,Math.PI/2,-.4],['main-route',-20,66,Math.PI,.1],['main-repair',-19,60.4,Math.PI/2,-.2],['south-mouth',-27.2,54,-Math.PI/2,.12],['upper-seam',-30,66,Math.PI,.5],['flood',-29.5,65,Math.PI,-.2,49],['gallery-control',0,19,0,.1],['keeper-control',12,13.5,-2.4,.05]];
+fs.mkdirSync(out,{recursive:true});
+(async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],audits=[],errors=[];try{
+ for(const before of [true,false]){
+  const p=await b.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  for(const name of ['under-green-bunker-retaining'])await p.route('**/'+name+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(before?'output/under-green/visual-pass74/source/'+name+'-before.js':'web/'+name+'.js','utf8')}));
+  await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__bunkerProbe={scene,renderer,materials,structureMeshes,batchCulling};'+marker);return r.fulfill({contentType:'application/javascript',body:s});});
+  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
+  const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
+  async function place(f){await p.evaluate(async f=>{const {createRun}=await import('./under-green-sim.js'),{solid}=await import('./under-green-course.js');if(solid({x:f[1],y:f[2]},.3))throw Error('Solid fixture '+f[0]);const r=createRun();r.mode='playing';r.time=26.3;r.elapsed=f[5]||0;r.joe.phase='absent';Object.assign(r.player,{x:f[1],y:f[2],yaw:f[3],pitch:f[4],grace:100});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
+  async function shot(name){await p.evaluate(()=>__underGreen.whenPresented());const s=await read(),g=s.graphics;rows.push({before,name,viewport:p.viewportSize(),player:s.player,graphics:{resolution:g.resolution,draws:g.draws,triangles:g.triangles,textures:g.textures,programs:g.programs,lights:g.lights}});await p.screenshot({path:`${out}/${before?'before':'after'}-${name}-${p.viewportSize().width}.jpg`,quality:91});}
+  for(const f of fixtures){await place(f);await shot(f[0]);}
+  const audit=await p.evaluate(()=>{
+   const {structureMeshes,materials,batchCulling}=__bunkerProbe;batchCulling?.restore();const outside=[],missingColors=[];
+   const hash=a=>{let h=2166136261;for(const v of new Uint8Array(a.buffer,a.byteOffset,a.byteLength))h=Math.imul(h^v,16777619);return h>>>0;};
+   for(const m of structureMeshes){const p=m.geometry.attributes.position,idx=m.geometry.index;if(m.material.vertexColors&&!m.geometry.attributes.color)missingColors.push(m.name);
+    for(let i=0;i<(idx?.count||p.count);i+=3){const coords=[];let inside=['sand','soil'].includes(m.name);for(let j=0;j<3;j++){const k=idx?idx.getX(i+j):i+j,x=p.getX(k),y=p.getY(k),z=p.getZ(k);coords.push(x,y,z);if(x> -12.0||x< -32.25||y<1.879||y>4.901||z> -46.8||z< -77.2)inside=false;}if(!inside)outside.push(m.name+':'+hash(new Float32Array(coords)));}
+   }
+   outside.sort();return {outsideCount:outside.length,outsideHash:hash(new TextEncoder().encode(outside.join('|'))),missingColors,shoring:JSON.parse(render_game_to_text()).graphics.districtDetails.enclosure.bunkerShoring,finish:JSON.parse(render_game_to_text()).graphics.structureDetails.bunkerRetaining,material:materials.bunkerCoping?{size:[materials.bunkerCoping.map.image.width,materials.bunkerCoping.map.image.height],vertexColors:materials.bunkerCoping.vertexColors,emissive:materials.bunkerCoping.emissive.getHex()}:null};
+  });audits.push(audit);assert.deepEqual(audit.missingColors,[]);
+  if(!before){
+   assert.equal(audit.shoring.length,10);assert.equal(audit.shoring.filter(f=>f.repaired).length,1);assert.equal(audit.finish.replacedMetalCaps,63);assert.equal(audit.finish.stones.length,133);assert.equal(audit.finish.deposits.length,8);assert.equal(audit.finish.repairs.length,2);assert.equal(audit.material.emissive,0);assert.deepEqual(audit.material.size,[1254,1254]);
+   if(!preview){
+    for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});for(const f of [fixtures[0],fixtures[4]]){await place(f);await shot(f[0]);}}
+    await p.setViewportSize({width:2560,height:1600});await place(fixtures[0]);await p.keyboard.down('c');await p.evaluate(()=>advanceTime(250));await shot('crouch');await p.keyboard.up('c');await p.evaluate(()=>advanceTime(300));await p.keyboard.down('q');await p.evaluate(()=>advanceTime(300));await shot('rear');await p.keyboard.up('q');
+    await place(fixtures[2]);const settled=await p.screenshot({type:'png'});await place(fixtures[4]);await place(fixtures[2]);assert(settled.equals(await p.screenshot({type:'png'})),'Unstable coping pixels');
+    audit.clearance=await p.evaluate(async()=>{const {structureEdges}=await import('./under-green-structure.js'),{floorLayout,solid}=await import('./under-green-course.js'),poses=[];for(const e of structureEdges(floorLayout().tiles).filter(e=>e.kind==='retaining'&&(e.axis==='x'?e.line:(e.start+e.end)/2)<-12)){for(const at of [...new Set([e.start+.45,(e.start+e.end)/2,e.end-.45])]){const x=e.axis==='x'?e.line-e.side*.32:at,y=e.axis==='y'?e.line-e.side*.32:at;if(solid({x,y},.3))continue;const facing=e.axis==='x'?e.side*Math.PI/2:e.side===1?0:Math.PI;for(const height of [1.12,1.65])for(const pitch of [-.8,0,.8])for(const fov of [45,85])for(const aspect of [390/844,844/390])for(const yaw of [facing-.8,facing,facing+.8])poses.push({x,y,height,pitch,fov,aspect,yaw});}}return {samples:poses.length,hits:__underGreen.inspectCameraClearance(poses).filter(v=>v.hits.length)};});assert.deepEqual(audit.clearance.hits,[]);
+    // Bright outside-only sentinel exercises raster/depth opacity at the lower
+    // coping and existing upper cap, including distant fogged views.
+    await p.evaluate(async()=>{const T=await import('./vendor/three/three.module.js'),m=new T.Mesh(new T.PlaneGeometry(2,.36),new T.MeshBasicMaterial({color:0xff00ff,fog:false,toneMapped:false,side:T.DoubleSide}));m.position.set(-30,1.90,-52.5);__bunkerProbe.scene.add(m);window.__bunkerSentinel=m;});
+    const pixelCount=()=>p.evaluate(()=>{const gl=__bunkerProbe.renderer.getContext(),a=new Uint8Array(gl.drawingBufferWidth*gl.drawingBufferHeight*4);gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,a);let n=0;for(let i=0;i<a.length;i+=4)if(a[i]>220&&a[i+1]<30&&a[i+2]>220)n++;return n;});
+    await place(['sentinel-positive',-30,56,Math.PI,Math.atan2(1.9-1.65,4)]);assert(await pixelCount()>10,'Sentinel control must be visible');
+    await p.evaluate(()=>__bunkerSentinel.position.z=-51.78);audit.sentinels=[];
+    for(const height of [1.90,4.13])for(const distance of [4,14,19]){await p.evaluate(h=>__bunkerSentinel.position.y=h,height);await place(['sentinel',-30,52+distance,Math.PI,Math.atan2(height-1.65,distance)]);const pixels=await pixelCount();audit.sentinels.push({height,distance,pixels});assert.equal(pixels,0,'Outside sentinel leaked');}
+    await p.evaluate(()=>{__bunkerProbe.scene.remove(__bunkerSentinel);__bunkerSentinel.geometry.dispose();__bunkerSentinel.material.dispose();});
+    await place(fixtures[0]);await p.keyboard.press('Escape');const paused=await read();await p.evaluate(()=>advanceTime(1000));assert.equal((await read()).elapsed,paused.elapsed);await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');await place(fixtures[0]);await shot('reduced');
+   }
+  }
+  await p.close();
+ }
+ assert.equal(audits[0].outsideCount,audits[1].outsideCount);assert.equal(audits[0].outsideHash,audits[1].outsideHash,'Changed geometry outside bunker dressing');
+ for(const a of rows.filter(r=>r.before)){const z=rows.find(r=>!r.before&&r.name===a.name);assert.deepEqual(a.player,z.player);assert.deepEqual(a.graphics.lights,z.graphics.lights);assert.deepEqual(a.graphics.resolution,z.graphics.resolution);assert.equal(a.graphics.textures,z.graphics.textures);}
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,preview,rows,audits,errors},null,2));console.log(JSON.stringify({passed:true,software,preview,views:rows.length,outsideTriangles:audits[1].outsideCount,cameras:audits[1].clearance?.samples,sentinels:audits[1].sentinels?.length}));
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

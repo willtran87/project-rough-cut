@@ -1,0 +1,30 @@
+# Level 1 service-building drainage craft
+
+Partial V07/V08/V09 architectural progress in the full 35-item/V01–V21 upgrade. The previous shadow-filter turn was progress. This pass replaces placeholder drainage on the grounds-service building and maintenance shed; it does not accept all architecture or materials.
+
+## Construction
+
+`web/course-building-drainage.js` replaces each building's closed cylindrical gutter, plain pipe and square outlet with front and rear drainage runs. Each has an open, thick-walled half-round trough, closed end cheeks, narrow rolled lips, eave brackets, a bottom outlet opening, hollow vertical pipe, connected curved outlet, inlet/joint collars, wall plates, straps, screws and an open annular lip. Restrained rust is concentrated at joints. A low stone beneath each outlet has a darker central splash area. These are static environmental details, not a new water simulation.
+
+The rear run mirrors to the opposite building corner. All low parts stay outside the central doorway; over-door gutter parts are above head height. Existing roofs, fascia, window rooms, doors, building anchors and collision hulls remain. The parts use the existing iron/rust/stone materials and enter the normal static surface/spatial batches. They add no light, texture, shader, animation update or independent resource owner. Cache versions were updated through the Level 1 entry/module chain.
+
+The first pipe used a uniform 1,200-triangle sweep. The final pipe uses 432 triangles: a single straight section and six bend segments, with 12 radial facets, an inner wall and open end rims. Each gutter is 124 triangles. This keeps detail where the silhouette bends. Exterior/cavity/end-cheek winding was checked rather than relying only on a close render.
+
+## Verification
+
+- `tools/verify-building-drainage.mjs`: rays from above/below confirm the open trough floor and correct exterior; a ray through the spigot confirms its actual opening; end-cheek normals face outward; the pipe inlet/outlet remain hollow; 12 radial rays hit the outer wall before the cavity; geometry/UV values are finite. Both building widths retain a clear central 2.4 m wide doorway below 2.4 m headroom.
+- `tools/verify-building-drainage.cjs`: 16 views each before-native, after-native and after-software. Both buildings have front, corner, lit-side corner, eave, outlet and rear views; service views at 1280×720 and 390×844 supplement 2560×1600. Actual walking input, pause, reduced-motion presentation, 15 subsequent camera turns and scene rebuild pass. Exactly two drainage assemblies with two runs each are present after rebuild; no browser errors.
+- Native high-resolution target 2492×1402; ordinary 1193×671; phone 379×833. Software frozen scenes retain their existing lower rendering budget. Dark sides/rears remain deliberately unlit; the stronger lit-side approach makes the pipe collar/bracket construction clearer. No ambient or practical-light boost was used to expose it.
+- Sixteen matched native views retain identical light inventories/intensities, all path-lantern data (28 path lights), building/door positions, rotations, collision hulls and door poses. Only decorative bounds expand. Native render deltas: 0–3 draws and 3,516–10,740 triangles, including shadow passes; one extra batched geometry, zero extra textures/programs. These are resource/submission counts, not a frame-rate or whole-level performance claim.
+- Warm counts stay fixed during the camera-turn check. Final native count 1,013 geometries/113 textures; software 777/113. Geometry-count comparison uses this fixture's own baseline (1,012 native), not counts from unrelated earlier scenes. The corrected traversal moves from x−18 to x−4.67 at progress667.625 with no boundary correction.
+- Installed web-game client uses the new optional `--building-drainage` fixture, actual forward/lateral input and two capture bursts on both renderers. It positions the player on the maintenance shed's playable approach after the normal Level 1 bootstrap. Other client options and chapters are preserved.
+
+The first traversal/client setup used the decorative service facade outside the playable boundary; movement snapped the player back into bounds. That was not valid walking evidence. Final fixture traversal starts at the maintenance shed, asserts an in-bounds start and a bounded walking distance, and the client uses the same playable building. Static close facade views remain inspection views, not proof those positions are reachable in gameplay.
+
+Final artifacts: `output/level-one-building-drainage/after-native`, `after-software`, `client-native`, `client-software`; matching baseline in `before-native`. The initial 14-view native candidate used the more expensive pipe and was superseded by the final 16-view run. `comparison.json` records the matched counts/invariants. The original baseline building module accompanies the evidence. Five modules from this drainage implementation were subsequently preserved as the ground-integration baseline; the newer source manifest is in output/level-one-drainage-ground.
+
+## Remaining work
+
+The dark rear/outlet views are not evidence of complete close-up readability. Splash stones overlap some existing low vegetation and need a broader footing/planting integration pass. A dark rectangular splash area is a modest material cue, not finished irregular wet-ground art. Full facade material consistency, roof/interior craft elsewhere, whole-route composition, software high-resolution fidelity and extended-play performance remain open. V07/V08/V09 and the goal remain in progress.
+
+Follow-up: `qa/level-one-drainage-ground-2026-11-14.md` records the irregular sloping stone, pixel-stepped stain and local planting exclusion. Previous client handles14680/88283 were missing on revalidation; their completed captures/states were inspected (both native/software remain first_hole with movement from x6/progress689 to x4/progress694 and no error files). New current-source client runs also pass.

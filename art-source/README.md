@@ -1,5 +1,7 @@
 # Directional art masters
 
+These September 13 directional sprites are retained source assets for legacy/comparison rendering. The current browser presentation uses fixed 3D props and an animated Joe model; see the [art-direction contract](../design/pixel-3d-art-direction.md) and [Joe model source/rebuild guide](../assets/enemies/joe-hd/model/README.md). Runtime WebP preparation is documented in the [development guide](../docs/development.md).
+
 Generated with the built-in image tool on 2026-09-13, using the existing Rough Cut art as references. The user explicitly authorized local image processing after shed generations repeatedly returned opaque backgrounds.
 
 `tools/prepare-directional-art.py` uses Pillow to produce the runtime PNGs under `web/assets/`. It removes border-connected neutral checkerboard from the shed, removes neutral checkerboard inside the open cart cab, discards detached neighboring-frame remnants, and aligns Joe's four walking poses to a common ground baseline. Left poses mirror the complete right poses; the generated left mower was clipped. Original files remain preserved here and in the generator output directory.

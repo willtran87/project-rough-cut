@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {createGamepadSession} from '../web/gamepad-session.js';
+const pad={connected:true,id:'pad',index:0,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))},s=createGamepadSession();
+pad.buttons[0].pressed=true;assert(!s.update(pad,'menu').ready);
+pad.buttons[0].pressed=false;assert(s.update(pad,'menu').ready);
+pad.buttons[0].pressed=true;assert(s.update(pad,'menu').ready);assert(!s.update(pad,'playing').ready);
+pad.buttons[0].pressed=false;pad.axes[0]=1;assert(!s.update(pad,'playing').ready);
+pad.axes[0]=0;assert(s.update(pad,'playing').ready);
+assert(s.update(null,'playing').disconnected);assert(!s.update(null,'playing').disconnected);
+pad.buttons[9].value=1;assert(!s.update(pad,'paused').ready);
+pad.buttons[9].value=0;assert(s.update(pad,'paused').ready);
+pad.id='replacement';pad.axes[3]=-.8;assert(!s.update(pad,'paused').ready);
+pad.axes[3]=0;assert(s.update(pad,'paused').ready);s.requireNeutral();pad.buttons[0].pressed=true;assert(!s.update(pad,'paused').ready);
+pad.buttons[0].pressed=false;assert(!s.update(pad,'paused',false).ready);
+pad.buttons[0].pressed=true;assert(!s.update(pad,'paused',true).ready);
+pad.buttons[0].pressed=false;assert(s.update(pad,'paused',true).ready);
+console.log('PASS: connection, context, replacement, trigger values, neutral rearming and one-shot disconnect');

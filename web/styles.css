@@ -47,6 +47,7 @@ body {
   padding: clamp(0px, 0.7vw, 8px);
   position: relative;
   isolation: isolate;
+  container-type: inline-size;
 }
 
 #game-shell::before {
@@ -62,6 +63,15 @@ body {
 
 #game-shell::after {
   display: none;
+}
+
+@media (orientation:portrait) {
+  #game-shell[data-course-portrait="true"] {
+    width:100%;height:calc(100dvh - 2 * var(--stage-gap));aspect-ratio:auto;
+    padding:0;
+  }
+  #game-shell[data-course-portrait="true"]::after {display:none;}
+  #game-shell[data-course-portrait="true"] #route-choices {left:50%;width:94%;bottom:300px;}
 }
 
 #game {
@@ -114,3 +124,78 @@ body {
     0 0 0 3px rgb(223 123 49 / 35%),
     0 24px 80px rgb(0 0 0 / 75%);
 }
+
+#study-launch {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 4;
+  font-size: 13px;
+}
+
+#study-dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: clamp(16px, 3vw, 28px);
+  overflow: auto;
+  color: #eef1dd;
+  background: #0b1912;
+  border: 1px solid #91b69d;
+  border-radius: 8px;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+#study-dialog::backdrop { background: rgb(0 5 2 / 80%); }
+.study-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+#study-dialog h1 { font-size: 26px; margin: 0; }
+#study-dialog h2 { font-size: 20px; margin-top: 24px; }
+#study-dialog h3 { font-size: 16px; color: #e9c188; margin-bottom: 6px; }
+#study-dialog article { border-bottom: 1px solid #344c3c; padding: 8px 0; }
+#study-dialog article p { margin-top: 6px; }
+.study-tabs, .study-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.study-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+#study-dialog label { display: grid; gap: 5px; margin: 10px 0; }
+#study-dialog select, #study-dialog textarea { width: 100%; padding: 10px; background: #061009; color: #eef1dd; border: 1px solid #73917b; font: inherit; border-radius: 4px; }
+#study-dialog button, #study-launch { min-height: 42px; padding: 8px 12px; border: 1px solid #73917b; border-radius: 4px; background: #153124; color: #eef1dd; cursor: pointer; font-family: inherit; }
+#study-dialog button:hover, #study-launch:hover { background: #254b35; }
+#study-dialog button[aria-pressed="true"] { background: #d9c393; color: #142318; }
+#study-dialog :focus-visible, #study-launch:focus-visible { outline: 3px solid #efbd73; outline-offset: 3px; }
+.study-small { font-size: 13px; color: #b4c9ba; }
+[hidden] { display: none !important; }
+#direct-choices { position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 3; }
+#direct-choices button { min-height: 42px; padding: 8px 14px; background: #14291e; color: #e7dfc0; border: 1px solid #b0b896; border-radius: 4px; font: 600 14px system-ui; cursor: pointer; white-space: nowrap; }
+#direct-choices button:focus-visible { outline: 3px solid #efbd73; }
+#feel-controls input[type="checkbox"] { width: 24px; height: 24px; accent-color: #c6d6a5; }
+@media (max-height: 500px) { #direct-choices { bottom: 24%; } #direct-choices button { font-size: 12px; min-height: 44px; padding: 6px; } }
+@media (max-width: 520px) { .study-grid { grid-template-columns: 1fr; } #study-launch { bottom: 10px; right: 10px; font-size: 11px; min-height: 36px; } }
+
+#route-choices { width:56%; position:absolute; left:48%; bottom:9%; transform:translateX(-50%); display:flex; gap:8px; z-index:8; }
+#route-choices[hidden] { display:none; }
+#route-choices button { flex:1; min-width:0; font:500 clamp(12px, 1.35cqw, 26px)/1.45 system-ui; color:#e2e8cf; background:#11291f; border:1px solid #83a48b; padding:10px 14px; min-height:44px; cursor:pointer; white-space:pre-line; line-height:1.45; }
+#route-choices button[aria-pressed=true] { border-color:#f4cf82; background:#3c4225; }
+#course-tools { position:absolute;left:4%;top:26%;width:55%;box-sizing:border-box;padding:1.2% 1.5%;z-index:7;background:rgba(5,18,14,.96);border:1px solid #677e69;color:#e1e2c8;font:clamp(12px,1.25cqw,22px)/1.35 ui-monospace,monospace;pointer-events:none; }
+#course-tools h2 { margin:0 0 .5em;font:inherit;font-weight:bold;color:#e6cb94; }
+#course-tools h2 small { display:block;font-weight:normal;color:#b3c1ac;font-size:.85em; }
+.course-tool { display:grid;grid-template-columns:1.5em 1fr auto;align-items:center;gap:.6em;padding:.45em 0;border-top:1px solid #304638; }
+.course-tool-marker { text-align:center;border:1px solid #c6cca3;color:#f0deb0; }
+.course-tool strong { font-size:1em; }.course-tool small { display:block;font-size:.85em;color:#b3c1ac; }
+.course-tool-status { color:#e6cb94;white-space:nowrap;font-size:.9em; }
+.course-tool.spent { opacity:.6; }
+#course-tools p { margin:.45em 0 0;font-size:.85em;color:#b3c1ac; }
+#course-tools .course-tool-rules { display:none; }
+@media(max-height:480px) { #course-tools { top:25%;font-size:12px;padding:.6% 1%; } .course-tool { padding:.25em 0; } .course-tool small,#course-tools h2 small { display:none; } #course-tools p { font-size:10px; } #course-tools .course-tool-rules { display:block; } }
+@media(max-height:480px) { #route-choices { bottom:7%; width:56%; } #route-choices button { padding:4px; font-size:12px; } }
+#course-loading{position:absolute;inset:clamp(0px,.7vw,8px);z-index:40;overflow:hidden;display:flex;align-items:flex-end;background:#081318;color:#eee7cf;font-family:ui-monospace,monospace;pointer-events:none;border:1px solid #59614b}
+#course-loading .course-loading-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+#course-loading::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,10,10,.08) 35%,rgba(3,10,10,.35) 61%,rgba(3,10,10,.96) 100%);pointer-events:none}
+.course-loading-copy{position:relative;z-index:1;width:100%;padding:3.5% 5%;background:linear-gradient(0deg,rgba(3,10,10,.55),transparent)}
+.course-loading-kicker{display:block;color:#cab57f;font-size:clamp(10px,1.1cqw,20px);letter-spacing:.16em}
+.course-loading-title{margin:.45em 0 .35em;font-size:clamp(16px,2.4cqw,42px);font-weight:700;line-height:1.25;text-wrap:balance}
+.course-loading-mark{color:#d0aa61;letter-spacing:.08em}
+.course-loading-hint{margin:0;color:#b4c3bb;font-size:clamp(11px,1.25cqw,22px);line-height:1.45}
+#course-loading[hidden]{display:none}
+/* Shared controller focus for Level 1's DOM dialogs above its canvas menus. */
+dialog[data-gamepad] :focus { outline: 3px solid #edc986; outline-offset: 4px; }
+.gamepad-dialog-help { display: none; }
+dialog[data-gamepad] .gamepad-dialog-help { display: block; color: #edc986; }

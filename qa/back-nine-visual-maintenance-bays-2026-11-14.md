@@ -1,0 +1,22 @@
+# Back Nine: five authored maintenance workspaces
+
+Partial BV21/BV23/BV25 progress. Five repeated closed grounds-store fronts now have recessed service counters containing distinct work: turf supplies, irrigation repair, range equipment, an unfinished mower-deck repair, and engine servicing. The visible counter/drawers retain the buildings' blocked-entry language. The existing footprints, foundations, roofs, paths and gameplay collision remain in place.
+
+`web/back-nine-maintenance-bays.js` authors enclosed walls, raised shutters/guides, counters, shelves, peg rails, tools and job-specific supplies. The irrigation station holds an opened pump and removed impeller/couplings; the deck station has a shaped stamped cover, spindles, detached blade, spare wheel and parts tray. Other stations contain woven seed sacks/trays, ball buckets and maintenance brushes, or fluid cans, filter pleats and spare belts. `course-features.js` replaces the former filled body/front panels with these rooms. The contents stay within their existing store footprint, so no new obstacle or destructible prop is placed in a chase route.
+
+The five rooms total 518 authored pieces / 11,296 triangles before removing the old body/front panels. They use existing spatial material batches and light/shadow sources. The sack material reuses the already-loaded 1254-square player work-cloth illustration with local cropped UVs; labels/seams rotate with the sack. No new image asset, texture allocation, light, animation loop or simulation system. Existing materials provide stone, timber, paint, steel, brass and rubber. Scene/module import-map versions are `20261114-maintenance-2`.
+
+## Verification
+
+- `node tools/verify-back-nine-maintenance-bays.mjs` passes all five stores: finite geometry, equipment inside the existing solid footprint, seated walls/roof bounds, open recessed sightline, solid counter/shutter ray hits, unchanged course data/navigation. The wall bottom intentionally overlaps the existing raised foundation.
+- `node tools/verify-course-destruction.mjs` passes all 23 crushable fixtures, player blocking, opened gaps, camera/ejection clearance, retry and actual Joe pursuit through the parked cart. No destruction rules changed.
+- `tools/capture-back-nine-maintenance-bays.cjs` captures actual seeded driving approaches and separately labelled close inspection cameras for all five stores, plus 1280x720 and 390x844 views. Baseline/current native and current software runs have no page/console errors. Native viewport 2560x1600, actual main buffer 2560x1440. The final sack-label rotation correction has additional focused native/software supply captures (`supply-final-*`). Actual before/current images and responsive views were opened and inspected.
+- Twelve matched native views retain 31 programs and 53 textures. The five ordinary approach views add 0–2 draws and 1,864–4,612 triangles depending on the visible stores. See `resource-comparison.json`. These counters do not establish a frame-time budget.
+- The installed standard gameplay client runs through `tools/verify-presented-client.mjs --back-nine --maintenance-bays --high-resolution`, two 60-frame forward bursts. Native and software both stop at exactly (-2,206.4455874), on foot, speed zero, before the pump-store footprint. Images/state inspected; no error artifacts. Native retains 2560x1440; software drops to640x360, an unresolved whole-level fidelity limit.
+- A final native installed-client run adds `--maintenance-supplies` and checks the cloth/label correction during actual movement. Player stops at (12,201.4405874), speed zero, before the supply counter. Native2560x1440, no error artifacts; final image/state inspected.
+
+Evidence is in `output/back-nine-visual-upgrade/maintenance-bays/`, with baseline sources, source snapshots and a SHA-256 manifest. Close inspection cameras are explicitly separate from ordinary gameplay captures; the latter plus installed-client traversal demonstrate visibility during play.
+
+## Remaining scope
+
+BV23/BV25 move from pending to in progress. These five composed interiors improve habitation and architectural depth; whole maintenance-yard composition, exterior supplies/work arrangements, stronger interrupted-work storytelling and broad Level 1 parity remain. Objects at distant driving views still reduce to silhouettes, and software retains substantial resolution/detail loss. BV48 remains open. All 48 original requirements remain active; this is not acceptance of the whole level.

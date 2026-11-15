@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../web/vendor/three/three.module.js';
+import {createCourseSignLamp} from '../web/course-sign-lamp.js';
+
+const parent=new THREE.Group(),parts=[],lamp=createCourseSignLamp(parent,(...v)=>parts.push(v),{x:-22*.1152,y:1.55,z:-40*.16});
+assert.equal(lamp.light.shadow.autoUpdate,false);
+const frame={time:100,paused:false,clearNavigation:false,joe:{x:100,y:700}};
+const step=()=>{lamp.light.shadow.needsUpdate=false;lamp.update(frame);return lamp.light.shadow.needsUpdate;};
+assert(step());frame.time++;assert(!step(),'Static map is retained with Joe outside the light envelope');
+Object.assign(frame.joe,{x:0,y:40});frame.time++;assert(step(),'Arrival refreshes the map');
+frame.paused=true;frame.time++;assert(!step(),'Pause keeps the near map');
+frame.paused=false;assert(step(),'Gait resumes near the light');
+frame.joe.x=-3;assert(step(),'Position change refreshes even at the same timestamp');
+Object.assign(frame.joe,{x:100,y:700});assert(step(),'Departure removes stale actor shadow');
+frame.time++;assert(!step());frame.clearNavigation=true;assert(step(),'Changed sign draw range invalidates the map');
+frame.time=0;assert(step(),'Time reset invalidates the map');
+assert(parts.every(([x])=>Math.abs(x+22*.1152)<.9),'Lamp hardware stays within the existing board width');
+assert.equal(parts.length,12);assert(lamp.stats().position[1]-lamp.light.distance>0,'No ground-level light spill');
+lamp.root.traverse(o=>{o.geometry?.dispose();o.material?.dispose();o.shadow?.dispose();});
+console.log(JSON.stringify({passed:true,hardwareParts:parts.length,checks:['Static shadow reuse','Near arrival/gait/position/departure','Pause','Navigation and time reset','Existing board width','Bounded light range']}));
