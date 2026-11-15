@@ -18,7 +18,7 @@ export const OPENING_SLIDES = [
     alt:'Fresh mower tracks lead through low mist to Joe. His mower is still, and he has turned to face you.',sound:'The engine cuts out. Only the wind remains.',motor:0,hz:42,wind:.007,hum:0},
 ];
 export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,captions,toggleFullscreen,
-  slides=OPENING_SLIDES,storageKey='rough-cut.opening-story.v1',header='NIGHT ORDER',replayHint='Replay it from the clubhouse menu.',mount=document.getElementById('game-shell'),advanceKeys=['Enter','Space'],finalLabel='Review chapter →'}){
+  slides=OPENING_SLIDES,storageKey='rough-cut.opening-story.v1',header='NIGHT ORDER',replayHint='Replay it from the clubhouse menu.',mount=document.getElementById('game-shell'),advanceKeys=['KeyE','Enter','Space'],finalLabel='Review chapter →'}){
   const saved=()=>{try{return JSON.parse(localStorage.getItem(storageKey))||{};}catch{return {};}};
   const dialog=document.createElement('dialog');dialog.id='opening-story';dialog.tabIndex=-1;
   dialog.setAttribute('aria-labelledby','opening-title');dialog.setAttribute('aria-describedby','opening-copy');

@@ -148,7 +148,10 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  for(let z=13;z<=17;z+=.45)box('dark',21.77,1.5,z,.08,2.9,.08);
  const sluiceLabel=sign('KEEPER’S SLUICE',13.7,2.4,15,2,.45);sluiceLabel.rotation.y=Math.PI/2;
  for(const x of [-8,7]){const marker=sign(x<0?'OVERLOOK ↰':'OVERLOOK ↱',x,1.2,14.4,2.3,.5);marker.rotation.y=x<0?-Math.PI/2:Math.PI/2;cyl('metal',x,.55,14.4,.04,1.1);}
- sign('18 / CHAMPIONSHIP OVERLOOK',-2,OVERLOOK.h+.9,5.22,8,.6);
+ // The entrance banner clears standing head height and the gate piers. Two
+ // posts rise from the rear parapet (1.1 m above the deck) to carry it.
+ sign('18 / CHAMPIONSHIP OVERLOOK',-2,OVERLOOK.h+2.75,5.22,8,.6);
+ for(const x of [-5.9,1.9])cyl('metal',x,OVERLOOK.h+2.075,5.12,.045,1.95);
  // The close announcement sits on the side parapet, leaving the bunker and
  // destination view open. Both branch entrants can inspect it without a timer.
  const receiptFrame=new THREE.Group();scene.add(receiptFrame);
