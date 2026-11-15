@@ -57,7 +57,7 @@ document.addEventListener('keydown',e=>{
  if(e.target.matches('input,select,summary')&&e.code!=='Escape')return;
  if(e.code==='Escape'){e.preventDefault();if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();return;}
  if(e.code==='KeyF'){e.preventDefault();if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}
- if(!live()){if(e.code==='Enter'&&!e.target.matches('button,a')&&resultView==='summary'){e.preventDefault();primary();}return;}
+ if(!live()){if((e.code===bindings.interact&&!e.repeat||e.code==='Enter'&&!e.target.matches('button,a'))&&resultView==='summary'){e.preventDefault();primary();}return;}
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();
  if(device==='touch')clearInput();device='keyboard';keys.add(e.code);
  if(!e.repeat&&e.code===bindings.interact)usePressed=true;

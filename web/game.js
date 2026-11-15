@@ -9279,6 +9279,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
+  /** Menus and panels confirm with the interact key (E by default); Enter and Space remain as fallbacks. */
+  function confirmKey(event) {
+    return event.code === "Enter" || event.code === "Space" || (!event.repeat && event.code === keyboardBindingCode("interact"));
+  }
+
   function keyboardCodeLabel(code) {
     return keyLabel(code, 'legacy');
   }
@@ -12005,7 +12010,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       record:'Course record: '+recordText(bestCareerRecord()),career:state.career.roundsStarted?`${state.career.roundsStarted} rounds · ${state.career.escapes} escaped · ${state.career.captures} denied`:'',
       noticeTitle:clock?'':state.mode==='claim'?'Change rejected':assets.failed?'Some art could not load':'',
       notice:clock?'':state.mode==='claim'?state.status.replace(/^CHANGE REJECTED:\s*/,''):assets.failed?'Reload to retry.':state.status,
-      controls:clock?clockedOutReturnPrompt():state.mode==='claim'?inputCopy('Escape dismiss · ↑↓ Menu · Enter confirm','B dismiss · D-pad menu · A confirm','Dismiss rejection or choose another menu action'):inputCopy('←→ Chapter · ↑↓ Action · Enter confirm · Page keys scroll','D-pad ←→ Chapter · ↑↓ Action · A confirm · LB records · X comfort · Y journal · Right stick scroll','Choose a chapter, then Start Game · Scroll for details')},clubhouseControls);
+      controls:clock?clockedOutReturnPrompt():state.mode==='claim'?inputCopy(`Escape dismiss · ↑↓ Menu · ${keyboardBindingLabel('interact')} confirm`,'B dismiss · D-pad menu · A confirm','Dismiss rejection or choose another menu action'):inputCopy(`←→ Chapter · ↑↓ Action · ${keyboardBindingLabel('interact')} confirm · Page keys scroll`,'D-pad ←→ Chapter · ↑↓ Action · A confirm · LB records · X comfort · Y journal · Right stick scroll','Choose a chapter, then Start Game · Scroll for details')},clubhouseControls);
   }
 
   const menuBackdrop = document.createElement('canvas');
@@ -13010,7 +13015,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         status:`${completedNightOrderActionCount()}/3 checks · ${h.golfBalls} balls · ${normalizeDisplayText(escapeReadiness().text)}`,
         threat:spatialDisplayUnits(`Joe ${{patrol:'patrolling',search:'searching',investigate:'investigating',chase:'chasing'}[h.joe.mode]||h.joe.mode} · ${Math.round(worldDistance(h.joe,state.player))}m · ${h.hasLineOfSight?'Open sightline':'Sightline blocked'}`),
         selected:state.pauseIndex,scale:state.uiScale,
-        controls:inputCopy('↑ / ↓ selects · Enter confirms · Esc resumes','D-pad selects · A confirms · B / Menu resumes · X comfort · Y journal','Tap an action. Time stays paused.'),
+        controls:inputCopy(`↑ / ↓ selects · ${keyboardBindingLabel('interact')} confirms · Esc resumes`,'D-pad selects · A confirms · B / Menu resumes · X comfort · Y journal','Tap an action. Time stays paused.'),
         actions:PAUSE_ITEMS.map((label,index)=>({label,description:PAUSE_DESCRIPTIONS[index]}))});
       RCScene3D.showDomHud();return;
     }
@@ -49588,7 +49593,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     if(spatialViewEnabled() && window.RCQualityUI?.briefing){
       RCQualityUI.briefing({ready:!RCScene3D.isPreparing(),overtime:state.hole.overtime,
         controls:inputCopy(`${keyboardMovementCopy()} move · Mouse look · ${keyboardBindingLabel('interact')} use · Hold ${keyboardBindingLabel('chip')} to aim a ball lure`, 'Left stick move · Right stick look · A use · Hold X to aim a ball lure', 'Left pad move · Swipe to look · USE interacts · Hold CHIP for a ball lure'),
-        start:inputCopy(`${keyboardBindingLabel('interact')} / Enter — step onto the course`,'A — step onto the course','Step onto the course')});
+        start:inputCopy(`${keyboardBindingLabel('interact')} — step onto the course`,'A — step onto the course','Step onto the course')});
       return;
     }
     const variant = activeRunVariant();
@@ -58592,7 +58597,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
   function responsiveResultPresentation(outcome){
     const h=state.hole,victory=outcome==='victory',actions=resultActionPresentations(outcome);
     const common={outcome,selected:state.resultIndex,actions,scale:state.uiScale,
-      controls:inputCopy('Arrows select · Enter confirms · Page Up / Down scrolls · Esc menu',victory?'D-pad selects · A confirms · Right stick scrolls · Y journal · B menu':'D-pad selects · A confirms · X loss details · Right stick scrolls · B menu','Tap an action · Scroll for the full review'),
+      controls:inputCopy(`Arrows select · ${keyboardBindingLabel('interact')} confirms · Page Up / Down scrolls · Esc menu`,victory?'D-pad selects · A confirms · Right stick scrolls · Y journal · B menu':'D-pad selects · A confirms · X loss details · Right stick scrolls · B menu','Tap an action · Scroll for the full review'),
       art:mainCtx.canvas};
     if(!victory){
       const review=h.captureReview||{label:'Close contact',zoneName:courseZoneAt(state.player.y).name,evidence:'Joe closed the final distance before the route was clear.',counterplay:'Use Listening Focus, preserve cover, and keep a second route available.',repeatCount:1};
@@ -64129,7 +64134,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       event.preventDefault();
       return;
     }
-    if (state.mode === "gate" && (event.code === "Enter" || event.code === "Space")) {
+    if (state.mode === "gate" && confirmKey(event)) {
       startIntro();
       event.preventDefault();
     } else if (state.mode === "intro" && ["Enter", "Space", "Escape"].includes(event.code)) {
@@ -64162,7 +64167,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       ) {
         selectPortfolioVariant(1);
         event.preventDefault();
-      } else if (event.code === "Enter" || event.code === "Space") {
+      } else if (confirmKey(event)) {
         playUiTone(285, 0.07, 0.025);
         activateMenu();
         event.preventDefault();
@@ -64222,7 +64227,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         adjustSelectedSetting(1);
         event.preventDefault();
       } else if (
-        (event.code === "Enter" || event.code === "Space") &&
+        confirmKey(event) &&
         !event.repeat
       ) {
         adjustSelectedSetting(1);
@@ -64240,7 +64245,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         playUiTone(190 + state.pauseIndex * 14, 0.045, 0.016);
         event.preventDefault();
       } else if (
-        (event.code === "Enter" || event.code === "Space") &&
+        confirmKey(event) &&
         !event.repeat
       ) {
         activatePause();
@@ -64332,10 +64337,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
         selectResultAction(1);
         event.preventDefault();
       } else if (
-        (
-          event.code === "Enter" ||
-          event.code === "Space"
-        ) &&
+        confirmKey(event) &&
         !event.repeat
       ) {
         activateResultAction();
@@ -64344,8 +64346,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     } else if (
       state.mode === "clocked_out" &&
       (
-        event.code === "Enter" ||
-        event.code === "Space" ||
+        confirmKey(event) ||
         event.code === "Escape"
       )
     ) {
