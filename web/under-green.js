@@ -59,6 +59,9 @@ prefs.resolution=Number.isFinite(spatial.resolution)?clamp(spatial.resolution,.5
 let toggleCrouch=false,toggleSprint=false;
 const touchRun=createTouchRunControl(),touchPointers=new Map();
 const saved=readSave(stored(SAVE_KEY));let run=createRun(0,false,saved?.difficulty),world=null,ready=false,manual=false,last=performance.now(),accumulator=0,usePressed=false,lookX=0,lookY=0,uiMode='',lastSave=-1,dirty=true,padButtons=[],drag=null,inputMethod=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';
+// Repairs campaign progress for players who finished this chapter while its
+// completion was saved to the chapter record but not to the campaign.
+if(saved?.completed===true&&!RCProgression.state().completed['under-green'])RCProgression.complete('under-green');
 if(new URLSearchParams(location.search).has('telemetry'))run.telemetry=createLocalTelemetry();
 const playtest=new URLSearchParams(location.search).has('playtest')?mountUnderGreenPlaytest(document.querySelector('#panel .panel-body'),()=>({viewport:{width:innerWidth,height:innerHeight},inputMethod,settings:{muted:prefs.muted,reducedMotion:prefs.reduced,fov:prefs.fov,resolution:prefs.resolution,threatCaptions:shared.threatCaptions,soundCaptions:shared.soundCaptions},bindings:{...bindings}})):null;
 function persist(){
@@ -75,7 +78,7 @@ function clearInput(){keys.clear();touch.clear();touchPointers.clear();touchRun.
 function release(){if(document.pointerLockElement===canvas)document.exitPointerLock();}
 const live=()=>['playing','aftermath'].includes(run.mode);
 const presentationWake=createFrameWake(()=>draw(),()=>ready&&!manual&&!document.hidden&&live());
-function beginEscape(){if(run.mode==='complete'){location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
+function beginEscape(){if(run.mode==='complete'){RCProgression.complete('under-green');location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
 let storyReturnMode='briefing';
 const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:'Replay from Controls & comfort. E continues; Esc skips.',advanceKeys:['KeyE','Enter','Space'],finalLabel:'Review chapter →',
  reducedMotion:()=>prefs.reduced,captions:()=>shared.soundCaptions,toggleFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},
