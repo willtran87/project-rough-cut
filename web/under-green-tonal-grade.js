@@ -1,7 +1,7 @@
 // A small hue-preserving lift for already lit, opaque material detail. Zero
 // remains zero, highlights return to unity, and water/effects keep their own
 // authored response. This runs inside existing material shaders, before fog.
-const strength=.42;
+const strength=.42,rim=2.2;
 const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
 export const drainDetailGain=value=>1+strength*smooth(.00015,.002,value)*(1-smooth(.025,.12,value));
 
@@ -18,10 +18,14 @@ export function createDrainTonalGrade(scene,additionalMaterials=[]){
     float drainDetailValue=max(outgoingLight.r,max(outgoingLight.g,outgoingLight.b));
     float drainDetailLift=1.0+${strength.toFixed(2)}*smoothstep(.00015,.002,drainDetailValue)*(1.0-smoothstep(.025,.12,drainDetailValue));
     outgoingLight*=drainDetailLift;
+    // Damp masonry seen along its length returns more of the light already
+    // reaching it. Unlit surfaces stay black; no source or pass is added.
+    float drainRimFacing=1.0-min(1.0,abs(dot(normalize(normal),normalize(vViewPosition))));
+    outgoingLight+=(reflectedLight.directDiffuse+reflectedLight.indirectDiffuse)*(drainRimFacing*drainRimFacing*${rim.toFixed(2)});
     #include <opaque_fragment>
    `);
   };
-  material.customProgramCacheKey=()=>key+'-drain-detail-grade-v1';material.needsUpdate=true;
+  material.customProgramCacheKey=()=>key+'-drain-detail-grade-v2-wet-rim';material.needsUpdate=true;
  }
- return {stats:()=>({materials:hooks.size,maxGain:1+strength,blackPreserved:true,waterExcluded:true,transparentExcluded:true,extraPasses:0}),dispose(){for(const [m,[compile,key]]of hooks){m.onBeforeCompile=compile;m.customProgramCacheKey=key;}hooks.clear();}};
+ return {stats:()=>({materials:hooks.size,maxGain:1+strength,blackPreserved:true,wetRim:rim,waterExcluded:true,transparentExcluded:true,extraPasses:0}),dispose(){for(const [m,[compile,key]]of hooks){m.onBeforeCompile=compile;m.customProgramCacheKey=key;}hooks.clear();}};
 }

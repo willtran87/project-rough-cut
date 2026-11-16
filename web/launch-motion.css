@@ -1,0 +1,92 @@
+/* Living stills for the loading, briefing and story panels.
+   Every moving part animates transform or opacity only, so the wait stays smooth
+   while the page is busy building the course. Reduced motion holds each still. */
+
+/* ---- Night Order loading panel: south gate, shed and drain ---- */
+/* The renderer flips [hidden] inside each frame; a live panel keeps its boxes so
+   the animations below are not restarted (see launch-motion.js). */
+#course-loading[hidden][data-rc-live]{display:grid!important}
+#course-loading .course-loading-stage{position:relative;width:min(100%,1320px);height:min(60vh,650px);align-self:end;box-sizing:border-box;overflow:hidden;border:4px solid #253323;outline:1px solid var(--rc-edge);background:#050d0b;container-type:size}
+#course-loading .course-loading-stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 52%,rgba(2,8,7,.5) 100%),linear-gradient(180deg,rgba(2,8,7,.28),transparent 16%,transparent 80%,rgba(2,8,7,.42))}
+/* The plate keeps the painting's own shape, so each effect stays on its landmark
+   at any viewport. --rc-slack is the hidden height available for the slow tilt. */
+#course-loading .course-loading-plate{--rc-slack:calc((max(56.28cqw,100cqh) - 100cqh) / 2);position:absolute;left:50%;top:50%;width:max(100cqw,177.69cqh);aspect-ratio:1672/941;transform:translate(-50%,-50%);will-change:transform;animation:rc-plate-tilt 44s cubic-bezier(.33,.33,.6,1) infinite alternate both}
+#course-loading .course-loading-plate .course-loading-art{position:absolute;inset:0;width:100%;height:100%;border:0;outline:0;object-fit:cover}
+.course-loading-fx,.course-loading-fx>span,.course-loading-rain{position:absolute;display:block;pointer-events:none}
+.course-loading-fx{inset:0}
+.rcfx-lamp{left:11%;top:-9%;width:35%;aspect-ratio:1;background:radial-gradient(circle,rgba(255,196,110,.34),rgba(255,170,80,.12) 34%,transparent 66%);opacity:.5;animation:rc-lamp 6.5s ease-in-out infinite}
+.rcfx-window{left:68.2%;top:38.2%;width:7%;aspect-ratio:1;background:radial-gradient(circle,rgba(255,214,140,.85) 0,rgba(255,180,90,.42) 16%,rgba(255,160,70,.14) 38%,transparent 66%);opacity:.55;animation:rc-flicker 7.3s linear infinite}
+.rcfx-puddle{left:28%;top:86%;width:20%;height:10%;background:radial-gradient(ellipse,rgba(255,190,110,.26),transparent 68%);opacity:.4;animation:rc-lamp 6.5s ease-in-out infinite}
+.rcfx-glint{left:38.4%;top:60.9%;width:3%;aspect-ratio:1;background:radial-gradient(circle,#fff6d8 0,rgba(255,232,170,.6) 9%,transparent 34%),linear-gradient(90deg,transparent,rgba(255,240,196,.9) 50%,transparent) center/100% 2px no-repeat,linear-gradient(0deg,transparent,rgba(255,240,196,.9) 50%,transparent) center/2px 100% no-repeat;opacity:0;animation:rc-glint 6.8s ease-in-out 1.6s infinite}
+.rcfx-mist{left:0;top:47%;width:100%;height:30%;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent 30%,#000 62%);mask-image:linear-gradient(90deg,transparent 30%,#000 62%)}
+.rcfx-mist-near{top:70%;height:32%;-webkit-mask-image:none;mask-image:none;opacity:.7}
+.rcfx-mist>i{position:absolute;left:0;top:0;width:200%;height:100%;background:radial-gradient(ellipse 22% 44% at 14% 56%,rgba(176,204,198,.2),transparent 70%),radial-gradient(ellipse 30% 36% at 46% 40%,rgba(160,192,188,.16),transparent 72%),radial-gradient(ellipse 20% 48% at 78% 62%,rgba(184,208,200,.18),transparent 70%),radial-gradient(ellipse 14% 30% at 96% 34%,rgba(170,198,192,.12),transparent 70%);background-size:50% 100%;will-change:transform;animation:rc-mist 54s linear infinite}
+.rcfx-mist-near>i{animation-duration:78s;animation-direction:reverse}
+.rcfx-trickle{left:86.3%;top:76.4%;width:2.7%;height:4%;overflow:hidden;opacity:.75}
+.rcfx-trickle>i{position:absolute;left:0;top:0;width:100%;height:200%;background:linear-gradient(180deg,transparent 0,rgba(214,236,240,.6) 34%,rgba(214,236,240,.12) 58%,transparent 100%) 0 0/34% 25%,linear-gradient(180deg,rgba(214,236,240,.1) 0,transparent 30%,rgba(214,236,240,.5) 72%,transparent 100%) 50% 0/26% 25%,linear-gradient(180deg,rgba(214,236,240,.42) 0,transparent 44%,rgba(214,236,240,.2) 80%,transparent 100%) 100% 0/30% 25%;background-repeat:repeat-y;will-change:transform;animation:rc-trickle .62s linear infinite}
+.rcfx-ripple{left:84.6%;top:79.6%;width:6%;height:2.6%;border-radius:50%;border:1px solid rgba(206,230,236,.5);opacity:0;animation:rc-ripple 2.6s ease-out infinite}
+.rcfx-ripple-late{animation-delay:1.3s}
+/* Drizzle sits in screen space above the plate. One tile is 110 by 220 pixels and
+   the layer travels exactly one tile across and two down, so the loop is seamless. */
+.course-loading-rain{left:0;right:-110px;top:-440px;bottom:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='220'%3E%3Cpath stroke='%23c4d6dc' stroke-opacity='.34' stroke-linecap='round' d='M20 8l-5 20M71 30l-4 16M100 74l-5 20M44 96l-4 16M12 138l-5 20M83 150l-4 16M55 188l-5 20'/%3E%3C/svg%3E");will-change:transform;animation:rc-rain .95s linear infinite}
+.course-loading-rain-far{background-size:66px 132px;right:-66px;top:-264px;opacity:.55;animation-name:rc-rain-far;animation-duration:1.15s}
+#course-loading .course-loading-copy{position:relative;overflow:hidden}
+#course-loading .course-loading-copy::before{content:"";position:absolute;left:0;top:0;width:26%;height:2px;background:linear-gradient(90deg,transparent,#d8bd82 50%,transparent);animation:rc-sweep 2.8s cubic-bezier(.45,0,.55,1) infinite}
+#course-loading .course-loading-mark{display:inline-block;animation:rc-mark 1.6s ease-in-out infinite}
+@keyframes rc-plate-tilt{from{transform:translate(-50%,-50%) translate3d(.6cqw,calc(var(--rc-slack) * .92),0) scale(1.035)}to{transform:translate(-50%,-50%) translate3d(-.6cqw,calc(var(--rc-slack) * -.5),0) scale(1.1)}}
+@keyframes rc-lamp{0%,100%{opacity:.42}38%{opacity:.7}44%{opacity:.5}47%{opacity:.68}72%{opacity:.36}}
+@keyframes rc-flicker{0%,100%{opacity:.55}5%{opacity:.82}7%{opacity:.3}9%{opacity:.74}31%{opacity:.6}32%{opacity:.16}34%{opacity:.66}58%{opacity:.86}60%{opacity:.48}62%{opacity:.8}85%{opacity:.5}86%{opacity:.7}}
+@keyframes rc-glint{0%,74%,100%{opacity:0;transform:scale(.3) rotate(0deg)}81%{opacity:1;transform:scale(1) rotate(24deg)}90%{opacity:0;transform:scale(.45) rotate(44deg)}}
+@keyframes rc-mist{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+@keyframes rc-trickle{from{transform:translate3d(0,-25%,0)}to{transform:translate3d(0,0,0)}}
+@keyframes rc-ripple{0%{opacity:.6;transform:scale(.25)}100%{opacity:0;transform:scale(1.25)}}
+@keyframes rc-rain{from{transform:translate3d(0,0,0)}to{transform:translate3d(-110px,440px,0)}}
+@keyframes rc-rain-far{from{transform:translate3d(0,0,0)}to{transform:translate3d(-66px,264px,0)}}
+@keyframes rc-sweep{from{transform:translate3d(-110%,0,0)}to{transform:translate3d(490%,0,0)}}
+@keyframes rc-mark{0%,100%{opacity:1}50%{opacity:.42}}
+
+/* ---- Chapter briefing art: a slow push and one weather layer for each chapter ---- */
+.rc-launch .rc-brief-heading figure{overflow:hidden}
+.rc-launch .rc-brief-heading figure>img{will-change:transform;animation:rc-brief-push 26s ease-in-out infinite alternate both}
+.rc-launch .rc-brief-heading figcaption{z-index:2}
+.rc-launch .rc-brief-heading figure::before,.rc-launch .rc-brief-heading figure::after{content:"";position:absolute;pointer-events:none;z-index:1}
+/* Night Order: low mist across the fairway and the shed window. */
+.rc-launch .rc-brief-heading figure::before{left:0;top:38%;width:200%;height:62%;background:radial-gradient(ellipse 22% 44% at 14% 56%,rgba(176,204,198,.2),transparent 70%),radial-gradient(ellipse 30% 36% at 46% 44%,rgba(160,192,188,.15),transparent 72%),radial-gradient(ellipse 20% 48% at 78% 62%,rgba(184,208,200,.17),transparent 70%);background-size:50% 100%;animation:rc-mist 48s linear infinite}
+.rc-launch .rc-brief-heading figure::after{inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(2,8,7,.42) 100%)}
+/* Back Nine: rain driving across the cart shed. */
+.rc-launch .rc-brief-heading:has(#back-nine-brief-title) figure::before{left:0;right:-110px;top:-440px;bottom:0;width:auto;height:auto;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='220'%3E%3Cpath stroke='%23c4d6dc' stroke-opacity='.4' stroke-linecap='round' d='M20 8l-5 20M71 30l-4 16M100 74l-5 20M44 96l-4 16M12 138l-5 20M83 150l-4 16M55 188l-5 20'/%3E%3C/svg%3E");animation:rc-rain .8s linear infinite}
+/* Under the Green: water dripping from the culvert roots. */
+.rc-launch .rc-brief-heading:has(#under-green-brief-title) figure::before{left:0;right:0;top:-220px;bottom:0;width:auto;height:auto;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='220'%3E%3Cpath stroke='%23cfe0dc' stroke-opacity='.42' stroke-linecap='round' d='M18 20v9M62 96v12M104 44v8M131 150v11M40 172v8M88 204v7'/%3E%3C/svg%3E");animation:rc-drip 1.5s linear infinite}
+/* The Final Cut: the stand floodlights never hold steady. */
+.rc-launch .rc-brief-heading:has(#final-cut-brief-title) figure::before{left:52%;top:-30%;width:70%;height:130%;background:radial-gradient(ellipse at 64% 34%,rgba(255,226,160,.3),rgba(255,214,140,.1) 34%,transparent 64%);animation:rc-flicker 5.9s linear infinite}
+@keyframes rc-brief-push{from{transform:scale(1.04) translate3d(-1.2%,.6%,0)}to{transform:scale(1.1) translate3d(1.2%,-.6%,0)}}
+@keyframes rc-drip{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,220px,0)}}
+/* While the chapter prepares, a brass line travels the footer edge. */
+.rc-launch[data-preparing="true"] .rc-brief-footer{position:relative;overflow:hidden}
+.rc-launch[data-preparing="true"] .rc-brief-footer::before{content:"";position:absolute;left:0;top:0;width:22%;height:2px;background:linear-gradient(90deg,transparent,#d8bd82 50%,transparent);animation:rc-sweep 2.8s cubic-bezier(.45,0,.55,1) infinite}
+
+/* ---- Story cards: a longer fade, a slow push, and captions that settle in ---- */
+#opening-story .opening-image img{animation:rc-story-in 1s cubic-bezier(.22,.61,.36,1) both,rc-story-push 30s cubic-bezier(.2,.5,.5,1) both}
+#opening-story:is([data-slide="1"],[data-slide="3"],[data-slide="5"],[data-slide="7"]) .opening-image img{animation-name:rc-story-in,rc-story-push-back}
+#opening-story :is(.opening-heading,#opening-copy){animation:rc-caption-a .6s ease-out both}
+#opening-story:is([data-slide="1"],[data-slide="3"],[data-slide="5"],[data-slide="7"]) :is(.opening-heading,#opening-copy){animation-name:rc-caption-b}
+#opening-story #opening-copy,#final-cut-story .fc-story-copy{animation-delay:.1s}
+#final-cut-story .fc-story-image img{animation:rc-story-in 1s cubic-bezier(.22,.61,.36,1) both,rc-story-push 30s cubic-bezier(.2,.5,.5,1) both}
+#final-cut-story:is([data-slide="1"],[data-slide="3"],[data-slide="5"],[data-slide="7"]) .fc-story-image img{animation-name:rc-story-in,rc-story-push-back}
+#final-cut-story .fc-story-caption :is(small,h2,.fc-story-copy){animation:rc-caption-a .6s ease-out both}
+#final-cut-story:is([data-slide="1"],[data-slide="3"],[data-slide="5"],[data-slide="7"]) .fc-story-caption :is(small,h2,.fc-story-copy){animation-name:rc-caption-b}
+#final-cut-story[data-paused=true] .fc-story-image img{animation-play-state:paused}
+@keyframes rc-story-in{from{opacity:0}to{opacity:1}}
+@keyframes rc-story-push{from{transform:scale(1) translate3d(.35%,0,0)}to{transform:scale(1.05) translate3d(-.35%,0,0)}}
+@keyframes rc-story-push-back{from{transform:scale(1) translate3d(-.35%,0,0)}to{transform:scale(1.05) translate3d(.35%,0,0)}}
+/* Two identical captions keyframes: alternating the name restarts the fade on each slide. */
+@keyframes rc-caption-a{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rc-caption-b{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---- Reduced motion: the system preference or the game's own setting ---- */
+:root[data-rc-motion="reduced"] #course-loading,:root[data-rc-motion="reduced"] #course-loading *,:root[data-rc-motion="reduced"] #course-loading *::before,:root[data-rc-motion="reduced"] .rc-brief-heading figure>img,:root[data-rc-motion="reduced"] .rc-brief-heading figure::before,:root[data-rc-motion="reduced"] .rc-brief-footer::before,#game-shell[data-reduced="true"] .rc-brief-heading figure>img,#game-shell[data-reduced="true"] .rc-brief-heading figure::before,#final-cut-story[data-reduced=true] :is(.fc-story-image img,.fc-story-caption *){animation:none!important}
+:root[data-rc-motion="reduced"] :is(.course-loading-rain,.rcfx-glint,.rcfx-ripple),:root[data-rc-motion="reduced"] #course-loading .course-loading-copy::before,:root[data-rc-motion="reduced"] .rc-launch[data-preparing="true"] .rc-brief-footer::before,:root[data-rc-motion="reduced"] .rc-launch .rc-brief-heading:is(:has(#back-nine-brief-title),:has(#under-green-brief-title)) figure::before,#game-shell[data-reduced="true"] .rc-brief-heading:has(#back-nine-brief-title) figure::before{display:none}
+@media(prefers-reduced-motion:reduce){
+ #course-loading,#course-loading *,#course-loading *::before,.rc-brief-heading figure>img,.rc-brief-heading figure::before,.rc-brief-footer::before,#final-cut-story :is(.fc-story-image img,.fc-story-caption *){animation:none!important}
+ .course-loading-rain,.rcfx-glint,.rcfx-ripple,#course-loading .course-loading-copy::before,.rc-launch[data-preparing="true"] .rc-brief-footer::before,.rc-launch .rc-brief-heading:is(:has(#back-nine-brief-title),:has(#under-green-brief-title)) figure::before{display:none}
+}

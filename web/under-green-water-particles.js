@@ -27,7 +27,7 @@ export function waterEffectTexture(kind){
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
 }
 
-export function fadingWaterInstances(scene,capacity,texture,{color=0x99988d,opacity=.5,shininess=48,diffuseOnly=false,scatter=0}={}){
+export function fadingWaterInstances(scene,capacity,texture,{color=0x99988d,opacity=.5,shininess=48,diffuseOnly=false,scatter=0,gain=1}={}){
  const geometry=new THREE.PlaneGeometry(1,1),alphas=new THREE.InstancedBufferAttribute(new Float32Array(capacity),1);alphas.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('waterAlpha',alphas);
  const options={map:texture,color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide};
  const material=diffuseOnly?new THREE.MeshLambertMaterial(options):new THREE.MeshPhongMaterial({...options,specular:0xaaa99e,shininess});
@@ -47,9 +47,11 @@ export function fadingWaterInstances(scene,capacity,texture,{color=0x99988d,opac
   // Silty spray scatters the full practical-light intensity with subdued tint.
   // Keep a little lamp color, avoiding saturated turquoise spark-like streaks.
   s.fragmentShader=s.fragmentShader.replace('#include <opaque_fragment>',
-   'outgoingLight=mix(vec3(dot(outgoingLight,vec3(.2126,.7152,.0722))),outgoingLight,.28);\n#include <opaque_fragment>');
+   // Aerated water returns far more light than the murk it left. The gain
+   // multiplies received light only, so unlit spray stays dark.
+   'outgoingLight=mix(vec3(dot(outgoingLight,vec3(.2126,.7152,.0722))),outgoingLight,.28)*'+gain.toFixed(2)+';\n#include <opaque_fragment>');
  };
- material.customProgramCacheKey=()=> 'drain-fading-particle-v3-'+scatter;
+ material.customProgramCacheKey=()=> 'drain-fading-particle-v4-'+scatter+'-'+gain;
  const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.count=0;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;
  // Their instances sit on/above the water, but the root is at the origin.
  // Explicit layering prevents a large transparent flood plane from sorting

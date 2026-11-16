@@ -37,7 +37,16 @@
  }
  const motion=matchMedia('(prefers-reduced-motion: reduce)');let entrancePlayed=false,entrance=[];
  function cancelEntrance(){for(const a of entrance)a.cancel();entrance=[];}
- function enterOnce(data){if(entrancePlayed)return;entrancePlayed=true;if(data.reducedMotion||motion.matches)return;for(const [el,delay]of [[panel.querySelector('.course-menu-card'),0],[rail,50],[panel.querySelector('aside'),90]]){const a=el.animate([{opacity:0},{opacity:1}],{duration:240,delay,fill:'backwards',easing:'ease-out'});entrance.push(a);a.finished.then(()=>a.cancel(),()=>{});}}
+ function enterOnce(data){if(entrancePlayed)return;entrancePlayed=true;if(data.reducedMotion||motion.matches)return;const play=(el,frames,options)=>{if(!el)return;const a=el.animate(frames,{fill:'backwards',easing:'ease-out',...options});entrance.push(a);a.finished.then(()=>a.cancel(),()=>{});};
+  for(const [el,delay]of [[panel.querySelector('.course-menu-card'),0],[rail,50],[panel.querySelector('aside'),90]])play(el,[{opacity:0},{opacity:1}],{duration:240,delay});
+  // The plaque drops into place, then the heading, preview and chapter cards rise in turn. Everything settles inside 400ms.
+  const settle='cubic-bezier(.2,.8,.2,1)',rise=y=>[{opacity:0,transform:`translateY(${y}px)`},{opacity:1,transform:'none'}];
+  play(panel.querySelector('.course-menu-plaque'),[{opacity:0,transform:'translateY(-10px) scale(.97)'},{opacity:1,transform:'none'}],{duration:300,delay:30,easing:settle});
+  play(panel.querySelector('.course-menu-heading'),[{opacity:0,transform:'translateX(-12px)'},{opacity:1,transform:'none'}],{duration:280,delay:80,easing:settle});
+  play(feature,rise(12),{duration:290,delay:90,easing:settle});
+  [...panel.querySelectorAll('#chapter-links [data-chapter]')].forEach((el,i)=>play(el,rise(16),{duration:230,delay:100+Math.min(i,3)*22,easing:settle}));
+  play(start,rise(10),{duration:250,delay:120,easing:settle});
+ }
  motion.addEventListener('change',()=>{if(motion.matches){cancelEntrance();cancelFeature();}});window.addEventListener('blur',()=>{cancelEntrance();cancelFeature();});document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelEntrance();cancelFeature();}});
  let chapterKey='';
  chaptersHost.querySelector('h2').textContent='Select a chapter';
@@ -47,7 +56,7 @@
  function restore(){for(const id of ['controls-launch','study-launch']){const b=document.getElementById(id);if(b&&panel.contains(b))shell.append(b);}const chapters=document.getElementById('chapter-links');if(chapters&&panel.contains(chapters)){chapters.hidden=true;document.body.append(chapters);}}
  function hide(){if(!wasOpen)return;atmosphere.stop();cancelEntrance();cancelFeature();panel.hidden=true;wasOpen=false;restore();}
  function render(data,controls){
-  gameReduced=!!data.reducedMotion;api=controls;panel.hidden=false;panel.dataset.screen=data.mode;panel.style.setProperty('--menu-scale',data.scale);art.clearRect(0,0,1280,720);art.drawImage(data.art,0,0,1280,720);
+  gameReduced=!!data.reducedMotion;if(panel.dataset.reduced!==String(gameReduced))panel.dataset.reduced=String(gameReduced);api=controls;panel.hidden=false;panel.dataset.screen=data.mode;panel.style.setProperty('--menu-scale',data.scale);art.clearRect(0,0,1280,720);art.drawImage(data.art,0,0,1280,720);
   const clock=data.mode==='clocked_out',changedMode=data.mode!==lastMode;
   const chapter=window.RCChapterSelect.selected();
   text('kicker',clock?'Out of office':chapter.chapter);text('title',clock?'Shift ended':chapter.title);text('tagline',clock?'Release night':chapter.tagline);
