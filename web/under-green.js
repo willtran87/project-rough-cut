@@ -45,9 +45,12 @@ let prefs={...legacyComfort,reduced:shared.reducedMotion||legacyReduced,muted:sh
 prefs.crossingAssist=legacyComfort.crossingAssist===true;
 // Use Level 1's mouse response and device preference; vertical look stays normal.
 prefs.sensitivity=.0025*deviceGain('mouse')**2;prefs.fov=clamp(Number(spatial.fov)||58,45,85);
-// This chapter's panic motion has its own default; don't change Level 1 comfort.
-prefs.cameraBob=legacyComfort.panicBobVersion===1&&Number.isFinite(legacyComfort.cameraBob)?clamp(legacyComfort.cameraBob,0,.6):.25;
-prefs.panicBobVersion=1;
+// Movement bob is one setting shared by every on-foot chapter. A value that
+// was deliberately changed here before it was shared carries over once.
+{const own=legacyComfort.panicBobVersion===1&&Number.isFinite(legacyComfort.cameraBob)?clamp(legacyComfort.cameraBob,0,.6):null;
+ if(own!==null&&own!==.25&&legacyComfort.bobShared!==true){feel.cameraBob=own;RCFoundation.saveComfort(feel);}
+ if(legacyComfort.bobShared!==true)try{localStorage.setItem('rough-cut.under-green-comfort.v1',JSON.stringify({...legacyComfort,bobShared:true}));}catch{}}
+prefs.cameraBob=feel.cameraBob;prefs.panicBobVersion=1;prefs.bobShared=true;
 prefs.resolution=Number.isFinite(spatial.resolution)?clamp(spatial.resolution,.5,1):1;
 let toggleCrouch=false,toggleSprint=false;
 const touchRun=createTouchRunControl(),touchPointers=new Map();
@@ -126,7 +129,7 @@ for(const input of document.querySelectorAll('[data-feel]')){
 }
 $('camera-bob').value=prefs.cameraBob;
 $('camera-bob-value').textContent=Math.round(prefs.cameraBob*100)+'%';
-$('camera-bob').addEventListener('input',e=>{clearInput();prefs.cameraBob=clamp(Number(e.target.value),0,.6);$('camera-bob-value').textContent=Math.round(prefs.cameraBob*100)+'%';savePrefs();});
+$('camera-bob').addEventListener('input',e=>{clearInput();prefs.cameraBob=feel.cameraBob=clamp(Number(e.target.value),0,.6);$('camera-bob-value').textContent=Math.round(prefs.cameraBob*100)+'%';savePrefs();saveFeel();});
 $('touch-run-toggle').checked=feel.touchSprintToggle;$('touch-run-toggle').onchange=e=>{feel.touchSprintToggle=e.target.checked;saveFeel();};
 $('crossing-assist').checked=prefs.crossingAssist;
 $('crossing-assist').onchange=e=>{prefs.crossingAssist=e.target.checked;preferenceStatus('crossing',patchRecord('rough-cut.under-green-comfort.v1',{crossingAssist:prefs.crossingAssist}));dirty=true;paint();};
