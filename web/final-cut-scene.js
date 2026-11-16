@@ -56,6 +56,8 @@ import {buildFinalCutEstateDetail} from './final-cut-estate-detail.js';
 import {buildFinalCutPumpHardware} from './final-cut-pump-hardware.js';
 import {buildFinalCutRefugeInteriors} from './final-cut-refuge-interiors.js';
 import {createRefugeLighting} from './final-cut-refuge-lighting.js';
+import {createFinalCutAtmosphere,FLOOD_MASTS,OVERLOOK_SIGN,BUNTING_POLES,REFUGE_WASHES} from './final-cut-atmosphere.js';
+import {createFinalCutCameraCues} from './final-cut-camera-cues.js';
 
 export async function createFinalCutScene(canvas,onProgress=()=>{}){
  onProgress('Preparing the championship grounds…');
@@ -123,6 +125,8 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   if(s.id==='bunker'){const rise=REFUGE_ARCHITECTURE.bunker.rise;const roofLabel=sign('',s.x+2.5,3.12+rise*(1-2.5/((s.w+.9)/2))+.16,-s.y+1.5,2.5,.65,'#d5cfb0','#1b4840');roofLabel.userData.decal=true;roofLabel.rotation.set(-Math.PI/2,Math.atan2(rise,(s.w+.9)/2),0);roofLabel.userData.paint((ctx,w,h)=>{ctx.fillStyle='#1b4840';ctx.fillRect(0,0,w,h);ctx.fillStyle='#d5cfb0';ctx.font='bold 160px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('BUNKER',w/2,h/2);});}
  }
  const refugeLighting=createRefugeLighting(scene,{box,software});
+ // Hooded eave fittings for the outer wall wash; the glow itself is unlit art.
+ for(const w of REFUGE_WASHES){box('dark',w.x+w.nx*.11,2.6,w.z+w.nz*.11,w.nx?.24:.5,.07,w.nx?.5:.24);box('lamp',w.x+w.nx*.11,2.555,w.z+w.nz*.11,w.nx?.15:.4,.02,w.nx?.4:.15);}
  // A real masonry bank creates a sheltered approach; the marked crossing at
  // its west end remains exposed to the final strip. Both paths reconnect.
  for(const w of ROUTE_WALLS)box('mortar',w.x,(w.h-.115)/2,-w.y,w.w-.065,w.h-.115,w.d-.065);
@@ -159,8 +163,18 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  for(const x of [-8,7]){const marker=sign(x<0?'OVERLOOK ↰':'OVERLOOK ↱',x,1.2,14.4,2.3,.5);marker.rotation.y=x<0?-Math.PI/2:Math.PI/2;cyl('metal',x,.55,14.4,.04,1.1);}
  // The entrance banner clears standing head height and the gate piers. Two
  // posts rise from the rear parapet (1.1 m above the deck) to carry it.
- sign('18 / CHAMPIONSHIP OVERLOOK',-2,OVERLOOK.h+2.75,5.22,8,.6);
- for(const x of [-5.9,1.9])cyl('metal',x,OVERLOOK.h+2.075,5.12,.045,1.95);
+ // It is the finale's marquee, so it keeps its own face: painted lamplight
+ // under a shielded batten of work lamps rather than another real light.
+ const marquee=new THREE.Group();scene.add(marquee);
+ const overlookSign=sign('18 / CHAMPIONSHIP OVERLOOK',OVERLOOK_SIGN.x,OVERLOOK_SIGN.height,OVERLOOK_SIGN.z,OVERLOOK_SIGN.width,OVERLOOK_SIGN.face,'#f3e6b6','#17352d',marquee);overlookSign.material.emissive.setRGB(.8,.74,.56);
+ box('dark',OVERLOOK_SIGN.x,OVERLOOK_SIGN.height,OVERLOOK_SIGN.z-.045,8.3,.86,.07);
+ for(const side of [-1,1]){box('brass',OVERLOOK_SIGN.x,OVERLOOK_SIGN.height+side*.36,OVERLOOK_SIGN.z-.005,8.16,.05,.03);box('brass',OVERLOOK_SIGN.x+side*4.055,OVERLOOK_SIGN.height,OVERLOOK_SIGN.z-.005,.05,.77,.03);}
+ box('dark',OVERLOOK_SIGN.x,OVERLOOK_SIGN.height+.6,OVERLOOK_SIGN.z+.2,7.9,.07,.5);box('dark',OVERLOOK_SIGN.x,OVERLOOK_SIGN.height+.53,OVERLOOK_SIGN.z+.44,7.9,.14,.03);
+ for(const dx of [-2.6,0,2.6]){box('metal',OVERLOOK_SIGN.x+dx,OVERLOOK_SIGN.height+.52,OVERLOOK_SIGN.z+.14,.05,.1,.3);box('lamp',OVERLOOK_SIGN.x+dx,OVERLOOK_SIGN.height+.545,OVERLOOK_SIGN.z+.3,1.5,.03,.16);}
+ for(const x of [-5.9,1.9]){cyl('metal',x,OVERLOOK.h+2.075,5.12,.045,1.95);box('brass',x,OVERLOOK.h+3.07,5.12,.11,.06,.11);}
+ // The east parapet carries a plain mast matching the safety lamp's pole, so
+ // the tournament bunting can span the deck above head height.
+ {const pole=BUNTING_POLES[1];cyl('metal',pole.x,7.05,pole.z,.055,2.3);box('brass',pole.x,pole.top+.03,pole.z,.13,.06,.13);}
  // The close announcement sits on the side parapet, leaving the bunker and
  // destination view open. Both branch entrants can inspect it without a timer.
  const receiptFrame=new THREE.Group();scene.add(receiptFrame);
@@ -194,15 +208,20 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  for(const y of [17,88]){cyl('wood',-30,3,-y,.16,6);box('green',-30,5.4,-y+.20,4,1.8,.12);sign('ACCEPTANCE\nIS EVERYTHING',-30,5.4,-y+.28,3.7,1.5);}
  const score=new THREE.Group();score.position.set(12,0,-95);scene.add(score);for(const x of [-6,6])cyl('metal',x,4.45,0,.13,8.9,score);box('dark',0,7.1,0,13,3.5,.4,score);
  const normalBoard=sign('FINAL ROUND\nASSOCIATE ANALYST\n18 · THE FINAL CUT',0,7.1,.23,12.4,3.1,'#dfd1a2','#122a26',score,'board'),endBoard=sign('COURSE CONDITION:\nEXCELLENT',0,7.1,.25,12.4,3.1,'#b3e3ce','#122a26',score,'board');endBoard.visible=false;
+ // The road side of the board is only ever seen after the escape, looking back.
+ const roadBoard=sign('COURSE CONDITION:\nEXCELLENT',0,7.1,-.23,12.4,3.1,'#b3e3ce','#122a26',score,'board');roadBoard.rotation.y=Math.PI;roadBoard.material.emissive.setRGB(.5,.56,.5);
  for(const x of [-6,6]){box('metal',x,8.92,.12,.08,.14,.34,score);box('dark',x,8.96,.4,.52,.2,.65,score);box('lamp',x,8.85,.4,.4,.025,.48,score);}
- cyl('cream',0,2.8,-88,.045,5.6);box('red',.6,5.1,-88,1.2,.65,.04);
+ cyl('cream',0,2.8,-88,.045,5.6);
  for(let x=-38;x<40;x+=5)box('cream',x,.04,-107,2,.02,.12);
  sign('PUBLIC ROAD\nLEAVE THE COURSE',0,1.7,-104,3.5,1);cyl('metal',0,.7,-104,.055,1.4);
  for(let x=-25;x<=25;x+=2)if(Math.abs(x)>2){box('metal',x,1.3,-94,.07,2.6,.07);box('metal',x,1.1,-94,2,.055,.055);}for(const x of [-2,2])box('metal',x,1.3,-94,.1,2.6,.1);for(const x of [-3,3])cyl('metal',x,3.25,-94,.08,6.5);sign('PUBLIC ROAD / EXIT',0,6.5,-93.9,5.5,.65,'#b3e3ce');
  const exitGate=new THREE.Group();exitGate.position.set(-2,0,-94);scene.add(exitGate);for(let x=0;x<=4;x+=.4)box('metal',x,1.3,0,.04,2.6,.045,exitGate);for(const y of [.2,1.3,2.5])box('metal',2,y,0,4,.05,.05,exitGate);
  const publicSideSign=sign('COURSE CLOSED',0,3.5,-94.03,5,.8);publicSideSign.rotation.y=Math.PI;
  // Distant floodlight silhouettes frame the authored moon and cloud layers.
- for(const baseX of [-28,27])for(const y of [22,70]){const x=baseX===27&&y===22?47:baseX;cyl('metal',x,5,-y,.1,10);box('dark',x,10,-y,1.6,.5,.3);box('floodLamp',x,9.9,-y+.18,1.4,.23,.02);}
+ for(const {x,y}of FLOOD_MASTS){cyl('metal',x,5,-y,.1,10);box('dark',x,10,-y,1.6,.5,.3);box('floodLamp',x,9.9,-y+.18,1.4,.23,.02);
+  // A second lamp bank and rear faces: the masts read as lit from the fairway.
+  box('metal',x,10.38,-y,.08,.3,.08);box('dark',x,10.7,-y,2.3,.5,.3);for(const side of [-1,1]){box('floodLamp',x,10.6,-y+side*.18,2.1,.23,.02);if(side<0)box('floodLamp',x,9.9,-y-.18,1.4,.23,.02);}
+ }
  // Elevated stone skirt around the nursery; the water itself stays out of routes.
  // Nursery paving is part of GROUND_SLABS.
  sign('NURSERY SWALE\nNO HEAVY MACHINERY',17,1.4,-83,2.6,.75,'#ded3a9','#172c27',scene,'warning');cyl('metal',17,.6,-83,.05,1.2);
@@ -337,6 +356,8 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  clippingGeometry.setIndex([0,1,2,0,2,3]);clippingGeometry.computeVertexNormals();
  const clippingMaterial=new THREE.MeshLambertMaterial({color:'#829052',side:THREE.DoubleSide});
  const clippings=new THREE.InstancedMesh(clippingGeometry,clippingMaterial,72);clippings.frustumCulled=false;scene.add(clippings);clippings.visible=false;
+ // Beams, haze, glows, bunting and thrown cuttings: unlit meshes, no lights.
+ const staging=createFinalCutAtmosphere(scene,body,{clippingGeometry,clippingMaterial}),cameraCues=createFinalCutCameraCues();
  // Rigid details retain their animated parent (wheel, wing, gate, lever).
  // Batch only siblings sharing geometry/material; independent reels and
  // breaking fragments remain individually animated.
@@ -362,7 +383,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  scene.traverse(o=>{if(o.isMesh){const mats=Array.isArray(o.material)?o.material:[o.material];o.receiveShadow=mats.some(m=>m.isMeshLambertMaterial);}});
  // Software retains architectural occlusion; tiny machinery self-shadows are
  // reserved for hardware. Neither tier changes the threat or sight rules.
- for(const root of [...(software?[]:[rig]),accessGate,exitGate])root.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&o.visible&&![materials.lamp,materials.headLamp,materials.wingLamp].includes(o.material))o.castShadow=true;});
+ for(const root of [...(software?[]:[rig]),accessGate,exitGate])root.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&o.visible&&!o.material.isShaderMaterial&&![materials.lamp,materials.headLamp,materials.wingLamp].includes(o.material))o.castShadow=true;});
  await Promise.resolve();
  await renderer.compileAsync(backdrop.scene,backdrop.camera);
  await renderer.compileAsync(scene,camera);
@@ -372,7 +393,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  return {rigGeometry(){
   scene.updateMatrixWorld(true);const v=new THREE.Vector3(),matrix=new THREE.Matrix4(),instanceMatrix=new THREE.Matrix4();
   return contactMeshes.map(({id,mesh,parent,instance})=>{mesh.updateMatrix();matrix.multiplyMatrices(parent.matrixWorld,mesh.matrix);if(instance!==null){mesh.getMatrixAt(instance,instanceMatrix);matrix.multiply(instanceMatrix);}const pos=mesh.geometry.attributes.position,points=[];for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(matrix);points.push([v.x,v.y,-v.z]);}return {id,points,triangles:Array.from(mesh.geometry.index.array)};});
- },poll,whenPresented,render(r,prefs={}){
+ },poll,whenPresented,cue:cameraCues.start,cueActive:cameraCues.active,render(r,prefs={}){
   if(poll()&&!prefs.manual){skippedFrames++;return false;}
   const start=performance.now(),w=canvas.clientWidth,h=canvas.clientHeight;
   renderQuality=finalCutRenderSize(w,h,{tier:prefs.visualTier,resolution:prefs.resolution,software});
@@ -386,6 +407,9 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
    // Reserve space for the retry card without covering the frozen machine.
    camera.setViewOffset(w,h,w>700?-w*.22:0,w>700?0:h*.25,w,h);camera.updateProjectionMatrix();
   }
+  // Staged entry, capture and victory moves are view-only and never run in
+  // reduced motion or under the deterministic test clock.
+  if(cameraCues.apply(camera,r,prefs))camera.updateProjectionMatrix();
   const j=r.rig;rig.position.set(j.x,0,-j.y);rig.rotation.y=-j.yaw;
   const wash=courseLightState(r);
   camera.updateMatrixWorld();backdrop.update(camera,r.time,prefs.reduced,r.mode==='paused');
@@ -416,7 +440,8 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   irrigation.update(r,prefs.reduced);
   pumpHardware.update(r);
   ambushReeds.update(r,prefs.reduced);verges.update(r,prefs.reduced);
-  rough.update(r,prefs.reduced);lastRun=r;
+  const drift=cameraCues.seconds();rough.update(r,prefs.reduced,drift);lastRun=r;
+  staging.update(r,camera,{reduced:prefs.reduced,courseWash:wash,lampBeam:lampState.beam,engine:lampState.marker,drift});
   for(const b of breakables){const broken=r.broken.includes(b.data.id);b.intact.visible=!broken;b.debris.visible=broken;if(broken){const age=prefs.reduced?1:r.breakTimes[b.data.id]===undefined?1:clamp((r.time-r.breakTimes[b.data.id])/.55,0,1);b.pieces.forEach((m,i)=>{m.position.set(Math.sin(i*7)*b.data.w*.5*age,.06+(1-age)*b.data.h*.6+Math.sin(age*Math.PI)*.45,Math.cos(i*5)*b.data.d*.7*age);m.rotation.set(.1*age,i*1.7*age,Math.sin(i)*.2*age);});}}
   clippings.visible=!prefs.reduced&&j.phase==='pass'&&j.speed>0;
   if(clippings.visible){let count=0;for(let i=0;i<72;i++){const t=(r.time*2+i*.173)%1,across=Math.sin(i*13)*5.2,along=1.3-t*2.6,sn=Math.sin(j.yaw),cs=Math.cos(j.yaw),y=j.y+cs*along-sn*across,x=j.x+sn*along+cs*across,from={x:j.x+sn*1.3+cs*across,y:j.y+cs*1.3-sn*across};const active=SECTORS.some(s=>inside(from,s));dummy.position.set(x,.16+Math.sin(t*Math.PI)*(1+(i%4)*.15),-y);dummy.rotation.set(t*5,i*1.3,t*3);dummy.scale.setScalar(active?.16:0);dummy.updateMatrix();clippings.setMatrixAt(i,dummy.matrix);if(active)count++;}clippings.visible=count>0;clippings.instanceMatrix.needsUpdate=true;}
@@ -440,6 +465,6 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);backgroundDraws=renderer.info.render.calls;backgroundTriangles=renderer.info.render.triangles;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;frameMs=performance.now()-start;submittedFrames++;
   if(!prefs.manual){fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
   return true;
- },stats:()=>({gpu,software,width,height,renderQuality,presentation:{submittedFrames,skippedFrames,pending:!!fence,offscreenShadows:offscreenShadows.size},backdrop:backdrop.stats(),draws:renderer.info.render.calls+backgroundDraws,backgroundDraws,triangles:renderer.info.render.triangles+backgroundTriangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,frameMs,actorCulling:actorCulling.stats(),headlights:headlights.stats(),maintenanceLight:maintenanceLight.stats(),cabLighting:cabLighting.stats(),refugeLighting:refugeLighting.stats(),courseLighting:{wash:lastRun?courseLightState(lastRun):0,ambient:skyLight.intensity,directional:moonlight.intensity,safety:safetyLight.intensity,refugeLights:refugeLights.length,moonShadow:!software,moonShadowSize:software?0:2048},reveal:lastRun?rigLampState(lastRun):null,ambushReeds:ambushReeds.stats(),landscape:landscape.stats(),verges:verges.stats(),courseContour:courseContour.stats(),estateDetail,refugeInteriors,mountedSigns,grandstand,irrigation:irrigation.stats(),pumpHardware:pumpHardware.stats(),boss:boss.stats(),engine:engine.stats(),tires:tires.stats(),lamps:lamps.stats(),bodywork:bodywork.stats(),machinery:machinery.stats(),hydraulics:hydraulics.stats(),surfaceScales,groundFinish:groundFinish.stats(),masonryBatching,staticBatching,banner:{fold:bannerFold,hemDepth:clothGeometry.attributes.position.getZ(84),hemHeight:clothGeometry.attributes.position.getY(84),pinnedDepth:clothGeometry.attributes.position.getZ(6),pinnedHeight:clothGeometry.attributes.position.getY(6)},rider:true,joe:joeActor.stats(),joeFinish:joeFinish.stats(),collapse:collapsePose(lastRun?.ending.age||0),roughSectors:rough.stats().sectors,mownTufts:rough.stats().mownTufts,standingTufts:rough.stats().standingTufts,rough:rough.stats(),brokenProps:breakables.filter(b=>b.debris.visible).length}),dispose(){if(fence){gl.deleteSync(fence);fence=null;}joeActor.dispose();joeFinish.dispose();backdrop.dispose();moonlight.shadow.map?.dispose();moonlight.shadow.mapPass?.dispose();boss.dispose();engine.dispose();tires.dispose();lamps.dispose();ambushReeds.dispose();headlights.dispose();maintenanceLight.dispose();cabLighting.dispose();refugeLighting.dispose();bodywork.dispose();hydraulics.dispose();machinery.dispose();irrigation.dispose();pumpHardware.dispose();landscape.dispose();verges.dispose();courseContour.dispose();groundFinish.dispose();staticMeshes.forEach(m=>m.dispose());renderer.dispose();scene.traverse(o=>o.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());rough.dispose();clippingMaterial.dispose();clothMaterial.dispose();atlasResources.forEach(r=>r.dispose());}};
+ },stats:()=>({gpu,software,width,height,renderQuality,presentation:{submittedFrames,skippedFrames,pending:!!fence,offscreenShadows:offscreenShadows.size},backdrop:backdrop.stats(),draws:renderer.info.render.calls+backgroundDraws,backgroundDraws,triangles:renderer.info.render.triangles+backgroundTriangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,frameMs,actorCulling:actorCulling.stats(),headlights:headlights.stats(),maintenanceLight:maintenanceLight.stats(),cabLighting:cabLighting.stats(),refugeLighting:refugeLighting.stats(),courseLighting:{wash:lastRun?courseLightState(lastRun):0,ambient:skyLight.intensity,directional:moonlight.intensity,safety:safetyLight.intensity,refugeLights:refugeLights.length,moonShadow:!software,moonShadowSize:software?0:2048},reveal:lastRun?rigLampState(lastRun):null,ambushReeds:ambushReeds.stats(),landscape:landscape.stats(),verges:verges.stats(),courseContour:courseContour.stats(),estateDetail,refugeInteriors,mountedSigns,grandstand,irrigation:irrigation.stats(),pumpHardware:pumpHardware.stats(),boss:boss.stats(),engine:engine.stats(),tires:tires.stats(),lamps:lamps.stats(),bodywork:bodywork.stats(),machinery:machinery.stats(),hydraulics:hydraulics.stats(),surfaceScales,groundFinish:groundFinish.stats(),masonryBatching,staticBatching,banner:{fold:bannerFold,hemDepth:clothGeometry.attributes.position.getZ(84),hemHeight:clothGeometry.attributes.position.getY(84),pinnedDepth:clothGeometry.attributes.position.getZ(6),pinnedHeight:clothGeometry.attributes.position.getY(6)},rider:true,joe:joeActor.stats(),joeFinish:joeFinish.stats(),collapse:collapsePose(lastRun?.ending.age||0),roughSectors:rough.stats().sectors,mownTufts:rough.stats().mownTufts,standingTufts:rough.stats().standingTufts,rough:rough.stats(),staging:staging.stats(),cameraCue:cameraCues.stats(),brokenProps:breakables.filter(b=>b.debris.visible).length}),dispose(){if(fence){gl.deleteSync(fence);fence=null;}joeActor.dispose();joeFinish.dispose();backdrop.dispose();moonlight.shadow.map?.dispose();moonlight.shadow.mapPass?.dispose();boss.dispose();engine.dispose();tires.dispose();lamps.dispose();ambushReeds.dispose();headlights.dispose();maintenanceLight.dispose();cabLighting.dispose();refugeLighting.dispose();bodywork.dispose();hydraulics.dispose();machinery.dispose();irrigation.dispose();pumpHardware.dispose();landscape.dispose();verges.dispose();courseContour.dispose();groundFinish.dispose();staticMeshes.forEach(m=>m.dispose());renderer.dispose();scene.traverse(o=>o.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());staging.dispose();rough.dispose();clippingMaterial.dispose();clothMaterial.dispose();atlasResources.forEach(r=>r.dispose());}};
 }
 

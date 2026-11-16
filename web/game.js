@@ -22669,6 +22669,7 @@ import { createJoeVoice } from './joe-voice.js';
     state.resultIndex = 0;
     state.mode = "victory";
     state.time = 0;
+    armCourseCameraBeat("victory");
     state.transitionAlpha = 0.75;
     state.status = route === "drain" ? "Hole 1 escaped through drainage." : "Hole 1 survived.";
     setMotorLevel(0, 36);
@@ -26890,6 +26891,7 @@ import { createJoeVoice } from './joe-voice.js';
       state.resultIndex = (hole.rehearsalCheckpoint || hole.rehearsalOrigin) ? 1 : 0;
       state.mode = "defeat";
       state.time = 0;
+      armCourseCameraBeat("defeat");
       state.transitionAlpha = 0.6;
       state.status = "Caught by Joe.";
       setMotorLevel(0.14, 92);
@@ -53499,9 +53501,12 @@ import { createJoeVoice } from './joe-voice.js';
     }
   }
   function studyDialogOpen() {return Boolean(document.getElementById("study-dialog")?.open||window.RCQualityUI?.isDialogOpen());}
+  // The active camera beat, if any (see armCourseCameraBeat).
+  let courseCameraBeat=null;
   window.roughCutStudy = {
     available:()=>["menu","paused","victory","defeat","clocked_out"].includes(state.mode) &&
-      !(["victory","defeat"].includes(state.mode) && gameplayReadability().compact && !window.RCScene3D?.domHud()),
+      !(["victory","defeat"].includes(state.mode) && gameplayReadability().compact && !window.RCScene3D?.domHud()) &&
+      !(courseCameraBeat?.kind===state.mode && state.time<courseCameraBeat.duration && !state.reducedMotion),
     prepare:()=>{state.keys.clear();clearTouchInputs(true);state.gamepad.inputX=0;state.gamepad.inputY=0;state.gamepad.lookX=0;state.gamepad.previousButtons=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.connected)?.buttons.map(b=>b.pressed||b.value>.5)||[];document.exitPointerLock?.();},
     journal:()=>readFieldJournal(),
     snapshot:()=>JSON.parse(window.export_rough_cut_playtest()),
@@ -57232,10 +57237,59 @@ import { createJoeVoice } from './joe-voice.js';
       accentCooldown:h.tensionDirector.accentCooldown,finale:h.engagement.experience.finale,finaleReady:!!h.engagement.experience.finaleRoute,exitCues:spatialViewEnabled(),
       suppressScares:!!(suspenseProtected()||h.engagement.experience.coverRest?.active||h.tensionDirector.reliefSeconds>0||h.tensionDirector.pendingIntercept||h.tensionDirector.silentStalk||h.tensionDirector.coverAudit||h.tensionDirector.encounterActive||h.distraction?.kind==='patrol_reposition')};
   }
-  function drawSpatialFirstHole(){
+  // Short camera beats at the three hard cuts of a round: looking up from the
+  // phone on arrival, a whip toward Joe on capture and a rising pull-back on
+  // escape. They only offset the rendered view. Simulation, timers, records
+  // and the result panels are untouched, and Reduced motion skips them all.
+  const COURSE_CAMERA_BEATS={arrive:1.25,defeat:.62,victory:.85};
+  const courseCameraView={x:0,y:0,yaw:0,pitch:0,roll:0,fov:0,rise:0};
+  function armCourseCameraBeat(kind){
+    const h=state.hole,p=state.player;courseCameraBeat=null;
+    if(state.reducedMotion||!state.freeLook||!spatialViewEnabled()||h.rebuild.lab)return;
+    const scale=RCQuality.scale,yaw=cameraYaw();let turn=0,reach=0;
+    if(kind==='defeat'){
+      const dx=(h.joe.x-p.x)*scale.x,dy=h.joe.y-p.y;reach=Math.hypot(dx,dy)*scale.meters;
+      turn=Math.atan2(Math.sin(Math.atan2(dx,dy)-yaw),Math.cos(Math.atan2(dx,dy)-yaw));
+    }
+    courseCameraBeat={kind,duration:COURSE_CAMERA_BEATS[kind],from:kind==='arrive'?h.elapsed:0,yaw,turn,reach,pitch:p.pitch||0};
+  }
+  function courseCameraBeatView(){
+    const beat=courseCameraBeat;if(!beat)return null;
+    const h=state.hole,arriving=beat.kind==='arrive';
+    if(state.reducedMotion||!(arriving?state.mode==='first_hole'||state.mode==='paused':state.mode===beat.kind)){courseCameraBeat=null;return null;}
+    const t=((arriving?h.elapsed:state.time)-beat.from)/beat.duration;
+    if(!(t>=0)||t>=1){courseCameraBeat=null;return null;}
+    const view=courseCameraView,scale=RCQuality.scale,p=state.player;
+    view.x=p.x;view.y=p.y;view.yaw=view.pitch=view.roll=view.fov=view.rise=0;
+    if(arriving){
+      // Eyes come up from the phone to the course.
+      const rest=1-smoothstep(t);view.pitch=-.34*rest;view.rise=-.06*rest;view.fov=-5*rest;
+    }else if(beat.kind==='defeat'){
+      // Snap round to him, lunge in, and let the hit ring out of the frame.
+      const snap=1-Math.pow(1-clamp(t/.42,0,1),3),lunge=smoothstep(t/.7),ring=Math.sin(t*26)*Math.pow(1-t,2);
+      const face=Math.atan2(1.42-(h.rebuild.eyeHeight||scale.eye),Math.max(.6,beat.reach))-beat.pitch,step=Math.min(.42,Math.max(0,beat.reach-.75))*lunge/scale.meters;
+      view.yaw=beat.turn*snap;view.pitch=face*snap+ring*.035;view.roll=ring*.05+beat.turn*.03*(1-snap);view.fov=-15*lunge;
+      view.x=p.x+Math.sin(beat.yaw+beat.turn)*step/scale.x;view.y=p.y+Math.cos(beat.yaw+beat.turn)*step;
+    }else{
+      // The course falls away behind and below as the exit takes you.
+      const ease=smoothstep(t),back=.75*ease/scale.meters;
+      view.rise=1.05*ease;view.pitch=(-.16-beat.pitch*.5)*ease;view.fov=9*ease;
+      view.x=p.x-Math.sin(beat.yaw)*back/scale.x;view.y=p.y-Math.cos(beat.yaw)*back;
+    }
+    return view;
+  }
+  // Holds the result panel back for the length of the beat and draws the
+  // course through the moving camera instead.
+  function drawResultCameraBeat(){
+    if(courseCameraBeat?.kind!==state.mode||!courseCameraBeatView())return false;
+    return spatialViewEnabled()&&drawSpatialFirstHole(true);
+  }
+  function drawSpatialFirstHole(resultBeat=false){
     const h=state.hole,calibration=h.rebuild.lab==='calibration',p=spatialPreferences();
-    const wobble=spatialCameraWobble();
-    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:state.player,yaw:lookBackView().angle,pitch:(state.player.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll,fov:p.fov,resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight,bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    const wobble=spatialCameraWobble(),beat=courseCameraBeatView();
+    if(resultBeat&&!beat)return false;
+    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:beat&&(beat.x!==state.player.x||beat.y!==state.player.y)?{...state.player,x:beat.x,y:beat.y}:state.player,yaw:lookBackView().angle+(beat?.yaw||0),pitch:(state.player.pitch||0)+(beat?.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll+(beat?.roll||0),fov:p.fov+(beat?.fov||0),resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight+(beat?.rise||0),bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    if(resultBeat)return true;
     if(RCScene3D.domHud()&&state.mode==="paused")return true;
     if(RCScene3D.domHud()&&state.mode==="first_hole"&&!h.tutorialVisible){
       drawQualityHud();
@@ -58718,6 +58772,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function drawVictory() {
+    if(drawResultCameraBeat())return;
     if(window.RCScene3D?.domHud()){
       drawVictoryTableau(state.hole.escapeRoute==='drain',state.reducedMotion?1:smoothstep(state.time/.52));
       drawMotes(state.reducedMotion?0:state.time,36,state.hole.escapeRoute==='drain'?'115,201,170':'204,181,91',HEIGHT*.12);
@@ -59045,6 +59100,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function drawDefeat() {
+    if(drawResultCameraBeat())return;
     if(!window.RCScene3D?.domHud()&&gameplayReadability().compact){drawCompactResult("defeat");return;}
     const impact = state.reducedMotion?1:smoothstep(state.time / 0.48);
     const textReveal = state.reducedMotion?1:smoothstep((state.time - 0.18) / 0.38);
@@ -63508,6 +63564,7 @@ import { createJoeVoice } from './joe-voice.js';
       return;
     }
     state.hole.tutorialVisible = false;
+    armCourseCameraBeat("arrive");
     state.keys.clear();
     recordRoundStart();
     state.hole.hasMoved = startedMoving;

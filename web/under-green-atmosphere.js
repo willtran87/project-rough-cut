@@ -22,6 +22,7 @@ export function prepareDrainRootMaterial(materials,{map,bump,wet}){
  shadeDrainMaterial(materials.root,{root:true});
 }
 
+const HALO=2.1;
 export function buildDampAtmosphere({scene,layout,materials,put,lamps,barkTexture,mudTexture,barkRelief,barkWet,mudRelief,mudWet,lowDetail=false,contactShade=null}){
  if(!materials.root)prepareDrainRootMaterial(materials,{map:barkTexture,bump:barkRelief,wet:barkWet});
  materials.mudBank=new THREE.MeshPhongMaterial({map:mudTexture,bumpMap:mudRelief,bumpScale:.017,specularMap:mudWet,color:0xc4bea1,specular:0x69765b,shininess:26,vertexColors:true});shadeDrainMaterial(materials.mudBank);
@@ -36,12 +37,17 @@ export function buildDampAtmosphere({scene,layout,materials,put,lamps,barkTextur
  const {wallRoots,hangingRoots,mudBanks,ceilingHairs,authoredRoots}=buildDrainOrganicGeometry({layout,root,put,materials,lowDetail,growth});
  const canvas=document.createElement('canvas');canvas.width=canvas.height=64;
  const context=canvas.getContext('2d'),gradient=context.createRadialGradient(32,32,1,32,32,32);
- gradient.addColorStop(0,'rgba(255,255,255,.65)');gradient.addColorStop(.15,'rgba(255,255,255,.2)');gradient.addColorStop(1,'rgba(255,255,255,0)');
+ // A tight core inside a wide, faint skirt of lit damp air. Uneven lobes in
+ // the skirt let a slow turn read as haze drifting through the lamp light.
+ gradient.addColorStop(0,'rgba(255,255,255,.65)');gradient.addColorStop(.07,'rgba(255,255,255,.2)');gradient.addColorStop(.2,'rgba(255,255,255,.075)');gradient.addColorStop(.55,'rgba(255,255,255,.022)');gradient.addColorStop(1,'rgba(255,255,255,0)');
  context.fillStyle=gradient;context.fillRect(0,0,64,64);
+ context.globalCompositeOperation='destination-out';
+ for(let i=0;i<7;i++){const a=i*2.399,r=13+i%3*5,wisp=context.createRadialGradient(32+Math.cos(a)*r,32+Math.sin(a)*r,0,32+Math.cos(a)*r,32+Math.sin(a)*r,9+i%2*4);wisp.addColorStop(0,'rgba(0,0,0,.55)');wisp.addColorStop(1,'rgba(0,0,0,0)');context.fillStyle=wisp;context.fillRect(0,0,64,64);}
+ context.globalCompositeOperation='source-over';
  const texture=new THREE.CanvasTexture(canvas);
  const glows=lamps.map((lamp,index)=>{
   const material=new THREE.SpriteMaterial({map:texture,color:lamp.color??(index%3===1?0x6bc2bd:0xe9b575),transparent:true,opacity:.2,depthWrite:false,blending:THREE.AdditiveBlending});
-  const sprite=new THREE.Sprite(material);sprite.position.set(lamp.x,lamp.height||2.8,-lamp.y+(lamp.lensOffset??.18)+.07*(lamp.facing??1));sprite.scale.set(.85,.85,1);scene.add(sprite);return sprite;
+  const sprite=new THREE.Sprite(material);sprite.position.set(lamp.x,lamp.height||2.8,-lamp.y+(lamp.lensOffset??.18)+.07*(lamp.facing??1));sprite.scale.set(HALO,HALO,1);scene.add(sprite);return sprite;
  });
  const glass=createDrainLampGlass(),lensGeometry=drainLampLensGeometry(),lensMaterial=glass.material;
  glass.bind(lensGeometry,lamps.length);
@@ -50,7 +56,7 @@ export function buildDampAtmosphere({scene,layout,materials,put,lamps,barkTextur
  lenses.instanceMatrix.needsUpdate=true;lenses.computeBoundingSphere();scene.add(lenses);
  const stats={wallRoots,hangingRoots,ceilingHairs,mudBanks,authoredRoots,growth:growth.stats(),practicalGlows:glows.length,lampGlass:glass.stats,lightLevels:[]};
  return {
-  update(time,reduced){glows.forEach((glow,i)=>{const level=dampLampLevel(time,i,reduced);stats.lightLevels[i]=level;glow.material.opacity=.3*level*(lamps[i].power??1);color.setHex(lamps[i].color??(i%3===1?0x8ac9c3:0xffc27c)).multiplyScalar((.13+level*.87)*(lamps[i].power??1));lenses.setColorAt(i,color);});lenses.instanceColor.needsUpdate=true;},
+  update(time,reduced){glows.forEach((glow,i)=>{const level=dampLampLevel(time,i,reduced);stats.lightLevels[i]=level;glow.material.opacity=.3*level*(lamps[i].power??1);const drift=time*(.05+i%4*.011)+i*1.7,breath=HALO*(1+.06*Math.sin(drift*1.9));glow.material.rotation=drift;glow.scale.set(breath,breath,1);color.setHex(lamps[i].color??(i%3===1?0x8ac9c3:0xffc27c)).multiplyScalar((.13+level*.87)*(lamps[i].power??1));lenses.setColorAt(i,color);});lenses.instanceColor.needsUpdate=true;},
   stats,
   dispose(){texture.dispose();glass.dispose();growth.dispose();glows.forEach(g=>g.material.dispose());},
  };

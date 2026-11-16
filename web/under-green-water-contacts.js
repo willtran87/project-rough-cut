@@ -31,15 +31,20 @@ export function waterContactHeight(point,waters,states,floodDepth=0){
 // Presentation history never consumes the actor's audio events or modifies
 // the simulation. Retry/time jumps clear the pool; pause cannot add contacts.
 export function createDrainWaterContacts(waters,{capacity=40}={}){
- let owner=null,lastTime=null,playerStep=0,joeStep=0,lastBlade=null,previousBlade=null,serial=0,events=[];
+ let owner=null,lastTime=null,playerX=0,playerY=0,joeX=0,joeY=0,playerStep=0,joeStep=0,lastBlade=null,previousBlade=null,serial=0,events=[];
  const totals={player:0,joe:0,blade:0,drip:0};
- function reset(r,actor){owner=r;lastTime=r.time;playerStep=Math.floor(r.player.walk/.72);joeStep=actor?.footsteps?.serial||0;lastBlade=null;previousBlade=actor?.blade?structuredClone(actor.blade):null;serial=0;events=[];for(const key in totals)totals[key]=0;}
+ function reset(r,actor){owner=r;lastTime=r.time;playerX=r.player.x;playerY=r.player.y;joeX=r.joe.x;joeY=r.joe.y;playerStep=Math.floor(r.player.walk/.72);joeStep=actor?.footsteps?.serial||0;lastBlade=null;previousBlade=actor?.blade?structuredClone(actor.blade):null;serial=0;events=[];for(const key in totals)totals[key]=0;}
  function add(kind,point,height,time,strength,velocity={}){events.push({kind,x:point.x,y:point.y,height,time,strength,serial:++serial,...velocity});if(events.length>capacity)events.shift();totals[kind]++;}
  return {
   update(r,states,actor){
    if(owner!==r||lastTime===null||r.time<lastTime||r.time-lastTime>.5){reset(r,actor);return events;}
    if(r.time===lastTime)return events;
    const previousTime=lastTime;lastTime=r.time;events=events.filter(e=>r.time-e.time<1.15);
+   // Travel since the previous sample aims each kicked fan; a resumed or
+   // teleported actor is clamped to a plausible stride rather than a jump.
+   const rate=1/(r.time-previousTime),travel=(from,to)=>Math.max(-7,Math.min(7,(to-from)*rate));
+   const playerVx=travel(playerX,r.player.x),playerVy=travel(playerY,r.player.y),joeVx=travel(joeX,r.joe.x),joeVy=travel(joeY,r.joe.y);
+   playerX=r.player.x;playerY=r.player.y;joeX=r.joe.x;joeY=r.joe.y;
    if(!['playing','aftermath'].includes(r.mode))return events;
    const flood=floodState(r.elapsed).depth,heightAt=p=>waterContactHeight(p,waters,states,flood);
    for(const drip of DRAIN_DRIPS){
@@ -50,13 +55,13 @@ export function createDrainWaterContacts(waters,{capacity=40}={}){
    const step=Math.floor(r.player.walk/.72);
    if(step!==playerStep&&r.player.speed>.2){
     const side=step%2?1:-1,p={x:r.player.x+Math.cos(r.player.yaw)*side*.14,y:r.player.y-Math.sin(r.player.yaw)*side*.14},height=heightAt(p);
-    if(height!==null)add('player',p,height,r.time,.72);
+    if(height!==null)add('player',p,height,r.time,.72,{vx:playerVx,vy:playerVy});
    }
    playerStep=step;
    const contact=actor?.footsteps?.lastContact;
    if(contact&&contact.serial!==joeStep){
     const foot=actor.soleContacts?.[contact.foot],height=foot&&heightAt(foot);
-    if(foot&&height!==null&&Math.abs(r.time-contact.time)<.1)add('joe',foot,height,r.time,.9);
+    if(foot&&height!==null&&Math.abs(r.time-contact.time)<.1)add('joe',foot,height,r.time,.9,{vx:joeVx,vy:joeVy});
    }
    joeStep=actor?.footsteps?.serial||0;
    if(actor?.blade&&!['absent','enter'].includes(r.joe.phase)){

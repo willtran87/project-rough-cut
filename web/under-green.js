@@ -4,6 +4,7 @@ import {createJoeVoice} from './joe-voice.js';
 // Joe's recorded voice for his defeat line; silent while muted or hidden.
 const joeVoice=createJoeVoice({muted:()=>prefs.muted||document.hidden});
 import {floodPace,floodCrossingScale} from './under-green-flood.js';
+import {drainTransitions} from './under-green-transitions.js';
 import {createOpeningStory} from './opening-story.js?v=20261114-launch-theme';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
 import {observeJoe} from './under-green-senses.js';
@@ -196,7 +197,8 @@ function input(dt=1/60){
  lookX=lookY=0;usePressed=false;return i;
 }
 const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
-function paint(){window.RCChapterLaunch.update(run.mode,ready);playtest?.observe(run,inputMethod);playtest?.refresh();const mode=run.mode,playing=live();finalCutLink.update(mode==='complete');document.body.dataset.mode=mode;document.body.classList.toggle('touch',inputMethod==='touch');$('hud').hidden=!playing;$('touch').hidden=!playing||inputMethod!=='touch';$('panel').hidden=playing;
+let transitionMoving=false;
+function paint(){drainTransitions.observe(run,performance.now(),prefs.reduced);document.body.classList.toggle('transition-hold',drainTransitions.holding());window.RCChapterLaunch.update(run.mode,ready);playtest?.observe(run,inputMethod);playtest?.refresh();const mode=run.mode,playing=live();finalCutLink.update(mode==='complete');document.body.dataset.mode=mode;document.body.classList.toggle('touch',inputMethod==='touch');$('hud').hidden=!playing;$('touch').hidden=!playing||inputMethod!=='touch';$('panel').hidden=playing;
  const runButton=document.querySelector('[data-key=sprint]');runButton.textContent=touchRun.active?'Run on':feel.touchSprintToggle?'Tap Run':'Run';runButton.setAttribute('aria-pressed',String(touchRun.active));
  const listening=playing&&run.player.focus===true;$('focus-state').hidden=!listening;document.querySelector('[data-key=focus]').setAttribute('aria-pressed',String(listening));
  text('control-guide',`${movementKeyLabel(bindings)} or arrows move relative to your view. Mouse or drag to look. ${onFootActionVerb('sprint','keyboard',feel)} ${label('sprint')} to run; ${onFootActionVerb('crouch','keyboard',feel)} ${label('crouch')} to crouch; ${label('focus')} listens; ${label('look_back')} glances behind; ${label('interact')} uses. F fullscreen. Controller: left stick move, right stick look, ${onFootActionVerb('sprint','gamepad',feel)} RT to run (RB also runs while held), ${onFootActionVerb('crouch','gamepad',feel)} LB to crouch, LT listen, A use, R3 rear, Start pause. Touch: movement pad and drag to look; ${onFootActionVerb('sprint','touch',feel)} Run to sprint, hold Crouch to crouch and Listen to focus. Listening Focus slows your movement, quiets water and brings Joe’s breathing and steps forward. It does not hide you from sight.`);
@@ -248,7 +250,7 @@ if(test)window.__underGreen={get run(){return run;},set run(v){run=v;uiMode='';d
 new ResizeObserver(()=>{dirty=true;}).observe(canvas);
 import {createMenuFrameGate} from './menu-frame-gate.js';
 const menuFrameDue=createMenuFrameGate();
-function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;if(ready&&!manual&&menuFrameDue(t,live())){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();}else{accumulator=0;const previous=inputMethod;input(.05);if(inputMethod!==previous)dirty=true;if(dirty&&run.mode!=='intro')draw();}}requestAnimationFrame(frame);}
+function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;{const moving=drainTransitions.observe(run,performance.now(),prefs.reduced);if(moving||transitionMoving)dirty=true;transitionMoving=moving;}if(ready&&!manual&&menuFrameDue(t,live())){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();}else{accumulator=0;const previous=inputMethod;input(.05);if(inputMethod!==previous)dirty=true;if(dirty&&run.mode!=='intro')draw();}}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);if(!opening.shouldSkip())showIntro(false);world=await createUnderGreenScene(canvas,m=>text('loading',m),{captureBuffer:test,initialRun:run,reduced:prefs.reduced});
 // Driver pipelines may defer work until the first real raster. Keep simulation
 // and Begin chapter gated until that frame has actually completed as well.

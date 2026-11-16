@@ -25,10 +25,12 @@ let playerCraft=null;
 import {auditResponseBellPose} from './audit-response.js';
 import {createNoiseHazardScene} from './noise-hazard-scene.js';
 let noiseHazardScene=null;
-import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261115-sweep';
+import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261116-soft-spray';
+import { createNightAir } from './course-night-air.js?v=20261116-night-air';
 import { createWetGround } from './wet-ground.js?v=20261113-visual-pass';
 let wetGround=null;
 let sprinklerSpray=null;
+let nightAir=null,treeSites=[];
 import { practiceStatus, stationImpulse, stationMechanismPose } from './station-feedback.js?v=20261112-station-replies';
 import { createCourseEntryGate } from './course-entry-gate.js';
 let courseEntryGate=null;
@@ -59,7 +61,7 @@ import { woodlandHeight } from './pixel-landscape.js';
 import {courseWoodlandPose} from './course-woodland-composition.js';
 import { createJoeModel } from './joe-model.js?v=20261113-mower-finish';
 import { prepareRendering, yieldPreparation, waitForGPU, preparationStats, prepareStaticBuffers } from './render-preparation.js';
-import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261113-light-haze';
+import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261116-close-pulse';
 import { createPixelWater } from './pixel-water.js?v=20261113-runoff-contact';
 import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-light';
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
@@ -253,6 +255,7 @@ function hedge(o,neutral=false){
   for(let i=0;i<10;i++){const a=i*Math.PI*.2;baked('sprig',0x52714b,p.x+Math.cos(a)*rx*.65,h-.06,p.z+Math.sin(a)*rz*.65,.35,.14,.3);}
 }
 function tree(x,z,height=6,radius=.75,clearance=null,composeWoodland=false){
+    treeSites.push({x,z,height});
     if(pixelVolume){const trunk=pixelWorld.tree(x,z,height,radius),root=trunk.parent;
       if(composeWoodland){const pose=courseWoodlandPose(x,z);root.position.set(pose.x,woodlandHeight(pose.x,pose.z),pose.z);root.scale.setScalar(pose.scale);root.userData.courseWoodland={...pose,original:[x,z]};}
       else root.position.y=woodlandHeight(x,z);
@@ -513,7 +516,7 @@ async function buildLandmarks(data,cancelled=()=>false){
   stats.entryGate=courseEntryGate.stats();
   if(pixelVolume)for(const side of [-1,1])for(let i=0;i<44;i++){pixelWorld.boundaryRope(side*13.1,1-i*2.7);if(i%8===7){await yieldPreparation(cancelled);if(cancelled())return;}}
 }
-function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
+function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
 function build(data){
   courseEntryGate=null;stats.entryGate=null;
   arrivalPhone=null;
@@ -569,6 +572,7 @@ function build(data){
     const irrigation=sprinklerLayout(data,SCALE,X_SCALE);
     if(pixelVolume)for(const head of irrigation)pixelWorld.irrigationHead(head);
     sprinklerSpray=createSprinklerSpray(world,irrigation,{software:softwareRenderer});
+    if(pixelVolume)nightAir=createNightAir(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,trees:treeSites,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE,box:o.shape==='box'}))});
     buildJoe();
     if(pixelVolume)courseVisualDetail=createCourseVisualDetail(world,data,{scale:SCALE,xScale:X_SCALE,software:softwareRenderer,wind:courseWind});
     const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(3,16,10),new THREE.MeshBasicMaterial({color:0xc9d7d1}));moonMesh.scale.setScalar(.5);moonMesh.position.set(-30,38,-48);sky.add(moonMesh);
@@ -588,7 +592,7 @@ function build(data){
   if(!data.calibration){deadGreenScene=createDeadGreenScene(world,{scale:SCALE,xScale:X_SCALE});deadGreenRefuge=createDeadGreenRefuge(world,{scale:SCALE,xScale:X_SCALE,paths:data.paths});}
   if(!data.calibration)teeAnomaly=createTeeAnomaly(world,{scale:SCALE,xScale:X_SCALE});
     await geometryReady;
-    if(cancelled())return;batchGlows();
+    if(cancelled())return;batchGlows();sprinklerSpray?.setLamps(glowAnchors,lights);nightAir?.setLamps(glowAnchors);
     stats.constructionMs=performance.now()-start;
     while(joeModel&&!joeModel.stats().ready&&!joeModel.stats().error){if(cancelled())return;await yieldPreparation(cancelled);}
     if(cancelled())return;
@@ -744,6 +748,7 @@ function render(ctx,data,frame){
   objectiveCues?.update(frame);
   environmentGuidance?.update(frame);
   sprinklerSpray?.update(frame,camera);
+  nightAir?.update(frame,camera,parallax?.moonCoverage()||0);
   wetGround?.update(frame);
   courseVisualDetail?.update(frame);stats.visualDetail=courseVisualDetail?.stats()||null;
   if(pickups.valve?.pressureNeedle)pickups.valve.pressureNeedle.rotation.z=frame.soakSeconds>0?-.8:1.1;
@@ -791,4 +796,4 @@ function render(ctx,data,frame){
   stats.drawCalls=renderer.info.render.calls+(parallax?stats.backgroundDrawCalls:0);stats.triangles=renderer.info.render.triangles;stats.frames++;return true;
 }
 function project(p,height=0){if(!camera)return null;const q=point(p);q.y=height;q.project(camera);return {x:(q.x+1)*640,y:(1-q.y)*360,visible:q.z>-1&&q.z<1&&Math.abs(q.x)<1&&Math.abs(q.y)<1};}
-window.RCScene3D={ready:true,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,practicals:practicalLighting?{...practicalLighting.stats(),ground:groundLighting?.stats()}:undefined,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};
+window.RCScene3D={ready:true,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,practicals:practicalLighting?{...practicalLighting.stats(),ground:groundLighting?.stats()}:undefined,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),nightAir:nightAir?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};

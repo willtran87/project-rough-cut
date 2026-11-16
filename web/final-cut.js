@@ -6,8 +6,9 @@ import {VISUAL_KEY,visualTier} from './final-cut-visual-settings.js';
 import {createRun,readSave,snapshot,step,objective,threat,nearbyAction,diagnostics} from './final-cut-sim.js';
 import {finaleEntry,recordFinaleCompletion,FINAL_CAREER_KEY} from './final-cut-campaign.js';
 import {finaleOutcome,evidenceFields,MASTERY,earnedMastery} from './final-cut-outcome.js';
-import {SAVE_KEY,clamp} from './final-cut-course.js';
+import {SAVE_KEY,clamp,distance} from './final-cut-course.js';
 import {createFinalCutScene} from './final-cut-scene.js';
+import {CUE_MS} from './final-cut-camera-cues.js';
 import {createFinalCutAudio} from './final-cut-audio.js';
 import {campaignPreferences,readRecord,writeRecord,preferenceWriter} from './preference-store.js';
 import {createFinalCutFeedback,feedbackPreferences,FEEDBACK_KEY} from './final-cut-feedback.js';
@@ -28,6 +29,10 @@ const bindings=actionBindings('onFoot',preferences.keyboardBindings,preferences.
 let raw=null;try{raw=localStorage.getItem(SAVE_KEY);}catch{}
 const entry=finaleEntry(query.get('from')||RCProgression.state().finalRoute),saved=query.has('replay')?null:readSave(raw),initial=saved&&(!query.has('from')||saved.route===entry.route)?{...entry,...saved,priorEvidence:Math.max(entry.priorEvidence,saved.priorEvidence),groundskeeper:entry.groundskeeper||saved.groundskeeper,crewLogs:entry.crewLogs|saved.crewLogs}:entry;
 let resultView='summary',story=null,winStoryRunId=null;
+// A staged shot holds the capture/escape panel back for a short camera move.
+// It is presentation only: state, saves and timers are already final, any
+// fresh key or click ends it, and reduced motion or the test clock skips it.
+let shot=null,edgeLevel=0;
 let run=createRun(initial,entry.route),world=null,ready=false,manual=false,last=performance.now(),savedSerial=-1,device=matchMedia('(pointer:coarse)').matches?'touch':'keyboard',usePressed=false,chipPressed=false,chipReleased=false,chipOwner=null,lookX=0,lookY=0,drag=null,padButtons=[],panelMode='';
 const feedbackPrefs=feedbackPreferences(readRecord(FEEDBACK_KEY)),saveFeedback=preferenceWriter(FEEDBACK_KEY,feedbackPrefs),feedback=createFinalCutFeedback();let activePad=null;
 const audio=createFinalCutAudio(()=>({...preferences,footsteps:feedbackPrefs.footsteps}),run),mouse=createMouseLook(),live=()=>!story?.active&&['playing','aftermath'].includes(run.mode);
@@ -36,8 +41,12 @@ function clearInput(){feedback.update(run,null,false,0);keys.clear();touch.clear
 function beginChip(source){if(!live())return;if(chipOwner!==source)run.ballAim=freshAim();chipOwner=source;chipPressed=true;chipReleased=false;}
 function releaseChip(source){if(chipOwner===source&&live())chipReleased=true;}
 function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed){recordFinaleCompletion(run);RCProgression.complete('final-cut');}text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
-function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}run.mode=run.won?'aftermath':'playing';clearInput();canvas.focus();paint();persist();}
-function primary(){if(!ready||story?.active)return;enterRound();}
+const staged=()=>!preferences.reducedMotion&&!manual&&!!world;
+function cue(name){$('curtain').dataset.cue='';if(!staged())return false;world.cue(name);void $('curtain').offsetWidth;$('curtain').dataset.cue=name;return true;}
+function stage(mode){if(cue(mode))shot={mode,until:performance.now()+CUE_MS[mode]};}
+function endShot(){if(!shot)return;shot.until=0;dirty=true;paint();}
+function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();const resumed=run.mode==='paused';if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}run.mode=run.won?'aftermath':'playing';if(!resumed&&run.mode==='playing')cue('start');clearInput();canvas.focus();paint();persist();}
+function primary(){if(!ready||story?.active)return;if(shot){endShot();return;}enterRound();}
 function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();persist();if(document.pointerLockElement)document.exitPointerLock();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}paint();audio.update(run);}
 function showResultView(view){if(run.mode!=='complete')return;resultView=view;panelMode='';clearInput();paint();$('panel').scrollTop=0;$(view==='credits'?'credits-back':view==='notice'?'notice-back':'show-credits').focus({preventScroll:true});}
 const menu=createDOMGamepadMenu({root:$('panel'),onStart:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();},onBack:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else if(run.mode==='paused')pause();},onDisconnect:()=>{if(device==='gamepad'&&live())pause();}});
@@ -59,6 +68,7 @@ spatialStore.subscribe((v,name,saved)=>{spatial=v;dirty=true;syncSpatial();text(
 for(const el of document.querySelectorAll('[data-feedback]')){const name=el.dataset.feedback;el.value=feedbackPrefs[name];text('feedback-'+name,Math.round(feedbackPrefs[name]*100)+'%');el.addEventListener('input',()=>{feedbackPrefs[name]=feedbackPreferences({...feedbackPrefs,[name]:Number(el.value)})[name];feedback.stop();audio.update(run);text('feedback-'+name,Math.round(feedbackPrefs[name]*100)+'%');text('feedback-settings-status',saveFeedback(feedbackPrefs)?'':'Settings apply for this session. Browser storage is unavailable.');});}
 document.addEventListener('keydown',e=>{
  if(e.target.matches('input,select,summary')&&e.code!=='Escape')return;
+ if(shot){e.preventDefault();if(!e.repeat)endShot();return;}
  if(e.code==='Escape'){e.preventDefault();if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();return;}
  if(e.code==='KeyF'){e.preventDefault();if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}
  if(!live()){if((e.code===bindings.interact&&!e.repeat||e.code==='Enter'&&!e.target.matches('button,a'))&&resultView==='summary'){e.preventDefault();primary();}return;}
@@ -72,7 +82,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code===bindings.chip)releaseChip('keyboard');});window.addEventListener('blur',()=>{feedback.stop();if(live())pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden){feedback.stop();if(live())pause();}audio.update(run);});window.addEventListener('pagehide',()=>{feedback.stop();persist();});
 canvas.addEventListener('click',()=>{if(live()&&device!=='touch'){audio.start();canvas.requestPointerLock?.()?.catch?.(()=>{});}});
-canvas.addEventListener('pointerdown',e=>{if(!live()||drag)return;device=e.pointerType==='touch'?'touch':'keyboard';audio.start();drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointerdown',e=>{if(shot){endShot();return;}if(!live()||drag)return;device=e.pointerType==='touch'?'touch':'keyboard';audio.start();drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{if(!live())return;const locked=document.pointerLockElement===canvas;if(!locked&&drag?.id!==e.pointerId)return;const dx=locked?e.movementX:e.clientX-drag.x,dy=locked?e.movementY:e.clientY-drag.y;
  if(e.pointerType==='touch'){const gain=.004*spatial.touch*1280/Math.max(1,canvas.clientWidth);lookX+=dx*gain*(preferences.invertLook?-1:1);lookY+=dy*gain;}else mouse.push(dx*.0025*spatial.mouse**2*(preferences.invertLook?-1:1),dy*.0025*spatial.mouse**2);
  if(drag){drag.x=e.clientX;drag.y=e.clientY;}
@@ -103,7 +113,10 @@ function input(dt){
 }
 function paint(){
  window.RCChapterLaunch.update(run.mode,ready);
- const active=live(),action=nearbyAction(run);const arrival=active&&!!run.arrival.reached&&!run.arrival.requested;if(document.body.dataset.themeArrival!==String(arrival))document.body.dataset.themeArrival=String(arrival);document.body.classList.toggle('touch',device==='touch');$('hud').hidden=!active;$('touch').hidden=!active||device!=='touch';$('panel').hidden=active;$('loading').hidden=ready&&run.mode!=='briefing';
+ if(shot){if(performance.now()<shot.until&&run.mode===shot.mode&&staged()){$('hud').hidden=$('touch').hidden=$('panel').hidden=$('defeat-backdrop').hidden=true;return;}shot=null;world?.cue(null);$('curtain').dataset.cue='';panelMode='';}
+ const active=live(),action=nearbyAction(run);
+ // The screen edge tightens while the working rig is close; never in reduced motion.
+ {const j=run.rig,near=active&&run.mode==='playing'&&!preferences.reducedMotion&&j.phase!=='waiting'?clamp(1-(distance(run.player,j)-5)/11,0,1)*(j.speed>0?1:.35):0,level=Math.round(near*(.86+.14*Math.sin(run.time*9))*40);if(level!==edgeLevel){edgeLevel=level;$('edge').style.opacity=String(level/40);}}const arrival=active&&!!run.arrival.reached&&!run.arrival.requested;if(document.body.dataset.themeArrival!==String(arrival))document.body.dataset.themeArrival=String(arrival);document.body.classList.toggle('touch',device==='touch');$('hud').hidden=!active;$('touch').hidden=!active||device!=='touch';$('panel').hidden=active;$('loading').hidden=ready&&run.mode!=='briefing';
  text('objective',objective(run));text('checkpoint',`${['ARRIVAL','PUMP PREPARED','MACHINE DISABLED'][run.checkpoint]}${run.evidence?' · RECORD SECURED':''}`);
  const messages=finalCutMessages(run,preferences);
  const aim=run.ballAim,chipKey=device==='gamepad'?'X':device==='touch'?'Chip':label('chip'),useKey=device==='gamepad'?'A':device==='touch'?'Use':label('interact');
@@ -141,20 +154,20 @@ function paint(){
   if(complete&&ready&&winStoryRunId!==run.runId){winStoryRunId=run.runId;queueMicrotask(()=>{if(run.mode==='complete'&&!story.active)story.open('win');});}
  }
 }
-function update(dt){const controls=input(dt);controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.saveSerial!==savedSerial)persist();audio.update(run);feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,feedbackPrefs.vibration);paint();}
+function update(dt){const controls=input(dt),before=run.mode;controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.mode!==before&&(run.mode==='caught'||run.mode==='complete'))stage(run.mode);if(run.saveSerial!==savedSerial)persist();audio.update(run);feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,feedbackPrefs.vibration);paint();}
 function draw(){return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,cameraBob:feel.cameraBob,manual});}
 import {createMenuFrameGate} from './menu-frame-gate.js';
 const menuFrameDue=createMenuFrameGate();
 let nextGameplayFrame=0;
 function frame(now){
  if(ready&&!manual){
-  const active=live(),due=active?now+.25>=nextGameplayFrame:menuFrameDue(now,false);
+  const active=live(),due=active?now+.25>=nextGameplayFrame:shot?true:menuFrameDue(now,false);
   if(due){
    const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
    // Schedule at 60 Hz even on high-refresh displays; never catch up by
    // submitting a burst of expensive scenes after a delayed frame.
    if(active){const interval=1000/60;nextGameplayFrame=now+interval-Math.max(0,(now-nextGameplayFrame)%interval);update(dt);}
-   else{nextGameplayFrame=now;const previous=device;input(.05);if(previous!==device)dirty=true;if(dirty&&!story.active)paint();}
+   else{nextGameplayFrame=now;const previous=device;input(.05);if(previous!==device||shot)dirty=true;if(dirty&&!story.active)paint();}
    if(!story.active&&(live()||dirty)&&draw()!==false)dirty=false;
   }
   if(!active){last=now;nextGameplayFrame=now;world.poll();}
@@ -162,7 +175,7 @@ function frame(now){
  requestAnimationFrame(frame);
 }
 new ResizeObserver(()=>{dirty=true;if(manual)draw();}).observe(canvas);
-window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
+window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,shot:shot?.mode||null,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
 window.advanceTime=async ms=>{manual=true;await world?.whenPresented();const n=Math.ceil(Math.max(0,ms)/(1000/60));for(let k=0;k<n;k++)update(Math.min(1/60,ms/1000-k/60));paint();draw();await new Promise(resolve=>requestAnimationFrame(resolve));};
 if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,preferences,spatialStore};
 paint();if(run.mode==='briefing'&&run.checkpoint===0&&!story.shouldSkip()){story.open('intro');}world=await createFinalCutScene(canvas,message=>text('loading',message));ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);

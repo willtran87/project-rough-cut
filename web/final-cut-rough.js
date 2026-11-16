@@ -17,19 +17,32 @@ export function createFinalCutRough(scene){
   }
  }
  geometry.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setIndex(ix);geometry.computeVertexNormals();
- const time={value:0},reduced={value:0};
+ // roughWalker: player x/z then a trailing wake x/z. roughReels: rig x/z and
+ // how hard its deployed reels are working. Both only bend rendered blades.
+ const time={value:0},reduced={value:0},walker={value:new THREE.Vector4(0,-999,0,-999)},reels={value:new THREE.Vector4(0,-999,0,0)};
  const animate=shader=>{
-  Object.assign(shader.uniforms,{roughTime:time,roughReduced:reduced});
-  shader.vertexShader='attribute float roughVariant; uniform float roughTime; uniform float roughReduced;\n'+shader.vertexShader;
+  Object.assign(shader.uniforms,{roughTime:time,roughReduced:reduced,roughWalker:walker,roughReels:reels});
+  shader.vertexShader='attribute float roughVariant; uniform float roughTime; uniform float roughReduced; uniform vec4 roughWalker; uniform vec4 roughReels;\n'+shader.vertexShader;
   shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv.x=(vMapUv.x+roughVariant)/3.0;\n#endif');
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
    vec4 root=modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.);
-   float breeze=sin(roughTime*.8+root.x*.17+root.z*.13)*.035*(1.-roughReduced);
-   transformed.x+=position.y*position.y*breeze;
+   float gust=pow(.5+.5*sin(roughTime*.42-root.x*.07-root.z*.1),3.);
+   float breeze=(sin(roughTime*.8+root.x*.17+root.z*.13)*.035+gust*(.11+.035*sin(roughTime*3.1+root.x*.9+root.z*.7)))*(1.-roughReduced);
+   // Blades lean away from the walker and recover slowly along the wake; the
+   // working reels shake and flatten the stand just ahead of the cut.
+   vec2 away=root.xz-roughWalker.xy,trail=root.xz-roughWalker.zw,churned=root.xz-roughReels.xy;
+   float reach=length(away),part=1.-smoothstep(.35,1.8,reach),wake=(1.-smoothstep(.2,1.25,length(trail)))*.6;
+   float churn=(1.-smoothstep(2.,7.,length(churned)))*roughReels.z;
+   vec2 push=away/max(reach,.001)*part*1.05+trail/max(length(trail),.001)*wake*.5*(1.-part);
+   push+=(churned/max(length(churned),.001)*.2+vec2(sin(roughTime*23.+root.x*3.1),cos(roughTime*19.+root.z*2.7))*.1*(1.-roughReduced))*churn;
+   vec3 axisX=instanceMatrix[0].xyz,axisZ=instanceMatrix[2].xyz;float lean=position.y*position.y;
+   transformed.x+=lean*(breeze+dot(vec3(push.x,0.,push.y),axisX)/max(dot(axisX,axisX),.0001));
+   transformed.z+=lean*dot(vec3(push.x,0.,push.y),axisZ)/max(dot(axisZ,axisZ),.0001);
+   transformed.y-=lean*(max(part,wake)*.3+churn*.12);
   `);
  };
- const material=new THREE.MeshLambertMaterial({map,vertexColors:false,color:'#aab39c',alphaTest:.3,side:THREE.DoubleSide});material.onBeforeCompile=animate;material.customProgramCacheKey=()=> 'final-cut-authored-rough-v1';
- const depth=new THREE.MeshDepthMaterial({map,alphaTest:.3,depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});depth.onBeforeCompile=animate;depth.customProgramCacheKey=()=> 'final-cut-authored-rough-depth-v1';
+ const material=new THREE.MeshLambertMaterial({map,vertexColors:false,color:'#aab39c',alphaTest:.3,side:THREE.DoubleSide});material.onBeforeCompile=animate;material.customProgramCacheKey=()=> 'final-cut-authored-rough-v2-parting';
+ const depth=new THREE.MeshDepthMaterial({map,alphaTest:.3,depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});depth.onBeforeCompile=animate;depth.customProgramCacheKey=()=> 'final-cut-authored-rough-depth-v2-parting';
  const stub=new THREE.BufferGeometry(),sp=[],si=[];
  for(let blade=0;blade<3;blade++){
   const a=blade*2.39,cs=Math.cos(a),sn=Math.sin(a),first=sp.length/3;
@@ -47,9 +60,13 @@ export function createFinalCutRough(scene){
   }
   standing.computeBoundingSphere();standing.boundingSphere.radius+=.15;stubble.computeBoundingSphere();stubble.visible=false;patches.push({sector,root,standing,stubble,tufts});
  }
- geometry.dispose();let owner=null,lastRevision=-1,lastCut='',mown=0;
+ geometry.dispose();let owner=null,lastRevision=-1,lastCut='',mown=0,wakeRun=null,wakeTime=0;
  return {
-  update(r,isReduced){time.value=r.time;reduced.value=isReduced?1:0;const cut=r.cut.join(',');if(owner===r&&lastRevision===r.cutRevision&&lastCut===cut)return;
+  update(r,isReduced,drift=0){time.value=r.time+drift;reduced.value=isReduced?1:0;
+   const w=walker.value,p=r.player,j=r.rig,follow=wakeRun===r?1-Math.exp(-Math.max(0,Math.min(.1,r.time-wakeTime))*1.7):1;wakeRun=r;wakeTime=r.time;
+   w.z+=(p.x-w.z)*follow;w.w+=(-p.y-w.w)*follow;w.x=p.x;w.y=-p.y;
+   reels.value.set(j.x+Math.sin(j.yaw)*1.4,-j.y-Math.cos(j.yaw)*1.4,j.speed>0&&j.deployment>.6&&!r.won?1:0,0);
+   const cut=r.cut.join(',');if(owner===r&&lastRevision===r.cutRevision&&lastCut===cut)return;
    mown=0;
    for(const patch of patches){let cutCount=0,changed=false;
     patch.tufts.forEach((t,i)=>{const isMown=isCut(r,{x:patch.sector.x+t.x,y:patch.sector.y-t.z});if(isMown){cutCount++;mown++;}if(t.cut===isMown)return;t.cut=isMown;changed=true;
