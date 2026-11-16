@@ -78,7 +78,8 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
  function update(run,actor,states,reduced=false){
   if(owner!==run){owner=run;last=run.time||0;clock=run.time||0;}
   const dt=Math.max(0,(run.time||0)-last);last=run.time||0;
-  if(!reduced&&run.mode!=='paused')clock+=dt;
+  // Sprinklers always run: Reduced motion calms the camera, not the water.
+  if(run.mode!=='paused')clock+=dt;
   time.value=clock;active=visible=boosted=mist=0;let count=0,splashes=0;
   for(const [i,w]of COURSE.wet.entries()){
    const phase=states[i],near=Math.hypot(actor.x-w.x,actor.y-w.y)<55;
@@ -88,9 +89,6 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
    if(phase.active){active++;if(phase.manual)boosted++;}
    if(!phase.active||!near)continue;visible++;
    heads[i].rotation.y=-(clock*1.35+w.y*.013);
-   // Reduced motion retains wet ground and a stationary head, without a
-   // frozen midair particle curtain or endlessly expanding impact rings.
-   if(reduced)continue;
    for(let n=0;n<(phase.manual?32:24);n++){
     const drop=sprinklerDrop(w,clock,n,!!phase.manual);
     dummy.position.set(drop.x,drop.height,-drop.y);dummy.rotation.set(0,-drop.angle,(drop.age-.5)*1.5);
