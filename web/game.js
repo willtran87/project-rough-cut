@@ -20409,6 +20409,21 @@ import { createJoeVoice } from './joe-voice.js';
     };
   }
 
+  /** True when a caption's source is on screen: ahead of the player, within 30 m and not behind cover. */
+  function captionSourceInView(source) {
+    if (!source || !spatialViewEnabled() || !Number.isFinite(source.x) || !Number.isFinite(source.y)) return false;
+    const dx = (source.x - state.player.x) * RCQuality.scale.x, dy = source.y - state.player.y, distance = Math.hypot(dx, dy);
+    if (distance * RCQuality.scale.meters > 30) return false;
+    if (distance >= 1) {
+      const bearing = Math.atan2(dx, dy), yaw = lookBackView().angle;
+      if (Math.abs(Math.atan2(Math.sin(bearing - yaw), Math.cos(bearing - yaw))) > .6) return false;
+    }
+    const blocker = lineBlockerBetween(state.player, source);
+    return !blocker || blocker === source.id;
+  }
+  // Captions that carry an instruction or a rule rather than describing an event.
+  const CAPTIONS_KEPT_IN_VIEW = /^(?:close_|old_finish_notice)/;
+
   function pushThreatCaption(
     text,
     source = null,
@@ -20420,6 +20435,19 @@ import { createJoeVoice } from './joe-voice.js';
       (descriptiveMessage(text) ? !state.threatCaptions && !state.soundCaptions : !state.threatCaptions) ||
       state.mode !== "first_hole" ||
       !state.hole.captions
+    ) {
+      return;
+    }
+    // The banner describes what the player cannot see. When the source of an
+    // event is in plain view the world already shows it, so nothing is
+    // announced. Kept regardless: every line with Sound captions on, lines
+    // that carry an instruction, and warnings about Joe's reaction to
+    // something other than Joe himself (his reaction is not visible there).
+    if (
+      !state.soundCaptions &&
+      !CAPTIONS_KEPT_IN_VIEW.test(String(key)) &&
+      !(category === "danger" && source !== state.hole.joe) &&
+      captionSourceInView(source)
     ) {
       return;
     }
@@ -53154,7 +53182,8 @@ import { createJoeVoice } from './joe-voice.js';
     }
     if(!e.arrival.phoneCaptionShown&&arrivalPhoneVisible(e.arrival,!suspenseProtected()&&!activeInteractionPromptOwner()&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&h.detection<.12)&&e.arrival.age-e.arrival.lockAt>=2.2){
       e.arrival.phoneCaptionShown=true;
-      pushThreatCaption('PHONE: NIGHT ORDER DONE — CLOSED BY JOE',null,'world',3.5,'course_arrival');
+      // The 3D view shows the phone and its message in the player's hand.
+      if(!spatialViewEnabled()||state.soundCaptions)pushThreatCaption('PHONE: NIGHT ORDER DONE — CLOSED BY JOE',null,'world',3.5,'course_arrival');
     }
     const timer=e.timer;
     if(timer){

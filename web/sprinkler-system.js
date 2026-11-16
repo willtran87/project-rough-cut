@@ -30,7 +30,8 @@ export function createSprinklerSpray(parent,heads,{software=false}={}){
  }
  function update(frame,camera){
   active=frame.soakSeconds>0;const density=frame.fx?.density??1;
-  const enabled=active&&density>0,clock=frame.reducedMotion?0:Math.floor(frame.time*(software?12:20))/(software?12:20);
+  // Sprinklers always run: Reduced motion calms the camera, not the water.
+  const enabled=active&&density>0,clock=Math.floor(frame.time*(software?12:20))/(software?12:20);
   const key=enabled?[clock,frame.reducedMotion,density,camera.position.x,camera.position.y,camera.position.z,...camera.quaternion.toArray(),camera.fov,camera.aspect].join(':'):'dry';
   if(key===signature)return;signature=key;updates++;mesh.count=0;activeHeads=[];
   if(enabled){
@@ -40,7 +41,10 @@ export function createSprinklerSpray(parent,heads,{software=false}={}){
    const steps=software||density<.75?8:12;
    for(const [index,head]of nearby.entries()){
     activeHeads.push(head.id);
-    const sweep=Math.sin(clock*.85+head.x)*.10;
+    // The head turns back and forth through a wide arc (about 85 degrees,
+    // every seven seconds) so the jet visibly travels across its wet zone.
+    // From a head 0.6 radius off-centre this arc still lands inside the zone.
+    const sweep=Math.sin(clock*.85+head.x)*.75;
     for(let lane=0;lane<3;lane++){
      const angle=head.angle+sweep+(lane-1)*.15,dx=Math.sin(angle),dz=Math.cos(angle),reach=head.reach*(.79+lane*.07),height=.72+lane*.15;
      for(let i=0;i<steps;i++){

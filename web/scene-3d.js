@@ -25,7 +25,7 @@ let playerCraft=null;
 import {auditResponseBellPose} from './audit-response.js';
 import {createNoiseHazardScene} from './noise-hazard-scene.js';
 let noiseHazardScene=null;
-import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261108-wet-atmosphere';
+import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261115-sweep';
 import { createWetGround } from './wet-ground.js?v=20261113-visual-pass';
 let wetGround=null;
 let sprinklerSpray=null;
