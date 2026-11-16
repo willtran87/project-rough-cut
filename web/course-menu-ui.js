@@ -70,6 +70,12 @@
   const key=JSON.stringify([data.stamps,data.shots]);if(key!==contentKey){contentKey=key;const list=items=>items.map(item=>{const li=document.createElement('li');li.textContent=`${item.earned?'✓':'○'} ${item.name||item.label} · ${item.hint}`;return li;});panel.querySelector('.course-stamps').replaceChildren(...list(data.stamps));panel.querySelector('.course-shot-book ul').replaceChildren(...list(data.shots));}
   for(const key of ['progress','record','career','noticeTitle','notice','controls'])text(key,data[key]);
   if(chapter.href&&data.mode==='menu'&&!data.noticeTitle)text('notice','Chapters open as you reach them in the story.');
+  // Chapter 02 has two routes, one behind each Night Order exit. Once the
+  // first is earned, name the exit that leads to the other.
+  if(data.mode==='menu'&&!data.noticeTitle&&progress.completed['night-order']){
+   const other=!progress.exits.drain?['drain','Under the Green']:!progress.exits.shed?['shed','The Back Nine']:null;
+   if(other)text('notice',`Unexplored route: leave Night Order by the ${other[0]} exit to reach ${other[1]}.`);
+  }
   const back=panel.querySelector('[data-clubhouse-command="return"]');back.hidden=!clock&&data.mode!=='claim';back.textContent=clock?'Return to main menu':'Dismiss rejection';
   for(const id of ['controls-launch','study-launch']){const b=document.getElementById(id);if(b&&!extras.contains(b))extras.append(b);if(b&&id==='study-launch')b.hidden=!window.roughCutStudy?.available();}
   const chapters=document.getElementById('chapter-links');if(chapters){if(clock)chapters.hidden=true;else{const host=panel.querySelector('.course-chapters');if(!host.contains(chapters))host.append(chapters);chapters.hidden=false;}}

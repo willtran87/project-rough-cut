@@ -74,6 +74,18 @@ Tools generally write evidence under `output/`. Consult the relevant QA report f
 
 Source art lives in `assets/` and `art-source/`; deployed runtime assets live in `web/assets/`, including optimized images, models, menu art and audio. Do not assume every current runtime asset is a WebP or that an old image count describes the current bundle.
 
+### Joe's recorded voice
+
+Joe's spoken lines are generated from the text the game already shows. `web/joe-voice.js` looks a clip up by the line's text, so a line with no clip is silent and captions cannot drift from audio. The Final Cut's five in-round lines and PA announcements keep their own builders (`tools/build-final-cut-joe.ps1`, `tools/build-final-cut-pa.ps1`).
+
+```powershell
+node tools/build-joe-voice.mjs           # build clips for lines that have none
+node tools/build-joe-voice.mjs --check   # fail if any line has no clip
+node tools/build-joe-voice.mjs --prune   # also delete clips whose line was removed
+```
+
+The build needs Windows (System.Speech, "Microsoft David Desktop") and `ffmpeg` on PATH. It reads `web/joe-dialogue.js`, `web/back-nine-dialogue.js`, `web/defeat-dialogue.js` and the base lines in `web/game.js`, and writes `web/assets/audio/joe-voice/<id>.ogg` plus `index.txt`. Rerun it after adding or editing a line.
+
 - `python tools/optimize-runtime-art.py` prepares optimized runtime artwork; inspect its Pillow dependency and input/output mapping before rebuilding.
 - `node tools/bake-course-navigation.mjs` rebuilds baked course navigation after relevant course/clearance edits.
 - `python tools/build-joe-rider.py` rebuilds the Back Nine rider from its source assets; see the [Joe model guide](../assets/enemies/joe-hd/model/README.md) for the underlying model workflow.

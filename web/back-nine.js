@@ -29,6 +29,9 @@ import {BACK_NINE_SLIDES,paintBackNineBrief,backNineHint,backNineControls,backNi
 const playtestMode=new URLSearchParams(location.search).has('playtest');
 const elements=new Map(),$=id=>elements.get(id)||(elements.set(id,document.getElementById(id)),elements.get(id)),SAVE='rough-cut.back-nine.v1';
 const finalCutLink=mountFinalCutLink(document.querySelector('#panel-footer .actions'),'garage');
+// Joe's recorded voice follows his captions; it is spoken even when subtitles
+// are off, and never while muted or while the tab is hidden.
+const joeVoice=createJoeVoice({muted:()=>settings.muted||document.hidden});let voicedCaption='';
 const joeReactions=createJoeReactions(),chatter=createChatterGate({duration:text=>Math.max(3.5,Math.min(6,text.length/24))}),pickDefeat=createDefeatPicker();
 // Avoid replacing unchanged text nodes (and invalidating layout) every RAF.
 function setText(id,value){const element=$(id);if(element.textContent!==value)element.textContent=value;}
@@ -137,13 +140,15 @@ function paintUI(){
  const joeDistance=distance(player,run.joe);
  const messages=driving?chaseMessages(run,{routeHints:chaseControls.prefs.routeHints,soundCaptions:settings.soundCaptions,coarse:coarsePointer.matches,method:inputMethod,bindings}):{banner:'',sound:'',dialogue:''};
  const reactionBlocked=!!world?.staffSightingActive?.()||!encounterAllows(run,'dialogue')||!!messages.banner||messages.soundUrgent||struck||joeDistance<18||joeDistance>85||run.grace>0||run.story.near>=0||run.joe.ram.phase!=='none'||['windup','surge'].includes(t.phase);
- const dialogue=chatter(run,()=>joeReactions.caption(run)||variedJoeCaption(run,messages.dialogue),{blocked:reactionBlocked,enabled:settings.subtitles,canStart:encounterAllows(run,'dialogue-start')&&dialogueApproachClear(run)});
+ const spoken=chatter(run,()=>joeReactions.caption(run)||variedJoeCaption(run,messages.dialogue),{blocked:reactionBlocked,enabled:true,canStart:encounterAllows(run,'dialogue-start')&&dialogueApproachClear(run)}),dialogue=settings.subtitles?spoken:'';
+ if(run.mode==='driving'||run.mode==='sealing'){if(spoken!==voicedCaption){voicedCaption=spoken;if(/^JOE:/.test(spoken))joeVoice.say(spoken);else joeVoice.stop();}}
+ else if(voicedCaption){voicedCaption='';joeVoice.stop();}
  setText('caption',messages.banner||dialogue);setText('sound-caption',messages.sound);
  setData($('game-shell'),'message',!!messages.banner||!!dialogue);
  setData($('game-shell'),'ejecting',run.mode==='driving'&&!!run.foot?.ejection&&run.time-run.foot.ejection.at<1.18);
  if(run.mode==='driving'&&run.joe.ram.phase==='lineup'){const key=run.joe.ram.cycles;if(key!==announcedRam){announcedRam=key;setText('status',messages.banner);}}
  if(run.death){setText('status','Run down by Joe.');setText('hint','');setText('speed','RUN DOWN');setText('surface','');}
- finalCutLink.update(run.mode==='complete');setHidden('primary',run.mode==='complete');if(uiMode===run.mode)return;uiMode=run.mode;setHidden('loading',true);setHidden('loading-art',run.mode!=='briefing');setHidden('restart',run.mode!=='paused');$('panel-content').scrollTop=0;$('panel').scrollTop=0;
+ finalCutLink.update(run.mode==='complete');setHidden('primary',run.mode==='complete');if(uiMode===run.mode)return;uiMode=run.mode;joeVoice.stop();setHidden('loading',true);setHidden('loading-art',run.mode!=='briefing');setHidden('restart',run.mode!=='paused');$('panel-content').scrollTop=0;$('panel').scrollTop=0;
  const ending=escapeCopy(run.escape);
  setHidden('escape-record',run.mode!=='complete');if(run.mode==='complete')setText('escape-record',ending.detail);
  const copy={briefing:['ROUGH CUT · CHAPTER 02','The Back Nine',chaseBrief(run),'Begin chapter'],sealing:['INSIDE THE GARAGE','Closing the shutter','You are inside. The engine is still outside.','Closing…'],paused:['CHASE PAUSED','Chase paused','You and Joe are stopped. Continue when you are ready.','Resume escape'],caught:['THE BACK NINE · DELIVERY BLOCKED','Sprint terminated','Run down by Joe’s industrial mower.','Restart from the shed'],complete:['THE BACK NINE · SURVIVED',ending.title,ending.story,'Continue to the Final Cut']}[run.mode];
@@ -151,7 +156,7 @@ function paintUI(){
  setText('checkpoint-note',defeated?'No checkpoints. Retry starts at the shed with a fresh cart and both relays offline. '+keyLabel(bindings.interact)+' / R also retries.':run.mode==='complete'?'The garage is secure. Continue to the championship grounds.':run.mode==='paused'?'The chase is paused. Resume when ready. Restart begins again at the shed.':'Time waits until you begin. Relays power the exit; death restarts the whole run.');
  if(defeated){
   const review=pickDefeat(run,{nearExit:distance(player,COURSE.finish)<60,onFoot:!!run.foot,shortcut:!!run.hunt.choiceMask||run.events.some(e=>e.type==='shortcut'),damage:run.cart.hits>0,objectives:run.checkpoint>0});
-  setText('defeat-line',`“${review.lines[0]}\n${review.lines[1]}”`);
+  setText('defeat-line',`“${review.lines[0]}\n${review.lines[1]}”`);joeVoice.say(review.lines);
   const failure=run.failure||captureFailure(run);setText('defeat-tip',failure.advice);setText('story',failure.cause);copy[2]=failure.cause;
   setText('defeat-review',`NEXT ACTION // ${failure.advice}\nRESTART FROM THE SHED // ${run.checkpoint}/2 relays reached this attempt · ${Math.ceil(distance(chaseActor(run),COURSE.finish))} m from the garage`);keys.clear();touch.clear();chaseControls.reset();$('primary').focus({preventScroll:true});}
  if(copy){setText('eyebrow',copy[0]);setText('title',copy[1]);setText('story',copy[2]);setText('primary',copy[3]);setText('status',copy[1]+'. '+copy[2]);if(['briefing','paused','complete'].includes(run.mode))(run.mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}
@@ -189,6 +194,7 @@ if(new URLSearchParams(location.search).has('test'))window.__backNine={get run()
 import {createMenuFrameGate} from './menu-frame-gate.js';
 import {prefetchBackNineCourse} from './back-nine-prefetch.js';
 import {keyLabel} from './control-profiles.js';
+import {createJoeVoice} from './joe-voice.js';
 const menuFrameDue=createMenuFrameGate();let idleUIKey='';
 function frame(now){
  const delta=Math.min(.1,(now-last)/1000);last=now;

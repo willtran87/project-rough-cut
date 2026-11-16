@@ -7,7 +7,9 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
  try{
   const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{
-   localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');
+   // Chapters are gated by campaign progress: unlock them and skip the opening stories.
+   localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));
+   localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');localStorage.setItem('rough-cut.under-green-opening.v1','{"skip":true}');
    if(!localStorage.getItem('binding-test-seeded')){
     localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{interact:'KeyT'},keyboardBindingsVersion:2,volume:.37,extension:{keep:true}}));
     localStorage.setItem('binding-test-seeded','1');
@@ -16,7 +18,9 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
   });
   const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   async function visit(){await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.__backNine&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);}
-  await visit();await p.locator('#chase-comfort summary').click();
+  // Settings are grouped into categories; the keyboard rows live under Controls.
+  const openControls=async()=>{await p.locator('#chase-comfort>summary').click();await p.locator('#chase-comfort nav button',{hasText:'Controls'}).click();};
+  await visit();await openControls();
   assert.equal((await read()).bindings.look_back,'KeyQ');
   const remap={move_up:'KeyI',move_down:'KeyK',move_left:'KeyJ',move_right:'KeyL',brake:'KeyB',interact:'KeyO',look_back:'KeyU'};
   for(const [action,key]of Object.entries(remap))await p.locator(`[data-binding="${action}"]`).selectOption(key);
@@ -29,7 +33,7 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
   await p.locator('[data-binding="brake"]').selectOption('KeyB');await p.locator('[data-binding="interact"]').selectOption('KeyO');
   assert.deepEqual((await read()).bindings,remap);
   assert.match(await p.locator('#guide-controls').innerText(),/I.*J L.*K.*B \/ O.*U/);
-  assert.match(await p.locator('#comfort-controls').innerText(),/O \/ B brake.*U glance/);
+  assert.match(await p.locator('#comfort-controls').textContent(),/O \/ B brake.*U glance/);
   assert.equal(await p.locator('[data-binding="interact"] option[value="KeyI"]').evaluate(e=>e.disabled),true);
   const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.settings.v1')));
   assert.deepEqual(saved.keyboardBindings,{interact:'KeyT'});assert.equal(saved.volume,.37);assert.deepEqual(saved.extension,{keep:true});
@@ -49,7 +53,7 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
   async function stage(foot=false,finish=false){
    await p.evaluate(async({foot,finish})=>{
     const {createRun}=await import('./back-nine-sim.js'),{leaveBrokenCart}=await import('./chase-player.js');
-    const r=createRun(finish?2:0);r.mode='driving';r.time=8;r.grace=100;r.messageTime=0;
+    const r=createRun(finish?2:0);r.mode='driving';r.time=8;r.grace=100;r.messageTime=0;if(finish)Object.assign(r.exitRelease,{released:true,open:1}); // the jammed shutter is already freed: this stage tests the garage hold
     Object.assign(r.cart,{x:0,y:foot?40:50,yaw:0,speed:0});Object.assign(r.joe,{x:0,y:0});
     if(foot){leaveBrokenCart(r);r.time+=2;Object.assign(r.foot,{x:finish?-23:0,y:finish?807:50,yaw:0,viewYaw:0,invulnerable:0});}
     __backNine.run=r;advanceTime(0);
@@ -73,7 +77,7 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
   await p.evaluate(()=>testPad.buttons[11]={pressed:true,value:1});await tick(100);
   assert.match((await read()).objective,/hold B/);assert.doesNotMatch((await read()).messages.banner,/O \/ B|E \/ Space/);
   await p.evaluate(()=>{testPad.buttons[11]={pressed:false,value:0};});await tick(17);
-  await p.keyboard.press('Escape');await p.locator('#chase-comfort summary').click();await tick(17);
+  await p.keyboard.press('Escape');await openControls();await tick(17);
   await p.locator('[data-binding="move_up"]').focus();await p.evaluate(()=>testPad.buttons[15]={pressed:true,value:1});await tick(17);
   await p.evaluate(()=>testPad.buttons[15]={pressed:false,value:0});await tick(17);assert.notEqual((await read()).bindings.move_up,'KeyI');
   await p.locator('[data-keyboard-reset]').click();assert.equal((await read()).bindings.move_up,'KeyW');assert.equal((await read()).bindings.look_back,'KeyQ');

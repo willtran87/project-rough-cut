@@ -1,5 +1,7 @@
 import {createDefeatPicker} from './defeat-dialogue.js';
 const defeatQuote=createDefeatPicker({chapter:'final-cut'});
+import {createJoeVoice} from './joe-voice.js';
+let lossVoice=null,voicedLoss='';
 import {VISUAL_KEY,visualTier} from './final-cut-visual-settings.js';
 import {createRun,readSave,snapshot,step,objective,threat,nearbyAction,diagnostics} from './final-cut-sim.js';
 import {finaleEntry,recordFinaleCompletion,FINAL_CAREER_KEY} from './final-cut-campaign.js';
@@ -117,7 +119,8 @@ function paint(){
   if(!complete)resultView='summary';$('panel').classList.toggle('completed',complete);$('panel').classList.toggle('caught',caught);$('panel').dataset.contact=caught?run.failure?.kind||'chassis':'';const outcome=complete?finaleOutcome(run):null,extra=complete&&resultView!=='summary';window.RCGameTheme.closing($('panel'),extra?resultView:'');
   $('panel').classList.toggle('briefing',run.mode==='briefing');$('chapter-splash').hidden=run.mode!=='briefing';$('defeat-backdrop').hidden=!caught;$('loss-quote').hidden=!caught;$('loss-story').hidden=!caught;
   $('story-replay').hidden=caught||complete;text('story-replay',complete?'Replay ending scene':'Replay story');
-  if(caught)text('loss-quote','“'+defeatQuote(run).lines.join(' ')+'”');text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
+  if(caught){const lines=defeatQuote(run).lines,quote='“'+lines.join(' ')+'”';text('loss-quote',quote);if(quote!==voicedLoss){voicedLoss=quote;(lossVoice??=createJoeVoice({muted:()=>preferences.muted||document.hidden})).say(lines);}}
+  else if(voicedLoss){voicedLoss='';lossVoice?.stop();}text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
   if(caught){clearInput();$('panel').scrollTop=0;if(document.pointerLockElement)document.exitPointerLock();}
   text('title',caught?run.failure?.title||'A cut too close':complete?(resultView==='credits'?'Credits':resultView==='notice'?'One last notice':outcome.title):paused?'Round suspended':'The Final Cut');
   $('round-plan').hidden=!paused||run.seed===0;text('round-plan',cutPlan(run).name+' · '+cutPlan(run).description);

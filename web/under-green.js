@@ -1,5 +1,8 @@
 import {createDefeatPicker} from './defeat-dialogue.js';
 const defeatQuote=createDefeatPicker({chapter:'under-green'});
+import {createJoeVoice} from './joe-voice.js';
+// Joe's recorded voice for his defeat line; silent while muted or hidden.
+const joeVoice=createJoeVoice({muted:()=>prefs.muted||document.hidden});
 import {floodPace,floodCrossingScale} from './under-green-flood.js';
 import {createOpeningStory} from './opening-story.js?v=20261114-launch-theme';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
@@ -225,7 +228,7 @@ function paint(){window.RCChapterLaunch.update(run.mode,ready);playtest?.observe
  document.body.classList.toggle('crossing',!!water&&!run.finished);
  text('paused-objective',objective(run));$('paused-objective').hidden=mode!=='paused';
  document.body.classList.toggle('water-hit',!prefs.reduced&&run.waterLock>1.3);
- if(mode!==uiMode){uiMode=mode;$('joe-loss-quote').hidden=mode!=='caught';if(mode==='caught')text('joe-loss-quote','“'+defeatQuote(run).lines.join(' ')+'”');if(!playing&&mode!=='intro'){release();clearInput();(mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}dirty=true;}
+ if(mode!==uiMode){uiMode=mode;joeVoice.stop();$('joe-loss-quote').hidden=mode!=='caught';if(mode==='caught'){const lines=defeatQuote(run).lines;text('joe-loss-quote','“'+lines.join(' ')+'”');joeVoice.say(lines);}if(!playing&&mode!=='intro'){release();clearInput();(mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}dirty=true;}
  $('journal').hidden=!run.evidence;$('restart').hidden=mode!=='paused';$('primary').hidden=mode==='complete';$('comfort').hidden=mode==='complete';document.querySelector('.chapters').hidden=true;$('guide').hidden=mode==='caught'||mode==='complete';$('result').hidden=mode!=='caught'&&mode!=='complete';
  $('defeat-art').hidden=mode!=='caught';if(mode==='caught')$('restart').hidden=true;
  text('title',mode==='caught'?'Caught below the green':mode==='complete'?'Beyond his reach':mode==='paused'?'Take a breath.':'Under the Green');
