@@ -1,10 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+// Chapters are gated by campaign progress: unlock this chapter before each page loads.
+const unlock=()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));};
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[];
  try{
   const p=await browser.newPage({viewport:{width:1280,height:720}});p.on('pageerror',e=>errors.push(e.message));
-  await p.goto('http://127.0.0.1:4187/back-nine.html');
+  await p.addInitScript(unlock);await p.goto('http://127.0.0.1:4187/back-nine.html');
   const slide=n=>p.waitForFunction(n=>{if(!window.render_game_to_text)return false;const s=JSON.parse(render_game_to_text()).openingStory;return s.active&&s.ready&&s.slide===n;},n);
   await slide(1);await p.keyboard.press('KeyF');await p.waitForFunction(()=>!!document.fullscreenElement);await p.keyboard.press('KeyF');await p.waitForFunction(()=>!document.fullscreenElement);
   await p.evaluate(()=>{window.mockPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[mockPad]});});
@@ -17,7 +19,7 @@ const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modu
   await release();await press(0);assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).mode),'back_nine_driving');await release();await press(9);await release();assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).mode),'back_nine_paused');
   await p.close();
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),t=await context.newPage();t.on('pageerror',e=>errors.push(e.message));
-  await t.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({volume:0,subtitles:false})));
+  await t.addInitScript(unlock);await t.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({volume:0,subtitles:false})));
   // Test skipping a failed asset without a stuck loading state.
   await t.route('**/back-nine-opening/01-other-side.webp',r=>r.abort());
   await t.goto('http://127.0.0.1:4187/back-nine.html');await t.locator('.opening-retry').waitFor({state:'visible'});

@@ -35,6 +35,7 @@ import {freshZoneCueQueue,requestZoneCue,advanceZoneCue,zoneCuePriority} from '.
 import {OLD_FINISH,freshDeadGreen,advanceDeadGreen} from './dead-green.js';
 import { createCourseAnnouncement } from './course-announcement.js';
 import { onFootCameraMotion } from './on-foot-camera-motion.js';
+import { createJoeVoice } from './joe-voice.js';
 
 (() => {
   const mouseLook=createMouseLook(),touchRun=createTouchRunControl(),gamepadSession=createGamepadSession(),gamepadDialogs=new Map();
@@ -13211,6 +13212,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
   }
 
   function resetFirstHole(variantOverride = null) {
+    joeVoiceInstance?.stop();
     mouseLook.reset();
     restoreRankedCareer();
     courseBackdropRenderedAt = -Infinity;
@@ -22062,6 +22064,13 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
     return null;
   }
 
+  // Joe's recorded voice for the lines shown as his captions. Created on
+  // first use; silent while muted or while the page is hidden.
+  let joeVoiceInstance = null;
+  function joeVoice() {
+    return joeVoiceInstance ??= createJoeVoice({ muted: () => state.muted || document.hidden });
+  }
+
   function triggerJoeBark(
     mode,
     requestedContext = null,
@@ -22128,6 +22137,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
     state.hole.nextQuietBarkAt = state.hole.elapsed + 35;
     state.hole.joeBark =
       candidates[index];
+    joeVoice().say(state.hole.joeBark);
     state.hole.joeBarkContext =
       context || mode;
     recentBarks.push(
@@ -26848,6 +26858,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
       );
       hole.captureDialogue =
         selectJoeCaptureDialogue();
+      joeVoice().say(hole.captureDialogue?.lines || []);
       state.resultIndex = (hole.rehearsalCheckpoint || hole.rehearsalOrigin) ? 1 : 0;
       state.mode = "defeat";
       state.time = 0;
@@ -58608,6 +58619,14 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
     ];
     return statRows;
   }
+  /** Chapter 02 has two routes. Until both exits have been used, say where the other one leads. */
+  function unexploredRouteNote(route){
+    const exits=RCProgression.state().exits||{},other=route==='drain'?'shed':route==='shed'?'drain':null;
+    if(!other||exits[other])return '';
+    return other==='drain'
+      ? 'UNEXPLORED ROUTE — THE DRAIN EXIT LEADS TO ANOTHER CHAPTER: UNDER THE GREEN.'
+      : 'UNEXPLORED ROUTE — THE SHED EXIT LEADS TO ANOTHER CHAPTER: THE BACK NINE.';
+  }
   function victoryMilestoneText(result){return result.masterProductOwnerUnlocked || result.dossierPerfected
       ? "NIGHT ORDER PERFECTED — ALL FOUR PERFORMANCE STAMPS FILED."
       : result.shotCraftBookCompleted ? "SHOT BOOK COMPLETE — PRESSURE, BANK, AND LIE WORK ARE NOW ON FILE."
@@ -58641,7 +58660,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
       summary:result.unranked?'Unranked · Career and records unchanged':result.newBest?'New '+(result.overtime?'overtime':result.route+' route')+' record':`Route best · ${(record?.score||result.score).toLocaleString()} points`,
       evidence:echo?echo.headline+' · '+echo.detail:`${result.route.toUpperCase()} escape filed`,
       advice:actions[0].description,dialogue:'',
-      milestone:victoryMilestoneText(result),stats:victoryStatRows(result,echo),events:victoryScoreNotes(result).map(e=>e.text)};
+      milestone:[victoryMilestoneText(result),unexploredRouteNote(result.route)].filter(Boolean).join(' '),stats:victoryStatRows(result,echo),events:victoryScoreNotes(result).map(e=>e.text)};
   }
   function drawResponsiveResult(outcome){RCQualityUI.result(responsiveResultPresentation(outcome));RCScene3D.showDomHud();}
 
@@ -60820,6 +60839,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
   }
 
   function enterMenu() {
+    joeVoiceInstance?.stop();
     const fromIntro=state.mode==="intro";
     window.RCChapterSelect?.refreshProgress();
     if(state.mode!=="settings")window.RCChapterSelect?.select(RCProgression.state().current);
@@ -60842,6 +60862,7 @@ import { onFootCameraMotion } from './on-foot-camera-motion.js';
   }
 
   function enterPause() {
+    joeVoiceInstance?.stop();
     if (state.mode !== "first_hole") {
       return;
     }

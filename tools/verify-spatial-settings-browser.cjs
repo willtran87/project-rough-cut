@@ -7,6 +7,8 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
  try{
   const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage();
   p.on('pageerror',e=>errors.push(e.message));
+  // Chapters are gated by campaign progress: unlock this chapter and skip its opening story before each page loads.
+  await p.addInitScript(()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.under-green-opening.v1',JSON.stringify({skip:true}));});
   const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   async function visit(path='under-green.html?test'){
    await p.goto('http://127.0.0.1:4187/'+path);
@@ -14,14 +16,16 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
   }
   async function settings(){
    if((await read()).mode==='under_green_playing')await p.keyboard.press('Escape');
-   if(!(await p.locator('#comfort').evaluate(e=>e.open)))await p.locator('#comfort summary').click();
+   if(!(await p.locator('#comfort').evaluate(e=>e.open)))await p.locator('#comfort>summary').click();
   }
-  async function set(id,value){await settings();const input=p.locator('#'+id);if(typeof value==='boolean')await input.setChecked(value);else await input.fill(String(value));await tick(0);}
+  // Settings are grouped into categories: open the one holding the control.
+  async function show(selector){const name=await p.locator(selector).evaluate(e=>e.closest('[data-theme-category]')?.dataset.themeCategory);if(name)await p.locator('#comfort nav button',{hasText:name}).click();}
+  async function set(id,value){await settings();await show('#'+id);const input=p.locator('#'+id);if(typeof value==='boolean')await input.setChecked(value);else await input.fill(String(value));await tick(0);}
   async function reset(){
    await p.evaluate(async()=>{navigator.getGamepads=()=>[];__underGreen.clearInput();const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';});await tick(0);
   }
   const near=(a,b,tolerance=.00001)=>assert(Math.abs(a-b)<tolerance,`${a} != ${b}`);
-  await visit();await settings();
+  await visit();await settings();await show('#sensitivity');
   assert.equal(await p.locator('#sensitivity').inputValue(),'1');
   for(const [id,value,key]of [['field-of-view',72,'fov'],['sensitivity',1.5,'mouse'],['controller-sensitivity',1.75,'controller'],['touch-sensitivity',.75,'touch']]){
    await set(id,value);assert.equal((await read()).spatial[key],value);
@@ -85,7 +89,7 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
   checks.push('Level 1 adapter consumes saved settings; UI writes and canvas-service writes sync; return/reload carries FOV, gain and comfort');
 
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
-   await p.setViewportSize({width,height});await settings();await p.locator('.on-foot-settings').scrollIntoViewIfNeeded();await tick(0);
+   await p.setViewportSize({width,height});await settings();await show('.on-foot-settings');await p.locator('.on-foot-settings').scrollIntoViewIfNeeded();await tick(0);
    const bounds=await p.locator('.on-foot-settings').boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width+.5);
    await p.screenshot({path:`${out}/settings-${width}.png`});
    for(const selector of ['#field-of-view','#sensitivity','#controller-sensitivity','#touch-sensitivity','#camera-bob','#crouch-toggle','#sprint-toggle','#movement-ramp']){

@@ -27,11 +27,14 @@ window.__refugeAudit={
  }refugeLighting.lights.forEach((l,i)=>l.visible=visibility[i]);return results;}
 };
 `;
+const base=(process.env.GAME_URL||'http://127.0.0.1:4187').replace(/\/$/,'');
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],samples=[],culling=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before){for(const f of ['final-cut-scene.js','final-cut-estate-detail.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/refuge-lighting/source/before-'+f,'utf8')}));}
  else {const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));}
- await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
+ // Chapters are gated by campaign progress: unlock the finale and skip its opening story before the page loads.
+ await p.addInitScript(()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.final-cut-story.v1',JSON.stringify({skipIntro:true}));});
+ await p.goto(base+'/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook',-2,0,0,50,.08],['bunker-entry',-3.3,19.5,-5.5,15,.22],['pump-entry',18,38,14,38,.25],['pavilion-entry',-7.5,86,-11,86,.25],['pump-oblique',18,40.5,14.5,38,.15],['fixture-close',16,38,14.73,38,-.38]];
  const fixture=async v=>p.evaluate(async([name,x,y,tx,ty,pitch])=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1,openingSeen:true});r.mode='playing';Object.assign(r.rig,{x:39,y:50,phase:'disabled'});Object.assign(r.player,{x,y,yaw:Math.atan2(tx-x,ty-y),pitch});__finalCut.run=r;await advanceTime(0);},v);
  const shot=async name=>{await p.screenshot({path:`${out}/${name}.png`});views.push(await p.evaluate(name=>{const s=JSON.parse(render_game_to_text());return{name,player:s.player,graphics:s.graphics,viewport:[innerWidth,innerHeight]};},name));assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));};

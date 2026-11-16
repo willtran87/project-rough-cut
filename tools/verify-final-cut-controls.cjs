@@ -1,10 +1,15 @@
 const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
+// Chapters are gated by campaign progress: unlock the finale and skip its opening story before each page loads.
+const unlock=()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.final-cut-story.v1',JSON.stringify({skipIntro:true}));};
+const base=(process.env.GAME_URL||'http://127.0.0.1:4187').replace(/\/$/,'');
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/final-cut';p.on('pageerror',e=>errors.push(e.message));
  const ready=()=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000}),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
- await p.goto('http://127.0.0.1:4187/final-cut.html?test');await ready();await tick(0);await p.locator('#comfort summary').click();
- await p.locator('[data-binding=interact]').selectOption('KeyT');await p.locator('[data-campaign=reducedMotion]').check();await p.locator('[data-campaign=subtitleSize]').fill('1.4');
+ await p.addInitScript(unlock);await p.goto(base+'/final-cut.html?test');await ready();await tick(0);await p.locator('#comfort>summary').click();
+ // Settings are grouped into categories: open the one holding each control.
+ const tab=name=>p.locator('#comfort nav button',{hasText:name}).click();
+ await tab('Controls');await p.locator('[data-binding=interact]').selectOption('KeyT');await tab('Camera');await p.locator('[data-campaign=reducedMotion]').check();await tab('Readability');await p.locator('[data-campaign=subtitleSize]').fill('1.4');
  assert.equal((await read()).bindings.interact,'KeyT');
  for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await tick(0);await p.screenshot({path:`${out}/settings-${width}.png`});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  await p.reload();await ready();await tick(0);assert.equal((await read()).bindings.interact,'KeyT');assert((await read()).preferences.reduced);await p.click('#primary');
@@ -18,7 +23,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun();r.mode='playing';Object.assign(r.player,{x:0,y:26});Object.assign(r.rig,{phase:'pass',x:7,y:26,yaw:-Math.PI/2,direction:-1,deployment:1});__finalCut.run=r;});await tick(1800);assert.equal((await read()).mode,'final_cut_caught');await p.screenshot({path:`${out}/caught-390.png`});await p.click('#primary');assert.equal((await read()).mode,'final_cut_playing');assert.equal((await read()).checkpoint,0);checks.push('Real blade defeat and immediate retry');
  // Separate real touch context; diagnostics place only a safe test location.
  const context=await b.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true}),t=await context.newPage();t.on('pageerror',e=>errors.push(e.message));
- await t.goto('http://127.0.0.1:4187/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.locator('#primary').tap();
+ await t.addInitScript(unlock);await t.goto(base+'/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.locator('#primary').tap();
  const cdp=await context.newCDPSession(t),contacts=new Map(),ttick=ms=>t.evaluate(ms=>advanceTime(ms),ms),tread=()=>t.evaluate(()=>JSON.parse(render_game_to_text()));
  const center=async s=>{const r=await t.locator(s).boundingBox();assert(r);return {x:r.x+r.width/2,y:r.y+r.height/2};};
  const start=async(id,point)=>{contacts.set(id,point);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[...contacts].map(([id,p])=>({id,...p}))});};
