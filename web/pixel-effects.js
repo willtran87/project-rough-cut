@@ -36,6 +36,7 @@ export const createImpactMask=()=>mask('ripple');
 
 export function createPixelEffects(world,{software=false,scale,xScale,moon,blockers=[],ponds=[],drain=null}){
   const root=new THREE.Group();root.name='PixelAtmosphere';world.add(root);
+  const COURSE_ECHO_GROUND_LINE=false;
   const limits={trails:software?80:160,mist:software?10:24,flecks:software?24:56,ripples:3,beam:1,figures:software?1:3,shafts:software?2:3,echo:software?32:64};
   const batches={},textures=[],position=new THREE.Vector3(),size=new THREE.Vector3(),rotation=new THREE.Quaternion(),matrix=new THREE.Matrix4(),color=new THREE.Color(),euler=new THREE.Euler();
   const frustum=new THREE.Frustum(),projection=new THREE.Matrix4(),sphere=new THREE.Sphere();
@@ -213,10 +214,11 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
         emit('beam',j.x*xScale+Math.cos(h)*length*.55,.042,-j.y*scale-Math.sin(h)*length*.55,.65,length,0x776a47,rotation);
       }
     }
-    // Recorded player route is evidence, not a hostile apparition; it remains
-    // available with scares disabled and never writes to the saved run.
+    // The recorded route of a previous run used to be drawn here as a moving
+    // dashed line on the ground. It read as a guide and distracted from the
+    // course, so it is no longer drawn; the echo's pace comparison is unaffected.
     const echo=f.echo;
-    if(echo?.record?.ghostPath){
+    if(COURSE_ECHO_GROUND_LINE&&echo?.record?.ghostPath){
       const path=echo.record.ghostPath,start=frame.time-10;let lo=0,hi=path.length;
       while(lo<hi){const mid=(lo+hi)>>1;if(path[mid].t<start)lo=mid+1;else hi=mid;}
       for(let i=Math.max(1,lo);i<path.length&&path[i].t<=frame.time;i++){
