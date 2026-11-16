@@ -13,7 +13,20 @@ import {collapsePose} from './final-cut-ending.js';
 import {createFinalCutJoe} from './final-cut-joe.js';
 import {finishFinalCutJoe,preloadFinalCutJoeFinish} from './final-cut-joe-finish.js';
 import {ARRIVAL_WALLS,OVERLOOK,OVERLOOK_RAMPS,BAY,ACCESS,OVERLOOK_ACCESS,ACCESS_GATE,ACCESS_FENCE,groundHeight} from './final-cut-arrival-layout.js';
-import {WALLS,REFUGES,SECTORS,BREAKABLES,PUMP,BELL,NOTE,BALL_BASKETS,SWALE,LANES,clamp,isCut,inside,distance,lineClear} from './final-cut-course.js';
+import {WALLS,REFUGES,SECTORS,BREAKABLES,PUMP,BELL,NOTE,BALL_BASKETS,SWALE,LANES,MOVEMENT,clamp,isCut,inside,distance,lineClear} from './final-cut-course.js';
+import {onFootCameraMotion} from './on-foot-camera-motion.js';
+// Reused each frame for the shared walking motion; the rig is the pursuer.
+const walker={x:0,y:0,speed:0,walk:0,sprinting:false},pursuer={x:0,y:0};
+// Eye height matches Night Order and Under the Green (1.65 m standing, 1.12 m
+// crouched) and eases between them at the same rate instead of snapping. It is
+// view state only: the simulation and saves still hold a plain crouch flag.
+const EYE_STANDING=1.65,EYE_CROUCHED=1.12,eye={height:EYE_STANDING,run:null,time:0};
+export function easedEyeHeight(r,reduced){
+ const target=r.player.crouch?EYE_CROUCHED:EYE_STANDING;
+ if(eye.run!==r){eye.run=r;eye.height=target;}
+ else{const dt=Math.max(0,Math.min(.1,r.time-eye.time));eye.height=target+(eye.height-target)*Math.exp(-dt*(reduced?30:18));}
+ eye.time=r.time;return eye.height;
+}
 import {MAX_WORLD_BALLS,flightPoint} from './final-cut-balls.js';
 import {ROUTE_WALLS,FORK,FORK_SIGN,FINAL_ROUTES} from './final-cut-route-layout.js';
 import {CAB,cabPerformance} from './final-cut-cab.js';
@@ -369,7 +382,9 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   renderQuality=finalCutRenderSize(w,h,{tier:prefs.visualTier,resolution:prefs.resolution,software});
   const boardText=championshipBoard(r);if(boardText!==lastBoard){lastBoard=boardText;normalBoard.userData.write(boardText);receiptBoard.userData.write(boardText);}
   if(width!==renderQuality.width||height!==renderQuality.height){width=renderQuality.width;height=renderQuality.height;renderer.setSize(width,height,false);camera.aspect=w/h;}
-  camera.clearViewOffset();camera.fov=prefs.fov||58;camera.updateProjectionMatrix();camera.position.set(r.player.x,groundHeight(r.player)+(r.player.crouch?1.1:1.72),-r.player.y);camera.rotation.set(-r.player.pitch,-r.player.yaw-r.player.rearAngle,0,'YXZ');
+  camera.clearViewOffset();camera.fov=prefs.fov||58;camera.updateProjectionMatrix();walker.x=r.player.x;walker.y=r.player.y;walker.speed=r.player.speed||0;walker.walk=r.player.walk||0;walker.sprinting=!r.player.crouch&&!r.player.focus&&walker.speed>MOVEMENT.walk*1.1;pursuer.x=r.rig.x;pursuer.y=r.rig.y;
+  const bob=onFootCameraMotion(walker,pursuer,r.mode==='playing'?prefs.cameraBob||0:0,prefs.reduced);
+  camera.position.set(r.player.x,groundHeight(r.player)+easedEyeHeight(r,prefs.reduced)+bob.height,-r.player.y);camera.rotation.set(-r.player.pitch+bob.pitch,-r.player.yaw-r.player.rearAngle,bob.roll,'YXZ');
   if(r.mode==='caught'&&r.failure?.rig){
    const view=defeatView(r.failure);camera.fov=58;camera.position.set(view.eye.x,view.eye.y,view.eye.z);camera.lookAt(view.target.x,view.target.y,view.target.z);
    // Reserve space for the retry card without covering the frozen machine.

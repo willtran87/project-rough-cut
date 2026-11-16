@@ -50,6 +50,8 @@ const keyboard=bindKeyboardSettings($('keyboard'),{profile:'onFoot',stored:bindi
 let selectedVisualTier=visualTier(readRecord(VISUAL_KEY).tier);
 $('visual-tier').value=selectedVisualTier;
 $('visual-tier').addEventListener('change',()=>{selectedVisualTier=visualTier($('visual-tier').value);dirty=true;text('visual-settings-status',writeRecord(VISUAL_KEY,{tier:selectedVisualTier})?'':'Settings apply for this session. Browser storage is unavailable.');});
+// Movement bob is the shared on-foot setting, also editable in the other chapters.
+{const bob=$('camera-bob'),show=()=>text('camera-bob-value',Math.round(feel.cameraBob*100)+'%');bob.value=feel.cameraBob;show();bob.addEventListener('input',()=>{feel.cameraBob=clamp(Number(bob.value),0,.6);show();text('spatial-settings-status',RCFoundation.saveComfort(feel)?'':'Settings apply for this session. Browser storage is unavailable.');dirty=true;});}
 function syncSpatial(){for(const el of document.querySelectorAll('[data-spatial]')){if(el.type==='checkbox')el.checked=spatial[el.dataset.spatial];else el.value=spatial[el.dataset.spatial];}}
 spatialStore.subscribe((v,name,saved)=>{spatial=v;dirty=true;syncSpatial();text('spatial-settings-status',saved?'':'Settings apply for this session. Browser storage is unavailable.');});syncSpatial();for(const el of document.querySelectorAll('[data-spatial]'))el.addEventListener('input',()=>spatialStore.set(el.dataset.spatial,el.type==='checkbox'?el.checked:Number(el.value)));
 for(const el of document.querySelectorAll('[data-feedback]')){const name=el.dataset.feedback;el.value=feedbackPrefs[name];text('feedback-'+name,Math.round(feedbackPrefs[name]*100)+'%');el.addEventListener('input',()=>{feedbackPrefs[name]=feedbackPreferences({...feedbackPrefs,[name]:Number(el.value)})[name];feedback.stop();audio.update(run);text('feedback-'+name,Math.round(feedbackPrefs[name]*100)+'%');text('feedback-settings-status',saveFeedback(feedbackPrefs)?'':'Settings apply for this session. Browser storage is unavailable.');});}
@@ -137,7 +139,7 @@ function paint(){
  }
 }
 function update(dt){const controls=input(dt);controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.saveSerial!==savedSerial)persist();audio.update(run);feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,feedbackPrefs.vibration);paint();}
-function draw(){return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,manual});}
+function draw(){return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,cameraBob:feel.cameraBob,manual});}
 import {createMenuFrameGate} from './menu-frame-gate.js';
 const menuFrameDue=createMenuFrameGate();
 let nextGameplayFrame=0;

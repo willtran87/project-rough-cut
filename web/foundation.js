@@ -2,7 +2,8 @@
 (() => {
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const units=Object.freeze({x:0.72,visual:0.12,walk:24,sprint:38,crouch:15,listen:15});
-  const defaults=Object.freeze({cameraBob:0,cameraRoll:false,cameraShake:false,flashes:false,apparitions:true,ghostInterference:true,crouchToggle:false,sprintToggle:false,touchSprintToggle:false});
+  // cameraBob is the Movement bob used by all on-foot chapters (see on-foot-camera-motion.js).
+  const defaults=Object.freeze({cameraBob:.25,cameraRoll:false,cameraShake:false,flashes:false,apparitions:true,ghostInterference:true,crouchToggle:false,sprintToggle:false,touchSprintToggle:false});
   let previousComfort={...defaults};
   function readComfort(){try{const p=JSON.parse(localStorage.getItem('rough-cut.feel.v1')||'{}');previousComfort=Object.fromEntries(Object.entries(defaults).map(([k,v])=>[k,typeof v==='boolean'?(typeof p?.[k]==='boolean'?p[k]:v):Number.isFinite(p?.[k])?clamp(p[k],0,.6):v]));}catch{previousComfort={...defaults};}return {...previousComfort};}
   function saveComfort(state){

@@ -34,6 +34,7 @@ import {zoneCueAnchor,zoneCueSound} from './zone-cue-scene.js';
 import {freshZoneCueQueue,requestZoneCue,advanceZoneCue,zoneCuePriority} from './zone-cue-queue.js';
 import {OLD_FINISH,freshDeadGreen,advanceDeadGreen} from './dead-green.js';
 import { createCourseAnnouncement } from './course-announcement.js';
+import { onFootCameraMotion } from './on-foot-camera-motion.js';
 
 (() => {
   const mouseLook=createMouseLook(),touchRun=createTouchRunControl(),gamepadSession=createGamepadSession(),gamepadDialogs=new Map();
@@ -357,6 +358,9 @@ import { createCourseAnnouncement } from './course-announcement.js';
     { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
     {id:"clear_navigation",group:"presentation",label:"CLEAR NAVIGATION",key:"clearNavigation",type:"toggle"},
   ];
+  // The course map was removed as a player option. Its drawing and route code
+  // remain for the listening view; nothing below can open it while this is false.
+  const COURSE_MAP_ENABLED = false;
   const KEYBOARD_BINDING_ROWS = [
     { id: "move_up", label: "MOVE FORWARD", defaultCode: "KeyW" },
     { id: "move_left", label: "MOVE LEFT", defaultCode: "KeyA" },
@@ -368,7 +372,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     { id: "look_back", label: "LOOK BEHIND", defaultCode: "KeyQ" },
     { id: "interact", label: "INTERACT / RECLAIM", defaultCode: "KeyE" },
     { id: "chip", label: "AIM / CHIP", defaultCode: "Space" },
-    { id: "controls", label: "MAP / CONTROLS", defaultCode: "KeyH" },
+    { id: "controls", label: "PAUSE / CONTROLS", defaultCode: "KeyH" },
   ];
   const RESERVED_BINDING_CODES = new Set([
     "Escape",
@@ -12192,7 +12196,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     ctx.fillStyle="#06150e";ctx.fillRect(0,0,WIDTH,HEIGHT);
     drawText("KEY BINDINGS",640,74,40,"#eef3df","center",true);
     drawText(inputCopy("SELECT AN ACTION · PRESS A KEY","SELECT WITH D-PAD · A TO REBIND","TAP AN ACTION · USE A PHYSICAL KEY"),640,122,28,"#eacb88","center",true);
-    const labels=["FORWARD","LEFT","BACK","RIGHT","SPRINT","CROUCH","LISTEN","REAR VIEW","USE","CHIP","MAP"];
+    const labels=["FORWARD","LEFT","BACK","RIGHT","SPRINT","CROUCH","LISTEN","REAR VIEW","USE","CHIP",COURSE_MAP_ENABLED?"MAP":"PAUSE"];
     KEYBOARD_BINDING_ROWS.forEach((binding,index)=>{
       const b=bindingRowGeometry(index),selected=state.bindingIndex===index;
       ctx.fillStyle=selected?"#344b29":"#10271b";ctx.fillRect(b.x,b.y,b.width,b.height);
@@ -17469,10 +17473,15 @@ import { createCourseAnnouncement } from './course-announcement.js';
     );
   }
 
+  /** The 3D view moves the real camera with the shared on-foot wobble, so screen-space bob applies only to the 2D fallback. */
+  function screenSpaceBob() {
+    return spatialViewEnabled() ? 0 : state.cameraBob;
+  }
+
   function courseCameraFrameTransform() {
     if(renderFrameCache.cameraFrame)return renderFrameCache.cameraFrame;
     const impact=state.cameraShake&&!state.reducedMotion?Math.sin(state.hole.elapsed*120)*2*clamp(state.hole.rebuild.impactTimer/.12,0,1):0;
-    if(!state.cameraRoll&&!state.cameraBob)return {viewportShift:impact,verticalShift:0,roll:0,scale:1+Math.abs(impact)*2/WIDTH};
+    if(!state.cameraRoll&&!screenSpaceBob())return {viewportShift:impact,verticalShift:0,roll:0,scale:1+Math.abs(impact)*2/WIDTH};
     const motion=courseCameraMotion(),locomotion=courseLocomotionState(),rear=lookBackView();
     const turn=state.cameraRoll?Math.sin(rear.amount*Math.PI):0,direction=lookBackState().direction;
     const shift=(state.cameraRoll?courseViewportShiftX():0)+direction*turn*(state.reducedMotion?12:46)+impact;
@@ -17799,7 +17808,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
             footingLurch * 0.42,
     };
     const result=renderFrameCache.locomotion;
-    result.bob*=state.cameraBob;result.verticalShift*=state.cameraBob;result.zoom*=state.cameraBob;result.roll=state.cameraRoll?result.roll:0;
+    const screenBob=screenSpaceBob();result.bob*=screenBob;result.verticalShift*=screenBob;result.zoom*=screenBob;result.roll=state.cameraRoll?result.roll:0;
     return result;
   }
 
@@ -45587,6 +45596,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   function toggleCourseMap() {
     const hole = state.hole;
+    if (!COURSE_MAP_ENABLED) { hole.mapOpen = false; return; }
     hole.mapOpen = !hole.mapOpen;
     clearTouchInputs(true);
     if(hole.mapOpen){state.keys.clear();if(hole.ballAim.active)cancelGolfBallAim();}
@@ -45601,9 +45611,11 @@ import { createCourseAnnouncement } from './course-announcement.js';
 
   function drawCourseMiniMap(standalone=false) {
     if (state.focusedHud && !standalone) {
+      if (COURSE_MAP_ENABLED) {
       const b = focusedMapButtonGeometry();
       ctx.fillStyle="#0b251a";ctx.fillRect(b.x,b.y,b.width,b.height);strokeRect(b.x,b.y,b.width,b.height,"#9bbdab",1);
       drawText(state.hole.mapOpen ? "CLOSE MAP" : inputCopy(`${keyboardBindingLabel("controls")} MAP`,"Y MAP","MAP"),b.x+b.width/2,b.y+36,24,"#d4e8db","center",true);
+      }
       if (!state.hole.mapOpen && !state.hole.focus) return;
     }
     const refreshInterval =
@@ -54596,8 +54608,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
               "MOVE LEFT STICK/D-PAD  •  RT SPRINT  •  LB CROUCH  •  LT LISTEN  •  R3 REAR  •  A USE  •  HOLD X AIM  •  START",
             )
           : inputCopy(
-              `${document.pointerLockElement === canvas ? "MOUSE LOOK" : "CLICK / DRAG TO LOOK"}  •  ${keyboardBindingLabel("controls")} MAP  •  ESC PAUSE`,
-              "RIGHT STICK LOOK  •  Y MAP  •  START PAUSE",
+              `${document.pointerLockElement === canvas ? "MOUSE LOOK" : "CLICK / DRAG TO LOOK"}  •  ${COURSE_MAP_ENABLED ? keyboardBindingLabel("controls") + " MAP  •  " : ""}ESC PAUSE`,
+              COURSE_MAP_ENABLED ? "RIGHT STICK LOOK  •  Y MAP  •  START PAUSE" : "RIGHT STICK LOOK  •  START PAUSE",
             ),
         28,
         HEIGHT - 25,
@@ -57069,6 +57081,17 @@ import { createCourseAnnouncement } from './course-announcement.js';
     state.player.pitch=clamp((state.player.pitch||0)+delta*(scaled?1:state.lookSensitivity*(p.invertVertical?-1:1)),-.85,.85);
     state.hole.lookPracticeRadians=(state.hole.lookPracticeRadians||0)+Math.abs(state.player.pitch-previousPitch);
   }
+  // Shared on-foot walking motion. Authored course units become metres here
+  // (x is narrower than y), so the stride matches the other on-foot chapters.
+  const spatialWalker={x:0,y:0,speed:0,walk:0,sprinting:false},spatialPursuer={x:0,y:0};
+  function spatialCameraWobble(){
+    const h=state.hole,metres=RCQuality.scale.meters,dt=h.lastMovementDeltaSeconds||0;
+    spatialWalker.x=state.player.x*RCQuality.scale.x*metres;spatialWalker.y=state.player.y*metres;
+    spatialWalker.speed=dt>0?(h.lastMovementAppliedDistance||0)*metres/dt:0;spatialWalker.walk=(h.travelDistance||0)*metres;
+    spatialWalker.sprinting=sprintHeld()&&!h.crouched;
+    spatialPursuer.x=h.joe.x*RCQuality.scale.x*metres;spatialPursuer.y=h.joe.y*metres;
+    return onFootCameraMotion(spatialWalker,spatialPursuer,state.cameraBob,state.reducedMotion);
+  }
   function spatialCourseData(){
     const calibration=state.hole.rebuild.lab==='calibration',keyId=activeRunVariant().id+':'+calibration;
     if(spatialDataCache?.keyId===keyId)return spatialDataCache;
@@ -57171,7 +57194,8 @@ import { createCourseAnnouncement } from './course-announcement.js';
   }
   function drawSpatialFirstHole(){
     const h=state.hole,calibration=h.rebuild.lab==='calibration',p=spatialPreferences();
-    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:state.player,yaw:lookBackView().angle,pitch:(state.player.pitch||0)+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:state.cameraRoll&&!state.reducedMotion&&h.lastMovementAppliedDistance>0?Math.sin(h.locomotionPhase||0)*state.cameraBob*.018:0,fov:p.fov,resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight,bob:state.reducedMotion?0:(h.lastMovementAppliedDistance>0?Math.sin(h.locomotionPhase||0)*state.cameraBob*.045:0),joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    const wobble=spatialCameraWobble();
+    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:state.player,yaw:lookBackView().angle,pitch:(state.player.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll,fov:p.fov,resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight,bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
     if(RCScene3D.domHud()&&state.mode==="paused")return true;
     if(RCScene3D.domHud()&&state.mode==="first_hole"&&!h.tutorialVisible){
       drawQualityHud();
@@ -63198,7 +63222,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
       }
     } else if (state.mode === "first_hole") {
       const mapButton = focusedMapButtonGeometry();
-      if (state.focusedHud && !state.hole.tutorialVisible && point.x>=mapButton.x && point.x<=mapButton.x+mapButton.width && point.y>=mapButton.y && point.y<=mapButton.y+mapButton.height) {
+      if (COURSE_MAP_ENABLED && state.focusedHud && !state.hole.tutorialVisible && point.x>=mapButton.x && point.x<=mapButton.x+mapButton.width && point.y>=mapButton.y && point.y<=mapButton.y+mapButton.height) {
         toggleCourseMap();
         return;
       }
@@ -64024,6 +64048,7 @@ import { createCourseAnnouncement } from './course-announcement.js';
     ) {
       openKeyboardBindings();
     } else if (
+      COURSE_MAP_ENABLED &&
       pressed(3) &&
       state.mode === "first_hole"
     ) {
@@ -64304,8 +64329,12 @@ import { createCourseAnnouncement } from './course-announcement.js';
       } else if (
         gameplayAction === "controls"
       ) {
-        if (!event.repeat) toggleCourseMap();
-        playUiTone(220, 0.045, 0.015);
+        if (!COURSE_MAP_ENABLED) {
+          if (!event.repeat) enterPause();
+        } else {
+          if (!event.repeat) toggleCourseMap();
+          playUiTone(220, 0.045, 0.015);
+        }
         event.preventDefault();
       } else if (
         gameplayAction === "interact" &&

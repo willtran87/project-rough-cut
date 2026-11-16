@@ -3,12 +3,12 @@
   if(!window.roughCutRebuild)return;
   const api=()=>window.roughCutRebuild,host=document.getElementById('study-setup');
   const section=document.createElement('section');
-  section.innerHTML='<h2>Practise the fundamentals</h2><p>Practice starts a separate run without records. Finish or leave through Pause → Return to menu.</p><div class="study-actions"><button type="button" data-lab="calibration">Movement practice</button><button type="button" data-lab="encounter">Bell encounter</button></div><h2>Camera and controls</h2><p>The default camera stays steady. These preferences are saved on this device.</p><div id="feel-controls" class="study-grid"></div>';
+  section.innerHTML='<h2>Practise the fundamentals</h2><p>Practice starts a separate run without records. Finish or leave through Pause → Return to menu.</p><div class="study-actions"><button type="button" data-lab="calibration">Movement practice</button><button type="button" data-lab="encounter">Bell encounter</button></div><h2>Camera and controls</h2><p>A little movement bob is on by default and is shared by all on-foot chapters. Set Camera bob to zero, or enable Reduced motion, for a steady camera. These preferences are saved on this device.</p><div id="feel-controls" class="study-grid"></div>';
   host.prepend(section);
   const labels={cameraBob:'Camera bob',cameraRoll:'Camera lean',cameraShake:'Impact shake',flashes:'Scare flashes',apparitions:'Ghost sightings',ghostInterference:'Ghost screen interference',crouchToggle:'Toggle crouch',sprintToggle:'Toggle sprint (keyboard / controller)',touchSprintToggle:'Tap Run to toggle (on-foot chapters)'};
   for(const [key,value]of Object.entries(api().comfort())){
     const label=document.createElement('label'),input=document.createElement('input');label.textContent=labels[key];input.dataset.feel=key;
-    if(typeof value==='boolean'){input.type='checkbox';input.checked=value;}else{input.type='range';input.min='0';input.max='.6';input.step='.1';input.value=String(value);}
+    if(typeof value==='boolean'){input.type='checkbox';input.checked=value;}else{input.type='range';input.min='0';input.max='.6';input.step='.05';input.value=String(value);}
     input.addEventListener('input',()=>api().setComfort(key,input.type==='checkbox'?input.checked:Number(input.value)));label.append(input);if(key==='touchSprintToggle'){const help=document.createElement('small');help.textContent='Tap Run once, then move and look with two thumbs. Tap again to walk. Pause or an interrupted touch clears it.';label.append(help);}section.querySelector('#feel-controls').append(label);
   }
   section.querySelectorAll('[data-lab]').forEach(b=>b.addEventListener('click',()=>api().startLab(b.dataset.lab)));
