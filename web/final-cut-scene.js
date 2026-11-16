@@ -28,7 +28,7 @@ export function easedEyeHeight(r,reduced){
  eye.time=r.time;return eye.height;
 }
 import {MAX_WORLD_BALLS,flightPoint} from './final-cut-balls.js';
-import {ROUTE_WALLS,FORK,FORK_SIGN,FINAL_ROUTES} from './final-cut-route-layout.js';
+import {ROUTE_WALLS,FORK_SIGN} from './final-cut-route-layout.js';
 import {CAB,cabPerformance} from './final-cut-cab.js';
 import {defeatView} from './final-cut-defeat.js';
 import {RIG_BODY,RIG_WHEELS,RIG_BANK,RIG_WING_PARTS,wingPartId,rigWheelAngle} from './final-cut-rig.js';
@@ -126,13 +126,9 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  // A real masonry bank creates a sheltered approach; the marked crossing at
  // its west end remains exposed to the final strip. Both paths reconnect.
  for(const w of ROUTE_WALLS)box('mortar',w.x,(w.h-.115)/2,-w.y,w.w-.065,w.h-.115,w.d-.065);
- for(const [name,points]of Object.entries(FINAL_ROUTES)){
-  let a=FORK;
-  for(const b of points){const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy),bank=Math.min(a.y,b.y)>=55.7&&Math.max(a.y,b.y)<=60.3||Math.min(a.y,b.y)>=71.7;
-   if(!bank)for(let d=.5;d<length;d+=1.5)mesh(name==='bank'?'cream':'mint',unit,a.x+dx*d/length,.045,-a.y-dy*d/length,.13,.025,.45,null,0,Math.atan2(-dx,dy));
-   a=b;
-  }
- }
+ // The two routes past the fork were once traced with unlit dashes on the turf.
+ // They read as an overlay rather than part of the grounds, so the paths, the
+ // masonry bank and the fork sign now carry the routes on their own.
  const forkSign=sign('PAVILION\n← BANK WALK / LONG\nOPEN CROSSING / SHORT →',FORK_SIGN.x,1.6,-FORK_SIGN.y,FORK_SIGN.d,.75);forkSign.rotation.y=Math.PI/2;cyl('metal',FORK_SIGN.x-.025,.9,-FORK_SIGN.y,.024,1.8);
  sign('BANK WALK\nCROSS AFTER THE PASS',-2,1.45,-58.06,2.7,.58);
  sign('PAVILION →',-14.5,1.55,-74.16,2.2,.35);
