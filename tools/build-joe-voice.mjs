@@ -44,25 +44,120 @@ async function allLines() {
   const from = game.indexOf('const BASE_JOE_CAPTURE_LINES'), to = game.indexOf('const JOE_DIALOGUE_LIBRARY');
   if (from < 0 || to < from) throw Error('Could not find the base Joe lines in web/game.js');
   const base = vm.runInNewContext(game.slice(from, to) + ';({capture:BASE_JOE_CAPTURE_LINES,barks:BASE_JOE_STATE_BARKS})', {});
-  const raw = [
-    ...base.capture.flatMap(entry => entry.lines), ...strings(base.barks),
-    ...strings(backNine.JOE_LINES), ...strings(backNine.JOE_STORY_CUES),
-    ...strings(defeat.DEFEAT_LINES), ...strings(defeat.CHAPTER_DEFEAT_LINES),
-    ...nightOrder.captureLines.flatMap(entry => entry.lines),
-    ...strings(nightOrder.stateBarks), ...strings(nightOrder.contextBarks),
-  ];
-  const byId = new Map();
-  for (const text of raw) {
+  // Grouped, most clearly heard first. A line that appears in two groups
+  // belongs to the earlier one. The order only matters to --elevenlabs, which
+  // revoices whole groups in turn so a group is never left in two voices.
+  const groups = {
+    defeat: strings(defeat.DEFEAT_LINES),
+    chapterDefeat: strings(defeat.CHAPTER_DEFEAT_LINES),
+    backNineStory: strings(backNine.JOE_STORY_CUES),
+    baseCapture: base.capture.flatMap(entry => entry.lines),
+    backNineLines: strings(backNine.JOE_LINES),
+    nightCapture: nightOrder.captureLines.flatMap(entry => entry.lines),
+    baseBarks: strings(base.barks),
+    stateBarks: strings(nightOrder.stateBarks),
+    contextBarks: strings(nightOrder.contextBarks),
+  };
+  const byId = new Map(), groupOf = new Map();
+  for (const [group, raw] of Object.entries(groups)) for (const text of raw) {
     const spoken = spokenText(text);
     if (!/[a-z]/i.test(spoken)) continue;
     const id = voiceClipId(spoken);
     if (byId.has(id) && byId.get(id).toLowerCase() !== spoken.toLowerCase()) throw Error(`Clip name collision: "${byId.get(id)}" / "${spoken}"`);
-    byId.set(id, spoken);
+    if (!byId.has(id)) { byId.set(id, spoken); groupOf.set(id, group); }
   }
-  return byId;
+  return {byId, groupOf, groupNames: Object.keys(groups)};
 }
 
-const lines = await allLines();
+const {byId: lines, groupOf, groupNames} = await allLines();
+
+// Revoices existing clips with ElevenLabs: a built-in voice, whispered (v3
+// audio tags), then slowed and lowered about 2.4 semitones before the usual
+// speech encode. The low-pass sits higher than the synthesiser chain's so the
+// breath of the whisper survives. Which clips are already in this voice is
+// recorded in assets/audio/joe-voice/elevenlabs.txt; a line whose text changes
+// gets a new clip name and so falls out of that record by itself.
+// A group is only started if its estimated cost fits what is left of --budget.
+//
+//   ELEVENLABS_API_KEY=... node tools/build-joe-voice.mjs --elevenlabs --budget 8000 [--groups defeat,chapterDefeat]
+//   ELEVENLABS_API_KEY=... node tools/build-joe-voice.mjs --elevenlabs --final-cut
+const JOE_VOICE = 'onwK4e9ZLuTAKqWW03F9'; // ElevenLabs built-in "Daniel"
+/** One whispered take of `text`, processed and encoded to `clip`. */
+async function whisper(key, voice, text, clip, bitrate) {
+  let response;
+  for (let attempt = 0; ; attempt++) {
+    response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: '[whispers] [slowly] ' + text, model_id: 'eleven_v3', voice_settings: {stability: .5}})});
+    if (response.status !== 429 || attempt >= 4) break;
+    await new Promise(resolve => setTimeout(resolve, 4000 * (attempt + 1)));
+  }
+  if (!response.ok) throw Error(`ElevenLabs refused "${text}" (${response.status}): ${(await response.text()).slice(0, 300)}`);
+  const charged = Number(response.headers.get('character-cost')) || 8 + text.length;
+  const source = clip + '.mp3';
+  fs.writeFileSync(source, Buffer.from(await response.arrayBuffer()));
+  const encoded = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', source, '-af', 'asetrate=44100*0.87,aresample=48000,highpass=f=220,lowpass=f=6000,loudnorm=I=-21:TP=-3:LRA=4', '-ac', '1', '-c:a', 'libopus', '-b:a', bitrate, clip], {stdio: ['ignore', 'inherit', 'inherit']});
+  fs.rmSync(source);
+  if (encoded.status !== 0) throw Error(`Encoding failed for "${text}"`);
+  const seconds = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', clip]).stdout.toString());
+  return {charged, seconds};
+}
+// The Final Cut's five scripted lines live apart from the rest: the level
+// reads each clip's length from web/final-cut-dialogue-lines.js, so that file
+// is rewritten here in the form tools/build-final-cut-joe.ps1 gives it.
+async function revoiceFinalCut(key, voice) {
+  const script = JSON.parse(fs.readFileSync(path.join(repo, 'assets', 'audio', 'final-cut-joe', 'script.json'), 'utf8'));
+  const manifest = [];
+  let spent = 0;
+  for (const line of script) {
+    if (!/^[a-z-]+$/.test(line.id)) throw Error('Invalid dialogue file ID');
+    const take = await whisper(key, voice, line.text, path.join(web, 'assets', 'audio', 'final-cut-joe', line.id + '.ogg'), '48k');
+    spent += take.charged;
+    manifest.push({...line, duration: +take.seconds.toFixed(3), url: `./assets/audio/final-cut-joe/${line.id}.ogg`});
+  }
+  fs.writeFileSync(path.join(web, 'final-cut-dialogue-lines.js'), '// Generated by tools/build-final-cut-joe.ps1 from the authored script.\n// Revoiced by tools/build-joe-voice.mjs --elevenlabs --final-cut.\nexport const JOE_LINES = ' + JSON.stringify(manifest).replace(/'/g, '\\u0027') + ';\n');
+  console.log(JSON.stringify({finalCut: manifest.map(line => [line.id, line.duration]), credits: spent}));
+}
+async function revoice() {
+  const key = process.env.ELEVENLABS_API_KEY;
+  if (!key) throw Error('Set ELEVENLABS_API_KEY');
+  const arg = (name, fallback) => { const i = process.argv.indexOf(name); return i < 0 ? fallback : process.argv[i + 1]; };
+  const voice = arg('--voice', JOE_VOICE);
+  if (process.argv.includes('--final-cut')) return revoiceFinalCut(key, voice);
+  const budget = Number(arg('--budget', 'Infinity'));
+  let spent = 0;
+  const wanted = (arg('--groups', '') || groupNames.join(',')).split(',');
+  const record = path.join(repo, 'assets', 'audio', 'joe-voice', 'elevenlabs.txt');
+  fs.mkdirSync(path.dirname(record), {recursive: true});
+  const done = new Set(fs.existsSync(record) ? fs.readFileSync(record, 'utf8').split(/\s+/).filter(Boolean) : []);
+  const save = () => fs.writeFileSync(record, [...done].filter(id => lines.has(id)).sort().join('\n') + '\n');
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'joe-voice-'));
+  const odd = [];
+  try {
+    for (const group of wanted) {
+      const todo = [...lines].filter(([id]) => groupOf.get(id) === group && !done.has(id));
+      if (!todo.length) { console.log(`${group}: already revoiced`); continue; }
+      // Measured: the direction tags are charged at about eight credits a line.
+      const estimate = todo.reduce((sum, [, text]) => sum + 8 + text.length, 0);
+      if (estimate > budget - spent) { console.log(`${group}: skipped, needs about ${estimate} credits and ${Math.floor(budget - spent)} remain`); continue; }
+      let cost = 0;
+      for (const [id, text] of todo) {
+        const clip = path.join(work, id + '.ogg');
+        let take;
+        try { take = await whisper(key, voice, text, clip, '24k'); } catch (error) { save(); throw error; }
+        cost += take.charged; spent += take.charged;
+        // A take that runs far longer than its text usually has the direction
+        // read aloud or a stray noise in it: listed for a listen, not rejected.
+        if (!(take.seconds > .4) || take.seconds > 4 + text.length * .16) odd.push(`${id} ${take.seconds.toFixed(1)}s "${text}"`);
+        fs.copyFileSync(clip, path.join(outDir, id + '.ogg'));
+        done.add(id);
+      }
+      save();
+      console.log(`${group}: ${todo.length} lines, ${cost} credits`);
+    }
+  } finally { fs.rmSync(work, {recursive: true, force: true}); }
+  writeIndex();
+  if (odd.length) console.log('Worth a listen:\n' + odd.join('\n'));
+  console.log(JSON.stringify({revoiced: done.size, of: lines.size, credits: spent}));
+}
 const existing = () => new Set(fs.existsSync(outDir) ? fs.readdirSync(outDir).filter(f => f.endsWith('.ogg')).map(f => f.slice(0, -4)) : []);
 const missing = () => { const have = existing(); return [...lines].filter(([id]) => !have.has(id)); };
 const writeIndex = () => fs.writeFileSync(path.join(outDir, 'index.txt'), [...existing()].filter(id => lines.has(id)).sort().join('\n') + '\n');
@@ -79,6 +174,7 @@ if (process.argv.includes('--check')) {
 }
 
 fs.mkdirSync(outDir, {recursive: true});
+if (process.argv.includes('--elevenlabs')) { await revoice(); process.exit(0); }
 if (process.argv.includes('--prune')) {
   for (const id of existing()) if (!lines.has(id)) fs.rmSync(path.join(outDir, id + '.ogg'));
 }
