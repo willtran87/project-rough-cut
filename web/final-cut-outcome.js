@@ -17,17 +17,18 @@ export function evidenceItems(r){
  return items;
 }
 export function finaleOutcome(r){
- const records=evidenceItems(r),documented=records.length>0;
- return {id:documented?'documented':'survived',title:documented?'The warnings survive':'Beyond the boundary',route:ROUTE_NAMES[r.route]||ROUTE_NAMES.direct,
+ const records=evidenceItems(r),documented=records.length>0,kept=documented&&r.recordChoice==='kept';
+ return {id:kept?'kept':documented?'documented':'survived',title:kept?'What you carried out':documented?'The warnings survive':'Beyond the boundary',route:ROUTE_NAMES[r.route]||ROUTE_NAMES.direct,
   survival:'You reached the public road. The assignment is over.',
   aftermath:'At daybreak, the insurer suspends the turf-telemetry pilot and withdraws Joe’s course-control access. You hand in your badge and leave his team.',
-  report:documented?'Your statement enters the incident file with the records you carried out. The review has more to work with than the wreckage.':'Your statement and the ruined machine trigger an inspection. Without recovered records, the earlier warnings remain undocumented.',
+  report:kept?'You keep the records. The review has your statement and the wreck, and nothing in writing. The papers go home with you, in case Joe’s name turns up on another course.':documented?'Your statement enters the incident file with the records you carried out. The review has more to work with than the wreckage.':'Your statement and the ruined machine trigger an inspection. Without recovered records, the earlier warnings remain undocumented.',
   records,art:'./assets/optimized/final-cut-story/06-public-road.webp',
   alt:'An employee lanyard on the safe public road; Joe and the disabled industrial mower remain behind a closed fence.'};
 }
 export const MASTERY=[
  {id:'unbroken',title:'Unbroken round',description:'Finish from arrival without a capture.',earned:r=>r.captures===0},
  {id:'borrowed-attention',title:'Borrowed attention',description:'Make Joe select a strip because of your golf ball, then escape.',earned:r=>r.stats.ballRedirects>0},
+ {id:'no-wasted-water',title:'No wasted water',description:'Escape without a capture, opening exactly three valves.',earned:r=>r.captures===0&&r.stats.floods===3},
  {id:'read-the-wake',title:'Read the wake',description:'Cross all three fairways and escape without a capture or thrown ball.',earned:r=>r.captures===0&&r.stats.balls===0&&r.stats.crossings.length===3},
 ];
 export function earnedMastery(r){return r.completed&&r.masteryEligible?MASTERY.filter(m=>m.earned(r)).map(m=>m.id):[];}

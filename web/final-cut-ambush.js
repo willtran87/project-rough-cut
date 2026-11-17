@@ -2,6 +2,7 @@ import {WALLS,FIXTURES,LANES,clamp,wrap,refuge,lineClear,concealed,segmentBox} f
 import {rigWallHit} from './final-cut-rig.js';
 import {AMBUSH_CORRIDOR_X} from './final-cut-route-layout.js';
 import {advanceRollingTravel} from './final-cut-travel.js';
+import {BLACKOUT} from './final-cut-basin-layout.js';
 
 export const AMBUSH={travelSpeed:18,travelAcceleration:12,cutSpeed:10.2,cutAcceleration:8.5,warning:1.05,lateWarning:.9,lift:.4};
 // Reeds screen the service roads and the ends of the clear eastern corridor.
@@ -15,7 +16,8 @@ export const AMBUSH_REEDS=[
  {id:'north-road-west',x:-23.5,y:96.8,w:41,d:2.6,h:5.2},
  {id:'north-road-east',x:23.5,y:96.8,w:41,d:2.6,h:5.2},
 ];
-export function attackWarning(r){return r.pump?AMBUSH.lateWarning:AMBUSH.warning;}
+// Each time the machine is held he gives a little less warning.
+export function attackWarning(r){return Math.max(.72,(r.pump?AMBUSH.lateWarning:AMBUSH.warning)-.08*(r.stage||0));}
 export function ambushTell(r){
  const j=r.rig,a=j.attack;if(!a||j.phase!=='announce'||r.won)return null;
  const reed=AMBUSH_REEDS.find(p=>p.id===a.entry);
@@ -23,7 +25,8 @@ export function ambushTell(r){
 }
 export function heardPlayer(r){const n=r.lastNoise;return n&&r.time-n.time<9?n:null;}
 export const reedsOcclude=(a,b)=>AMBUSH_REEDS.some(p=>segmentBox(a,b,p));
-export function seesPlayer(r){return !concealed(r)&&lineClear(r.rig,r.player)&&!reedsOcclude(r.rig,r.player)&&Math.hypot(r.rig.x-r.player.x,r.rig.y-r.player.y)<90;}
+// With the floodlights down he sees only what his own lamps reach.
+export function seesPlayer(r){const range=r.blackout&&r.blackout.until>r.time?BLACKOUT.sight:90;return !concealed(r)&&lineClear(r.rig,r.player)&&!reedsOcclude(r.rig,r.player)&&Math.hypot(r.rig.x-r.player.x,r.rig.y-r.player.y)<range;}
 export function observedPlayer(r){return r.lastSight&&r.time-r.lastSight.time<8?r.lastSight:null;}
 export function rememberNoise(r){
  if(r.player.speed>5&&!refuge(r.player))r.lastNoise={x:r.player.x,y:r.player.y,time:r.time};

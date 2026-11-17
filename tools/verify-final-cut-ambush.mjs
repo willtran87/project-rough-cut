@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRun,step,snapshot,readSave} from '../web/final-cut-sim.js';
@@ -6,7 +9,7 @@ import {WALLS,FIXTURES,isCut} from '../web/final-cut-course.js';
 import {rigWallHit} from '../web/final-cut-rig.js';
 const out='output/final-cut/ambush';fs.mkdirSync(out,{recursive:true});const cases=[];
 function fixture(entry){
- const r=createRun({checkpoint:1});r.mode='playing';r.water=0;r.pump=false;
+ const r=flooded(createRun({checkpoint:1}));r.mode='playing';r.water=0;r.pump=false;
  Object.assign(r.player,{x:['north','south'].includes(entry)?21.5:0,y:50,yaw:0});
  Object.assign(r.rig,{x:entry==='west'?-30:30,y:entry==='north'?66:26,yaw:entry==='west'?-Math.PI/2:Math.PI/2,lane:1,passSerial:['north','west'].includes(entry)?1:2,seen:true});
  const a=planAmbush(r,1,'observed player',false);assert.equal(a.entry,entry);
@@ -35,5 +38,5 @@ let r=fixture('north');const locked=JSON.stringify(r.rig.attack);for(let n=0;n<1
 r.mode='paused';const before=JSON.stringify(r);step(r,{},.25);assert.equal(JSON.stringify(r),before);
 r=fixture('west');Object.assign(r.player,{x:0,y:50,crouch:false});assert(!seesPlayer(r),'Service reeds block vision');
 Object.assign(r.player,{x:0,y:60});r.rig.phase='waiting';r.arrival.requested=false;for(let n=0;n<15;n++)step(r,{forward:1,sprint:true},1/60);assert(heardPlayer(r));
-r=fixture('east');Object.assign(r.player,{x:8,y:74});r.water=1;assert(wetFooting(r));r.rig.phase='waiting';r.arrival.requested=false;step(r,{forward:1},1/60);assert(Math.abs(r.player.speed-3.84*.78)<.01);
+r=fixture('east');Object.assign(r.player,{x:8,y:74});flooded(r);assert(wetFooting(r));r.rig.phase='waiting';r.arrival.requested=false;step(r,{forward:1},1/60);assert(Math.abs(r.player.speed-3.84*.78)<.01);
 fs.writeFileSync(out+'/rules.json',JSON.stringify({passed:true,cases,checks:['Four cardinal captures and walking reaction escapes at four frame rates','Full-size masonry clearance and bounded physical travel','Warning before every committed attack','No retarget after commitment; pause freezes everything','Vertical mowing persists after reload','Reeds block sight; sprinting creates a remembered sound','Saturated turf slows actual movement']},null,2));console.log(`PASS: ${cases.length} cardinal contact/escape cases, physical clearance, tells, saves, noise and wet footing.`);

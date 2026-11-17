@@ -101,7 +101,7 @@ export function createFinalCutIrrigation(scene,{materials,software=false}){
   const wheels=r.won?RIG_WHEELS.map(w=>worldPart(r.rig,w)):[];for(let i=0;i<4;i++)uniforms.wheels.value[i].set((wheels[i]?.x||0)-SWALE.x,-(wheels[i]?.y||0)+SWALE.y);
   cap.rotation.z=ruptured?-clamp((age-3.2)/.3,0,1)*1.35:0;
   let streamCount=0;
-  if(r.pump)for(let j=0;j<jetCount;j++){
+  if(r.pump&&(fill>0||ruptured))for(let j=0;j<jetCount;j++){
    if(j>=3&&(!ruptured||reduced))continue;
    const extent=j<3?clamp(fill*6,0,1):grow;
    for(let k=0;k<jetSegments;k++){
@@ -111,7 +111,7 @@ export function createFinalCutIrrigation(scene,{materials,software=false}){
    }
   }
   streams.count=streamCount;streams.visible=streamCount>0;streams.instanceMatrix.needsUpdate=true;
-  droplets.visible=r.pump&&!reduced;
+  droplets.visible=r.pump&&(fill>0||ruptured)&&!reduced;
   if(droplets.visible){for(let i=0;i<droplets.count;i++){const j=i%(ruptured?6:3),t=(clock*.7+i*.137)%1,p=pointOnJet(j,t*(j<3?clamp(fill*6,0,1):grow),pressure,jetDrop);p.x+=Math.sin(i*7)*t*.14;p.z+=Math.cos(i*3)*t*.2;dummy.position.copy(p);dummy.rotation.set(i,t*6,0);dummy.scale.setScalar((j<3?.025:.045)*(1-t*.4));dummy.updateMatrix();droplets.setMatrixAt(i,dummy.matrix);}droplets.instanceMatrix.needsUpdate=true;}
   tops.visible=bottoms.visible=r.won;let clods=0;
   if(r.won)for(let w=0;w<4;w++)for(let k=0;k<4;k++){

@@ -1,8 +1,11 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRun,step,snapshot,nearbyAction} from '../web/final-cut-sim.js';
 import {advanceUnease,uneaseFrame,createUnease} from '../web/final-cut-unease.js';
-const checks=[],run=()=>{const r=createRun({checkpoint:1});r.mode='playing';r.player.yaw=1.1;r.drama.phase='refuge';Object.assign(r.rig,{x:-30,y:66,phase:'turn',path:[{x:30,y:66}]});return r;};
+const checks=[],run=()=>{const r=flooded(createRun({checkpoint:1}));r.mode='playing';r.player.yaw=1.1;r.drama.phase='refuge';Object.assign(r.rig,{x:-30,y:66,phase:'turn',path:[{x:30,y:66}]});return r;};
 const wait=(r,seconds)=>{for(let i=0;i<seconds*120;i++)advanceUnease(r,1/120,!!nearbyAction(r));};
 let r=run();assert.equal(nearbyAction(r),null);wait(r,2.1);assert(r.unease.seen);assert(r.unease.age!==null);assert.equal(uneaseFrame(r).fold,0);assert.equal(uneaseFrame(r).wind,.003);wait(r,3.4);assert(uneaseFrame(r).fold>.9);assert.equal(uneaseFrame(r,true).fold,0);assert.equal(uneaseFrame(r,true).wind,null);wait(r,3);assert.equal(r.unease.age,null);wait(r,15);assert.equal(r.unease.age,null);checks.push('One six-second optional beat follows two settled seconds: wind drops before cloth moves; reduced motion stays static; no repeat');
 const restored=createRun(snapshot(r));assert(restored.unease.seen);assert.equal(restored.unease.age,null);assert.deepEqual(createUnease(null),{seen:false,settled:0,age:null});checks.push('Only the consumed flag survives retry/reload; legacy and malformed optional state default safely');

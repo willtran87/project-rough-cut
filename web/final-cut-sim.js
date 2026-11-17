@@ -19,6 +19,8 @@ import {advanceWheelTravel,advanceWheelFilm} from './final-cut-wheel-travel.js';
 import {evidenceFields,restoreFacts,runFacts} from './final-cut-outcome.js';
 import {createArrival,arrivalSpawn,advanceArrival,arrivalSnapshot,upgradeArrivalMotion} from './final-cut-arrival.js';
 import {ACCESS,OVERLOOK_ACCESS,OPENING_RIG} from './final-cut-arrival-layout.js';
+import {BASINS,BASIN_TIMING,BREAKER} from './final-cut-basin-layout.js';
+import {createBasins,basinSnapshot,stageOf,flowing,swaleArmed,valveState,openValve,advanceBasins,holdRemaining,basinUnder,basinById,valveActions,createBlackout,throwBreaker,breakerReady,blackedOut} from './final-cut-basins.js';
 import {ROAD_EXIT,EXIT_END,upgradeEndingMotion,createEnding,advanceEnding,restoreEnding,endingSnapshot,wreckFromSave,collapsePose} from './final-cut-ending.js';
 export {MOVEMENT} from './final-cut-course.js';
 export function createRun(saved={},route='direct'){
@@ -28,19 +30,20 @@ export function createRun(saved={},route='direct'){
  const seed=clamp(saved.seed|0,0,2),schedule=createSchedule(saved.schedule,seed,cp);
  const r={version:1,mode:'briefing',route:actualRoute,arrival,crossings:restoreCrossings(saved.crossings),time:0,elapsed:facts.elapsed,runId:facts.id,captures:facts.captures,masteryEligible:facts.eligible,checkpoint:cp,player:{pitch:0,...spawn,speed:0,walk:0,rearAngle:0},
  rig:{...OPENING_RIG,phase:'waiting',age:0,lane:0,direction:-1,deployment:0,speed:0,steering:0,passSerial:0,evidence:'mowing schedule',path:[],distance:0,reelAngle:0,seen:false},
- cut:Array.isArray(saved.cut)?[...new Set(saved.cut.filter(id=>SECTORS.some(s=>s.id===id)))]:[],pump:saved.pump===true||cp>=1,water:cp>=1?1:0,won,completed:won&&saved.completed===true,
+ cut:Array.isArray(saved.cut)?[...new Set(saved.cut.filter(id=>SECTORS.some(s=>s.id===id)))]:[],pump:saved.pump===true||cp>=1,water:0,gauge:0,basins:createBasins(saved.basins,won),blackout:createBlackout(),won,completed:won&&saved.completed===true,
  cutAreas:restoreCutAreas(saved.cutAreas),cutRevision:0,broken:Array.isArray(saved.broken)?[...new Set(saved.broken.filter(id=>BREAKABLES.some(b=>b.id===id)))]:[],breakTimes:{},openingSeen:cp>0||saved.openingSeen===true,opening:{ceremony:cp===0&&saved.openingSeen!==true,closePass:false,firstCut:false,silenceAt:null},
  ...evidenceFields(saved),priorEvidence:clamp(Number(saved.priorEvidence)||0,0,3),...restoreBallState(saved),lure:null,bellCooldown:0,saveSerial:0,events:[],message:'',messageTime:0,dialogue:'',dialogueTime:0,
- stats:{crossings:facts.crossings,nearMisses:0,lures:0,balls:facts.balls,ballRedirects:facts.ballRedirects,wait:0},drama:createDrama(saved.drama),stationReceipt:normalizeStationReceipt(saved.stationReceipt,actualRoute),announcement:createAnnouncement(saved.announcement,cp>0),unease:createUnease(saved.unease),failure:null,seed,schedule,attempt:1};
+ stats:{crossings:facts.crossings,nearMisses:0,lures:0,balls:facts.balls,ballRedirects:facts.ballRedirects,wait:0,floods:0,slips:0},drama:createDrama(saved.drama),stationReceipt:normalizeStationReceipt(saved.stationReceipt,actualRoute),announcement:createAnnouncement(saved.announcement,cp>0),unease:createUnease(saved.unease),failure:null,seed,schedule,attempt:1};
+ r.stage=stageOf(r);r.recordChoice=['filed','kept'].includes(saved.recordChoice)?saved.recordChoice:null;
  if(cp===1){r.rig.x=30;r.rig.y=50;r.rig.lane=1;r.rig.phase='announce';r.rig.deployment=0;}
  if(cp===0&&r.openingSeen)r.rig.phase='announce';
  r.ending=createEnding();
- if(r.won){const wreck=wreckFromSave(saved.ending);r.rig={...r.rig,...wreck,phase:'disabled',deployment:1};r.water=1;restoreEnding(r,saved.ending||{age:EXIT_END});r.rig.phase=r.ending.age<7?'bogged':'disabled';r.rig.age=r.ending.age;r.mode=r.completed?'complete':'briefing';}
+ if(r.won){const wreck=wreckFromSave(saved.ending);r.rig={...r.rig,...wreck,phase:'disabled',deployment:1};r.water=1;r.stage=2;restoreEnding(r,saved.ending||{age:EXIT_END});r.rig.phase=r.ending.age<7?'bogged':'disabled';r.rig.age=r.ending.age;r.mode=r.completed?'complete':'briefing';}
  r.engine=createEngineMotion(saved.engine,r);
  return r;
 }
 export function readSave(raw){try{const s=JSON.parse(raw);if(!s||s.version!==1||!Number.isInteger(s.checkpoint)||s.checkpoint<0||s.checkpoint>2)return null;return snapshot(createRun({...s,arrival:upgradeArrivalMotion(s.arrival),ending:upgradeEndingMotion(s.ending),runFacts:s.runFacts||{eligible:false}}));}catch{return null;}}
-export function snapshot(r){return {version:1,engine:{...r.engine},checkpoint:r.checkpoint,route:r.route,arrival:arrivalSnapshot(r),crossings:{...r.crossings},drama:dramaSnapshot(r),stationReceipt:r.stationReceipt?{...r.stationReceipt,stations:[...r.stationReceipt.stations]}:null,announcement:announcementSnapshot(r),unease:uneaseSnapshot(r),pump:r.pump,won:r.won,completed:r.completed,ending:endingSnapshot(r),cut:[...r.cut],cutAreas:(r.cutAreas||[]).map(a=>({...a})),broken:[...(r.broken||[])],openingSeen:r.openingSeen,...evidenceFields(r),...ballSnapshot(r),priorEvidence:r.priorEvidence,runFacts:runFacts(r),seed:r.seed,schedule:scheduleSnapshot(r)};}
+export function snapshot(r){return {version:1,engine:{...r.engine},checkpoint:r.checkpoint,route:r.route,arrival:arrivalSnapshot(r),crossings:{...r.crossings},drama:dramaSnapshot(r),stationReceipt:r.stationReceipt?{...r.stationReceipt,stations:[...r.stationReceipt.stations]}:null,announcement:announcementSnapshot(r),unease:uneaseSnapshot(r),pump:r.pump,basins:basinSnapshot(r),recordChoice:r.recordChoice,won:r.won,completed:r.completed,ending:endingSnapshot(r),cut:[...r.cut],cutAreas:(r.cutAreas||[]).map(a=>({...a})),broken:[...(r.broken||[])],openingSeen:r.openingSeen,...evidenceFields(r),...ballSnapshot(r),priorEvidence:r.priorEvidence,runFacts:runFacts(r),seed:r.seed,schedule:scheduleSnapshot(r)};}
 function event(r,type,data={}){r.events.push({type,time:r.time,...data});if(r.events.length>24)r.events.shift();}
 function say(r,text,t=4){r.message=text;r.messageTime=t;}
 function phase(r,name){if(name==='disengage'&&r.rig.phase==='pass'&&r.rig.evidence==='observed player')queueJoeLine(r,'missed');r.rig.phase=name;r.rig.age=0;event(r,'phase',{phase:name});}
@@ -48,7 +51,7 @@ export function nearbyAction(r){
  if(r.won)return r.mode==='aftermath'&&distance(r.player,ROAD_EXIT)<2.5?ROAD_EXIT:null;
  if(r.mode!=='playing'||r.ballAim.active)return null;
  const view=r.player.yaw+r.player.rearAngle;
- return [!r.arrival.requested&&OVERLOOK_ACCESS,!r.arrival.requested&&ACCESS,!r.pump&&PUMP,!r.loadLimit&&NOTE,BELL,...(r.ballCount<BALL_CAPACITY?BALL_BASKETS:[])].filter(Boolean).find(a=>{
+ return [!r.arrival.requested&&OVERLOOK_ACCESS,!r.arrival.requested&&ACCESS,!r.pump&&PUMP,!r.loadLimit&&NOTE,BELL,...(r.arrival.open?valveActions(r):[]),r.arrival.open&&breakerReady(r)&&BREAKER,...(r.ballCount<BALL_CAPACITY?BALL_BASKETS:[])].filter(Boolean).find(a=>{
   const d=distance(r.player,a),angle=wrap(Math.atan2(a.x-r.player.x,a.y-r.player.y)-view);
   return d<=2.3&&(d<.5||Math.abs(angle)<1.05)&&lineClear(r.player,a);
  })||ballAction(r);
@@ -58,14 +61,21 @@ function interact(r){
  if(a.id.startsWith('balls-')){r.ballCount=BALL_CAPACITY;r.saveSerial++;say(r,'Three practice balls. Hold Chip to aim; release to send one toward a different strip.',4);event(r,'ball-refill',{id:a.id});return;}
  if(a.id==='recover-ball'){r.balls=r.balls.filter(b=>b.id!==a.ballId);r.ballCount++;r.saveSerial++;say(r,'Golf ball recovered.',2);event(r,'ball-recovered');return;}
  if(a.id==='course-access'){r.arrival.requested=true;r.saveSerial++;say(r,'Final round requested. Stay behind the rail: it opens after the first cutting pass clears the walk.',7);return;}
+ if(a.id.startsWith('valve-')){
+  const b=basinById(a.basin),v=valveState(r,b);
+  if(!v.ok){say(r,v.note,4);return;}
+  openValve(r,b);r.stats.floods++;event(r,'valve',{id:b.id,x:b.valve.x,y:b.valve.y});queueJoeLine(r,'valve');
+  say(r,b.final?'The nursery swale is filling. Bring him across it before it drains: ring the bell, or let him see you on the west bank.':`The ${b.name} is filling. It will not stay wet for long. Bring him down this strip, then get to stone.`,6);return;
+ }
+ if(a.id==='breaker'){throwBreaker(r);event(r,'blackout');queueJoeLine(r,'blackout');say(r,'Every floodlight drops. He heard the breaker. Move while it is dark.',5);return;}
  if(a.id==='road'){r.completed=true;r.mode='complete';r.saveSerial++;event(r,'complete');return;}
  if(a.id==='pump'){
-  r.pump=true;r.checkpoint=1;r.saveSerial++;event(r,'pump');say(r,'Bypass open. Watch the nursery swale fill. The stone path stays dry.',6);
+  r.pump=true;r.checkpoint=1;r.saveSerial++;event(r,'pump');say(r,'Pump primed. Each hollow has a valve at its edge. One at a time, and the water will not stay.',7);
  }else if(a.id==='record'){
   r.evidence=true;r.loadLimit=true;r.saveSerial++;event(r,'evidence');say(r,'LOAD LIMIT: No heavy machinery on saturated turf. Record secured.',5);
  }else if(r.bellCooldown<=0){
-  r.lure={x:BELL.x,y:74,source:'groundskeeping bell',time:r.time,trap:r.water>=1};r.bellCooldown=3;r.stats.lures++;event(r,'bell');
-  say(r,r.water>=1?'The bell calls him across the flooded swale. Stay behind masonry.':'The bell calls him to the final fairway. Prepare the pump before the trap can work.',5);
+  r.lure={x:BELL.x,y:74,source:'groundskeeping bell',time:r.time,trap:swaleArmed(r)};r.bellCooldown=3;r.stats.lures++;event(r,'bell');
+  say(r,swaleArmed(r)?'The bell calls him across the swale. Get back to stone.':'The bell calls him to the final fairway. The swale is dry: it will not hold him.',5);
  }
 }
 function select(r){
@@ -74,8 +84,8 @@ function select(r){
  j.seen=seesPlayer(r);const observed=j.seen?r.player:observedPlayer(r);
  const scheduled=nextScheduledStrip(r);
  let lane=scheduled.lane,source='mowing schedule',trap=false;
- if(r.lure&&r.time-r.lure.time<50){lane=laneFor(r.lure);source=r.lure.source;trap=r.lure.trap===true;if(source==='golf ball'){r.stats.ballRedirects++;r.saveSerial++;event(r,'ball-selected',{lane});queueJoeLine(r,'distraction');}r.lure=null;}
- else if(!scheduled.opening&&observed&&observed.y>19){lane=laneFor(observed);source='observed player';trap=r.water>=1&&lane===2&&observed.x<-2&&Math.abs(observed.y-74)<5.4;}
+ if(r.lure&&r.time-r.lure.time<50){lane=laneFor(r.lure);source=r.lure.source;trap=source==='groundskeeping bell'&&swaleArmed(r);if(source==='golf ball'){r.stats.ballRedirects++;r.saveSerial++;event(r,'ball-selected',{lane});queueJoeLine(r,'distraction');}r.lure=null;}
+ else if(!scheduled.opening&&observed&&observed.y>19){lane=laneFor(observed);source='observed player';trap=swaleArmed(r)&&lane===2&&observed.x<2.5&&Math.abs(observed.y-74)<5.4;}
  else if(!scheduled.opening&&heardPlayer(r)){lane=laneFor(heardPlayer(r));source='running footsteps';}
  // Replay plans finish their advertised opening strips; real audible lures
  // still override them. After that, the ordinary perception rules resume.
@@ -117,6 +127,10 @@ function updateRig(r,dt){
  if(j.phase==='bogged'){
   if(j.age>7){phase(r,'disabled');say(r,'The reels have stopped. Follow the stone path to the public road.',6);}return;
  }
+ if(j.phase==='mired'){
+  // Held, not beaten: the reels are stopped and the chassis is still solid.
+  if(j.age>=BASIN_TIMING.mire){event(r,'tear-free',{x:j.x,y:j.y});say(r,r.stage>=2?'He tears free again. The nursery valve has pressure now: the swale will hold him.':'He tears free. One more hollow, then the swale.',6);phase(r,'pass');}return;
+ }
  if(j.phase==='reveal'){
   if(!deploy(j,clamp((j.age-2)/4,0,1))){blockedRig(r);return;}
   if(j.age>2&&!j.spoken){j.spoken=true;queueJoeLine(r,'opening');event(r,'reveal');say(r,'The lamps spread apart. One machine spans the strip.',4);}
@@ -136,7 +150,10 @@ function updateRig(r,dt){
   if(j.age>=(j.attack?attackWarning(r):4)){j.cutStartX=j.x;phase(r,'pass');j.passSerial++;event(r,'commit',{lane:j.lane,direction:j.direction,entry:j.attack?.entry});}return;
  }
  if(j.phase==='pass'){
-  const motion=j.attack?ambushMotion(j,dt):{...cuttingMotion(j.x,j.direction,dt,j.cutStartX),y:j.y},dx=motion.x-j.x,dy=motion.y-j.y;
+  // Half-flooded ground only drags at the wheels. Each time he has been
+  // held he drives the next charge harder.
+  const under=basinUnder(r),slipping=!!under&&under.state!=='spent'&&under.level>=BASIN_TIMING.wetAt&&under.level<1,pace=dt*(slipping?.4:1)*(j.attack?1+.12*r.stage:1);
+  const motion=j.attack?ambushMotion(j,pace):{...cuttingMotion(j.x,j.direction,pace,j.cutStartX),y:j.y},dx=motion.x-j.x,dy=motion.y-j.y;
   if(rigWallHit({...j,x:motion.x,y:motion.y},WALLS)){
    blockedRig(r);return;
   }
@@ -144,7 +161,11 @@ function updateRig(r,dt){
   for(const id of mow(r,previousX,previousY)){event(r,'cut',{id});if(!r.opening.firstCut){r.opening.firstCut=true;r.opening.silenceAt=r.time;event(r,'ceremony-stop');}}
   for(const b of BREAKABLES)if(!r.broken.includes(b.id)&&rigWallHit(j,[b])){r.broken.push(b.id);r.breakTimes[b.id]=r.time;event(r,'break-prop',{id:b.id,x:b.x,y:b.y});}
   if(!r.opening.closePass&&refuge(r.player)?.id==='bunker'&&j.lane===0&&distance(j,r.player)<13){r.opening.closePass=true;event(r,'protected-pass');say(r,'The stone holds. Watch the open ground behind his reels.',4);}
-  if(r.water>=1&&inside(j,SWALE,-1.5)){
+  if(slipping&&j.slipped!==under.basin.id+':'+j.passSerial){j.slipped=under.basin.id+':'+j.passSerial;r.stats.slips++;event(r,'slip',{id:under.basin.id,x:j.x,y:j.y});queueJoeLine(r,'slip');say(r,`The ${under.basin.name} was not full. His wheels slip, then bite.`,4);}
+  if(under&&under.state==='full'&&!under.basin.final){
+   r.basins[under.basin.id].state='spent';r.stage=stageOf(r);r.checkpoint=1;r.saveSerial++;j.miredBasin=under.basin.id;phase(r,'mired');event(r,'mired',{id:under.basin.id,stage:r.stage,x:j.x,y:j.y});queueJoeLine(r,r.stage>=2?'mired-second':'mired-first');say(r,'The hollow has him. He is stuck: cross while the reels are still.',5);return;
+  }
+  if(under&&under.state==='full'&&under.basin.final){
    r.won=true;r.checkpoint=2;r.ending=createEnding({wheelBase:-j.distance/RIG_WHEELS[0].radius,reelBase:j.reelAngle},j);r.saveSerial++;phase(r,'bogged');r.mode='aftermath';event(r,'victory');queueJoeLine(r,'bogging');say(r,'The ground gives way. You did it.',4);return;
   }
   if(motion.done){if(!j.attack)j.x=j.direction*RIG.headland;r.saveSerial++;phase(r,'disengage');}return;
@@ -181,18 +202,20 @@ function stepFixed(r,i,dt){
  for(let k=0;k<LANES.length;k++)if(before.y<LANES[k]+6&&p.y>=LANES[k]+6&&!r.stats.crossings.includes(k)){r.stats.crossings.push(k);r.saveSerial++;event(r,'crossing',{lane:k});}
  const cancelChip=i.use&&r.ballAim.active;if(i.use&&!cancelChip)interact(r);
  advanceBalls(r,{...i,cancelChip},dt,event,say);
- if(r.pump)r.water=Math.min(1,r.water+dt/6);
+ advanceBasins(r,dt,event);
  advanceArrival(r,dt);updateRig(r,dt);recordPlantTravel(r,beforeRig);advanceCrossings(r,event);
  const j=r.rig,target=j.phase==='turn'&&j.path[0]?Math.atan2(j.path[0].x-j.x,j.path[0].y-j.y):j.phase==='align'?(j.attack?.yaw??j.direction*Math.PI/2):j.yaw;
  const steer=clamp(wrap(target-j.yaw)*.65,-.65,.65),steering=(j.steering||0)+clamp(steer-(j.steering||0),-dt*1.5,dt*1.5);
  if(!j.turnPlan&&!(j.attack&&j.phase==='turn')&&steering!==j.steering&&(r.won||!rigWallHit({...j,steering},WALLS)))j.steering=steering;
  if(!['bogged','disabled'].includes(beforeRig.phase)){
   advanceWheelTravel(r,beforeRig,dt);
+  // Stuck wheels keep turning in the mud without carrying him anywhere.
+  if(j.phase==='mired'){const churn=(7-j.age*.5)*dt;j.wheelTravel=j.wheelTravel.map((d,k)=>d+churn*(k%2?1:.82));advanceWheelFilm({...r,won:false},RIG_WHEELS.map(()=>churn),dt);}
   if(r.won){r.ending.wheelBases=j.wheelTravel.map((d,k)=>wrap(-d/RIG_WHEELS[k].radius));r.ending.wheelFilm=j.wheelFilm.map(f=>({...f}));}
  }
  const contact=!r.won&&sweptRigHit(before,p,beforeRig,r.rig);
  if(contact&&!WALLS.some(w=>inside(p,w,.05))&&lineClear(p,r.rig))capture(r,contact);
- if(r.won){const spin=collapsePose(r.ending.age).wheelSpin;advanceEnding(r,dt);const churn=collapsePose(r.ending.age).wheelSpin-spin;advanceWheelFilm(r,RIG_WHEELS.map(w=>churn*w.radius),dt);}
+ if(r.won){const spin=collapsePose(r.ending.age).wheelSpin;advanceEnding(r,dt);if(r.ending.secured&&r.ending.joe.phase==='fence'&&!r.ending.spoke){r.ending.spoke=true;queueJoeLine(r,'fence');}const churn=collapsePose(r.ending.age).wheelSpin-spin;advanceWheelFilm(r,RIG_WHEELS.map(w=>churn*w.radius),dt);}
  advanceEngineMotion(r,dt);
  advanceDrama(r,dt);
  advanceAnnouncement(r,dt,!!nearbyAction(r));
@@ -205,10 +228,22 @@ export function step(r,input={},dt=1/60){
  const motionScale=movementStartScale(r.player,input.strafe||0,input.forward||0,Math.min(dt,.25),!!input.acceleration);
  for(let k=0;k<n&&['playing','aftermath'].includes(r.mode);k++)stepFixed(r,{...input,motionScale,lookX:(input.lookX||0)/n,lookY:(input.lookY||0)/n,use:k===0&&input.use,chipStart:k===0&&input.chipStart,chipRelease:k===n-1&&input.chipRelease},delta);
 }
-export function objective(r){if(r.won)return r.ending.secured?'You are safe. Follow the road sign to leave, or look back.':'Reach the public road';if(!r.arrival.reached)return 'Follow the service walk up to the protected overlook.';if(!r.arrival.requested)return 'Find the public road. When ready, use either final-round control.';if(!r.arrival.open)return 'Stay behind the rail. It opens after the first pass clears the walk.';if(!r.pump)return 'Cross behind the mower. Reach the pump shelter.';if(r.water<1)return 'The swale is filling. Find the starter’s pavilion.';return crossingObjective(r);}
+export function objective(r){if(r.won)return r.ending.secured?'You are safe. Follow the road sign to leave, or look back.':'Reach the public road';if(!r.arrival.reached)return 'Follow the service walk up to the protected overlook.';if(!r.arrival.requested)return 'Find the public road. When ready, use either final-round control.';if(!r.arrival.open)return 'Stay behind the rail. It opens after the first pass clears the walk.';if(!r.pump)return 'Cross behind the mower. Reach the pump shelter and prime the pump.';return floodObjective(r);}
+function floodObjective(r){
+ const j=r.rig,wet=flowing(r),held=`Held ${r.stage} of 2.`;
+ if(j.phase==='mired')return 'He is stuck. The reels are still: cross now.';
+ if(j.trapApproach&&['turn','align','announce','pass'].includes(j.phase))return 'His next pass crosses the swale. Get clear and stay clear.';
+ if(wet){const s=r.basins[wet.id],left=Math.ceil(holdRemaining(r,wet));
+  if(wet.final)return s.state==='full'?`The swale is full for ${left}s. Ring the bell out on the bank, or let him see you there.`:'The swale is filling. Call him across it: the bell on the bank, or your own face.';
+  return s.state==='full'?`The ${wet.name} is full for ${left}s. Bring him down this strip. ${held}`:`The ${wet.name} is filling. Be seen on this strip, then get to stone. ${held}`;}
+ if(r.stage<2)return `Open a hollow’s valve as he lifts his reels: he hears it and comes down that strip. ${held}`;
+ return 'The nursery valve has pressure. Open it on the swale’s west bank, then be the bait.';
+}
 export function threat(r){
  const j=r.rig,relative=j.x-r.player.x,side=relative<0?'left':'right';
  if(r.won)return j.phase==='bogged'?'THE RIG IS SINKING':'THE REELS HAVE STOPPED';
+ if(j.phase==='mired')return 'THE RIG IS STUCK · REELS STOPPED · MOVE';
+ if(blackedOut(r)&&!['announce','pass'].includes(j.phase))return 'FLOODLIGHTS DOWN · HE SEES ONLY WHAT IS CLOSE';
  const tell=ambushTell(r);if(tell)return `GRASS RUSTLING · ${tell.entry.toUpperCase()} · ${j.trapApproach?'FLOODED SWALE':'GET CLEAR'}`;
  if(j.attack&&j.phase==='pass')return `CHARGE FROM ${j.attack.entry.toUpperCase()} · ${j.trapApproach?'FLOODED SWALE':'MOVE ACROSS HIS PATH'}`;
  if(j.attack&&['turn','align'].includes(j.phase))return 'JOE IS IN THE REEDS · WATCH AND LISTEN';
@@ -219,4 +254,7 @@ export function threat(r){
  if(['announce','pass'].includes(j.phase))return `${j.phase==='announce'?'ALIGNING':'CUTTING'} · ${['NEAR','MIDDLE','FINAL'][j.lane]} FAIRWAY · ${side.toUpperCase()}`;
  if(j.phase==='waiting')return !r.arrival.reached?'SERVICE WALK · FOLLOW THE RAMP':r.arrival.requested?'JOE IS STARTING THE MACHINE · STAY BEHIND THE RAIL':'THE OVERLOOK IS SAFE · BEGIN WHEN READY';if(j.phase==='reveal')return 'THE CUTTING WINGS ARE OPENING';return 'REELS LIFTED · JOE IS TURNING';
 }
-export function diagnostics(r){return {mode:'final_cut_'+r.mode,coordinates:'metres; x east, y towards road; yaw 0 north',seconds:+r.time.toFixed(2),engine:{...r.engine},player:{...r.player},arrival:{...r.arrival,joe:{...r.arrival.joe}},rig:{...r.rig,travel:r.rig.travel?{time:r.rig.travel.time,distance:r.rig.travel.distance,duration:r.rig.travel.route.duration,length:r.rig.travel.route.length}:null,turnPlan:r.rig.turnPlan?{segment:r.rig.turnPlan.index,segments:r.rig.turnPlan.segments.length,at:r.rig.turnPlan.at,speed:r.rig.turnPlan.speed,shift:r.rig.turnPlan.shift}:null,path:r.rig.path.map(p=>({...p}))},ambush:{tell:ambushTell(r),noise:heardPlayer(r),wetFooting:wetFooting(r)},objective:objective(r),action:nearbyAction(r),shelter:refuge(r.player)?.name||null,cut:[...r.cut],cutAreas:r.cutAreas,broken:r.broken,opening:r.opening,crossings:crossingState(r),openingSeen:r.openingSeen,pump:r.pump,water:r.water,won:r.won,completed:r.completed,ending:r.ending,checkpoint:r.checkpoint,route:r.route,cutPlan:{...cutPlan(r),...r.schedule},...evidenceFields(r),runFacts:runFacts(r),balls:r.ballCount,ballAim:{active:r.ballAim.active,power:r.ballAim.power,target:r.ballAim.plan?.target,blocked:r.ballAim.plan?.blocked,reason:r.ballAim.plan?.reason},worldBalls:r.balls.map(b=>({id:b.id,x:b.x,y:b.y,z:b.z,age:b.age,landed:b.landed})),failure:r.failure,stationReceipt:r.stationReceipt,announcement:{...r.announcement,board:championshipBoard(r)},unease:{...r.unease},drama:{phase:r.drama.phase,pressure:r.drama.pressure,heard:r.drama.heard,active:r.drama.active,pending:r.drama.pending},stats:r.stats};}
+// After the first cycles the routine status lines are dropped: lamps, reeds and
+// sound carry them. What remains is what the player could not otherwise know.
+export function threatEssential(r){const j=r.rig;return j.passSerial<3||r.won||j.phase==='mired'||blackedOut(r)||!!j.clearanceWarning||!!ambushTell(r)||(!!j.attack&&j.phase==='pass');}
+export function diagnostics(r){return {mode:'final_cut_'+r.mode,coordinates:'metres; x east, y towards road; yaw 0 north',seconds:+r.time.toFixed(2),engine:{...r.engine},player:{...r.player},arrival:{...r.arrival,joe:{...r.arrival.joe}},rig:{...r.rig,travel:r.rig.travel?{time:r.rig.travel.time,distance:r.rig.travel.distance,duration:r.rig.travel.route.duration,length:r.rig.travel.route.length}:null,turnPlan:r.rig.turnPlan?{segment:r.rig.turnPlan.index,segments:r.rig.turnPlan.segments.length,at:r.rig.turnPlan.at,speed:r.rig.turnPlan.speed,shift:r.rig.turnPlan.shift}:null,path:r.rig.path.map(p=>({...p}))},ambush:{tell:ambushTell(r),noise:heardPlayer(r),wetFooting:wetFooting(r)},objective:objective(r),action:nearbyAction(r),shelter:refuge(r.player)?.name||null,cut:[...r.cut],cutAreas:r.cutAreas,broken:r.broken,opening:r.opening,crossings:crossingState(r),openingSeen:r.openingSeen,pump:r.pump,water:r.water,stage:r.stage,basins:Object.fromEntries(BASINS.map(b=>[b.id,{...r.basins[b.id]}])),blackout:{...r.blackout,active:blackedOut(r)},won:r.won,completed:r.completed,ending:r.ending,checkpoint:r.checkpoint,route:r.route,cutPlan:{...cutPlan(r),...r.schedule},...evidenceFields(r),runFacts:runFacts(r),balls:r.ballCount,ballAim:{active:r.ballAim.active,power:r.ballAim.power,target:r.ballAim.plan?.target,blocked:r.ballAim.plan?.blocked,reason:r.ballAim.plan?.reason},worldBalls:r.balls.map(b=>({id:b.id,x:b.x,y:b.y,z:b.z,age:b.age,landed:b.landed})),failure:r.failure,stationReceipt:r.stationReceipt,announcement:{...r.announcement,board:championshipBoard(r)},unease:{...r.unease},drama:{phase:r.drama.phase,pressure:r.drama.pressure,heard:r.drama.heard,active:r.drama.active,pending:r.drama.pending},stats:r.stats};}

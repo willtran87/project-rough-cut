@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRun,step,snapshot} from '../web/final-cut-sim.js';
@@ -11,7 +14,7 @@ for(const direction of [-1,1]){
   const p=cuttingMotion(start,direction,seconds);near(p.x,start+direction*travel);near(p.speed,speed);near(cuttingTime(p.x,direction),seconds);
  }
  for(const hz of [30,60,120,144]){
-  const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:-10,y:15});Object.assign(r.rig,{x:start,y:26,yaw:direction*Math.PI/2,direction,phase:'announce',age:0,lane:0,deployment:0});
+  const r=flooded(createRun({checkpoint:1}));r.mode='playing';Object.assign(r.player,{x:-10,y:15});Object.assign(r.rig,{x:start,y:26,yaw:direction*Math.PI/2,direction,phase:'announce',age:0,lane:0,deployment:0});
   let wait=0;while(r.rig.phase!=='pass'&&wait++<hz*5)step(r,{},1/hz);assert.equal(r.rig.phase,'pass');
   const began=r.time;let lastSpeed=r.rig.speed,lastX=r.rig.x,maximumAcceleration=0,peak=0,frames=0;
   while(r.rig.phase==='pass'&&frames++<hz*20){
@@ -41,5 +44,5 @@ for(const hz of [30,60,120,144]){
 }
 // Real trap approaches at all three rates reach the saturated swale at full cutting speed;
 // braking at the far service road cannot prematurely stop the earned finale.
-for(const hz of [30,60,120]){const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:-16,y:86});Object.assign(r.rig,{x:30,y:74,yaw:-Math.PI/2,direction:-1,phase:'announce',age:0,lane:2,deployment:0});let frames=0,approachSpeed=0;while(!r.won&&frames++<hz*20){if(r.rig.phase==='pass')approachSpeed=r.rig.speed;step(r,{},1/hz);}assert(r.won);near(approachSpeed,7.2);assert.equal(r.checkpoint,2);assert(r.rig.x>11&&r.rig.x<13);}
+for(const hz of [30,60,120]){const r=flooded(createRun({checkpoint:1}));r.mode='playing';Object.assign(r.player,{x:-16,y:86});Object.assign(r.rig,{x:30,y:74,yaw:-Math.PI/2,direction:-1,phase:'announce',age:0,lane:2,deployment:0});let frames=0,approachSpeed=0;while(!r.won&&frames++<hz*20){if(r.rig.phase==='pass')approachSpeed=r.rig.speed;step(r,{},1/hz);}assert(r.won);near(approachSpeed,7.2);assert.equal(r.checkpoint,2);assert(r.rig.x>11&&r.rig.x<13);}
 fs.mkdirSync('output/final-cut/cutting-drive',{recursive:true});const report={passed:true,duration:CUT_DURATION,runs};fs.writeFileSync('output/final-cut/cutting-drive/rules.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));

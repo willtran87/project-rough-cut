@@ -2,10 +2,13 @@ import {distance,lineClear,refuge,RIG,clamp} from './final-cut-course.js';
 import {approachingCut} from './final-cut-messages.js';
 import {JOE_LINES} from './final-cut-dialogue-lines.js';
 const lines=new Map(JOE_LINES.map(line=>[line.id,line]));
+const LINE_REST=45;
 export function createDrama(saved={}){saved=saved&&typeof saved==='object'?saved:{};return {heard:Array.isArray(saved.heard)?[...new Set(saved.heard.filter(id=>lines.has(id)))]:[],cooldown:Number.isFinite(saved.cooldown)?clamp(saved.cooldown,0,14):0,pending:null,active:null,phase:'arrival',pressure:0,quiet:0,lastRefuge:null};}
 export const dramaSnapshot=r=>({heard:[...r.drama.heard],cooldown:r.drama.cooldown});
 export function queueJoeLine(r,id){
- const line=lines.get(id),d=r.drama;if(!line||d.heard.includes(id))return false;
+ // A line can return once it has rested, so Joe is not silent on a retry.
+ // `heard` still records every line this save has ever played.
+ const line=lines.get(id),d=r.drama;if(!line||r.time-(d.last?.[id]??-Infinity)<LINE_REST)return false;
  if(d.pending&&lines.get(d.pending.id).priority>line.priority)return false;
  d.pending={id,expires:r.time+line.window};return true;
 }
@@ -40,7 +43,7 @@ export function advanceDrama(r,dt){
  if(!line.essential&&(d.cooldown>0||r.messageTime>0||r.ballAim.active||r.player.focus))return;
  const range=line.essential?70:lineClear(r.player,r.rig)?45:24;
  if(distance(r.player,r.rig)>range)return;
- d.pending=null;d.active={id:line.id,started:r.time,duration:line.duration+.25};d.heard.push(line.id);d.cooldown=14;r.saveSerial++;
+ d.pending=null;d.active={id:line.id,started:r.time,duration:line.duration+.25};if(!d.heard.includes(line.id))d.heard.push(line.id);(d.last??={})[line.id]=r.time;d.cooldown=14;r.saveSerial++;
  r.dialogue=`Joe: “${line.text}”`;r.dialogueTime=d.active.duration;
 }
 // Score supports actual exposure; it never changes threat selection or motion.

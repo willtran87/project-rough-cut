@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from '../web/vendor/three/three.module.js';
@@ -17,7 +20,7 @@ for(const hz of [30,60,120,144]){
 checks.push('30/60/120/144 Hz: committed cutting drives the reel; moving headland turns leave it braked; wheel rotation cancels actual forward travel at ground contact');
 const snapshots=[];
 for(const hz of [30,60,120,144]){
- const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:0,y:92});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',deployment:1,distance:12.34,reelAngle:1.2});tick(r,.25,hz);assert(r.won);angle(r.ending.wheelBase,-r.rig.distance/RIG_WHEELS[0].radius);angle(r.ending.reelBase,r.rig.reelAngle);
+ const r=flooded(createRun({checkpoint:1}));r.mode='playing';Object.assign(r.player,{x:0,y:92});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',deployment:1,distance:12.34,reelAngle:1.2});tick(r,.25,hz);assert(r.won);angle(r.ending.wheelBase,-r.rig.distance/RIG_WHEELS[0].radius);angle(r.ending.reelBase,r.rig.reelAngle);
  for(const wait of [0,3,3,1,4]){
   tick(r,wait,hz);const pose=machineryPose(r),copy=createRun(readSave(JSON.stringify(snapshot(r)))),restored=machineryPose(copy);
   angle(pose.wheel,restored.wheel);angle(pose.reel,restored.reel);near(Math.cos(pose.wheel),Math.cos(restored.wheel));near(Math.cos(pose.reel),Math.cos(restored.reel));

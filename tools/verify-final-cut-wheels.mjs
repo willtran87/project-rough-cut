@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{if(r.basins)Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {advanceWheelTravel,wheelSurface,wheelSupport,cleanWheelFilm} from '../web/final-cut-wheel-travel.js';
@@ -22,11 +25,11 @@ checks.push('Circular tread climbs the actual 12 cm paving edge before its axle 
 const r={rig:{x:35,y:40,yaw:0,distance:0,steering:0},water:0};
 for(let k=0;k<120;k++)advanceWheelTravel(r,{...r.rig},1/120);assert.deepEqual(r.rig.wheelFilm,cleanWheelFilm());
 for(let k=0;k<120;k++){const before={...r.rig};r.rig.y+=.1;advanceWheelTravel(r,before,1/120);}assert(r.rig.wheelFilm.every(f=>f.dust>.5&&f.mud===0));
-Object.assign(r.rig,{x:8,y:72});r.water=1;
+Object.assign(r.rig,{x:8,y:72});flooded(r);
 for(let k=0;k<120;k++){const before={...r.rig};r.rig.y+=.02;advanceWheelTravel(r,before,1/120);}assert(r.rig.wheelFilm.every(f=>f.mud>.2&&f.wet>.9));
 checks.push('Actual slab footprints select gravel/turf/mud and dry paving; movement deposits dirt, stationary dry wheels stay clean');
 for(const hz of [30,60,120,144]){
- const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:0,y:92});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',deployment:1,distance:12.34,wheelTravel:[12,13,14,15],wheelFilm:cleanWheelFilm([{mud:.3},{dust:.4},{grass:.2},{wet:.7}])});
+ const r=flooded(createRun({checkpoint:1}));r.mode='playing';Object.assign(r.player,{x:0,y:92});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',deployment:1,distance:12.34,wheelTravel:[12,13,14,15],wheelFilm:cleanWheelFilm([{mud:.3},{dust:.4},{grass:.2},{wet:.7}])});
  for(let k=0;k<hz/4;k++)step(r,{},1/hz);assert(r.won);assert.equal(new Set(r.ending.wheelBases).size,4);
  for(const wait of [0,3,4,5]){for(let k=0;k<wait*hz;k++)step(r,{},1/hz);const copy=createRun(readSave(JSON.stringify(snapshot(r))));machineryPose(r).wheels.forEach((a,k)=>{near(Math.sin(a),Math.sin(machineryPose(copy).wheels[k]));near(Math.cos(a),Math.cos(machineryPose(copy).wheels[k]));});assert.deepEqual(copy.ending.wheelFilm,r.ending.wheelFilm);}
  r.mode='paused';const before=JSON.stringify(snapshot(r));step(r,{},.25);assert.equal(JSON.stringify(snapshot(r)),before);
