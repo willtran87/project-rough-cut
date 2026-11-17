@@ -92,5 +92,5 @@ export function buildFinalCutPumpHardware({box,mesh,unit,cylinder,scene,material
   for(const side of [-1,1]){box('metal',17+side*.17,.11,-y,.045,.17,.18);box('brass',17+side*.17,.201,-y,.05,.025,.18);parts+=2;}
  }
  let state={fill:0,open:false,needle:2.3};
- return {update(r){const fill=clamp(r.water,0,1);needle.rotation.z=2.3-fill*4.6;indicator.material=materials[fill>=1?'mint':r.pump?'amber':'dark'];state={fill,open:r.pump,needle:needle.rotation.z};},stats:()=>({...state,parts,flanges,bolts,gaugePixels:128}),dispose(){scene.remove(root);texture.dispose();dialMaterial.dispose();dialGeometry.dispose();needleGeometry.dispose();needleMaterial.dispose();hub.geometry.dispose();indicatorGeometry.dispose();}};
+ return {update(r){const fill=clamp(r.gauge??r.water,0,1);needle.rotation.z=2.3-fill*4.6;indicator.material=materials[fill>=1?'mint':r.pump?'amber':'dark'];state={fill,open:r.pump,needle:needle.rotation.z};},stats:()=>({...state,parts,flanges,bolts,gaugePixels:128}),dispose(){scene.remove(root);texture.dispose();dialMaterial.dispose();dialGeometry.dispose();needleGeometry.dispose();needleMaterial.dispose();hub.geometry.dispose();indicatorGeometry.dispose();}};
 }

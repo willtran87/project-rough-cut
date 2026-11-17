@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRun,step,snapshot,readSave,nearbyAction} from '../web/final-cut-sim.js';
@@ -5,7 +8,7 @@ import {solid,gateContact,distance} from '../web/final-cut-course.js';
 import {collapsePose} from '../web/final-cut-ending.js';
 const checks=[],tick=(r,t,i={},hz=60)=>{for(let k=0;k<t*hz;k++)step(r,i,1/hz);};
 for(const hz of [30,60,120]){
- const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:0,y:92,yaw:0});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,phase:'pass',deployment:1,direction:-1});tick(r,.1,{},hz);assert(r.won);assert.equal(r.ending.joe.phase,'cab');const won=readSave(JSON.stringify(snapshot(r)));assert(won.won);assert.equal(won.ending.wreck.x,r.rig.x);
+ const r=flooded(createRun({checkpoint:1}));r.mode='playing';Object.assign(r.player,{x:0,y:92,yaw:0});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,phase:'pass',deployment:1,direction:-1});tick(r,.1,{},hz);assert(r.won);assert.equal(r.ending.joe.phase,'cab');const won=readSave(JSON.stringify(snapshot(r)));assert(won.won);assert.equal(won.ending.wreck.x,r.rig.x);
  tick(r,4,{},hz);assert(r.ending.ruptured);assert(!r.ending.shutdown);assert(collapsePose(r.ending.age).sink>.5);
  tick(r,3,{forward:1},hz);assert(r.player.y>102);assert(r.ending.secured);tick(r,2,{},hz);assert.equal(r.ending.gate,1);assert(r.ending.shutdown);assert.equal(r.ending.joe.phase,'dismount');
  const paused=structuredClone(r.ending);r.mode='paused';tick(r,10,{},hz);assert.deepEqual(r.ending,paused);r.mode='aftermath';

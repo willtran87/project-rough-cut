@@ -7,7 +7,7 @@ import {rigHit} from './final-cut-rig.js';
 // only repose the render camera after the normal view is computed: the
 // simulation, saves, timers and panel text never see them. Wall-clock timed,
 // so they are skipped under reduced motion and the deterministic test clock.
-export const CUE_MS=Object.freeze({start:1400,caught:1500,complete:17500});
+export const CUE_MS=Object.freeze({start:1400,caught:1500,complete:17500,mired:2600,bogged:5200});
 // The escape closes the whole game: crane over the 18th, settle on the public
 // road, then the floodlight banks go down in this order as first light comes.
 export const FINALE=Object.freeze({crane:5.5,settle:[6.2,11.2],banksOff:[8.6,9.9,11.2,12.5],bankFade:.55,dawn:[11.4,17]});
@@ -47,7 +47,7 @@ export function createFinalCutCameraCues(now=()=>performance.now()){
   finale:()=>finale,
   apply(camera,r,prefs){
    if(!kind){settleFinale();return false;}
-   const t=progress(),mode=kind==='start'?'playing':kind;
+   const t=progress(),mode=kind==='start'||kind==='mired'?'playing':kind==='bogged'?'aftermath':kind;
    if(t>=1||prefs.reduced||prefs.manual||r.mode!==mode){kind=null;settleFinale();return false;}
    applied++;
    if(kind==='start'){
@@ -55,6 +55,14 @@ export function createFinalCutCameraCues(now=()=>performance.now()){
     const stoop=1-outCubic(t);camera.position.y-=.5*stoop;camera.rotation.x-=.36*stoop;camera.fov*=1-.1*stoop;return true;
    }
    playerView(r);const base=prefs.fov||58,s=t*CUE_MS[kind]/1000;camera.clearViewOffset();
+   if(kind==='mired'||kind==='bogged'){
+    // The machine going down is what the round is for: the eye is turned onto
+    // it and closes in, then is handed back. The viewpoint never leaves the
+    // player and movement stays live throughout.
+    const j=r.rig,total=CUE_MS[kind]/1000,hold=smoother(clamp01(s/.7))*(1-smoother(clamp01((s-(total-.8))/.8)));
+    target.set(j.x,1.7,-j.y);look.lookAt(eye,target,up);to.setFromRotationMatrix(look);
+    camera.position.copy(eye);camera.quaternion.copy(from).slerp(to,hold*(kind==='bogged'?1:.8));camera.fov=base*(1-(kind==='bogged'?.38:.24)*hold);return true;
+   }
    if(kind==='caught'){
     // Impact, then a slow hang: the view is wrenched up onto Joe while the
     // body is thrown clear and the legs go. The lens lurches at the machine as

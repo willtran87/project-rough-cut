@@ -3,6 +3,7 @@ import {ARRIVAL_WALLS,ARRIVAL_SPAWNS,ACCESS,OVERLOOK_ACCESS,ACCESS_FENCE,ACCESS_
 import {ROUTE_WALLS,FORK_BASKET,FORK_SIGN} from './final-cut-route-layout.js';
 import {rigHit,CUT_HALF_WIDTH,RIG_BODY,RIG_WHEELS} from './final-cut-rig.js';
 import {refugeFurniture,refugeFurnitureSolids} from './final-cut-refuge-layout.js';
+import {VALVES,BREAKER} from './final-cut-basin-layout.js';
 export const SAVE_KEY='rough-cut.final-cut.v1';
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -34,13 +35,15 @@ export const REFUGE_TIMBER_POSTS=REFUGES.flatMap(s=>[-1,1].flatMap(side=>[-1,1].
 export const REFUGE_FURNITURE=refugeFurniture(REFUGES);
 export const REFUGE_FURNITURE_SOLIDS=refugeFurnitureSolids(REFUGE_FURNITURE);
 const SIGHT_OBSTACLES=[...WALLS,...REFUGE_TIMBER_POSTS,...REFUGE_FURNITURE_SOLIDS];
-export const PUMP={id:'pump',x:8,y:39,label:'Open the irrigation bypass'};
-export const BELL={id:'bell',x:-9.6,y:85,label:'Ring the groundskeeping bell'};
+export const PUMP={id:'pump',x:8,y:39,label:'Prime the irrigation pump'};
+// The bell stands out on the open bank between the pavilion and the swale:
+// ringing it means leaving stone.
+export const BELL={id:'bell',x:-6,y:80.4,label:'Ring the groundskeeping bell'};
 export const NOTE={id:'record',x:11.5,y:36.5,label:'Take the load-limit record'};
 export const BALL_BASKETS=[{id:'balls-bunker',x:-12,y:15},{id:'balls-pump',x:12.5,y:39.5},{id:'balls-pavilion',x:-18,y:86},FORK_BASKET].map(b=>({...b,label:'Refill golf balls'}));
 export const SWALE={x:8,y:74,w:12,d:12};
 export const GATE={x:0,y:94,w:4,d:.1,h:2.6};
-export const FIXTURES=[...REFUGE_TIMBER_POSTS,...REFUGE_FURNITURE_SOLIDS,{id:'pump-machine',...PUMP,w:1,d:.6,h:1.6},{id:'record-stand',...NOTE,w:.9,d:.55,h:1.4},{...ACCESS,w:.4,d:.4,h:1.2},{...OVERLOOK_ACCESS,id:'overlook-control',w:.4,d:.4,h:.9},FORK_SIGN,...BALL_BASKETS.map(b=>({...b,w:.6,d:.6,h:.55}))];
+export const FIXTURES=[...REFUGE_TIMBER_POSTS,...REFUGE_FURNITURE_SOLIDS,{id:'pump-machine',...PUMP,w:1,d:.6,h:1.6},{id:'record-stand',...NOTE,w:.9,d:.55,h:1.4},{...ACCESS,w:.4,d:.4,h:1.2},{...OVERLOOK_ACCESS,id:'overlook-control',w:.4,d:.4,h:.9},FORK_SIGN,...BALL_BASKETS.map(b=>({...b,w:.6,d:.6,h:.55})),...VALVES,BREAKER];
 export const ROAD_FENCE=[{x:-13.5,y:94,w:23,d:.1,h:2.6},{x:13.5,y:94,w:23,d:.1,h:2.6}];
 export const BREAKABLES=[
  {id:'hospitality-table',kind:'table',x:8,y:26,w:2.4,d:1.6,h:1},

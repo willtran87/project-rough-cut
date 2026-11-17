@@ -1,3 +1,6 @@
+// The swale no longer floods by itself at the pump checkpoint: these fixtures
+// start with it already full and held, as the old rules left it.
+const flooded=r=>{Object.assign(r.basins.swale,{state:'full',level:1,age:-1e6});r.water=1;r.stage=2;return r;};
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRun,step,snapshot,readSave,objective,threat} from '../web/final-cut-sim.js';
@@ -6,7 +9,7 @@ import {traverse} from './probe-final-cut.mjs';
 
 const checks=[],selections=[],runs=[];
 function fixture({side=1,x=-5,y=74,water=1,crouch=false}={}){
- const r=createRun({checkpoint:1});r.mode='playing';r.water=water;
+ const r=flooded(createRun({checkpoint:1}));r.mode='playing';r.water=water;if(water<1)Object.assign(r.basins.swale,{state:water>0?'draining':'dry',level:water,age:0});
  Object.assign(r.player,{x,y,yaw:0,crouch});
  // Observe from the playable side of the new reed screen, then finish the
  // pass behind it. Selection may remember that sighting, not see through grass.
@@ -23,7 +26,7 @@ for(const side of [-1,1])for(const hz of [30,60,120]){
  step(r,{},1/hz);assert.equal(r.rig.evidence,'observed player');assert(r.rig.trapApproach);
  assert.equal(r.rig.path.at(-1).y,74);assert.equal(r.rig.path.at(-1).x,30);
  assert.equal(r.events.filter(e=>e.type==='visual-lure').length,1);
- assert.match(objective(r),/pavilion/i);
+ assert.match(objective(r),/swale/i);
  const selected={side,hz,path:structuredClone(r.rig.path),player:{x:r.player.x,y:r.player.y}};
  // Walk out of the intended strip. The approach must keep its selected
  // destination even after Joe loses line of sight inside the refuge.
@@ -40,7 +43,7 @@ for(const side of [-1,1])for(const hz of [30,60,120]){
  selected.seconds=r.time;selected.wreck={x:r.rig.x,y:r.rig.y};selections.push(selected);
 }
 checks.push('Both headlands at 30/60/120 Hz: actual sight selects one approach; walking retreat and lost sight do not retarget it; physical bogging saves victory');
-for(const config of [{x:-16,y:86},{x:-5,y:69.2,crouch:true},{x:0,y:74},{water:0},{water:.5}]){
+for(const config of [{x:-16,y:86},{x:-5,y:69.2,crouch:true},{x:3,y:74},{water:0},{water:.5}]){
  const r=fixture(config),hidden=!lineClear(r.rig,r.player)||concealed(r);
  step(r,{crouch:!!config.crouch},1/60);assert(!r.rig.trapApproach);
  assert(!r.events.some(e=>e.type==='visual-lure'));if(hidden)assert.notEqual(r.rig.evidence,'observed player');

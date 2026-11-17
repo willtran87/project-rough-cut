@@ -37,6 +37,8 @@ import {championshipBoard} from './final-cut-announcement.js';
 import {finishCourseSurfaces} from './final-cut-surfaces.js';
 import {createFinalCutLandscape} from './final-cut-landscape.js';
 import {createFinalCutIrrigation} from './final-cut-irrigation.js';
+import {createFinalCutBasinArt} from './final-cut-basin-art.js';
+import {BREAKER} from './final-cut-basin-layout.js';
 import {buildFinalCutGrandstand} from './final-cut-grandstand.js';
 import {createFinalCutCourseContour} from './final-cut-course-contour.js';
 import {createFinalCutMachinery,machineryPose} from './final-cut-machinery.js';
@@ -229,6 +231,11 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  // Nursery paving is part of GROUND_SLABS.
  sign('NURSERY SWALE\nNO HEAVY MACHINERY',17,1.4,-83,2.6,.75,'#ded3a9','#172c27',scene,'warning');cyl('metal',17,.6,-83,.05,1.2);
  const irrigation=createFinalCutIrrigation(scene,{materials,software});
+ // One valve post at the edge of each floodable hollow, and the breaker that
+ // drops the floodlights. Their beacons and water are driven by run state.
+ const basinArt=createFinalCutBasinArt(scene,{materials,software});
+ for(const v of basinArt.valves){cyl('metal',v.x,.85,-v.y,.06,1.7);box('dark',v.x,1.02,-v.y,.24,.16,.24);}
+ box('dark',BREAKER.x,1.15,-BREAKER.y,.3,.7,.5);box('red',BREAKER.x+.17,1.22,-BREAKER.y,.05,.3,.1);
  // Bypass hardware and connected pipe provide a visible cause for flooding.
  const pumpHardware=buildFinalCutPumpHardware({box,mesh,unit,cylinder,scene,materials});
  const lever=new THREE.Group();lever.position.set(PUMP.x,1.1,-PUMP.y+.42);scene.add(lever);box('brass',0,.18,0,.07,.6,.08,lever);box('red',0,.45,0,.4,.09,.12,lever);
@@ -432,7 +439,9 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   }
   clothPoints.needsUpdate=true;clothGeometry.computeVertexNormals();
   const collapse=collapsePose(r.ending.age,prefs.reduced);
-  body.position.y=r.won?-collapse.sink+collapse.shudder:0;body.rotation.z=r.won?collapse.roll:0;
+  // Held in a hollow: the chassis settles and strains, then heaves out.
+  const mire=j.phase==='mired'?Math.min(1,j.age/1.1)*(1-Math.max(0,(j.age-5.6)/.9)):0;
+  body.position.y=r.won?-collapse.sink+collapse.shudder:-.2*mire+(mire&&!prefs.reduced?Math.sin(j.age*36)*.022*mire:0);body.rotation.z=r.won?collapse.roll:.05*mire;
   const lampState=rigLampState(r);materials.wingLamp.color.copy(lampDark).lerp(lampWarm,lampState.marker);materials.headLamp.color.copy(lampDark).lerp(lampWarm,lampState.beam);
   const mechanics=machineryPose(r,prefs.reduced);centerReel.rotation.x=mechanics.reel;
   for(const {wing,reel,side}of wings){wing.rotation.z=side*(1-j.deployment)*1.15+(r.won?side*collapse.wing*(side<0?1:.35):0);reel.rotation.x=mechanics.reel;}
@@ -442,7 +451,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   const acting=cabPerformance(r,prefs.reduced);steering.rotation.set(CAB.wheel.tilt,0,acting.wheel);cutControl.rotation.x=acting.lever;
   joeActor.update(r,prefs.reduced);joeFinish.update(r);maintenanceLight.update(r);cabLighting.update(r);refugeLighting.update(r,camera);
   actorCulling.update();
-  irrigation.update(r,prefs.reduced);
+  irrigation.update(r,prefs.reduced);basinArt.update(r,prefs.reduced);
   pumpHardware.update(r);
   ambushReeds.update(r,prefs.reduced);verges.update(r,prefs.reduced);
   const drift=cameraCues.seconds();rough.update(r,prefs.reduced,drift);lastRun=r;
