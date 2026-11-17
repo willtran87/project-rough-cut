@@ -51,18 +51,19 @@ import { createEnvironmentGuidance } from './environment-guidance.js?v=20261114-
 let objectiveCues=null,environmentGuidance=null;
 import { createSoftwareFrameBudget } from './software-frame-budget.js?v=20261112-stable-budget';
 import { courseLanternPairs, lanternPhase, lanternFlicker } from './lantern-layout.js?v=20261113-symmetric-28';
+import {lanternBlackout,siteBrightness} from './lantern-blackout.js?v=20261118-dread';
 import * as THREE from './vendor/three/three.module.js';
 import {stationFacing} from './station-facing.js';
 import * as PixelArt from './pixel-art.js';
 import { createParallax } from './parallax-scene.js?v=20261114-moon-direction';
 import { createIllustratedProps } from './illustrated-props.js';
 import { detailedGroundMaterial, finishPaths, paintApproachWear } from './terrain-finish.js?v=20261114-approach-wear';
-import { createPixelWorld } from './pixel-world-props.js?v=20261114-hedge-surface';
+import { createPixelWorld } from './pixel-world-props.js?v=20261118-dread';
 import { woodlandHeight } from './pixel-landscape.js';
 import {courseWoodlandPose} from './course-woodland-composition.js';
 import { createJoeModel } from './joe-model.js?v=20261113-mower-finish';
 import { prepareRendering, yieldPreparation, waitForGPU, preparationStats, prepareStaticBuffers } from './render-preparation.js';
-import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261117-close-grip';
+import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261118-dread';
 import { createPixelWater } from './pixel-water.js?v=20261113-runoff-contact';
 import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-light';
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
@@ -177,7 +178,7 @@ function label(text,width=2,color='#e8dcb6'){
 function sign(text,x,z,width=2.3,height=1.6){
   baked('box',0x675842,x,height/2,z,.09,height,.09);const m=label(text,width);m.position.set(x,height,z);staticRoot.add(m);
 }
-let glowTexture=null,glowBillboards=null,glowFloor=null,glowAnchors=[],glowFloorPhases=[];
+let glowTexture=null,glowBillboards=null,glowFloor=null,glowAnchors=[],glowFloorPhases=[],glowFloorSites=[],lanternSites=[];
 function lanternGlow(parent,x,y,z,size=.6){
   if(!pixelStyle)return;
   if(!glowTexture){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d',{willReadFrequently:true}),gradient=g.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'rgba(255,220,150,.55)');gradient.addColorStop(.18,'rgba(255,182,83,.20)');gradient.addColorStop(1,'rgba(255,153,59,0)');g.fillStyle=gradient;g.fillRect(0,0,64,64);glowTexture=new THREE.CanvasTexture(c);glowTexture.colorSpace=THREE.SRGBColorSpace;glowTexture.userData.sharedPixelArt=true;}
@@ -195,7 +196,7 @@ function batchGlows(){
   if(pools.length){const floor=glowFloor=instances(pools.length,.22);glowFloorPhases=[];pools.forEach((o,i)=>{
     // The source plane carries its dimensions in geometry, not Object3D.scale.
     matrix.copy(o.matrixWorld).scale(new THREE.Vector3(o.geometry.parameters.width,o.geometry.parameters.height,1));floor.setMatrixAt(i,matrix);
-    const p=o.getWorldPosition(new THREE.Vector3());glowFloorPhases.push(lanternPhase(p.x,p.z));floor.setColorAt(i,particleColor.setRGB(1,1,1));
+    const p=o.getWorldPosition(new THREE.Vector3());glowFloorPhases.push(lanternPhase(p.x,p.z));glowFloorSites.push({x:p.x,z:p.z});floor.setColorAt(i,particleColor.setRGB(1,1,1));
   });floor.instanceMatrix.needsUpdate=true;floor.instanceColor.setUsage(THREE.DynamicDrawUsage);}
   for(const o of [...sprites,...pools]){o.removeFromParent();if(!o.isSprite)o.geometry.dispose();o.material.dispose();}
   stats.glows={sources:sprites.length+pools.length,batches:Number(!!sprites.length)+Number(!!pools.length)};
@@ -203,10 +204,11 @@ function batchGlows(){
 function updateGlows(frame){
   if(!glowBillboards)return;
   const time=frame?.time||0,steady=!frame||frame.reducedMotion;
-  pixelWorld?.updateLanterns(time,steady);
-  glowAnchors.forEach((a,i)=>{a.intensity=lanternFlicker(time,a.phase,steady);const shimmer=.97+.03*a.intensity;matrix.compose(a.position,camera.quaternion,particleScale.copy(a.scale).multiplyScalar(shimmer));glowBillboards.setMatrixAt(i,matrix);glowBillboards.setColorAt(i,particleColor.setRGB(a.intensity,a.intensity,a.intensity));});
+  const out=lanternSites.length&&frame?.fx?.lanternsOut?lanternBlackout(lanternSites,frame.fx.lanternsOut,time,steady):null;
+  pixelWorld?.updateLanterns(time,steady,out&&lanternSites.map((s,i)=>({x:s.x,z:s.z,level:out[i]})));
+  glowAnchors.forEach((a,i)=>{a.intensity=lanternFlicker(time,a.phase,steady)*(out?siteBrightness(lanternSites,out,a.position.x,a.position.z):1);const shimmer=.97+.03*a.intensity;matrix.compose(a.position,camera.quaternion,particleScale.copy(a.scale).multiplyScalar(shimmer));glowBillboards.setMatrixAt(i,matrix);glowBillboards.setColorAt(i,particleColor.setRGB(a.intensity,a.intensity,a.intensity));});
   glowBillboards.instanceMatrix.needsUpdate=true;glowBillboards.instanceColor.needsUpdate=true;
-  if(glowFloor){glowFloorPhases.forEach((phase,i)=>{const value=lanternFlicker(time,phase,steady);glowFloor.setColorAt(i,particleColor.setRGB(value,value,value));});glowFloor.instanceColor.needsUpdate=true;}
+  if(glowFloor){glowFloorPhases.forEach((phase,i)=>{const value=lanternFlicker(time,phase,steady)*(out?siteBrightness(lanternSites,out,glowFloorSites[i].x,glowFloorSites[i].z):1);glowFloor.setColorAt(i,particleColor.setRGB(value,value,value));});glowFloor.instanceColor.needsUpdate=true;}
 }
 function buildUnderstory(data){
   if(!pixelStyle)return;
@@ -530,7 +532,7 @@ async function buildLandmarks(data,cancelled=()=>false){
   stats.entryGate=courseEntryGate.stats();
   if(pixelVolume)for(const side of [-1,1])for(let i=0;i<44;i++){pixelWorld.boundaryRope(side*13.1,1-i*2.7);if(i%8===7){await yieldPreparation(cancelled);if(cancelled())return;}}
 }
-function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];moonRim=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
+function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];moonRim=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];glowFloorSites=[];lanternSites=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
 function build(data){
   courseEntryGate=null;stats.entryGate=null;
   arrivalPhone=null;
@@ -573,6 +575,7 @@ function build(data){
     };
     const pairs=courseLanternPairs(routes,{clear:clearLamp});stats.pathLanterns={spacing:12,openingSpacing:10,offset:1.25,lampsPerSite:2,maxPairs:14,pairs};
     let lampSlice=performance.now();
+    lanternSites=pairs.flatMap(pair=>pair.lamps.map(p=>({x:p.x,z:p.z})));
     for(const pair of pairs)for(const p of pair.lamps){
       if(pixelVolume){pixelWorld.lantern(p.x,p.z);}else if(pixelStyle){illustrated.add(staticRoot,'rough-cut-path-lantern-atlas-v1',[135,35,345,555],p.x,p.z,.35,.6,{kind:'guide-lantern'});}else{baked('box',0x5c6751,p.x,.25,p.z,.07,.5,.07);baked('box',0xc7d7aa,p.x,.5,p.z,.15,.1,.15);}
       if(!pixelVolume)lanternGlow(staticRoot,p.x,.36,p.z,.32);

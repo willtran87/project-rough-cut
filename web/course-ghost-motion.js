@@ -62,7 +62,7 @@ export function createCourseGhostMotion({blockers=[],ponds=[],height=()=>0}={}){
 // sighting never borrows the old opacity or jumps across the screen.
 export function createGhostDissolve(){
   let current=null,lastTime=null;
-  return {sample(key,motion,alpha,time,{enabled=true,reduced=false,continueMotion=null}={}){
+  return {sample(key,motion,alpha,time,{enabled=true,reduced=false,continueMotion=null,fast=false}={}){
     if(!enabled||lastTime!==null&&time<lastTime){current=null;lastTime=time;if(!enabled)return null;}
     const dt=lastTime===null?0:Math.max(0,time-lastTime);lastTime=time;
     if(!current&&key&&motion)current={key,motion:{...motion},alpha:0,retiring:false};
@@ -82,7 +82,8 @@ export function createGhostDissolve(){
       if(age>=1.25){current=null;return null;}
     }else{
       current.motion={...motion};
-      const target=clamp(alpha,0,.75),rate=target>current.alpha?.42:.55;
+      // A glimpse behind the player has to land inside a short glance.
+      const target=clamp(alpha,0,.75),rate=target>current.alpha?(fast?2.6:.42):.55;
       current.alpha+=clamp(target-current.alpha,-rate*dt,rate*dt);
     }
     return {key:current.key,motion:current.motion,alpha:current.alpha};
