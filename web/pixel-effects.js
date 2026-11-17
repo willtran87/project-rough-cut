@@ -2,7 +2,7 @@ import * as THREE from './vendor/three/three.module.js';
 import * as Art from './pixel-art.js';
 import { woodlandHeight } from './pixel-landscape.js';
 import { createGhostJoe } from './ghost-joe.js?v=20261113-visual-pass';
-import {createCourseGhostMotion,createGhostDissolve} from './course-ghost-motion.js';
+import {createCourseGhostMotion,createGhostDissolve} from './course-ghost-motion.js?v=20261118-dread';
 import { createGhostSightings, createGhostFeedback } from './ghost-motion.js?v=20261108-ghost-scheduling';
 import { createOriginalFeatures } from './original-features.js?v=20261108-exit-cues';
 import { courseLook } from './course-atmosphere.js';
@@ -286,7 +286,7 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
     }
     const motionOptions={reduced:frame.reducedMotion,player:{x:px,z:pz}};
     let movement=motionKey&&modelAnchor?ghostMotion.sample(motionKey,modelAnchor,ghostTime,motionOptions):null;
-    const presentation=ghostDissolve.sample(motionKey,movement,apparitionAlpha,ghostTime,{enabled:f.apparitions!==false&&ghost.stats().ready,reduced:frame.reducedMotion,continueMotion:(key,time)=>ghostMotion.advance(key,time,motionOptions)});
+    const presentation=ghostDissolve.sample(motionKey,movement,apparitionAlpha,ghostTime,{enabled:f.apparitions!==false&&ghost.stats().ready,reduced:frame.reducedMotion,fast:!!active?.rear,continueMotion:(key,time)=>ghostMotion.advance(key,time,motionOptions)});
     movement=presentation?.motion||null;modelAnchor=movement;apparitionAlpha=presentation?.alpha||0;motionKey=presentation?.key||null;
     ghost.show(modelAnchor,apparitionAlpha,movement);
     audioGhost=modelAnchor&&apparitionAlpha>.08?{key:motionKey,x:modelAnchor.x,z:modelAnchor.z,phase:movement?.behaviorPhase||'passing',gesture:movement?.gesture||null,gazeGesture:movement?.gazeGesture||null,gazeVariant:movement?.gazeVariant||0}:null;

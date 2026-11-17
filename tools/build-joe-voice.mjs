@@ -43,11 +43,12 @@ async function allLines() {
   const game = fs.readFileSync(path.join(web, 'game.js'), 'utf8');
   const from = game.indexOf('const BASE_JOE_CAPTURE_LINES'), to = game.indexOf('const JOE_DIALOGUE_LIBRARY');
   if (from < 0 || to < from) throw Error('Could not find the base Joe lines in web/game.js');
-  const base = vm.runInNewContext(game.slice(from, to) + ';({capture:BASE_JOE_CAPTURE_LINES,barks:BASE_JOE_STATE_BARKS})', {});
+  const base = vm.runInNewContext(game.slice(from, to) + ';({capture:BASE_JOE_CAPTURE_LINES,barks:BASE_JOE_STATE_BARKS,dread:typeof JOE_DREAD_LINES==="undefined"?{}:JOE_DREAD_LINES})', {});
   // Grouped, most clearly heard first. A line that appears in two groups
   // belongs to the earlier one. The order only matters to --elevenlabs, which
   // revoices whole groups in turn so a group is never left in two voices.
   const groups = {
+    dread: strings(base.dread),
     defeat: strings(defeat.DEFEAT_LINES),
     chapterDefeat: strings(defeat.CHAPTER_DEFEAT_LINES),
     backNineStory: strings(backNine.JOE_STORY_CUES),

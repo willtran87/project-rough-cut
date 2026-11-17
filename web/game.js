@@ -1318,6 +1318,12 @@ import { createJoeVoice } from './joe-voice.js';
       "We are closing this epic!",
     ],
   };
+  // Lines for Night Order's dread beats. tools/build-joe-voice.mjs voices them.
+  const JOE_DREAD_LINES = {
+    toll: ["One.", "Two.", "Three."],
+    wait: "I'll wait here.",
+    keys: "I can hear your keys.",
+  };
   const JOE_DIALOGUE_LIBRARY =
     window
       .ROUGH_CUT_JOE_DIALOGUE || {
@@ -1876,12 +1882,22 @@ import { createJoeVoice } from './joe-voice.js';
     y: DRAIN_EXIT.y + 1,
   };
   const SPRINT_REVIEW_RADIUS = 13;
-  const SPRINT_REVIEW_FILING_REDUCTION = 0.18;
-  const QUIET_LOG_DURATION = 1.6;
+  const SPRINT_REVIEW_FILING_REDUCTION = 0.6;
+  const QUIET_LOG_DURATION = 5;
+  // A field check is work done standing at its station, in three audible
+  // beats. Each beat sharpens Joe's attention, and the finished check is the
+  // signal he comes to verify. Walking off abandons the work but keeps the
+  // beats already done.
+  const STATION_WORK_BEATS = 3;
+  const STATION_WORK = {
+    "audit-bell": { seconds: 6, quietSeconds: 6, verb: "RINGING", beat: "TOLL" },
+    "field-log": { seconds: 4.5, quietSeconds: QUIET_LOG_DURATION, verb: "STAMPING", beat: "STAMP" },
+    "release-review": { seconds: 7.5, quietSeconds: 5, verb: "SIGNING", beat: "PAGE" },
+  };
   const REVIEW_LIGHTS_OUT_DURATION = 18;
   const ESCAPE_FILING_DURATION = {
-    shed: 1.35,
-    drain: 1.7,
+    shed: 4.2,
+    drain: 5.2,
   };
   const ESCAPE_SEAL_DURATION = 1.2;
   const SPRINKLER_SOAK_ZONES = [
@@ -4982,9 +4998,13 @@ import { createJoeVoice } from './joe-voice.js';
     const appeal =
       emergencyAppealState();
     if (hole.quietLog) {
+      const working = NIGHT_ORDER_ACTIONS.find(a => a.id === (hole.quietLog.id || "field-log")), percent = Math.round(hole.quietLog.progress / hole.quietLog.duration * 100);
+      const quietStamp = hole.quietLog.quiet && working.id === "field-log";
       return interactionPromptResult(
-        `QUIET FILING ${Math.round(hole.quietLog.progress / hole.quietLog.duration * 100)}% // STAY CROUCHED + STILL`,
-        "field-log", "FIELD LOG", null, "active", "FILING QUIETLY",
+        quietStamp ? `QUIET FILING ${percent}% // STAY CROUCHED + STILL`
+          : hole.quietLog.quiet ? `${STATION_WORK[working.id].verb} ${percent}% // STAY STILL`
+          : `${STATION_WORK[working.id].verb} ${percent}% // ${STATION_WORK[working.id].beat} ${hole.quietLog.beats}/${STATION_WORK_BEATS} // STAND YOUR GROUND`,
+        working.id, working.shortLabel, null, "active", quietStamp ? "FILING QUIETLY" : "WORKING",
       );
     }
     if (hole.ballAim.active) {
@@ -13965,6 +13985,14 @@ import { createJoeVoice } from './joe-voice.js';
     );
     if (!held && glance.amount < 0.002) {
       glance.amount = 0;
+    }
+    const dread = state.hole.dread;
+    if (held && glance.amount > .85 && !dread?.glimpseChecked) { nightOrderDread().glimpseChecked = true; maybeStageRearGlimpse(); }
+    if (!held && dread) {
+      dread.glimpseChecked = false;
+      // Turn back and it is gone.
+      const shown = state.hole.horrorDirector?.manifestation;
+      if (shown?.rear) shown.seconds = Math.min(shown.seconds, .12);
     }
   }
 
@@ -23569,6 +23597,7 @@ import { createJoeVoice } from './joe-voice.js';
   function completeNightOrderAction(
     action,
     preparedQuiet = false,
+    worked = false,
   ) {
     const hole = state.hole;
     if (
@@ -23579,13 +23608,22 @@ import { createJoeVoice } from './joe-voice.js';
     ) {
       return false;
     }
-    if (action.id === "field-log" && stationPlan(action).active && !preparedQuiet) {
-      if (!hole.quietLog) hole.quietLog = { progress: 0, duration: QUIET_LOG_DURATION };
+    if (!preparedQuiet && !worked) {
+      // Using a station starts the work; updateQuietLog finishes or abandons it.
+      if (!hole.quietLog) {
+        const work = STATION_WORK[action.id];
+        const quiet = action.id !== "audit-bell" && stationPlan(action).active;
+        const banked = quiet ? 0 : Math.min(STATION_WORK_BEATS - 1, hole.stationBeats?.[action.id] || 0);
+        const duration = quiet ? work.quietSeconds : work.seconds;
+        hole.quietLog = { id: action.id, quiet, progress: duration * banked / STATION_WORK_BEATS, duration, beats: banked };
+      }
       return true;
     }
     hole.nightOrderActionsCompleted.push(
       action.id,
     );
+    if (action.id === "audit-bell" && worked) queueTollEcho(3);
+    if ([2, 3].includes(completedNightOrderActionCount())) sendJoeAhead(completedNightOrderActionCount());
     recordNightfallCheck(hole.engagement.experience.nightfall,action.id,hole.elapsed);
     hole.nightOrderActivation = {
       id: action.id,
@@ -24930,7 +24968,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function movementSoundReception() {
-    const h=state.hole,openRange=18+clamp(h.noise,0,1)*58;
+    const h=state.hole,openRange=18+clamp(h.noise,0,1)*58+(h.keyJingle?DREAD.keyRange:0);
     const distance=worldDistance(state.player,h.joe);
     // Quiet or already out-of-range movement cannot become audible through
     // cover. Skip the geometry query in these common cases.
@@ -26601,7 +26639,14 @@ import { createJoeVoice } from './joe-voice.js';
       const patrolTarget =
         JOE_PATROL_ROUTE[joe.patrolIndex];
       joe.patrolPause = Math.max(0, joe.patrolPause - dt);
-      if (joe.patrolPause <= 0 && !(hole.engagement.experience.firstImpression.workRemaining>0 && !actionableSight && !directSound && !distractionActive && hole.detection<.12)) {
+      const waitPost = lyingInWaitPost();
+      if (waitPost) {
+        // Gone ahead: he walks to the post and stands there, engine idling.
+        if (worldDistance(joe, waitPost) > DREAD.wait.reach) {
+          joe.patrolSpeed = (joe.patrolSpeed ?? 13) + (joe.brain.roam.speed * 1.08 - (joe.patrolSpeed ?? 13)) * (1 - Math.exp(-dt * 3));
+          moveJoeToward(waitPost, joe.patrolSpeed, dt);
+        }
+      } else if (joe.patrolPause <= 0 && !(hole.engagement.experience.firstImpression.workRemaining>0 && !actionableSight && !directSound && !distractionActive && hole.detection<.12)) {
         const patrolStartX = joe.x, patrolStartY = joe.y;
         const cruise=joe.brain.roam.speed;
         const desiredSpeed=cruise*lerp(.78,1,clamp((worldDistance(joe,patrolTarget)-7.5)/9,0,1));
@@ -52908,19 +52953,164 @@ import { createJoeVoice } from './joe-voice.js';
       !activeInteractionPromptOwner() && !h.quietLog && !h.escapeFiling.active;
   }
 
+  // Night Order dread: Joe answers the bell, the course goes darker with each
+  // check, his engine sometimes dies and leaves only silence, the work fights
+  // back, he goes ahead to wait, the key gives away a runner, and sometimes
+  // something stands behind you when you glance back. Presentation and
+  // pressure only: none of it can capture the player by itself.
+  const DREAD = {
+    echoDelay: 1.15,
+    stall: { seconds: 10, cooldown: 75, chancePerSecond: 1 / 28, minDistance: 30, maxDistance: 120 },
+    snag: { seconds: { "audit-bell": 2.2, "field-log": 1.8, "release-review": 2.6 },
+      copy: { "audit-bell": "THE ROPE CATCHES", "field-log": "THE STAMP PAD IS DRY", "release-review": "THE PEN SKIPS" } },
+    wait: { seconds: 45, release: 30, reach: 4.5 },
+    keyRange: 34,
+    glimpse: { cooldown: 40, minElapsed: 30, minJoeDistance: 45, chance: .45, seconds: 1.8 },
+  };
+  function freshDread() {
+    return { echo: null, darkAt: null, darkLevel: 0, stall: null, stallCooldown: 25, snagged: [], wait: null,
+      keyWarned: false, keyChime: 0, glimpseCooldown: 0, glimpses: 0, glimpseChecked: false };
+  }
+  function nightOrderDread() { return state.hole.dread ??= freshDread(); }
+  function joeWhisper(line, seconds = 2.4) {
+    const h = state.hole;
+    h.joeBark = line; h.joeBarkContext = "dread"; h.joeBarkTimer = seconds;
+    joeVoice().say(line);
+  }
+  /** The bell is answered from the dark, a beat after each toll. */
+  function queueTollEcho(count) {
+    const d = nightOrderDread(), line = JOE_DREAD_LINES.toll[count - 1];
+    if (line) d.echo = { line, at: state.hole.elapsed + DREAD.echoDelay };
+  }
+  /** Work that fights back, once per station, when Joe is listening hardest. */
+  function maybeSnagStation(filing, action) {
+    const h = state.hole, d = nightOrderDread();
+    if (filing.quiet || filing.snagged || d.snagged.includes(action.id)) return;
+    const near = worldDistance(h.joe, state.player) < 90, listening = h.joe.mode === "investigate" || h.joe.alert > .45;
+    const roll = hash(h.variantIndex * 31 + NIGHT_ORDER_ACTIONS.indexOf(action) * 7 + (h.attempt || 0) * 13);
+    if (!(near || listening) && roll > .4) return;
+    filing.snagged = true; d.snagged.push(action.id);
+    filing.duration += DREAD.snag.seconds[action.id];
+    playNoiseBurst(.12, .02, 620, "bandpass", 0, .03);
+    setHoleMessage(`${DREAD.snag.copy[action.id]} — the work slips back. Keep going or break away.`, 2.6);
+  }
+  /** After the second check Joe stops following and goes ahead to wait. */
+  function sendJoeAhead(completed) {
+    const h = state.hole, d = nightOrderDread();
+    let target = null, label = "";
+    if (completed === 2) {
+      const remaining = NIGHT_ORDER_ACTIONS.find(a => !nightOrderActionCompleted(a));
+      if (remaining) { target = remaining; label = remaining.shortLabel; }
+    } else if (completed === 3) {
+      const key = !h.keyCollected ? activeKeyPoint() : null, valve = !h.sprinklerUsed ? activeSprinklerPoint() : null;
+      const options = [key && { point: key, label: "THE SHED KEY" }, valve && { point: valve, label: "THE DRAIN VALVE" }].filter(Boolean);
+      const best = options.sort((a, b) => worldDistance(a.point, state.player) - worldDistance(b.point, state.player))[0];
+      if (best) { target = best.point; label = best.label; }
+    }
+    if (!target) return;
+    // Stand off the station itself, on open ground he can reach.
+    let post = null;
+    for (const radius of [16, 22, 12, 28]) for (let k = 0; k < 12 && !post; k++) {
+      const a = k * Math.PI / 6, point = { x: target.x + Math.cos(a) * radius, y: target.y + Math.sin(a) * radius * .72 };
+      if (joeNavigationPointClear(point)) post = point;
+    }
+    if (!post) return;
+    d.wait = { x: post.x, y: post.y, label, until: h.elapsed + DREAD.wait.seconds, arrived: false };
+    setHoleMessage(`Joe has stopped following. He is going ahead — toward ${label}.`, 3.6);
+  }
+  function lyingInWaitPost() {
+    const h = state.hole, w = h.dread?.wait;
+    if (!w) return null;
+    if (h.elapsed > w.until || worldDistance(state.player, w) < DREAD.wait.release || h.escapeFiling.active) { h.dread.wait = null; return null; }
+    return w;
+  }
+  /** 0 while his engine is dead, easing back in as it catches. */
+  function mowerStallGain() {
+    const s = state.hole?.dread?.stall;
+    if (!s) return 1;
+    const t = s.total - s.seconds;
+    if (t < .45) return 1 - t / .45 + .35 * Math.max(0, Math.sin(t * 40)) * (1 - t / .45);
+    if (s.seconds < .5) return Math.max(0, (.5 - s.seconds) / .5) * (.6 + .4 * Math.max(0, Math.sin(s.seconds * 36)));
+    return 0;
+  }
+  function updateNightOrderDread(dt, moving) {
+    const h = state.hole, d = nightOrderDread(), completed = completedNightOrderActionCount();
+    if (d.echo && h.elapsed >= d.echo.at) { joeWhisper(d.echo.line, 2); d.echo = null; }
+    // The engine dies and the course goes quiet. He is still out there.
+    d.stallCooldown = Math.max(0, d.stallCooldown - dt);
+    if (d.stall) {
+      d.stall.seconds = Math.max(0, d.stall.seconds - dt);
+      if (h.joe.mode === "chase" && d.stall.seconds > .5) d.stall.seconds = .5;
+      if (d.stall.seconds <= 0) { d.stall = null; d.stallCooldown = DREAD.stall.cooldown; setHoleMessage("THE ENGINE CATCHES.", 1.8); }
+    } else if (completed >= 1 && d.stallCooldown <= 0 && h.elapsed > 40 && h.joe.mode !== "chase" && !h.quietLog && !h.escapeFiling.active) {
+      const distance = worldDistance(h.joe, state.player);
+      if (distance > DREAD.stall.minDistance && distance < DREAD.stall.maxDistance && hash(Math.floor(h.elapsed * 4) * 17 + h.variantIndex) < DREAD.stall.chancePerSecond / 4) {
+        d.stall = { seconds: DREAD.stall.seconds, total: DREAD.stall.seconds };
+        setHoleMessage("His engine cuts out. You cannot hear him now.", 3);
+      }
+    }
+    // The checks put the course's lanterns out, a row at a time.
+    if (completed > d.darkLevel) { d.darkLevel = completed; d.darkAt = h.elapsed; if (completed < 3) setHoleMessage(`${h.message ? h.message + " " : ""}A row of lanterns gutters out.`, 3); }
+    const wait = lyingInWaitPost();
+    if (wait && !wait.arrived && worldDistance(h.joe, wait) < DREAD.wait.reach + 1) { wait.arrived = true; joeWhisper(JOE_DREAD_LINES.wait, 2.6); }
+    // A carried key rings with every running stride.
+    if (h.keyJingle) {
+      d.keyChime -= dt;
+      if (d.keyChime <= 0) { d.keyChime = .32; playUiTone(1760 + hash(h.elapsed * 7) * 420, .05, .012); playUiTone(2490, .04, .008); }
+      if (!d.keyWarned) { d.keyWarned = true; setHoleMessage("THE KEY JINGLES WHEN YOU RUN. Walk, or be heard.", 3.4); joeWhisper(JOE_DREAD_LINES.keys, 2.4); }
+    }
+    d.glimpseCooldown = Math.max(0, d.glimpseCooldown - dt);
+  }
+  /** Something stands behind you, only for as long as you are looking. */
+  function maybeStageRearGlimpse() {
+    const h = state.hole, d = nightOrderDread(), horror = h.horrorDirector;
+    if (!horror || horror.manifestation || d.glimpseCooldown > 0 || h.elapsed < DREAD.glimpse.minElapsed || h.joe.mode === "chase" ||
+        worldDistance(h.joe, state.player) < DREAD.glimpse.minJoeDistance || state.reducedMotion) return;
+    // Only where the renderer would actually show it: the same scare gates.
+    const fx = spatialEffectsFrame();
+    if (fx.apparitions === false || fx.suppressScares || fx.ghostSchedule?.blocked) return;
+    d.glimpses += 1;
+    if (hash(d.glimpses * 53 + h.variantIndex * 11 + Math.floor(h.elapsed)) > DREAD.glimpse.chance) { d.glimpseCooldown = 8; return; }
+    const seconds = DREAD.glimpse.seconds;
+    horror.manifestation = { type: "peripheral_groundskeeper", rear: true, side: hash(d.glimpses * 7) < .5 ? -1 : 1, seconds, duration: seconds, height: .55, seed: 9000 + d.glimpses };
+    d.glimpseCooldown = DREAD.glimpse.cooldown;
+    playNoiseBurst(.22, .014, 380, "lowpass", 0, .02);
+  }
   function updateQuietLog(dt, moving) {
     const h = state.hole, filing = h.quietLog;
     if (!filing) return;
-    const action = NIGHT_ORDER_ACTIONS.find(a => a.id === "field-log");
-    if (moving || !stationPlan(action).active || worldDistance(state.player, action) >= action.radius ||
+    const action = NIGHT_ORDER_ACTIONS.find(a => a.id === (filing.id || "field-log"));
+    const quietLog = filing.quiet && action.id === "field-log", work = STATION_WORK[action.id];
+    if (moving || (quietLog && !stationPlan(action).active) || worldDistance(state.player, action) >= action.radius ||
         h.ballAim.active || h.ballFlight || h.ballRoll) {
       recordEngagement("quiet_cancel",{moving,exposed:h.hasLineOfSight,progress:Number(filing.progress.toFixed(2))});
       h.quietLog = null;h.rebuild.forcedCrouch=false;
-      setHoleMessage("QUIET FILING CANCELLED — stay crouched, still and unseen; stand to stamp fast.", 2.4);
+      if (!filing.quiet) (h.stationBeats ??= {})[action.id] = filing.beats;
+      setHoleMessage(quietLog ? "QUIET FILING CANCELLED — stay crouched, still and unseen; stand to stamp loud."
+        : filing.quiet ? "SIGNATURE ABANDONED — stand still at the review to finish it."
+        : filing.beats ? `${action.shortLabel} ABANDONED — ${filing.beats} of ${STATION_WORK_BEATS} done and kept. Come back to finish.`
+        : `${action.shortLabel} ABANDONED — stand still at the station to work it.`, 2.8);
       return;
     }
     filing.progress = Math.min(filing.duration, filing.progress + dt);
-    if (filing.progress >= filing.duration) completeNightOrderAction(action, true);
+    // Each beat but the last sounds as it happens. The last one is the
+    // completed check, which raises its own full signal.
+    while (!filing.quiet && filing.beats < Math.min(STATION_WORK_BEATS - 1, Math.floor(filing.progress / filing.duration * STATION_WORK_BEATS + 1e-6))) {
+      filing.beats += 1;
+      playNightOrderActionCue(action);
+      if (action.id === "audit-bell") queueTollEcho(filing.beats);
+      if (filing.beats === 1) maybeSnagStation(filing, action);
+      addWorldEffect("filing_stamp", action.x, action.y, .8);
+      // The early beats only sharpen him. The finished check is the signal
+      // he comes to verify, exactly as before.
+      h.joe.alert = Math.max(h.joe.alert, .34 + filing.beats * .1);
+      setHoleMessage(`${work.beat} ${filing.beats} OF ${STATION_WORK_BEATS} — the sound carries. Finish it or break away.`, 2.4);
+    }
+    if (filing.progress >= filing.duration) {
+      if (h.stationBeats) delete h.stationBeats[action.id];
+      h.quietLog = null;h.rebuild.forcedCrouch=false;
+      completeNightOrderAction(action, quietLog, true);
+    }
   }
 
   function updateTacticalPayoff(dt) {
@@ -53527,8 +53717,8 @@ import { createJoeVoice } from './joe-voice.js';
       const quiet = hole.crouched && !hole.hasLineOfSight && hole.joe.mode !== "chase";
       return { tactic: "quiet_stamp", active: quiet, signalSeconds: quiet ? 0 : action.noiseSeconds,
         holdSeconds: quiet ? QUIET_LOG_DURATION : 0,
-        hint: quiet ? `STAY CROUCHED + STILL ${QUIET_LOG_DURATION}s // NO SIGNAL // STAND FOR FAST STAMP`
-          : `FAST STAMP // JOE WILL VERIFY HERE // SIGNAL ${action.noiseSeconds.toFixed(1)}s // BREAK TO SERVICE CART // ${hole.joe.mode === "chase" || hole.hasLineOfSight ? "LOSE JOE, THEN CROUCH FOR QUIET" : "CROUCH FOR QUIET"}`,
+        hint: quiet ? `STAY CROUCHED + STILL ${QUIET_LOG_DURATION}s // NO SIGNAL // STAND FOR LOUD STAMP`
+          : `LOUD STAMP ${STATION_WORK["field-log"].seconds}s // JOE WILL VERIFY HERE // SIGNAL ${action.noiseSeconds.toFixed(1)}s // BREAK TO SERVICE CART // ${hole.joe.mode === "chase" || hole.hasLineOfSight ? "LOSE JOE, THEN CROUCH FOR QUIET" : "CROUCH FOR QUIET"}`,
         reward: quiet ? "FILED UNHEARD // NO RETREAT NEEDED" : null };
     }
     if (action.id === "release-review") {
@@ -53536,11 +53726,11 @@ import { createJoeVoice } from './joe-voice.js';
         worldDistance(hole.distraction, action) >= 35 && hole.joe.mode === "investigate" && !hole.hasLineOfSight;
       const cover = fieldBreakawayTarget(action);
       return { tactic: "remote_diversion", active: Boolean(baited), signalSeconds: baited ? 0 : action.noiseSeconds,
-        hint: baited ? "JOE TOOK THE LURE // NO SIGNAL // SIGN AND LEAVE" : "LURE JOE AWAY FOR A QUIET SIGNATURE // OR SIGN AND RETREAT",
+        hint: baited ? `JOE TOOK THE LURE // NO SIGNAL // SIGN ${STATION_WORK["release-review"].quietSeconds}s AND LEAVE` : `LURE JOE AWAY FOR A QUIET SIGNATURE // OR SIGN ${STATION_WORK["release-review"].seconds}s AND RETREAT`,
         reward: baited ? "JOE STAYS WITH THE LURE // HEAD FOR YOUR EXIT" : `REACH ${cover.coverLabel}.` };
     }
     return { tactic: "plan_breakaway", active: true, signalSeconds: action.noiseSeconds,
-      hint: "PICK YOUR ROUTE TO HEDGE TUNNEL BEFORE RINGING", reward: null };
+      hint: `THREE TOLLS, ${STATION_WORK["audit-bell"].seconds}s // PICK YOUR ROUTE TO HEDGE TUNNEL FIRST`, reward: null };
   }
 
   function survivalThreatRead(environment) {
@@ -57182,7 +57372,7 @@ import { createJoeVoice } from './joe-voice.js';
     else if(h.escapeFiling.sealing){goal='Exit open';context='You made it';progress=1;}
     else if(h.engagement.closeEscape.remaining>0){context=threat.advice;}
     else if(h.escapeFiling.active){context='Opening exit · stay still · move to cancel';progress=h.escapeFiling.progress/h.escapeFiling.duration;}
-    else if(h.quietLog){context='Quiet stamp · stay still · move to cancel';progress=h.quietLog.progress/h.quietLog.duration;}
+    else if(h.quietLog){context=h.quietLog.quiet?'Quiet work · stay still · move to cancel':'Working the station · Joe can hear it · move to abandon';progress=h.quietLog.progress/h.quietLog.duration;}
     else if(h.ballAim.active){context=inputCopy(`Release ${keyboardBindingLabel('chip')} to chip · Escape cancels`,'Release X to chip · B cancels','Release CHIP to shoot · Pause cancels')+' · '+shotDecisionHint();progress=h.ballAim.power;progressLabel=`Shot power · ${Math.round(progress*100)}%`;}
     else if(danger){context=threat.advice;}
     else if(choice){context=(choice.targetId==='release-review'?stationPlan(NIGHT_ORDER_ACTIONS[2]).hint+' · ':'')+inputCopy('Choose 1 or 2',`RB switches · A: ${choice.labels[h.rebuild.padChoice]}`,'Choose your approach');}
@@ -57221,6 +57411,7 @@ import { createJoeVoice } from './joe-voice.js';
   function spatialEffectsFrame(){
     const h=state.hole;
     return {enabled:h.rebuild.lab!=="calibration",screen:state.mode==='first_hole'&&!h.mapOpen&&!h.tutorialVisible,
+      lanternsOut:{level:h.dread?.darkLevel||0,since:h.dread?.darkAt==null?1e9:h.elapsed-h.dread.darkAt},
       nightfall:h.rebuild.lab?null:courseNightfall(h.engagement.experience.nightfall,h.elapsed),
       deadGreen:h.engagement.experience.deadGreen,arrival:h.engagement.experience.arrival,gateImpact:h.southGateImpactTimer,firstImpression:h.engagement.experience.firstImpression,
       arrivalPhoneClear:['first_hole','paused'].includes(state.mode)&&!h.tutorialVisible&&!h.mapOpen&&!h.focus&&!h.ballAim.active&&!h.ballFlight&&!activeInteractionPromptOwner()&&!h.hasLineOfSight&&h.joe.mode==='patrol'&&h.detection<.12,
@@ -57323,7 +57514,7 @@ import { createJoeVoice } from './joe-voice.js';
       }
       if(owner){const target=[...NIGHT_ORDER_ACTIONS,...activeSprintReviews(),...COURSE_OBSTACLES].find(o=>o.id===owner.targetId);if(target){const q=RCScene3D.project(target,1.7);if(q?.visible){ctx.strokeStyle='#f2d9a0';ctx.lineWidth=2;ctx.strokeRect(q.x-12,q.y-12,24,24);}}}
       if(h.ballAim.active){drawText('Release to chip · '+Math.round(h.ballAim.power*100)+'% power',640,520,25,'#eedca5','center',true);}
-      else if(h.quietLog){drawText('Quiet filing · '+Math.round(h.quietLog.progress/h.quietLog.duration*100)+'% · Move to cancel',640,530,24,'#c3e1c1','center',true);}
+      else if(h.quietLog){drawText((h.quietLog.quiet?'Quiet work · ':'Working · ')+Math.round(h.quietLog.progress/h.quietLog.duration*100)+'% · Move to '+(h.quietLog.quiet?'cancel':'abandon'),640,530,24,h.quietLog.quiet?'#c3e1c1':'#eedca5','center',true);}
       else if(!owner&&!lesson&&h.messageTimer>0&&h.message&&!h.mapOpen&&!h.tutorialVisible&&!h.escapeFiling.active){drawText(h.message,640,550,fittedTextSize(h.message,20,920,15,true),'#d7deca','center',true);}
       drawCourseMiniMap();drawStatusRequestFeedback();drawEscapeFiling();drawThreatCaptions();drawJoeBark();
       if(h.tutorialVisible)drawTutorialBriefing();
@@ -60357,6 +60548,7 @@ import { createJoeVoice } from './joe-voice.js';
       if (sprinting) {
         hole.sprintSeconds += dt;
       }
+      hole.keyJingle = Boolean(sprinting && moving && hole.keyCollected && hole.phase === "return_to_shed");
       const preMoveEnvironment =
         hole.environment ||
         getPlayerEnvironmentState();
@@ -60788,6 +60980,7 @@ import { createJoeVoice } from './joe-voice.js';
         if (state.mode === "first_hole") {
           const wasQuietFiling = Boolean(hole.quietLog);
           updateQuietLog(dt, moving);
+          updateNightOrderDread(dt, moving);
           if (wasQuietFiling) {
             const quietPrompt = courseInteractionPromptPresentation();
             hole.prompt = quietPrompt.text;
@@ -61764,7 +61957,7 @@ import { createJoeVoice } from './joe-voice.js';
       setMotorLevel(
         authoredMotorLevel *
           motorVisibility *
-          acoustics.transmission * closeMotor.gain,
+          acoustics.transmission * closeMotor.gain * mowerStallGain(),
         (
           36 + closeMotor.pitch +
             proximity * 46 +

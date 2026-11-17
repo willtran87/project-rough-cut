@@ -42,6 +42,8 @@ export function createPixelWorld(parent, { label, glow, economy=false,wind=null 
   const records=[], materials=new Map(), staticRecords=[], surfaceTextures=new Map(),treeShadowMaterials=new Map(),treeMeshes=[],hedgeSurfaceMeshes=[];
   const drainCollisionParts=[];
   const flameTime={value:0},flameSteady={value:1};
+  // Up to 32 lanterns that have gone dark or are guttering: x, z, brightness.
+  const flameOut={value:Array.from({length:32},()=>new THREE.Vector3(0,-9999,1))};
   const reedContact=createVegetationContact();
   const reedTime={value:0},reedWind={value:0};let reedLast=null,reedDepth=null;
   function reedShader(shader){reedContact.shader(shader);shadeVergeNormals(shader);if(wind){wind.vegetationShader(shader,.16);return;}shader.uniforms.reedTime=reedTime;shader.uniforms.reedWind=reedWind;
@@ -58,15 +60,19 @@ export function createPixelWorld(parent, { label, glow, economy=false,wind=null 
   const flameMaterial=new THREE.MeshBasicMaterial({color:0xf0bd65,map:flameTexture});
   flameMaterial.onBeforeCompile=s=>{
     s.uniforms.lanternTime=flameTime;s.uniforms.lanternSteady=flameSteady;
-    s.vertexShader='uniform float lanternTime;\nuniform float lanternSteady;\nvarying float vLanternFlame;\n'+lanternFlickerGLSL+'\n'+s.vertexShader;
+    s.uniforms.lanternOut=flameOut;
+    s.vertexShader='uniform float lanternTime;\nuniform float lanternSteady;\nuniform vec3 lanternOut[32];\nvarying float vLanternFlame;\n'+lanternFlickerGLSL+'\n'+s.vertexShader;
     s.vertexShader=s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
       vec3 flameWorld=(modelMatrix*vec4(transformed,1.0)).xyz;
-      vLanternFlame=mix(lanternFlame(lanternTime,dot(flameWorld.xz,vec2(2.17,.73))),1.0,lanternSteady);`);
+      vLanternFlame=mix(lanternFlame(lanternTime,dot(flameWorld.xz,vec2(2.17,.73))),1.0,lanternSteady);
+      for(int i=0;i<32;i++){if(distance(flameWorld.xz,lanternOut[i].xy)<.6)vLanternFlame*=mix(.06,1.,lanternOut[i].z);}`);
     s.fragmentShader='varying float vLanternFlame;\n'+s.fragmentShader;
     s.fragmentShader=s.fragmentShader.replace('#include <opaque_fragment>','outgoingLight*=vLanternFlame;\n#include <opaque_fragment>');
   };
-  flameMaterial.customProgramCacheKey=()=> 'rough-cut-lantern-flame-v1';
-  function updateLanterns(time=0,steady=true){flameTime.value=time;flameSteady.value=steady?1:0;}
+  flameMaterial.customProgramCacheKey=()=> 'rough-cut-lantern-flame-v2';
+  function updateLanterns(time=0,steady=true,levels=null){flameTime.value=time;flameSteady.value=steady?1:0;
+    const dim=(levels||[]).filter(l=>l.level<.999).slice(0,32);
+    flameOut.value.forEach((v,i)=>{const l=dim[i];if(l)v.set(l.x,l.z,l.level);else v.set(0,-9999,1);});}
   const random=n=>{const a=Math.sin(n*127.1+311.7)*43758.5453;return a-Math.floor(a);};
   const surfaces={
     leaf:['rough-cut-hedge-hide-v2',[280,275,190,190]]
