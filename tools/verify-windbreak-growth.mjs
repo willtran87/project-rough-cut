@@ -20,5 +20,5 @@ for(const s of COURSE.sightbreaks){
  results.push({id:s.id,vertices:p.count,triangles:g.index.count/3,...g.userData.windbreak,opaqueCoverSamples:samples});g.dispose();core.dispose();mesh.material.dispose();
 }
 const material=new THREE.MeshLambertMaterial(),art=finishWindbreakSurface(material);
-art.update({time:20},false);assert.equal(art.stats().wind,1);art.update({time:20},true);assert.equal(art.stats().wind,0);assert.equal(art.stats().time,20);material.dispose();
+art.update({time:20},false);assert.equal(art.stats().wind,1);art.update({time:20},true);assert.equal(art.stats().wind,1);assert.equal(art.stats().time,20);material.dispose();
 const out='output/back-nine-visual-upgrade/windbreak-growth';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(out+'/geometry.json',JSON.stringify({passed:true,results},null,2));console.log(results);

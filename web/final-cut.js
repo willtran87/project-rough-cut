@@ -42,7 +42,7 @@ function beginChip(source){if(!live())return;if(chipOwner!==source)run.ballAim=f
 function releaseChip(source){if(chipOwner===source&&live())chipReleased=true;}
 function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed){recordFinaleCompletion(run);RCProgression.complete('final-cut');}text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
 const staged=()=>!preferences.reducedMotion&&!manual&&!!world;
-function cue(name){$('curtain').dataset.cue='';if(!staged())return false;world.cue(name);void $('curtain').offsetWidth;$('curtain').dataset.cue=name;return true;}
+function cue(name){$('curtain').dataset.cue='';if(!staged())return false;world.cue(name);$('curtain').style.setProperty('--cue',CUE_MS[name]+'ms');void $('curtain').offsetWidth;$('curtain').dataset.cue=name;return true;}
 function stage(mode){if(cue(mode))shot={mode,until:performance.now()+CUE_MS[mode]};}
 function endShot(){if(!shot)return;shot.until=0;dirty=true;paint();}
 function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();const resumed=run.mode==='paused';if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}run.mode=run.won?'aftermath':'playing';if(!resumed&&run.mode==='playing')cue('start');clearInput();canvas.focus();paint();persist();}
@@ -177,5 +177,5 @@ function frame(now){
 new ResizeObserver(()=>{dirty=true;if(manual)draw();}).observe(canvas);
 window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,shot:shot?.mode||null,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
 window.advanceTime=async ms=>{manual=true;await world?.whenPresented();const n=Math.ceil(Math.max(0,ms)/(1000/60));for(let k=0;k<n;k++)update(Math.min(1/60,ms/1000-k/60));paint();draw();await new Promise(resolve=>requestAnimationFrame(resolve));};
-if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,preferences,spatialStore};
+if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,stage,preferences,spatialStore};
 paint();if(run.mode==='briefing'&&run.checkpoint===0&&!story.shouldSkip()){story.open('intro');}world=await createFinalCutScene(canvas,message=>text('loading',message));ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);

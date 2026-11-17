@@ -72,13 +72,13 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  const camera=new THREE.PerspectiveCamera(58,16/9,.08,180);camera.rotation.order='YXZ';
  const skyLight=new THREE.HemisphereLight('#b9d6dc','#455738',2);scene.add(skyLight);const moonlight=new THREE.DirectionalLight('#a4c8d4',1.7);moonlight.position.set(-28,28,-72);scene.add(moonlight,moonlight.target);
  moonlight.castShadow=!software;moonlight.shadow.mapSize.set(2048,2048);Object.assign(moonlight.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.5,far:145});moonlight.shadow.bias=-.00015;moonlight.shadow.normalBias=.035;moonlight.shadow.autoUpdate=false;
- const nightFog=new THREE.Color('#0c1919'),litFog=new THREE.Color('#243238');
+ const nightFog=new THREE.Color('#0c1919'),litFog=new THREE.Color('#243238'),dawnFog=new THREE.Color('#3b3542'),nightSky=skyLight.color.clone(),dawnSky=new THREE.Color('#e6c3b4');
  const backdrop=createParallax({travelScale:.25,storm:.15,night:.18});scene.background=null;
  const grass=Art.texture('final-cut-ground-materials-v1',[0,0,512,512],null,true),stone=Art.texture('rough-cut-architecture-surfaces-v1',[1024,0,512,512],null,true),paving=Art.texture('final-cut-stone-materials-v1',[0,0,512,512],null,true),wood=Art.texture('rough-cut-architecture-surfaces-v1',[0,0,512,512],null,true);
  const materials={};
  for(const [name,color,map]of [['grass','#c1cbb0',grass],['stripe','#cbd5b8',grass],['rough','#abb892',grass],['stone','#9d9982',stone],['path','#bcc2b6',paving],['wood','#827450',wood],['green','#1b4840'],['cream','#d5cfb0'],['metal','#728481'],['dark','#172523'],['brass','#b9994f'],['red','#9c4636'],['water','#3b7779'],['road','#303d3d'],['seat','#697e72']])materials[name]=new THREE.MeshLambertMaterial({color,map});
  for(const [name,color]of [['lamp','#ffe1a4'],['mint','#9be6d1'],['amber','#ffbd63'],['white','#d5ddc3']])materials[name]=new THREE.MeshBasicMaterial({color});
- for(const name of ['wingLamp','headLamp','floodLamp'])materials[name]=new THREE.MeshBasicMaterial({color:'#1b211b'});
+ for(const name of ['wingLamp','headLamp','floodLamp','floodLamp1','floodLamp2','floodLamp3'])materials[name]=new THREE.MeshBasicMaterial({color:'#1b211b'});
  const lampDark=new THREE.Color('#1b211b'),lampWarm=new THREE.Color('#ffe1a4');
  materials.gravel=new THREE.MeshLambertMaterial({map:Art.texture('final-cut-ground-materials-v1',[0,512,512,512],null,true),color:'#c9c7b6'});
  const atlasImage=await Art.source('final-cut-industrial-materials-v1');
@@ -218,9 +218,12 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  const exitGate=new THREE.Group();exitGate.position.set(-2,0,-94);scene.add(exitGate);for(let x=0;x<=4;x+=.4)box('metal',x,1.3,0,.04,2.6,.045,exitGate);for(const y of [.2,1.3,2.5])box('metal',2,y,0,4,.05,.05,exitGate);
  const publicSideSign=sign('COURSE CLOSED',0,3.5,-94.03,5,.8);publicSideSign.rotation.y=Math.PI;
  // Distant floodlight silhouettes frame the authored moon and cloud layers.
- for(const {x,y}of FLOOD_MASTS){cyl('metal',x,5,-y,.1,10);box('dark',x,10,-y,1.6,.5,.3);box('floodLamp',x,9.9,-y+.18,1.4,.23,.02);
+ // Each mast is its own lamp bank, so the closing scene can take them down
+ // one at a time by colour alone.
+ const floodBanks=FLOOD_MASTS.map((m,i)=>'floodLamp'+(i||''));
+ for(const [bank,{x,y}]of FLOOD_MASTS.entries()){const floodLamp=floodBanks[bank];cyl('metal',x,5,-y,.1,10);box('dark',x,10,-y,1.6,.5,.3);box(floodLamp,x,9.9,-y+.18,1.4,.23,.02);
   // A second lamp bank and rear faces: the masts read as lit from the fairway.
-  box('metal',x,10.38,-y,.08,.3,.08);box('dark',x,10.7,-y,2.3,.5,.3);for(const side of [-1,1]){box('floodLamp',x,10.6,-y+side*.18,2.1,.23,.02);if(side<0)box('floodLamp',x,9.9,-y-.18,1.4,.23,.02);}
+  box('metal',x,10.38,-y,.08,.3,.08);box('dark',x,10.7,-y,2.3,.5,.3);for(const side of [-1,1]){box(floodLamp,x,10.6,-y+side*.18,2.1,.23,.02);if(side<0)box(floodLamp,x,9.9,-y-.18,1.4,.23,.02);}
  }
  // Elevated stone skirt around the nursery; the water itself stays out of routes.
  // Nursery paving is part of GROUND_SLABS.
@@ -357,7 +360,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  const clippingMaterial=new THREE.MeshLambertMaterial({color:'#829052',side:THREE.DoubleSide});
  const clippings=new THREE.InstancedMesh(clippingGeometry,clippingMaterial,72);clippings.frustumCulled=false;scene.add(clippings);clippings.visible=false;
  // Beams, haze, glows, bunting and thrown cuttings: unlit meshes, no lights.
- const staging=createFinalCutAtmosphere(scene,body,{clippingGeometry,clippingMaterial}),cameraCues=createFinalCutCameraCues();
+ const staging=createFinalCutAtmosphere(scene,body,{clippingGeometry,clippingMaterial,lite:software}),cameraCues=createFinalCutCameraCues();
  // Rigid details retain their animated parent (wheel, wing, gate, lever).
  // Batch only siblings sharing geometry/material; independent reels and
  // breaking fragments remain individually animated.
@@ -413,11 +416,13 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   const j=r.rig;rig.position.set(j.x,0,-j.y);rig.rotation.y=-j.yaw;
   const wash=courseLightState(r);
   camera.updateMatrixWorld();backdrop.update(camera,r.time,prefs.reduced,r.mode==='paused');
-  skyLight.intensity=.12+.98*wash;moonlight.intensity=(.04+1.66*wash)*(1-backdrop.moonCoverage()*.3);
+  // The closing scene only ever scales these existing lights and colours.
+  const finale=cameraCues.finale();
+  skyLight.intensity=.12+.98*wash*finale.dim+.75*finale.dawn;skyLight.color.copy(nightSky).lerp(dawnSky,finale.dawn);moonlight.intensity=(.04+1.66*wash*finale.dim)*(1-backdrop.moonCoverage()*.3);
   const snap=48/2048,mx=Math.round(r.player.x/snap)*snap,mz=Math.round(-r.player.y/snap)*snap;moonlight.target.position.set(mx,0,mz);moonlight.position.set(mx-28,28,mz-72);
   if(!software)moonlight.shadow.needsUpdate=true;
-  scene.fog.color.copy(nightFog).lerp(litFog,wash);
-  materials.floodLamp.color.copy(lampDark).lerp(lampWarm,wash);
+  scene.fog.color.copy(nightFog).lerp(litFog,wash*finale.dim).lerp(dawnFog,finale.dawn*.5);
+  floodBanks.forEach((name,i)=>materials[name].color.copy(lampDark).lerp(lampWarm,wash*finale.banks[i]));
   const atmosphere=uneaseFrame(r,prefs.reduced),clothPoints=clothGeometry.attributes.position;bannerFold=atmosphere.fold;
   for(let i=0;i<clothPoints.count;i++){
    const x=clothRest[i*3],y=clothRest[i*3+1],drop=(banner.clothHeight/2-y)/banner.clothHeight;
@@ -441,7 +446,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   pumpHardware.update(r);
   ambushReeds.update(r,prefs.reduced);verges.update(r,prefs.reduced);
   const drift=cameraCues.seconds();rough.update(r,prefs.reduced,drift);lastRun=r;
-  staging.update(r,camera,{reduced:prefs.reduced,courseWash:wash,lampBeam:lampState.beam,engine:lampState.marker,drift});
+  staging.update(r,camera,{reduced:prefs.reduced,courseWash:wash,lampBeam:lampState.beam,engine:lampState.marker,drift,bankLevels:finale.banks,firstLight:finale.dawn});
   for(const b of breakables){const broken=r.broken.includes(b.data.id);b.intact.visible=!broken;b.debris.visible=broken;if(broken){const age=prefs.reduced?1:r.breakTimes[b.data.id]===undefined?1:clamp((r.time-r.breakTimes[b.data.id])/.55,0,1);b.pieces.forEach((m,i)=>{m.position.set(Math.sin(i*7)*b.data.w*.5*age,.06+(1-age)*b.data.h*.6+Math.sin(age*Math.PI)*.45,Math.cos(i*5)*b.data.d*.7*age);m.rotation.set(.1*age,i*1.7*age,Math.sin(i)*.2*age);});}}
   clippings.visible=!prefs.reduced&&j.phase==='pass'&&j.speed>0;
   if(clippings.visible){let count=0;for(let i=0;i<72;i++){const t=(r.time*2+i*.173)%1,across=Math.sin(i*13)*5.2,along=1.3-t*2.6,sn=Math.sin(j.yaw),cs=Math.cos(j.yaw),y=j.y+cs*along-sn*across,x=j.x+sn*along+cs*across,from={x:j.x+sn*1.3+cs*across,y:j.y+cs*1.3-sn*across};const active=SECTORS.some(s=>inside(from,s));dummy.position.set(x,.16+Math.sin(t*Math.PI)*(1+(i%4)*.15),-y);dummy.rotation.set(t*5,i*1.3,t*3);dummy.scale.setScalar(active?.16:0);dummy.updateMatrix();clippings.setMatrixAt(i,dummy.matrix);if(active)count++;}clippings.visible=count>0;clippings.instanceMatrix.needsUpdate=true;}

@@ -64,7 +64,7 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
    slope+=(vec2(2.3,1.1)*cos(w1)+vec2(-1.3,2.7)*cos(w2))*.05;
    if(floodWake.z>0.0){
     vec2 wd=floodPixel-floodWake.xy;float wl=length(wd)+.001,wp=wl*4.2-floodTime*8.5,wa=floodWake.z*exp(-wl*.42)*smoothstep(.5,1.3,wl);
-    crest+=max(0.0,sin(wp))*wa*.8;slope+=wd/wl*cos(wp)*wa*2.6;
+    crest+=max(0.0,sin(wp))*wa*1.6;slope+=wd/wl*cos(wp)*wa*3.2;
    }
    vec3 rippleNormal=normalize(vec3(-slope.x*.22,1.0,-slope.y*.22)),toEye=normalize(cameraPosition-vFloodPoint);
    float fresnel=.04+.96*pow(1.0-max(dot(rippleNormal,toEye),0.0),4.0);
@@ -85,7 +85,7 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
    #include <opaque_fragment>
   `);
  };
- waterMaterial.customProgramCacheKey=()=> 'back-nine-submerged-turf-shore-v4-ripples'+(software?'-5':'-10');
+ waterMaterial.customProgramCacheKey=()=> 'back-nine-submerged-turf-shore-v5-ripples'+(software?'-5':'-10');
  if(turfConditionMaps)finishTurfCondition(waterMaterial,turfConditionMaps.dry,turfConditionMaps.soil,turfConditionMaps.field,'texture2D(map,vFloodPoint.xz/4.4).rgb');
  const water=[],heads=[],geometry=new THREE.BoxGeometry(.16,.065,.085);
  for(const [zone,w]of COURSE.wet.entries()){
@@ -119,7 +119,7 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
   if(run.mode!=='paused')clock+=dt;
   time.value=clock;active=visible=boosted=mist=veil=0;let count=0,splashes=0;
   // Wake rings follow whoever is moving through standing water.
-  const wading=actor.surface==='wet'?Math.min(1,Math.abs(actor.speed||0)/8)*(run.foot?.5:1):0;wake.value.set(actor.x,-actor.y,wading,0);
+  const wading=actor.surface==='wet'?Math.min(1,Math.abs(actor.speed||0)/(run.foot?4:8)):0;wake.value.set(actor.x,-actor.y,wading,0);
   for(const [i,w]of COURSE.wet.entries()){
    const phase=states[i],near=Math.hypot(actor.x-w.x,actor.y-w.y)<55;
    water[i].visible=!!phase.active&&near;
@@ -152,15 +152,15 @@ export function createIrrigationArt({scene,map,materials,put,box,cylinder,wetMas
     const power=phase.manual?1.3:1,reach=w.r*(phase.manual?.96:.86);
     for(let n=0;n<12;n++){
      const drop=sprinklerDrop(w,clock,n*2+1,!!phase.manual,scratch);
-     sprites.push(drop.x,drop.height+.05,-drop.y,.45+drop.age*1.1*power,.13,.175,.19,.34*Math.sin(drop.age*Math.PI),1,1.5,0,1.5);veil++;
+     sprites.push(drop.x,drop.height+.05,-drop.y,.45+drop.age*1.1*power,.13,.175,.19,.34*Math.sin(drop.age*Math.PI),1,.75,0,1.5);veil++;
     }
     for(let n=0;n<6;n++){
      const age=(clock*1.15+n/6)%1,angle=(clock-age*.7)*1.35+w.y*.013,x=w.x+Math.sin(angle)*reach+age*.9,y=w.y+Math.cos(angle)*reach;
-     sprites.push(x,terrainHeight(x,y)+.3+age*1.25*power,-y,.45+age*1.6*power,.16,.215,.235,.55*(1-age)*(1-age),1,1.6,.3,2);veil++;
+     sprites.push(x,terrainHeight(x,y)+.3+age*1.25*power,-y,.45+age*1.6*power,.16,.215,.235,.55*(1-age)*(1-age),1,.7,.3,2);veil++;
     }
     if(!software)for(let n=0;n<6;n++){
      const angle=n*1.047+clock*.045,radius=w.r*(.42+.28*Math.sin(n*2.1)),x=w.x+Math.sin(angle)*radius+Math.sin(clock*.11+n)*1.2,y=w.y+Math.cos(angle)*radius;
-     sprites.push(x,terrainHeight(x,y)+1.25+.35*Math.sin(clock*.31+n*1.9),-y,w.r*.42,.13,.175,.19,.16,.42,1.2,.45,7);veil++;
+     sprites.push(x,terrainHeight(x,y)+1.25+.35*Math.sin(clock*.31+n*1.9),-y,w.r*.42,.13,.175,.19,.16,.42,.8,.45,7);veil++;
     }
    }
   }

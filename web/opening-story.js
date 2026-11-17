@@ -34,6 +34,30 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
   dialog.querySelector('.opening-preference small').textContent=replayHint;
   const art=dialog.querySelector('.opening-image'),loading=dialog.querySelector('.opening-loading'),retry=dialog.querySelector('.opening-retry'),next=dialog.querySelector('[data-opening="next"]'),back=dialog.querySelector('[data-opening="back"]'),check=dialog.querySelector('input'),sound=dialog.querySelector('.opening-sound');
   const images=new Map();let index=0,token=0,ready=false,seen=Boolean(saved().seen),lastOutcome=null;
+  // Crossfade: the outgoing illustration is held, frozen mid-push, in a layer beneath
+  // the incoming one. Layout is set inline so an older cached style sheet still works.
+  const under=document.createElement('div');under.className='opening-under';under.setAttribute('aria-hidden','true');
+  under.style.cssText='position:absolute;inset:0;display:grid;place-items:center;pointer-events:none';
+  art.style.position='relative';art.before(under);
+  let fade=null,holdTimer=0;
+  const still=()=>dialog.dataset.reduced==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function dropHeld(){clearTimeout(holdTimer);holdTimer=0;fade?.cancel();fade=null;under.replaceChildren();loading.style.visibility='';}
+  function hold(generation){
+    const current=art.querySelector('img'),style=current&&getComputedStyle(current),transform=style?.transform,opacity=style?.opacity;
+    dropHeld();art.replaceChildren();
+    if(!current||still())return;
+    under.append(current);current.alt='';
+    current.style.cssText=`width:100%;height:100%;min-height:0;object-fit:contain;image-rendering:pixelated;animation:none;transform:${transform};opacity:${opacity}`;
+    // A slow download falls back to the plain loading message.
+    loading.style.visibility='hidden';holdTimer=setTimeout(()=>{if(generation===token&&!ready)dropHeld();},700);
+  }
+  function release(){
+    clearTimeout(holdTimer);holdTimer=0;loading.style.visibility='';
+    const old=under.firstElementChild;if(!old)return;
+    const mine=fade=old.animate([{opacity:old.style.opacity||1},{opacity:0}],{duration:500,delay:450,fill:'forwards',easing:'ease-in'});
+    if(dialog.dataset.paused==='true')mine.pause();
+    mine.finished.then(()=>{if(fade===mine){fade=null;under.replaceChildren();}},()=>{});
+  }
   function persist(){try{localStorage.setItem(storageKey,JSON.stringify({seen,skip:check.checked}));}catch{/* Private mode still permits a complete run. */}}
   function evict(){for(const [key]of images)if(key!==index&&key!==index+1)images.delete(key);}
   function load(i){
@@ -51,7 +75,7 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
     if(!dialog.open)return;index=Math.max(0,Math.min(slides.length-1,i));const generation=++token,slide=slides[index];
     if(document.activeElement===next||document.activeElement===back)dialog.focus({preventScroll:true});
     evict();ready=false;next.disabled=true;back.disabled=index===0;retry.hidden=true;loading.hidden=false;loading.textContent='Loading illustration…';
-    dialog.dataset.loading='true';dialog.dataset.slide=String(index);art.replaceChildren();
+    hold(generation);dialog.dataset.loading='true';dialog.dataset.slide=String(index);
     dialog.querySelector('[data-opening-kicker]').textContent=slide.kicker;
     dialog.querySelector('h1').textContent=slide.title;
     dialog.querySelectorAll('#opening-copy p').forEach((p,n)=>p.textContent=slide.lines[n]);
@@ -62,18 +86,19 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
     onSlide(slide,index);
     try{
       const img=await load(index);if(generation!==token||!dialog.open)return;
-      art.replaceChildren(img);dialog.dataset.loading='false';loading.hidden=true;ready=true;next.disabled=false;
+      img.removeAttribute('style');img.alt=slide.alt;
+      art.replaceChildren(img);dialog.dataset.loading='false';loading.hidden=true;ready=true;next.disabled=false;release();
       // One image ahead only, after the visible image finishes decoding.
       load(index+1).catch(()=>{});
     }catch{
       if(generation!==token||!dialog.open)return;
-      loading.textContent='The illustration could not load. Retry, or continue with the story.';
+      dropHeld();loading.textContent='The illustration could not load. Retry, or continue with the story.';
       retry.hidden=false;next.disabled=false;
     }
   }
   function close(outcome){
     if(!dialog.open)return;lastOutcome=outcome;seen=true;persist();token++;dialog.close();
-    art.replaceChildren();images.clear();ready=false;finish(outcome);
+    dropHeld();art.replaceChildren();images.clear();ready=false;finish(outcome);
   }
   function action(name){
     if(!dialog.open)return;onGesture();
@@ -93,9 +118,9 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
     else if(e.code==='KeyF'){e.preventDefault();toggleFullscreen();}
     else if(advanceKeys.includes(e.code)&&(e.code==='KeyE'||!e.target.closest('button,input'))){e.preventDefault();action('next');}
   });
-  const pausePresentation=()=>{dialog.dataset.paused=String(document.hidden||!document.hasFocus());};
+  const pausePresentation=()=>{dialog.dataset.paused=String(document.hidden||!document.hasFocus());if(dialog.dataset.paused==='true')fade?.pause();else fade?.play();};
   document.addEventListener('visibilitychange',pausePresentation);
-  window.addEventListener('blur',()=>{dialog.dataset.paused='true';});
+  window.addEventListener('blur',()=>{dialog.dataset.paused='true';fade?.pause();});
   window.addEventListener('focus',pausePresentation);
   return {
     preloadFirst(){if(!images.size)load(0).catch(()=>{});},

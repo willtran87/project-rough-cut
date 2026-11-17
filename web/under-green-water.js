@@ -1,7 +1,7 @@
 import {applyHorizontalWaterNormal} from './under-green-water-normal.js';
 import {channelShoreMeshData,channelSurfaceHeight} from './under-green-channel-shore.js';
 import {waterPoint,waterLocal,distance,onFloor,solid} from './under-green-course.js';
-import {channelJets} from './under-green-flow.js';
+import {channelJets,jetPoint} from './under-green-flow.js';
 import {spraySeed,sprayDrop,impactCloud,sprayFootprint} from './under-green-spray.js';
 import {floodState} from './under-green-flood.js';
 import {createDrainWaterContacts,DRAIN_DRIPS,drainDripSample,waterContactHeight} from './under-green-water-contacts.js';
@@ -118,19 +118,27 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
     float foamStreak=foamThread*smoothstep(.76-drainFoam*.27,.92-drainFoam*.22,foamBroad)*drainFoam;
     float foamLace=(1.-smoothstep(.015,.15+foamBroad*.12,shoreDistance))*smoothstep(.42,.6,foamFine)*drainFoam;
     float foamChurn=0.;
-    for(int i=0;i<DRAIN_JETS;i++)foamChurn=max(foamChurn,1.-smoothstep(.05,.5,length(p-drainJets[i])+(foamFine-.5)*.3));
-    foamChurn*=drainChurn*(.5+.5*foamThread);
+    // Each landing boils: a bright rolling core, rings of foam that travel
+    // outward from it, and steep short ripples that scatter the lamp.
+    vec2 drainWakeSlope=vec2(0.);
+    for(int i=0;i<DRAIN_JETS;i++){
+     vec2 spill=p-drainJets[i];float reach=length(spill)+.001,rough=reach+(foamFine-.5)*.3;
+     ${software?'foamChurn=max(foamChurn,1.-smoothstep(.04,.7,rough));':`float roll=.5+.5*sin(reach*15.-drainTime*8.5+foamBroad*6.+float(i)*2.1);
+     foamChurn=max(foamChurn,max(1.-smoothstep(.04,.34,rough),(1.-smoothstep(.2,.95,rough))*(.25+.75*roll*roll)));
+     drainWakeSlope+=spill/reach*cos(reach*13.-drainTime*9.+float(i)*1.3)*drainChurn*exp(-reach*1.5)*.3;`}
+    }
+    foamChurn*=drainChurn*(.6+.4*foamThread);
     // Anything wading here radiates rings that bend the lamp reflections and
     // drags a little broken foam with it: x/y is the wader in channel-local
     // metres, z its eased disturbance. The player is first, Joe second.
-    vec2 drainWakeSlope=vec2(0.);float foamWake=0.;
+    float foamWake=0.;
     for(int i=0;i<2;i++){
      vec2 away=p-drainWakes[i].xy;float reach=length(away)+.001,disturbance=drainWakes[i].z;
      drainWakeSlope+=away/reach*cos(reach*8.5-drainTime*6.5+float(i)*1.7)*disturbance*exp(-reach*.4)*smoothstep(.05,.4,reach)*.5;
      foamWake=max(foamWake,disturbance*(1.-smoothstep(.3,1.7+foamBroad*.9,reach))*(.45+.55*foamThread));
     }
     float drainFoamCover=clamp(max(max(foamStreak,foamLace*.7),max(foamChurn,foamWake)),0.,1.)*drainShoreWeight;
-    diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.30,.32,.28),drainFoamCover*.8);
+    diffuseColor.rgb=mix(diffuseColor.rgb,mix(vec3(.30,.32,.28),vec3(.66,.68,.62),foamChurn),drainFoamCover*.84);
     // A broad lobe spreads each practical's reflection across the ripples,
     // and grazing water mirrors the lamp-lit masonry around that practical.
     float sheenBreak=clamp(.55+14.*(capillarySlope.x-capillarySlope.y)+.25*waveB,0.,1.6);
@@ -146,7 +154,7 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
    applyHorizontalWaterNormal(shader,'((-.0624*waveA+.0068*waveB)*slopeEnergy+capillarySlope.x*capillaryEnergy+drainWakeSlope.x)*drainShoreWeight+drainShoreSlope.x','((.0312*waveA+.0432*waveB)*slopeEnergy-drainWakeSlope.y+capillarySlope.y*capillaryEnergy)*drainShoreWeight+drainShoreSlope.y');
 
   };
-  material.customProgramCacheKey=()=> 'drain-silt-bed-depth-v11-foam-wake-broad-reflection-'+jets.length;
+  material.customProgramCacheKey=()=> 'drain-silt-bed-depth-v12-boil-wake-broad-reflection-'+jets.length+(software?'-software':'');
   const shore=channelShoreMeshData(w),bed=new THREE.BufferGeometry();
   bed.setAttribute('position',new THREE.Float32BufferAttribute(shore.positions,3));
   bed.setAttribute('uv',new THREE.Float32BufferAttribute(shore.uv,2));
@@ -167,6 +175,8 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
  const contacts=createDrainWaterContacts(waters),ringCapacity=waters.length*12+120+NEAR_DRIP_CELLS,mistCapacity=waters.length*16+120;
  const ringPool=fadingWaterInstances(scene,ringCapacity,ringTexture,{color:0x84927b,opacity:.5,shininess:30,gain:2}),rings=ringPool.mesh;
  const sprayTexture=waterEffectTexture('spray'),mistPool=fadingWaterInstances(scene,mistCapacity,sprayTexture,{color:0xb4b3a6,opacity:.5,diffuseOnly:true,scatter:.3,gain:3}),mist=mistPool.mesh;
+ // Dense aerated water: the body of each outlet jet and the boil it lands in.
+ const frothPerChannel=software?32:72,frothPool=fadingWaterInstances(scene,waters.length*frothPerChannel+120,sprayTexture,{color:0xc9c8ba,opacity:.82,diffuseOnly:true,scatter:.45,gain:5}),froth=frothPool.mesh;froth.name='Drain outlet froth';
  drops.name='Drain droplets';rings.name='Drain contact ripples';mist.name='Drain impact spray';
  const dummy=new THREE.Object3D(),velocity=new THREE.Vector3(),viewVelocity=new THREE.Vector3(),viewPosition=new THREE.Vector3(),inverseCamera=new THREE.Quaternion(),color=new THREE.Color();
  const random=n=>{const v=Math.sin(n*127.1+71.7)*43758.5453;return v-Math.floor(v);},nearDrip={x:0,y:0,height:NEAR_DRIP_HEIGHT,period:1,offset:0},bowPoint={x:0,y:0},wakeLast=new Float64Array(4);
@@ -176,7 +186,7 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
  let activeDrops=0,activeSplashes=0,activeRipples=0,activeMist=0,activeContactDrops=0,lastContactDrop=null,visibleChannels=0,footprintBoosted=0,maxFootprintScale=1,foamClock=null;
  return {
   update(r,states,reduced,actor){
-   time.value=reduced?0:r.time;let count=0,ringCount=0,mistCount=0,splashes=0;activeContactDrops=0;lastContactDrop=null;visibleChannels=0;footprintBoosted=0;maxFootprintScale=1;
+   time.value=reduced?0:r.time;let count=0,ringCount=0,mistCount=0,frothCount=0,splashes=0;activeContactDrops=0;lastContactDrop=null;visibleChannels=0;footprintBoosted=0;maxFootprintScale=1;
    // Foam is presentation memory of the schedule: it builds through a surge
    // and thins over several seconds afterwards. A retry or time jump clears it.
    const foamStep=foamClock===null||r.time<foamClock||r.time-foamClock>.5?-1:r.time-foamClock;foamClock=r.time;
@@ -230,6 +240,26 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
      dummy.position.set(point.x,cloud.height,-point.y);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(i*2.399+v.jets[jetIndex].start.x);
      dummy.scale.set(cloud.width,cloud.tall,1);dummy.updateMatrix();mist.setMatrixAt(mistCount,dummy.matrix);mistPool.alphas.setX(mistCount++,cloud.alpha);
     }
+    // A continuous white body follows each jet's own arc from nozzle to water,
+    // widening as it breaks up, and three rolling heads of froth turn over at
+    // its landing. Both follow the pressure, so a receding surge thins them.
+    const flow=Math.min(1,s.level*1.15)*v.churn.value*Math.min(1,density*1.4),bodySteps=software?2:6;
+    for(let j=0;j<v.jets.length;j++){
+     const jet=v.jets[j],impactHeight=v.impactHeights[j];
+     for(let n=0;n<bodySteps;n++){
+      const t=(n+.5+.32*Math.sin(time.value*11+j*2.1+n*1.7))/bodySteps,a=jetPoint(jet,Math.max(0,t-.09)),b=jetPoint(jet,Math.min(1,t+.09)),from=waterPoint(v.w,a.x,a.y),to=waterPoint(v.w,b.x,b.y);
+      const fromHeight=a.height+(impactHeight-.12)*(t-.09)**2,toHeight=b.height+(impactHeight-.12)*(t+.09)**2;
+      dummy.position.set((from.x+to.x)/2,Math.max(impactHeight+.03,(fromHeight+toHeight)/2),-(from.y+to.y)/2);
+      velocity.set(to.x-from.x,toHeight-fromHeight,-(to.y-from.y));const reach=velocity.length();velocity.normalize();
+      viewVelocity.copy(velocity).applyQuaternion(inverseCamera);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(-Math.atan2(viewVelocity.x,viewVelocity.y));
+      dummy.scale.set(.1+t*.2,reach*1.7+.08,1);dummy.updateMatrix();froth.setMatrixAt(frothCount,dummy.matrix);frothPool.alphas.setX(frothCount++,flow*(.55+.3*Math.sin(time.value*14+n*2.3+j)**2)*(1-t*.35));
+     }
+     if(!software||j%2===0)for(let n=0;n<3;n++){
+      const cycle=time.value*(1.25+n*.21)+j*.37+n*.31,phase=cycle-Math.floor(cycle),turn=(Math.floor(cycle)*2.399+j*1.3+n*2.1),radius=.06+phase*.42,landing=v.jetLandings[j];
+      dummy.position.set(landing.x+Math.cos(turn)*radius,impactHeight+.05+Math.sin(Math.PI*phase)*(.16+n*.05),-(landing.y+Math.sin(turn)*radius));dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(turn);
+      dummy.scale.set(.26+phase*.42,.2+phase*.26,1);dummy.updateMatrix();froth.setMatrixAt(frothCount,dummy.matrix);frothPool.alphas.setX(frothCount++,flow*Math.sin(Math.PI*phase)**1.5*.9);
+     }
+    }
    }
    if(!reduced)for(const drip of DRAIN_DRIPS){
     if(Math.hypot(drip.x-r.player.x,drip.y-r.player.y)>24)continue;
@@ -268,15 +298,15 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
     // Both travel with the stride that made them, so they stay in a level
     // first-person view instead of being left under the camera.
     if(contact.kind==='player'&&age<.5){
-     const push=age/.5,seconds=age*1.15,pace=Math.hypot(contact.vx,contact.vy)||1,ahead=pace*seconds+1.5+seconds*1.9,envelope=Math.sin(Math.PI*push**.7)**2;
+     const push=age/.5,seconds=age*1.15,pace=Math.hypot(contact.vx,contact.vy)||1,ahead=pace*seconds+2.1+seconds*2.2,envelope=Math.sin(Math.PI*push**.7)**2;
      const bowX=contact.x+contact.vx/pace*ahead,bowY=contact.y+contact.vy/pace*ahead;bowPoint.x=bowX;bowPoint.y=bowY;
      const bowHeight=waterContactHeight(bowPoint,waters,states,floodDepth);
      if(bowHeight!==null){
       dummy.position.set(bowX,bowHeight+.006,-bowY);dummy.rotation.set(-Math.PI/2,0,Math.atan2(-contact.vx,contact.vy));dummy.scale.set(1+push*1.5,.5+push*.6,1);dummy.updateMatrix();rings.setMatrixAt(ringCount,dummy.matrix);ringPool.alphas.setX(ringCount++,envelope);
-      dummy.position.set(bowX,bowHeight+.12+push*.22,-bowY);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(contact.serial*2.399);dummy.scale.set(.5+push*.9,.26+push*.4,1);dummy.updateMatrix();mist.setMatrixAt(mistCount,dummy.matrix);mistPool.alphas.setX(mistCount++,envelope*.75);
+      dummy.position.set(bowX,bowHeight+.16+push*.34,-bowY);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(contact.serial*2.399);dummy.scale.set(.7+push*1.1,.34+push*.5,1);dummy.updateMatrix();froth.setMatrixAt(frothCount,dummy.matrix);frothPool.alphas.setX(frothCount++,envelope*.6);
      }
     }
-    if(contact.kind==='joe'&&age<.7)for(let layer=0;layer<2;layer++){const veil=age/.7;dummy.position.set(contact.x,currentHeight+.16+veil*(.3+layer*.42),-contact.y);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(contact.serial*2.399+layer*1.7);dummy.scale.set(.5+veil*(1.5-layer*.6),.34+veil*(.6+layer*.5),1);dummy.updateMatrix();mist.setMatrixAt(mistCount,dummy.matrix);mistPool.alphas.setX(mistCount++,Math.sin(Math.PI*veil**.6)**2);}
+    if(contact.kind==='joe'&&age<.7)for(let layer=0;layer<2;layer++){const veil=age/.7;dummy.position.set(contact.x,currentHeight+.16+veil*(.3+layer*.42),-contact.y);dummy.quaternion.copy(camera.quaternion);dummy.rotateZ(contact.serial*2.399+layer*1.7);dummy.scale.set(.5+veil*(1.5-layer*.6),.34+veil*(.6+layer*.5),1);dummy.updateMatrix();froth.setMatrixAt(frothCount,dummy.matrix);frothPool.alphas.setX(frothCount++,Math.sin(Math.PI*veil**.6)**2*.75);}
     if(!reduced)for(let i=0;i<CONTACT_SPLASH_DROPS;i++){
      const sample=contactSplashSample(contact,i,r.time);if(!sample)continue;
      const surface=waterContactHeight(sample,waters,states,floodDepth);
@@ -293,9 +323,9 @@ export function createDrainWater(scene,waters,camera,{software=false,renderHeigh
    wakeLast[0]=r.player.x;wakeLast[1]=r.player.y;wakeLast[2]=r.joe.x;wakeLast[3]=r.joe.y;
    activeDrops=count;activeSplashes=splashes;activeRipples=ringCount;
    dropPool.finish(count);ringPool.finish(ringCount);
-   activeMist=mistCount;mistPool.finish(mistCount);
+   activeMist=mistCount;mistPool.finish(mistCount);frothPool.finish(frothCount);
   },
   stats:()=>({footprintBoosted,maxFootprintScale,renderHeight:renderHeight(),channels:surfaces.length,visibleChannels,activeDrops,activeSplashes,activeRipples,activeMist,activeContactDrops,lastContactDrop,solidStreams:0,animationTime:time.value,dripSources:DRAIN_DRIPS,contacts:contacts.stats(),capacity:{drops:dropCapacity,contactDrops:contactDropCapacity,ripples:ringCapacity,mist:mistCapacity},jetsPerChannel:surfaces.map(v=>({id:v.w.id,count:v.jets.length,flowing:v.flowing})),presentation:'neutral silty droplets, gravity-driven impact fans, advecting dissipating spray and contact ripples'}),
-  dispose(){for(const v of surfaces){v.material.dispose();v.surface.geometry.dispose();}dropPool.dispose();ringPool.dispose();dropTexture.dispose();ringTexture.dispose();mistPool.dispose();sprayTexture.dispose();}
+  dispose(){for(const v of surfaces){v.material.dispose();v.surface.geometry.dispose();}dropPool.dispose();ringPool.dispose();frothPool.dispose();dropTexture.dispose();ringTexture.dispose();mistPool.dispose();sprayTexture.dispose();}
  };
 }

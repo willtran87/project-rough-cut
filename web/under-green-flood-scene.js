@@ -2,6 +2,7 @@ import * as THREE from './vendor/three/three.module.js';
 import {applyHorizontalWaterNormal} from './under-green-water-normal.js';
 import {partitionDrainSurfaces} from './under-green-light-partitions.js';
 import {floodState} from './under-green-flood.js';
+import {drainWakes,drainWakeUniforms,drainWakeShader,updateDrainWakes} from './under-green-wake.js';
 import {createFloodWetness} from './under-green-flood-wetness.js';
 import {floodShoreField} from './under-green-flood-shore.js';
 export function createDrainFlood(scene,layout){
@@ -10,12 +11,12 @@ export function createDrainFlood(scene,layout){
  shoreMap.minFilter=shoreMap.magFilter=THREE.LinearFilter;shoreMap.generateMipmaps=false;shoreMap.needsUpdate=true;
  const time={value:0},material=new THREE.MeshPhongMaterial({color:0xffffff,specular:0x697367,shininess:64,transparent:true,opacity:.82,depthWrite:false});
  material.onBeforeCompile=s=>{
-  s.uniforms.floodTime=time;s.uniforms.floodShoreMap={value:shoreMap};
+  s.uniforms.floodTime=time;s.uniforms.drainWakes=drainWakes;s.uniforms.floodShoreMap={value:shoreMap};
   s.uniforms.floodShoreDomain={value:new THREE.Vector4(shore.minX,shore.minY,shore.spanX,shore.spanY)};
   s.vertexShader='varying vec2 floodPoint;varying vec3 floodWorld;\n'+s.vertexShader;
   s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloodPoint=position.xz;');
   s.vertexShader=s.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nfloodWorld=(modelMatrix*vec4(transformed,1.)).xyz;');
-  s.fragmentShader='varying vec2 floodPoint;varying vec3 floodWorld;uniform float floodTime;uniform sampler2D floodShoreMap;uniform vec4 floodShoreDomain;float floodSheenLobe=0.;float floodSheenWall=0.;\n'+s.fragmentShader;
+  s.fragmentShader=drainWakeUniforms+'varying vec2 floodPoint;varying vec3 floodWorld;uniform float floodTime;uniform sampler2D floodShoreMap;uniform vec4 floodShoreDomain;float floodSheenLobe=0.;float floodSheenWall=0.;\n'+s.fragmentShader;
   s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    vec2 p=floor(floodPoint*160.)/160.;
    float shoreDistance=texture2D(floodShoreMap,(vec2(floodWorld.x,-floodWorld.z)-floodShoreDomain.xy)/floodShoreDomain.zw).r;
@@ -26,28 +27,29 @@ export function createDrainFlood(scene,layout){
    float swellA=cos(floodPoint.x*3.1+floodPoint.y*1.2-floodTime*.42);
    float swellB=cos(floodPoint.y*2.7-floodPoint.x*.9-floodTime*.36);
    float fineWave=cos(p.y*13.7+p.x*4.3-floodTime*.81);
+   // Whoever wades the flood rings it and pushes a pale crest ahead.${drainWakeShader('floodPoint','floodTime')}
    float grazing=pow(1.-max(0.,normalize(cameraPosition-floodWorld).y),5.);
    vec3 murk=mix(vec3(.009,.014,.011),vec3(.018,.020,.012),silt);
    murk=mix(murk,vec3(.020,.017,.010),bank*(.3+silt*.35));
-   diffuseColor.rgb=murk*(1.-contact*.42);
+   diffuseColor.rgb=mix(murk*(1.-contact*.42),vec3(.36,.38,.33),drainWakeBow*.7);
    // A small grazing-angle opacity lift keeps distant water silty. Reflected
    // light remains in the physical lighting pass, never in emissive pigment.
-   diffuseColor.a=mix(diffuseColor.a,1.,grazing*.7);
+   diffuseColor.a=mix(diffuseColor.a,1.,max(grazing*.7,drainWakeBow));
    // Standing flood water spreads each practical across its swell and mirrors
    // the lit masonry at grazing angles; both terms scale with real sources.
    floodSheenLobe=(.06+grazing*.7)*(1.-bank*.6);
    floodSheenWall=grazing*.06*(.7+.3*fineWave+ripple)*(1.-bank*.6);`);
   s.fragmentShader=s.fragmentShader.replace('#include <lights_phong_pars_fragment>',THREE.ShaderChunk.lights_phong_pars_fragment.replace('reflectedLight.directSpecular +=',
    'reflectedLight.directSpecular += directLight.color * material.specularColor * ( pow( saturate( dot( geometryNormal, normalize( directLight.direction + geometryViewDir ) ) ), 13. ) * floodSheenLobe + floodSheenWall );\n\treflectedLight.directSpecular +='));
-  applyHorizontalWaterNormal(s,'(-.0403*swellA+.0054*swellB-.0129*fineWave)*(1.-contact*.75)','(-.0156*swellA-.0162*swellB-.0411*fineWave)*(1.-contact*.75)');
+  applyHorizontalWaterNormal(s,'(-.0403*swellA+.0054*swellB-.0129*fineWave)*(1.-contact*.75)+drainWakeSlope.x','(-.0156*swellA-.0162*swellB-.0411*fineWave)*(1.-contact*.75)+drainWakeSlope.y');
   s.fragmentShader=s.fragmentShader.replace('#include <specularmap_fragment>',`#include <specularmap_fragment>
    specularStrength*=(.05+grazing*.08+ripple*.55)*(1.-bank*.6);`);
  };
- material.customProgramCacheKey=()=> 'drain-flood-silt-shore-v4-broad-reflection';
+ material.customProgramCacheKey=()=> 'drain-flood-silt-shore-v5-wake';
  const floodParts=partitionDrainSurfaces(scene,parts,material,'Drain flood',.40),mesh=floodParts.root;let state=floodState();
  const receiverState={value:new THREE.Vector3()},waterline={value:0},dampTop={value:0},wetFade={value:0};let wetness=null;
  return {bindReceivers(meshes){wetness?.dispose();wetness=createFloodWetness(meshes,receiverState);},inspectReceivers:()=>wetness?.inspect()||[],update(r,reduced){
-  state=floodState(r.elapsed);mesh.visible=state.depth>.006;mesh.position.y=state.depth;time.value=reduced?0:r.elapsed;
+  state=floodState(r.elapsed);updateDrainWakes(r);mesh.visible=state.depth>.006;mesh.position.y=state.depth;time.value=reduced?0:r.elapsed;
   material.opacity=.55+.41*THREE.MathUtils.smoothstep(state.depth,.015,.28);
   waterline.value=state.depth;
   const cycleAge=r.elapsed<32?0:(r.elapsed-32)%66;
