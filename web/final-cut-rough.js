@@ -27,7 +27,7 @@ export function createFinalCutRough(scene){
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
    vec4 root=modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.);
    float gust=pow(.5+.5*sin(roughTime*.42-root.x*.07-root.z*.1),3.);
-   float breeze=(sin(roughTime*.8+root.x*.17+root.z*.13)*.035+gust*(.11+.035*sin(roughTime*3.1+root.x*.9+root.z*.7)))*(1.-roughReduced);
+   float breeze=(sin(roughTime*.8+root.x*.17+root.z*.13)*.035+gust*(.21+.05*sin(roughTime*3.1+root.x*.9+root.z*.7)))*(1.-roughReduced);
    // Blades lean away from the walker and recover slowly along the wake; the
    // working reels shake and flatten the stand just ahead of the cut.
    vec2 away=root.xz-roughWalker.xy,trail=root.xz-roughWalker.zw,churned=root.xz-roughReels.xy;
@@ -41,8 +41,8 @@ export function createFinalCutRough(scene){
    transformed.y-=lean*(max(part,wake)*.3+churn*.12);
   `);
  };
- const material=new THREE.MeshLambertMaterial({map,vertexColors:false,color:'#aab39c',alphaTest:.3,side:THREE.DoubleSide});material.onBeforeCompile=animate;material.customProgramCacheKey=()=> 'final-cut-authored-rough-v2-parting';
- const depth=new THREE.MeshDepthMaterial({map,alphaTest:.3,depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});depth.onBeforeCompile=animate;depth.customProgramCacheKey=()=> 'final-cut-authored-rough-depth-v2-parting';
+ const material=new THREE.MeshLambertMaterial({map,vertexColors:false,color:'#aab39c',alphaTest:.3,side:THREE.DoubleSide});material.onBeforeCompile=animate;material.customProgramCacheKey=()=> 'final-cut-authored-rough-v3-gusts';
+ const depth=new THREE.MeshDepthMaterial({map,alphaTest:.3,depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});depth.onBeforeCompile=animate;depth.customProgramCacheKey=()=> 'final-cut-authored-rough-depth-v3-gusts';
  const stub=new THREE.BufferGeometry(),sp=[],si=[];
  for(let blade=0;blade<3;blade++){
   const a=blade*2.39,cs=Math.cos(a),sn=Math.sin(a),first=sp.length/3;

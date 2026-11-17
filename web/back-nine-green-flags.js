@@ -27,10 +27,10 @@ export function createGreenFlags(scene){
   Object.assign(s.uniforms,{flagTime:time,flagMotion:motion});s.vertexShader='uniform float flagTime;\n'+gustGLSL('flagTime')+'\n'+'attribute vec2 flagLocal;uniform float flagMotion;\n'+s.vertexShader;
   s.vertexShader=s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
    float flap=flagLocal.x*flagLocal.x;
-   transformed.z+=flagMotion*backNineGust(position.xz)*flap*(.035*sin(flagTime*2.1+flagLocal.x*7.0+flagLocal.y)+.012*sin(flagTime*4.3+flagLocal.x*12.0));
+   transformed.z+=flagMotion*backNineGust(position.xz)*flap*(.085*sin(flagTime*2.6+flagLocal.x*7.0+flagLocal.y)+.03*sin(flagTime*5.1+flagLocal.x*12.0));
    transformed.y-=flap*.026;
   `);
- };material.customProgramCacheKey=()=> 'back-nine-green-cloth-v1';
+ };material.customProgramCacheKey=()=> 'back-nine-green-cloth-v2';
  const parts=[];
  for(const [i,g]of COURSE_GREENS.entries()){
   const geo=new THREE.PlaneGeometry(.53,.3,12,5),p=geo.attributes.position,u=geo.attributes.uv,local=[];
@@ -42,5 +42,5 @@ export function createGreenFlags(scene){
  }
  const geometry=mergeIndexedGeometries(parts);parts.forEach(g=>g.dispose());geometry.computeBoundingSphere();geometry.boundingSphere.radius+=.1;
  const mesh=new THREE.Mesh(geometry,material);mesh.name='BackNineGreenFlags';scene.add(mesh);
- return {update(run,reduced){time.value=run.time;motion.value=reduced?0:1;},stats:()=>({flags:COURSE_GREENS.length,atlas:[768,256],motion:motion.value,time:time.value}),dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();map.dispose();}};
+ return {update(run){time.value=run.time;motion.value=1;},stats:()=>({flags:COURSE_GREENS.length,atlas:[768,256],motion:motion.value,time:time.value}),dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();map.dispose();}};
 }

@@ -77,8 +77,8 @@ export function finishWindbreakSurface(material){
    float cluster=.5+.25*sin(position.x*2.1+position.z*.8)+.25*sin(position.z*2.7-position.y*1.3);
    hedgeShade=mix(vec3(.67,.74,.72),vec3(1.06,1.08,.98),crown)*mix(.9,1.06,cluster);
    float bend=windbreakFlex*windbreakFlex*windbreakWind*backNineGust(position.xz);
-   transformed.x+=bend*.012*sin(windbreakTime*1.2+position.z*.37+position.x*.8);
-   transformed.z+=bend*.009*sin(windbreakTime*.9+position.z*.53);
+   transformed.x+=bend*.034*sin(windbreakTime*1.2+position.z*.37+position.x*.8);
+   transformed.z+=bend*.024*sin(windbreakTime*.9+position.z*.53);
   `);
   shader.fragmentShader='varying vec3 hedgeSurfacePoint;varying vec3 hedgeSurfaceNormal;varying vec3 hedgeShade;\n'+shader.fragmentShader;
   // Blend projections per fragment, as in Level 1, so rounded shoulders and
@@ -92,6 +92,6 @@ export function finishWindbreakSurface(material){
   shader.fragmentShader=shader.fragmentShader.replace('vec3 pixelShade=floor(',`outgoingLight=max(outgoingLight,diffuseColor.rgb*vec3(.12,.16,.17));
    vec3 pixelShade=floor(`);
  };
- material.customProgramCacheKey=()=>key+'-windbreak-leaf-v1';
- return {update(run,reducedMotion){time.value=run.time||0;wind.value=reducedMotion?0:1;},stats:()=>({time:time.value,wind:wind.value,texture:'level-one-hedge',projection:'triplanar'})};
+ material.customProgramCacheKey=()=>key+'-windbreak-leaf-v2';
+ return {update(run){time.value=run.time||0;wind.value=1;},stats:()=>({time:time.value,wind:wind.value,texture:'level-one-hedge',projection:'triplanar'})};
 }

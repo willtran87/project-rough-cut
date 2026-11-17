@@ -27,7 +27,7 @@ import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-region
 import { createMouseLook } from './mouse-look.js';
 import { advanceCartTimer, courseSoundMix } from './encounter-timing.js';
 import { COURSE_CIRCUITS, CIRCUIT_SECONDS, circuitPower, advanceCircuits, traceUnseenSeconds } from './course-circuits.js';
-import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261114-launch-theme';
+import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261117-crossfade';
 import { freshCourseArrival, advanceCourseArrival, arrivalPhoneVisible } from './course-arrival.js';
 import { freshFirstImpression, advanceFirstImpression, TEE_ANOMALY } from './course-first-impression.js';
 import {zoneCueAnchor,zoneCueSound} from './zone-cue-scene.js';
@@ -57241,7 +57241,8 @@ import { createJoeVoice } from './joe-voice.js';
   // phone on arrival, a whip toward Joe on capture and a rising pull-back on
   // escape. They only offset the rendered view. Simulation, timers, records
   // and the result panels are untouched, and Reduced motion skips them all.
-  const COURSE_CAMERA_BEATS={arrive:1.25,defeat:.62,victory:.85};
+  const COURSE_CAPTURE_HIT=.3;
+  const COURSE_CAMERA_BEATS={arrive:1.25,defeat:.95,victory:.85};
   const courseCameraView={x:0,y:0,yaw:0,pitch:0,roll:0,fov:0,rise:0};
   function armCourseCameraBeat(kind){
     const h=state.hole,p=state.player;courseCameraBeat=null;
@@ -57265,8 +57266,9 @@ import { createJoeVoice } from './joe-voice.js';
       // Eyes come up from the phone to the course.
       const rest=1-smoothstep(t);view.pitch=-.34*rest;view.rise=-.06*rest;view.fov=-5*rest;
     }else if(beat.kind==='defeat'){
-      // Snap round to him, lunge in, and let the hit ring out of the frame.
-      const snap=1-Math.pow(1-clamp(t/.42,0,1),3),lunge=smoothstep(t/.7),ring=Math.sin(t*26)*Math.pow(1-t,2);
+      // Snap round to him and lunge in at full speed; from the instant he
+      // connects the same move crawls, so the hit hangs in slow motion.
+      const hit=COURSE_CAPTURE_HIT,snap=1-Math.pow(1-clamp(t/(hit*.9),0,1),3),lunge=t<hit?.72*smoothstep(t/hit):.72+.28*Math.sqrt((t-hit)/(1-hit)),ring=t<hit?0:Math.sin((t-hit)*30)*Math.pow(1-(t-hit)/(1-hit),3);
       const face=Math.atan2(1.42-(h.rebuild.eyeHeight||scale.eye),Math.max(.6,beat.reach))-beat.pitch,step=Math.min(.42,Math.max(0,beat.reach-.75))*lunge/scale.meters;
       view.yaw=beat.turn*snap;view.pitch=face*snap+ring*.035;view.roll=ring*.05+beat.turn*.03*(1-snap);view.fov=-15*lunge;
       view.x=p.x+Math.sin(beat.yaw+beat.turn)*step/scale.x;view.y=p.y+Math.cos(beat.yaw+beat.turn)*step;
@@ -57282,7 +57284,16 @@ import { createJoeVoice } from './joe-voice.js';
   // course through the moving camera instead.
   function drawResultCameraBeat(){
     if(courseCameraBeat?.kind!==state.mode||!courseCameraBeatView())return false;
-    return spatialViewEnabled()&&drawSpatialFirstHole(true);
+    if(!spatialViewEnabled()||!drawSpatialFirstHole(true))return false;
+    if(state.mode==='defeat'){
+      // The impact itself: one warm flash as he connects (only with Flashes
+      // on), then the frame bruises toward the result panel. Drawn over the
+      // view only; nothing in the round reads it.
+      const t=state.time/courseCameraBeat.duration,flash=state.flashes?Math.max(0,1-Math.abs(t-COURSE_CAPTURE_HIT)/.07)*.5:0,bruise=clamp((t-COURSE_CAPTURE_HIT)/(1-COURSE_CAPTURE_HIT),0,1);
+      if(bruise>0){ctx.fillStyle=`rgba(38,5,3,${bruise*bruise*.42})`;ctx.fillRect(0,0,WIDTH,HEIGHT);}
+      if(flash>0){ctx.fillStyle=`rgba(255,232,196,${flash})`;ctx.fillRect(0,0,WIDTH,HEIGHT);}
+    }
+    return true;
   }
   function drawSpatialFirstHole(resultBeat=false){
     const h=state.hole,calibration=h.rebuild.lab==='calibration',p=spatialPreferences();

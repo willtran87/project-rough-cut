@@ -82,13 +82,13 @@ export function buildDrainOrganicGeometry({layout,root,put,materials,lowDetail=f
    root(points,.13+noise(branch+j*9)*.15);hangingRoots++;
    const start=points[3+branch%3],tip=start.clone().add(new THREE.Vector3(Math.sin(phase)*.4,-.4-noise(branch*8+j)*.35,Math.cos(phase)*.3));
    tip.y=Math.max(2.7,tip.y);
-   root([start,start.clone().lerp(tip,.5).add(new THREE.Vector3(.12,0,-.09)),tip],.045+noise(branch+j)*.04);hangingRoots++;
+   root([start,start.clone().lerp(tip,.5).add(new THREE.Vector3(.12,0,-.09)),tip],.045+noise(branch+j)*.04,null,{sway:true});hangingRoots++;
    // Fine feeders descend from actual limbs only at selected knots. Keep
    // their tips above head/scythe clearance and leave the other knots quiet.
    if(branch===1&&j%2===0)for(let hair=0;hair<(lowDetail?3:5);hair++){
     const attachment=points[2+hair%4].clone(),end=attachment.clone().add(new THREE.Vector3((noise(j*41+hair)-.5)*.25,-.22-noise(j*19+hair)*.35,(noise(j*31+hair)-.5)*.2));
     end.y=Math.max(2.7,end.y);
-    root([attachment,attachment.clone().lerp(end,.52).add(new THREE.Vector3(.035,0,-.025)),end],.009+noise(hair+j)*.005,null,{taper:.94});ceilingHairs++;
+    root([attachment,attachment.clone().lerp(end,.52).add(new THREE.Vector3(.035,0,-.025)),end],.009+noise(hair+j)*.005,null,{taper:.94,sway:true});ceilingHairs++;
    }
   }
  }

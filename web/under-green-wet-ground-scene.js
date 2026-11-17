@@ -1,4 +1,5 @@
 import {applyHorizontalWaterNormal} from './under-green-water-normal.js';
+import {drainWakes,drainWakeUniforms,drainWakeShader,updateDrainWakes} from './under-green-wake.js';
 import {shallowPoolGeometry} from './under-green-puddle-geometry.js';
 import * as THREE from './vendor/three/three.module.js';
 import {mergeIndexedGeometries} from './indexed-geometry.js';
@@ -50,7 +51,7 @@ export function createDrainWetGround(scene,waters){
  material.onBeforeCompile=s=>{
   s.uniforms.puddleTime=time;s.vertexShader='attribute float puddleInterior;varying float puddleDepth;varying vec2 puddlePoint;\n'+s.vertexShader;
   s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\npuddlePoint=position.xz;puddleDepth=puddleInterior;');
-  s.fragmentShader='varying float puddleDepth;varying vec2 puddlePoint;uniform float puddleTime;\n'+s.fragmentShader;
+  s.uniforms.drainWakes=drainWakes;s.fragmentShader=drainWakeUniforms+'varying float puddleDepth;varying vec2 puddlePoint;uniform float puddleTime;\n'+s.fragmentShader;
   s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    float galleryPool=step(abs(puddlePoint.x),5.)*step(8.5,-puddlePoint.y)*step(-puddlePoint.y,18.5);
    float pixelDensity=mix(128.,313.5,galleryPool);
@@ -65,12 +66,13 @@ export function createDrainWetGround(scene,waters){
    // Water between those highlights stays dark; there is no painted glow.
    float poolWaveA=cos(p.x*5.2+p.y*2.6-puddleTime*.45);
    float poolWaveB=cos(p.y*10.8-p.x*1.7-puddleTime*.30);
+   // A footfall in a shallow pool rings it; the rings bend whatever it reflects.${drainWakeShader('puddlePoint','puddleTime')}
   `);
-  applyHorizontalWaterNormal(s,'mix(sin(puddlePoint.x*23.+puddleTime*.2)*.012,-.0416*poolWaveA+.0051*poolWaveB,galleryPool)','mix(cos(puddlePoint.y*27.-puddleTime*.2)*.012,-.0208*poolWaveA-.0324*poolWaveB,galleryPool)');
+  applyHorizontalWaterNormal(s,'mix(sin(puddlePoint.x*23.+puddleTime*.2)*.012,-.0416*poolWaveA+.0051*poolWaveB,galleryPool)+drainWakeSlope.x*.7','mix(cos(puddlePoint.y*27.-puddleTime*.2)*.012,-.0208*poolWaveA-.0324*poolWaveB,galleryPool)+drainWakeSlope.y*.7');
   s.fragmentShader=s.fragmentShader.replace('#include <specularmap_fragment>','#include <specularmap_fragment>\nspecularStrength*=mix(.06+crest*.30,.08+crest*1.50,galleryPool)*(.65+.35*shallowEdge);');
   s.fragmentShader=s.fragmentShader.replace('#include <lights_phong_fragment>','#include <lights_phong_fragment>\nmaterial.specularShininess=mix(material.specularShininess,65.,galleryPool);');
  };
- material.customProgramCacheKey=()=> 'drain-puddle-shore-v3-gallery';
+ material.customProgramCacheKey=()=> 'drain-puddle-shore-v4-gallery-wake';
  const puddles=partitionDrainSurfaces(scene,DRAIN_SHALLOW_PATCHES.map(p=>shallowPoolGeometry(p,SHALLOW_WATER_HEIGHT)),material,'Shallow runoff pools');puddles.setRenderOrder(-1);
 
  const boot=bootMask(),footprints=fadingWaterInstances(scene,DRAIN_BOOT_TRACES.length,boot,{color:0x332b19,opacity:1,shininess:1});
@@ -105,7 +107,7 @@ export function createDrainWetGround(scene,waters){
  function update(r,states,reduced){
   const reset=owner!==r||lastTime===null||r.time<lastTime||r.time-lastTime>.5,dt=reset?0:Math.max(0,r.time-lastTime);
   if(reset)phases.fill(0);owner=r;lastTime=r.time;
-  const flood=floodState(r.elapsed).depth;time.value=reduced?0:r.time;
+  const flood=floodState(r.elapsed).depth;time.value=reduced?0:r.time;updateDrainWakes(r);
   const positions=clumps.map((c,i)=>{
    const flow=c.channel<0?null:states[c.channel],energy=flow?.level||0;
    if(!reduced)phases[i]+=dt*c.direction*(flow?.danger ? .34 : .065+energy*.06);

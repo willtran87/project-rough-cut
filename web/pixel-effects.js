@@ -338,10 +338,10 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
       // never reports a mower the game is not already warning about, and
       // Reduced motion leaves it out entirely.
       const jx=(frame.joe.x-frame.player.x)*xScale,jz=(frame.joe.y-frame.player.y)*scale,distance=Math.hypot(jx,jz);
-      const close=frame.reducedMotion?0:clamp(1-distance/10,0,1)*clamp(pressure*1.6,0,1),phase=(frame.time*(1.05+close*1.5))%1;
-      const beat=close>0?Math.max(Math.exp(-(((phase-.12)/.07)**2)),.7*Math.exp(-(((phase-.38)/.08)**2))):0,grip=Math.round(close*(.5+.5*beat)*12)/12;
-      const bearing=jx*Math.cos(frame.yaw||0)-jz*Math.sin(frame.yaw||0),side=grip>0&&frame.joe.mode==='chase'&&Math.abs(bearing)>distance*.25?Math.sign(bearing):0;
-      const next=[red,green,edge,flash?.side,grip,side].join(':');if(next===stamp)return;stamp=next;paints++;g.clearRect(0,0,256,144);
+      const hunted=frame.joe.mode==='chase',close=frame.reducedMotion?0:Math.sqrt(clamp(1-distance/(hunted?13:10),0,1))*clamp(pressure*(hunted?4:2.4),0,1),phase=(frame.time*(1.05+close*1.5))%1;
+      const beat=close>0?Math.max(Math.exp(-(((phase-.12)/.07)**2)),.7*Math.exp(-(((phase-.38)/.08)**2))):0,grip=Math.round(close*(.62+.38*beat)*14)/14,throb=Math.round(close*beat*8)/8;
+      const bearing=jx*Math.cos(frame.yaw||0)-jz*Math.sin(frame.yaw||0),side=grip>0&&hunted&&Math.abs(bearing)>distance*.25?Math.sign(bearing):0;
+      const next=[red,green,edge,flash?.side,grip,throb,side].join(':');if(next===stamp)return;stamp=next;paints++;g.clearRect(0,0,256,144);
       // Stepped, low-opacity borders leave the aiming and action lane clear.
       for(let i=0;i<7;i++){
         g.fillStyle=red>.12?`rgba(87,34,21,${red*(7-i)*.009})`:`rgba(18,43,29,${green*(7-i)*.013})`;
@@ -350,8 +350,10 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
       if(green>.2)for(let i=0;i<18;i++){g.fillStyle=`rgba(66,87,48,${green*.22})`;const x=i%2?249-random(i)*10:random(i)*10;g.fillRect(Math.floor(x),112+Math.floor(random(i+4)*26),2,4+Math.floor(random(i+9)*12));}
       if(edge>0){g.fillStyle=`rgba(147,170,147,${edge})`;const x=(flash.side||1)<0?0:244;for(let i=0;i<5;i++)g.fillRect(x,25+i*19,12,1);}
       if(grip>0){
-        for(let i=0;i<12;i++){g.fillStyle=`rgba(9,4,3,${grip*(12-i)*.016})`;const n=i*2;g.fillRect(n,n,2,144-n*2);g.fillRect(254-n,n,2,144-n*2);g.fillRect(n+2,n,252-n*2,2);g.fillRect(n+2,142-n,252-n*2,2);}
-        if(side)for(let i=0;i<9;i++){g.fillStyle=`rgba(214,160,84,${grip*(9-i)*.011})`;g.fillRect(side<0?i*2:254-i*2,10+i*4,2,124-i*8);}
+        // A deep stepped vignette squeezes the view; each heartbeat runs a dull
+        // red through its outer bands.
+        for(let i=0;i<16;i++){g.fillStyle=i<5&&throb>0?`rgba(${Math.round(9+70*throb)},${Math.round(4+8*throb)},${Math.round(3+5*throb)},${grip*(16-i)*.028})`:`rgba(9,4,3,${grip*(16-i)*.028})`;const n=i*2;g.fillRect(n,n,2,144-n*2);g.fillRect(254-n,n,2,144-n*2);g.fillRect(n+2,n,252-n*2,2);g.fillRect(n+2,142-n,252-n*2,2);}
+        if(side)for(let i=0;i<14;i++){g.fillStyle=`rgba(232,176,92,${grip*(14-i)*.02})`;g.fillRect(side<0?i*2:254-i*2,8+i*3,2,128-i*6);}
       }
     }
     return {draw,hide:()=>{canvas.hidden=true;},dispose:()=>{observer.disconnect();canvas.remove();},stats:()=>({paints,resolution:[256,144],visible:!canvas.hidden,ghostTear:ghostTear?{...ghostTear}:null})};

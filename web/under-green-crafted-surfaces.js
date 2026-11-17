@@ -62,10 +62,20 @@ export async function createCraftedDrainSurfaces(){
 // Broad, stationary variation breaks the two-metre repeat. Quantizing the field
 // keeps the shading in the same pixel language as the textures. Roots and wall
 // bases receive static grounding without an extra transparent pass or SSAO.
+// Simulation seconds for the draught; the scene advances it once per frame.
+export const drainDraught={value:0};
 export function shadeDrainMaterial(material,{wall=false,root=false}={}){
  material.onBeforeCompile=s=>{
   s.vertexShader='varying vec3 drainWorld;\n'+s.vertexShader;
-  s.vertexShader=s.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\ndrainWorld=(modelMatrix*vec4(transformed,1.)).xyz;');
+  s.vertexShader=s.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\ndrainWorld=(modelMatrix*vec4('+(root?'position':'transformed')+',1.)).xyz;');
+  if(root){
+   // Dangling root tips and feeder hairs stir in the tunnel draught. Weight is
+   // authored per vertex (zero on every fixed limb), the phase follows the
+   // batch's baked world position, and shading stays on the resting surface.
+   s.uniforms.drainDraught=drainDraught;
+   s.vertexShader='attribute float drainSway;uniform float drainDraught;\n'+s.vertexShader;
+   s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloat drainGust=.6+.4*sin(drainDraught*.31+position.x*.21+position.z*.17);\ntransformed.xz+=drainSway*drainGust*vec2(sin(drainDraught*1.9+position.x*1.3+position.z*.9)*.05,cos(drainDraught*1.4+position.z*1.1+position.x*.7)*.035);');
+  }
   s.fragmentShader='varying vec3 drainWorld;\n'+s.fragmentShader;
   s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    vec3 q=floor(drainWorld*128.)/128.;
@@ -76,5 +86,5 @@ export function shadeDrainMaterial(material,{wall=false,root=false}={}){
    ${root?'diffuseColor.rgb*=.91+.09*sin(q.y*5.+q.x*2.+q.z);':''}
   `);
  };
- material.customProgramCacheKey=()=>`drain-crafted-${wall}-${root}`;material.needsUpdate=true;
+ material.customProgramCacheKey=()=>`drain-crafted-${wall}-${root}`+(root?'-draught-sway-v1':'');material.needsUpdate=true;
 }

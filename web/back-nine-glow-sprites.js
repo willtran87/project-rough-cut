@@ -54,6 +54,8 @@ export function createGlowSprites(scene,lamps,capacity=256){
      vec3 right=vec3(viewMatrix[0][0],viewMatrix[1][0],viewMatrix[2][0]),up=vec3(viewMatrix[0][1],viewMatrix[1][1],viewMatrix[2][1]),toLamp;
      vec3 corner=glowPlace.xyz+(right*position.x*reach.x+up*position.y*reach.y)*.6;
      for(int i=0;i<2;i++)scatter+=glowLampColor[i]*glowLampReach(i,corner,toLamp);
+     // Close to a lamp, stacked puffs must glow, not burn out to white.
+     scatter=min(scatter,vec3(.5));
     }
     // Distance fog, and a near fade so a puff never floods the lens.
     float visible=(1.0-smoothstep(glowFog.x,glowFog.y,centreDepth))*(glowShape.w>0.0?smoothstep(glowShape.w*.3,glowShape.w,centreDepth):1.0);

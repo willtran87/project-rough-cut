@@ -26,11 +26,12 @@ import {auditResponseBellPose} from './audit-response.js';
 import {createNoiseHazardScene} from './noise-hazard-scene.js';
 let noiseHazardScene=null;
 import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261116-soft-spray';
-import { createNightAir } from './course-night-air.js?v=20261116-night-air';
+import { createNightAir } from './course-night-air.js?v=20261117-work-lamp';
+import { createCourseMoonRim } from './course-moon-rim.js?v=20261117-moon-rim';
 import { createWetGround } from './wet-ground.js?v=20261113-visual-pass';
 let wetGround=null;
 let sprinklerSpray=null;
-let nightAir=null,treeSites=[];
+let nightAir=null,treeSites=[],moonRim=null;
 import { practiceStatus, stationImpulse, stationMechanismPose } from './station-feedback.js?v=20261112-station-replies';
 import { createCourseEntryGate } from './course-entry-gate.js';
 let courseEntryGate=null;
@@ -61,7 +62,7 @@ import { woodlandHeight } from './pixel-landscape.js';
 import {courseWoodlandPose} from './course-woodland-composition.js';
 import { createJoeModel } from './joe-model.js?v=20261113-mower-finish';
 import { prepareRendering, yieldPreparation, waitForGPU, preparationStats, prepareStaticBuffers } from './render-preparation.js';
-import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261116-close-pulse';
+import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261117-close-grip';
 import { createPixelWater } from './pixel-water.js?v=20261113-runoff-contact';
 import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-light';
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
@@ -226,6 +227,19 @@ function buildUnderstory(data){
     for(let j=0;j<3;j++)put(x+(rand(i*7+j)-.5)*.35,z+(rand(i*11+j)-.5)*.35,.09+rand(i*17+j)*.12,i*31+j);
   }
   for(let i=0;i<4;i++)for(const side of [-1,1])put(side*(2.8+rand(i+12)*1.6),-3.5-i*.7,.35+rand(i+4)*.3,i+side);
+  // Shin-high grass stands in the rough either side of the fairway, on a
+  // jittered grid. It shares the verge material, so it leans in the wind and
+  // parts around the walker and the mower through the same contact field.
+  // Scenery only: the rough's cover and footing still come from the zone data.
+  if(!softwareRenderer)for(const zone of data.zones||[])for(const side of [-1,1]){
+    const inner=zone.fairwayHalfWidth*X_SCALE+.25,outer=data.bounds.maxX*X_SCALE-.1,z0=-zone.end*SCALE,z1=-zone.start*SCALE;
+    for(let gz=Math.ceil(z0/.8);gz*.8<z1;gz++)for(let gx=0;inner+gx*.8<outer;gx++){
+      const seed=gx*37.1+gz*91.7+side*13;if(rand(seed)<.18)continue;
+      const x=side*(inner+gx*.8+rand(seed+1)*.7),z=gz*.8+rand(seed+2)*.7;
+      if((data.sand||[]).some(b=>((x-b.x*X_SCALE)/((b.radiusX||b.radius)*X_SCALE+.3))**2+((z+b.y*SCALE)/((b.radiusY||b.radius)*SCALE+.3))**2<1))continue;
+      put(x,z,.24+rand(seed+3)*.24,seed+5);
+    }
+  }
   // Low plants break up path edges without covering the walkable centerline.
   for(const path of data.paths)for(let i=1;i<path.length;i++){const a=point(path[i-1]),b=point(path[i]),length=a.distanceTo(b),dx=(b.z-a.z)/length,dz=(a.x-b.x)/length;if(!length)continue;for(let d=.7;d<length;d+=1.1+rand(d+i*19)*2.4){const p=a.clone().lerp(b,d/length),side=Math.floor(d*3+i)%2?1:-1;put(p.x+dx*side*1.24,p.z+dz*side*1.24,.18+rand(d+i)*.16,d+i*71);}}
   const crops=[[0,100,420,475],[420,90,415,485],[835,100,419,475],[0,665,420,480],[420,665,415,480],[835,665,419,480]];
@@ -516,7 +530,7 @@ async function buildLandmarks(data,cancelled=()=>false){
   stats.entryGate=courseEntryGate.stats();
   if(pixelVolume)for(const side of [-1,1])for(let i=0;i<44;i++){pixelWorld.boundaryRope(side*13.1,1-i*2.7);if(i%8===7){await yieldPreparation(cancelled);if(cancelled())return;}}
 }
-function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
+function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];moonRim=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
 function build(data){
   courseEntryGate=null;stats.entryGate=null;
   arrivalPhone=null;
@@ -531,7 +545,8 @@ function build(data){
   for(let i=0;i<skyGeometry.attributes.position.count;i++){const y=skyGeometry.attributes.position.getY(i)/72,t=clamp(y*1.6,0,1),color=new THREE.Color(0x526b75).lerp(new THREE.Color(0x101e35),t);skyColors.push(color.r,color.g,color.b);}
   skyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(skyColors,3));sky=new THREE.Mesh(skyGeometry,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));sky.renderOrder=-1;world.add(sky);
   if(pixelStyle){sky.visible=false;world.background=null;parallax=createParallax({courseSky:pixelVolume});}
-  world.add(new THREE.HemisphereLight(0xc1d8df,0x657459,pixelVolume?.48:pixelStyle?.12:.18));world.add(new THREE.AmbientLight(0x9ba995,pixelVolume?.28:pixelStyle?.025:.035));const moon=new THREE.DirectionalLight(0xa9c7d9,pixelVolume?.14:pixelStyle?.18:.27);moon.position.fromArray(pixelVolume?COURSE_MOON_OFFSET:[-20,40,10]);world.add(moon);
+  world.add(new THREE.HemisphereLight(0xc1d8df,0x657459,pixelVolume?.48:pixelStyle?.12:.18));world.add(new THREE.AmbientLight(0x9ba995,pixelVolume?.28:pixelStyle?.025:.035));const moon=new THREE.DirectionalLight(0xa9c7d9,pixelVolume?.30:pixelStyle?.18:.27);moon.position.fromArray(pixelVolume?COURSE_MOON_OFFSET:[-20,40,10]);world.add(moon);
+  moonRim=pixelVolume&&!softwareRenderer?createCourseMoonRim(moon):null;
   moonShadow=null;nearLamp=null;if(pixelVolume){moonShadow=moon;moon.castShadow=!softwareRenderer;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:100});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;world.add(moon.target);}
   lastShadowTime=-Infinity;lastShadowX=lastShadowZ=Infinity;lastShadowMechanisms="";
   if(!data.calibration)pixelEffects=createPixelEffects(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,moon,drain:data.drain?{x:data.drain.x*X_SCALE,z:-data.drain.y*SCALE}:null,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE})),ponds:data.obstacles.filter(o=>o.id.includes('pond')).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE}))});
@@ -572,7 +587,7 @@ function build(data){
     const irrigation=sprinklerLayout(data,SCALE,X_SCALE);
     if(pixelVolume)for(const head of irrigation)pixelWorld.irrigationHead(head);
     sprinklerSpray=createSprinklerSpray(world,irrigation,{software:softwareRenderer});
-    if(pixelVolume)nightAir=createNightAir(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,trees:treeSites,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE,box:o.shape==='box'}))});
+    if(pixelVolume)nightAir=createNightAir(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,trees:treeSites,bounds:{x:data.bounds.maxX*X_SCALE,z:data.bounds.maxY*SCALE},blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE,box:o.shape==='box'}))});
     buildJoe();
     if(pixelVolume)courseVisualDetail=createCourseVisualDetail(world,data,{scale:SCALE,xScale:X_SCALE,software:softwareRenderer,wind:courseWind});
     const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(3,16,10),new THREE.MeshBasicMaterial({color:0xc9d7d1}));moonMesh.scale.setScalar(.5);moonMesh.position.set(-30,38,-48);sky.add(moonMesh);
@@ -617,8 +632,8 @@ function build(data){
       practicalLighting=(softwareRenderer?createPackedLanternLightField:createCourseLanternLightField)(glowAnchors);
       let groundMaterial=null;
       scene.traverse(o=>{if(o.userData.lanternGround){groundLighting=createCourseGroundLighting(o,glowAnchors,coursePointLights,{...practicalLighting.stats(),maxVaryings:renderer.capabilities.maxVaryings-1});tintCourseHabitatGround(o);if(groundLighting)groundMaterial=o.material;}});
-      scene.traverse(o=>{for(const m of Array.isArray(o.material)?o.material:[o.material])if(m!==groundMaterial)practicalLighting.apply(m);});
-      for(const m of pixelWorld?.localLighting?.allMaterials()||[])practicalLighting.apply(m);
+      scene.traverse(o=>{for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m!==groundMaterial)practicalLighting.apply(m);moonRim?.apply(m);}});
+      for(const m of pixelWorld?.localLighting?.allMaterials()||[]){practicalLighting.apply(m);moonRim?.apply(m);}
       for(const texture of practicalLighting.textures)renderer.initTexture(texture);
     }
     pixelWorld?.updateCulling(camera);updateGlows();
@@ -787,6 +802,7 @@ function render(ctx,data,frame){
     frame.fx.lamps=lights.map(l=>({x:l.pool.position.x,y:2.8,z:l.pool.position.z,power:l.power,color:l.tint}));
     pixelEffects.update(frame,camera,parallax?.moonCoverage()||0);
   }
+  moonRim?.update();
   screenFracture?.update(frame,pixelEffects?.interference(),width,height);
   stats.screenFracture=screenFracture?.stats();
   practicalLighting?.update();groundLighting?.update();

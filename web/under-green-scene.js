@@ -72,6 +72,7 @@ import {FLOORS,OBSTACLES,WATERS,LEVER,NOTE,SLUICE,GATE,onFloor,floorLayout,cover
 import {createTrimmerJoe,preloadTrimmerJoe} from './under-green-actor.js';
 import {createDrainWater} from './under-green-water.js';
 import {drainTransitions} from './under-green-transitions.js';
+import {drainDraught} from './under-green-crafted-surfaces.js';
 import {prepareJoeNavigation} from './under-green-navigation.js';
 import {prepareDrainRendering} from './under-green-render-preparation.js';
 import {waitForGPU} from './render-preparation.js';
@@ -179,6 +180,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   if(type==='rangeStone'&&!g.userData.preserveDrainUV)offsetRangePanelUV(copy);
   if(g===unit&&['soil','sand','bankSand','bankEarth'].includes(type))copy.userData={...copy.userData,drainBankBackingBox:true};
   if(type==='bankSand')ensureBankEdgeAttribute(copy);
+  if(type==='root'&&!copy.attributes.drainSway)copy.setAttribute('drainSway',new THREE.Float32BufferAttribute(new Float32Array(copy.attributes.position.count),1));
   batches.get(key).parts.push(copy);return null;
  }
  const box=(type,x,y,z,w,h,d,parent=null)=>put(unit,type,x,y,z,w,h,d,0,0,0,parent),cyl=new THREE.CylinderGeometry(1,1,1,8),ball=new THREE.IcosahedronGeometry(1,1),lamps=[];
@@ -377,7 +379,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  districtDetails.gallerySoffit={...gallerySoffit,attachedFinish:curvedGalleryPut.stats};
  districtDetails.galleryDecay.roofBackingProfile='curved entrance vault';districtDetails.galleryDecay.lowestOverhead=curvedGalleryPut.stats.minimumHeight;
  districtDetails.keeperTileDamage=buildKeeperTileDamage({materials,put});
- const humidity=createDrainHumidity({scene,camera,lamps});
+ const humidity=createDrainHumidity({scene,camera,lamps,software});
  districtDetails.enclosure=buildDistrictEnclosure({layout,materials,box,put});
  districtDetails.wallRepairs=buildDrainWallRepairs({box,put});
  // Software rasterization keeps the illustrated detail but avoids derivative
@@ -413,7 +415,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   // Deterministic QA can explicitly request a new image. Ordinary gameplay
   // never replaces an in-flight frame or advances simulation from a GPU wake.
   if(fence){gl.deleteSync(fence);fence=null;}
-  resolutionScale=Number.isFinite(prefs.resolution)?Math.min(1,Math.max(.5,prefs.resolution)):1;resize();const p=r.player,yaw=p.yaw+(p.rearAngle||0),bob=panicCameraMotion(p,r.joe,prefs.cameraBob,prefs.reduced);if(camera.fov!==prefs.fov){camera.fov=prefs.fov;camera.updateProjectionMatrix();}camera.position.set(p.x,(p.eyeHeight??1.65)+bob.height,-p.y);camera.rotation.set(p.pitch+bob.pitch,-yaw,bob.roll,'YXZ');drainTransitions.apply(camera,r,performance.now(),prefs.fov);
+  resolutionScale=Number.isFinite(prefs.resolution)?Math.min(1,Math.max(.5,prefs.resolution)):1;resize();const p=r.player,yaw=p.yaw+(p.rearAngle||0),bob=panicCameraMotion(p,r.joe,prefs.cameraBob,prefs.reduced);if(camera.fov!==prefs.fov){camera.fov=prefs.fov;camera.updateProjectionMatrix();}camera.position.set(p.x,(p.eyeHeight??1.65)+bob.height,-p.y);camera.rotation.set(p.pitch+bob.pitch,-yaw,bob.roll,'YXZ');drainTransitions.apply(camera,r,performance.now(),prefs.fov);drainDraught.value=r.time;
   batchCulling?.update(camera);contactShade.update(camera);flood.update(r,false);const apparition=haunting.sample(r,prefs.reduced);ghost.show(apparition?{x:apparition.x,y:0,z:-apparition.y,yaw:apparition.yaw}:null,apparition?.alpha||0,apparition?.motion);
   practicalLighting.update(camera,r.time,prefs.reduced);atmosphere.update(r.time,prefs.reduced);playerLight.position.copy(camera.position);joe.update(r,prefs.reduced);joeCastShadow.update(r,prefs.reduced);const waterStates=WATERS.map(w=>waterState(w,r.time,r.bypass,r.bypassAt));drainWater.update(r,waterStates,false,joe.stats());wetGround.update(r,waterStates,false);humidity.update(r,prefs.reduced);strikeDebris.update(r,prefs.reduced);
   for(const v of waterObjects){const state=waterState(v.w,r.time,r.bypass,r.bypassAt),active=state.danger?0:state.phase==='warning'?1:2;for(const lights of v.signals)lights.forEach((light,i)=>light.material=materials[i%3===active?['redSignal','amberSignal','greenSignal'][i%3]:'offSignal']);}

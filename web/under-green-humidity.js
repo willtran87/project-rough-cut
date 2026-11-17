@@ -39,8 +39,10 @@ function humidityTexture(){
  }
  c.putImageData(data,0,0);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.NearestFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
 }
-export function createDrainHumidity({scene,camera,lamps}){
- const capacity=HUMIDITY_POCKETS.reduce((n,p)=>n+p.count,0),texture=humidityTexture(),geometry=new THREE.PlaneGeometry(1,1),alpha=new THREE.InstancedBufferAttribute(new Float32Array(capacity),1);
+// Cards of lit moisture carried through each practical by the tunnel draught.
+const LAMP_HAZE=3;
+export function createDrainHumidity({scene,camera,lamps,software=false}){
+ const pocketCapacity=HUMIDITY_POCKETS.reduce((n,p)=>n+p.count,0),capacity=pocketCapacity+lamps.length*LAMP_HAZE,texture=humidityTexture(),geometry=new THREE.PlaneGeometry(1,1),alpha=new THREE.InstancedBufferAttribute(new Float32Array(capacity),1);
  geometry.setAttribute('humidityAlpha',alpha);alpha.setUsage(THREE.DynamicDrawUsage);
  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide,forceSinglePass:true});
  material.onBeforeCompile=s=>{
@@ -51,7 +53,7 @@ export function createDrainHumidity({scene,camera,lamps}){
  };
  material.customProgramCacheKey=()=> 'drain-local-humidity-v1';
  const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.name='Local damp air';mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;mesh.renderOrder=1.5;mesh.count=0;scene.add(mesh);
- const transform=new THREE.Object3D(),color=new THREE.Color(),lampColor=new THREE.Color(),base=new THREE.Color(0x63746c);let enabled=true,shown=[];
+ const transform=new THREE.Object3D(),color=new THREE.Color(),lampColor=new THREE.Color(),base=new THREE.Color(0x63746c);let enabled=true,shown=[],lampHaze=0;
  return {
   setEnabled(value){enabled=!!value;mesh.visible=enabled&&mesh.count>0;},
   update(run,reduced){
@@ -67,9 +69,24 @@ export function createDrainHumidity({scene,camera,lamps}){
     lamps.forEach((lamp,i)=>{const d=Math.hypot(lamp.x-p.x,lamp.y-p.y,(lamp.height??2.8)-p.height);if(d>7)return;lampColor.setHex(lamp.color??(i%3===1?0x79c8c5:0xe9b575));const gain=(1-d/7)**2*dampLampLevel(run.time,i,reduced)*.045*(lamp.power??1);color.r+=lampColor.r*gain;color.g+=lampColor.g*gain;color.b+=lampColor.b*gain;});
     mesh.setColorAt(count++,color);
    }
+   // Moisture drifts through every nearby practical: each card crosses the
+   // lamp's pool on the draught, brightens with that lamp and fades at either
+   // end of its pass. The draught never stops, including under Reduced motion.
+   lampHaze=0;
+   // Large blended cards are the costly part on a software rasteriser.
+   if(!software)for(let i=0;i<lamps.length;i++){
+    const lamp=lamps[i],lampHeight=lamp.height??2.8,away=Math.hypot(lamp.x-camera.position.x,lampHeight-camera.position.y,-lamp.y-camera.position.z);if(away>26)continue;
+    const level=dampLampLevel(run.time,i,reduced)*(lamp.power??1),reach=Math.min(1,(26-away)/6);lampColor.setHex(lamp.color??(i%3===1?0x79c8c5:0xe9b575));
+    for(let k=0;k<LAMP_HAZE;k++){
+     const pass=run.time*(.045+k*.013)+i*.37+k*.31,along=pass-Math.floor(pass),t=run.time*.21+i*1.9+k*2.1;
+     const x=lamp.x+(along-.5)*2.3,y=lamp.y+Math.sin(t*.6+k)*.3-(lamp.facing??1)*.25,height=lampHeight-.2-k*.34+Math.sin(t)*.1,near=Math.hypot(x-camera.position.x,height-camera.position.y,-y-camera.position.z);
+     transform.position.set(x,height,-y);transform.quaternion.copy(camera.quaternion);transform.scale.set(1.7+Math.sin(t*.7)*.25,.85+Math.cos(t*.5)*.12,1);transform.updateMatrix();mesh.setMatrixAt(count,transform.matrix);
+     alpha.setX(count,.34*level*reach*Math.sin(Math.PI*along)**2*Math.min(1,Math.max(0,(near-.5)/1.1)));color.copy(base).multiplyScalar(.5);color.r+=lampColor.r*.62*level;color.g+=lampColor.g*.62*level;color.b+=lampColor.b*.62*level;mesh.setColorAt(count++,color);lampHaze++;
+    }
+   }
    mesh.count=count;mesh.visible=enabled&&count>0;if(count){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;alpha.needsUpdate=true;}
   },
-  stats:()=>({kind:'localized-damp-air',capacity,active:mesh.count,draws:mesh.visible?1:0,texture:[128,128],enabled,pockets:HUMIDITY_POCKETS.map(p=>p.id),samples:shown.map(p=>({id:p.id,index:p.index,x:p.x,y:p.y,height:p.height,surface:p.surface,alpha:p.alpha}))}),
+  stats:()=>({kind:'localized-damp-air',capacity,pocketCapacity,lampHaze,active:mesh.count,draws:mesh.visible?1:0,texture:[128,128],enabled,pockets:HUMIDITY_POCKETS.map(p=>p.id),samples:shown.map(p=>({id:p.id,index:p.index,x:p.x,y:p.y,height:p.height,surface:p.surface,alpha:p.alpha}))}),
   dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();texture.dispose();},
  };
 }

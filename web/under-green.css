@@ -89,7 +89,9 @@
 #defeat-art{position:relative;margin:0;width:100%;height:clamp(200px,56dvh,1000px);flex:none;background:#050b09}
 #defeat-art img{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 /* The outcome panel arrives after the short capture or escape camera move. */
-body.transition-hold #panel{opacity:0;pointer-events:none}body[data-mode=caught] #panel,body[data-mode=complete] #panel{transition:opacity .28s ease-out}
+body.transition-hold #panel{opacity:0;pointer-events:none}
+/* The blow: one short pale flash that drains to a red edge. Never shown with Reduced motion. */
+@keyframes ug-impact{0%{opacity:.85}18%{opacity:.5}100%{opacity:0}}body.impact-flash #vignette::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(244,236,214,.55) 0,rgba(190,60,44,.38) 62%,rgba(90,14,10,.6) 100%);animation:ug-impact .42s ease-out forwards}body[data-mode=caught] #panel,body[data-mode=complete] #panel{transition:opacity .28s ease-out}
 body[data-mode=caught] #panel{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;padding:0;background:#080f0d}
 body[data-mode=caught] .panel-art{display:none}
 body[data-mode=caught] .panel-body{width:min(1200px,100%);margin:0 auto;padding:20px 30px;border-width:1px 0 0;box-shadow:none}

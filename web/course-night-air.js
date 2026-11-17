@@ -8,16 +8,35 @@ import {createSoftSprites,SOFT_DROP,SOFT_PUFF,SOFT_CROWN,SOFT_GLOW,SOFT_SHAFT,SO
 // never writes to it, adds no lights, and draws from three fixed pools.
 const fract=v=>v-Math.floor(v),hash=(a,b)=>fract(Math.sin(a*12.9898+b*78.233)*43758.5453),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a));return t*t*(3-2*t);};
 const MOON=new THREE.Vector3().fromArray(COURSE_MOON_OFFSET).normalize();
-export const JOE_LAMP={forward:1.02,height:.56,reach:8.5,dip:.085};
+export const JOE_LAMP={forward:1.02,height:.56,reach:8.5,dip:.085,power:22};
 
-export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blockers=[],trees=[]}={}){
+export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blockers=[],trees=[],bounds={x:12,z:125}}={}){
  const haze=createSoftSprites(parent,{name:'NightAirHaze',capacity:software?40:150,order:3,dither:.03});
  const glow=createSoftSprites(parent,{name:'NightAirGlow',capacity:software?28:96,blend:'add',order:4,dither:.012});
  // Multiplies what is already drawn, so lamp light brings up the turf and
  // hedge texture beneath it and leaves true black black.
- const lit=createSoftSprites(parent,{name:'NightAirLit',capacity:8,blend:'light',order:1,fog:false,dither:.05});
+ const lit=createSoftSprites(parent,{name:'NightAirLit',capacity:software?8:20,blend:'light',order:1,fog:false,dither:.05});
+ // The mower's work lamp as a real light, so turf, hedges and walls in the
+ // beam are actually lit. It exists and is enabled from the first frame and
+ // only ever moves or changes strength: the light count and every shader
+ // program stay as they were compiled at level start. It stands in above the
+ // deck so the flat ground takes the light, and its range is cut at the first
+ // solid thing the beam meets, so it never shines through cover. The software
+ // path keeps the cheap painted pool instead.
+ const lamp=software?null:new THREE.SpotLight(0xffdca2,0,JOE_LAMP.reach,.56,.85,.25);
+ if(lamp){lamp.name='CourseMowerWorkLamp';lamp.castShadow=false;parent.add(lamp,lamp.target);}
  const frustum=new THREE.Frustum(),projection=new THREE.Matrix4(),sphere=new THREE.Sphere(),lastCamera=new Float32Array(16);
- const sites=trees.filter((t,i)=>hash(i,3.7)<.62).map((t,i)=>{const top=t.height*(.62+.2*hash(i,9)),run=top/MOON.y;return {x:t.x-MOON.x*run,z:t.z-MOON.z*run,length:Math.min(run,7+3*hash(i,5)),width:1.1+1.1*hash(i,2),seed:hash(i,1)*40};});
+ // Where moonlight that clears a canopy comes to ground. Only landings on the
+ // course itself are kept, so every shaft crosses ground the walker can see.
+ const sites=[];
+ trees.forEach((t,i)=>{
+  for(let level=0;level<2;level++){
+   if(hash(i,3.7+level)>.7)continue;
+   const top=t.height*(level?.6+.2*hash(i,9):.3+.18*hash(i,8)),run=top/MOON.y,x=t.x-MOON.x*run,z=t.z-MOON.z*run;
+   if(Math.abs(x)>bounds.x+4.5||z>-1||z<-bounds.z||blockers.some(o=>{const ex=(x-o.x)/(o.rx+.4),ez=(z-o.z)/(o.rz+.4);return o.box?Math.abs(ex)<1&&Math.abs(ez)<1:ex*ex+ez*ez<1;}))continue;
+   sites.push({x,z,length:Math.min(run,8+4*hash(i,5+level)),width:.5+.5*hash(i,2+level),seed:hash(i,1+level)*40});
+  }
+ });
  let lamps=[],lastTime=NaN,lastDensity=-1,lastFov=0,lastAspect=0,updates=0,lastCost=0,maxCost=0;
  const counts={fog:0,halos:0,shafts:0,lamp:0,clippings:0,exhaust:0,steps:0};
  let cx=0,cy=0,cz=0,fr=0,fg=0,fb=0,beamReach=0;
@@ -52,15 +71,23 @@ export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blo
    glow.billboard(p.x,p.y+.22,p.z,size,size*.72,1,.60,.24,power,SOFT_GLOW);counts.halos++;
   }
  }
+ const sideX=-MOON.z/Math.hypot(MOON.x,MOON.z),sideZ=MOON.x/Math.hypot(MOON.x,MOON.z),moonTurn=Math.atan2(MOON.x,MOON.z)+Math.PI;
  function shafts(time,density,moon,yaw){
-  const limit=software?0:Math.round(12*density);if(!limit)return;
+  const limit=software?0:Math.round(7*density);if(!limit)return;
   // Slanting light is strongest when the eye looks up the beam toward the moon.
-  const toward=.55+.45*clamp(Math.sin(yaw)*MOON.x-Math.cos(yaw)*MOON.z);
+  const toward=.45+.55*clamp(Math.sin(yaw)*MOON.x-Math.cos(yaw)*MOON.z);
   for(let i=0;i<sites.length&&counts.shafts<limit;i++){
-   const s=sites[i],d=Math.hypot(s.x-cx,s.z-cz);if(d>34||d<2.5)continue;
+   const s=sites[i],d=Math.hypot(s.x-cx,s.z-cz);if(d>30||d<3)continue;
    const mx=s.x+MOON.x*s.length*.5,my=MOON.y*s.length*.5,mz=s.z+MOON.z*s.length*.5;if(!visible(mx,my,mz,s.length*.55))continue;
-   const shimmer=.7+.3*Math.sin(time*.19+s.seed)*Math.sin(time*.071+s.seed*1.7);
-   glow.along(s.x,0,s.z,MOON.x,MOON.y,MOON.z,s.width,s.length,.50,.66,.80,.05*moon*toward*shimmer*smooth(34,24,d)*smooth(2.5,7,d)*Math.min(1,density*1.3),SOFT_SHAFT,1);counts.shafts++;
+   const shimmer=.72+.28*Math.sin(time*.19+s.seed)*Math.sin(time*.071+s.seed*1.7),power=moon*shimmer*smooth(30,22,d)*smooth(3,7,d)*Math.min(1,density*1.3);
+   // A canopy breaks the light into a few separate blades of differing width.
+   for(let k=-1;k<=1;k++){
+    const off=k*(.5+.25*Math.sin(s.seed+k)),flick=.75+.25*Math.sin(time*.33+s.seed*3+k*2.1);
+    glow.along(s.x+sideX*off,0,s.z+sideZ*off,MOON.x,MOON.y,MOON.z,s.width*(1-.3*Math.abs(k)),s.length*(1-.12*Math.abs(k)),.52,.70,.88,.13*power*toward*flick,SOFT_SHAFT,1,0);
+   }
+   // The pale patch where they land, drawn into the turf itself.
+   lit.flat(s.x,.032,s.z,1.5+s.width*1.6,2.4,moonTurn,.55,.72,.9,.9*power,SOFT_GLOW);
+   counts.shafts++;
   }
  }
  // How far the lamp's beam runs before a hedge, wall or building stops it.
@@ -78,7 +105,12 @@ export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blo
   const ox=jx+dx*JOE_LAMP.forward,oy=JOE_LAMP.height,oz=jz+dz*JOE_LAMP.forward,chase=j.mode==='chase';
   // A filament is never perfectly steady, and the deck shakes it while cutting.
   const flicker=.92+.05*Math.sin(time*31+jx)+.03*Math.sin(time*7.3),power=(chase?1.15:1)*flicker;
-  const reach=beamReach=beamLength(ox,oz,dx,dz),ex=cx-ox,ey=cy-oy,ez=cz-oz,eye=Math.hypot(ex,ey,ez)||1,facing=(ex*dx+ez*dz)/eye;
+  const reach=beamReach=beamLength(ox,oz,dx,dz);
+  if(lamp){
+   const aim=Math.min(reach,4.6);lamp.position.set(ox-dx*.25,1.7,oz-dz*.25);lamp.target.position.set(ox+dx*aim,.25,oz+dz*aim);lamp.target.updateMatrixWorld();
+   lamp.distance=reach+2.2;lamp.intensity=JOE_LAMP.power*power*(1-smooth(30,42,d));
+  }
+  const ex=cx-ox,ey=cy-oy,ez=cz-oz,eye=Math.hypot(ex,ey,ez)||1,facing=(ex*dx+ez*dz)/eye;
   // Seen from the side the beam is a cone of lit air; seen down its length it
   // is a glare around the lamp itself.
   const edgeOn=1-facing*facing*facing*facing;
@@ -91,11 +123,11 @@ export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blo
   const pool=Math.min(reach,6.2),turn=heading-Math.PI/2;
   // Each pass can at most double what is beneath it, so the pool is laid
   // down as three nested passes: brightest where they all overlap.
-  for(let i=0;i<3;i++){const k=1-i*.24;lit.flat(ox+dx*pool*(.52-i*.07),.034+i*.002,oz+dz*pool*(.52-i*.07),(1.7+pool*.38)*k,pool*.66*k,turn,1,.88,.60,Math.min(1,power),SOFT_GLOW);}
-  glow.flat(ox+dx*pool*.5,.036,oz+dz*pool*.5,1.3+pool*.3,pool*.58,turn,1,.84,.54,.22*power,SOFT_GLOW);
+  if(!lamp)for(let i=0;i<3;i++){const k=1-i*.24;lit.flat(ox+dx*pool*(.52-i*.07),.034+i*.002,oz+dz*pool*(.52-i*.07),(1.7+pool*.38)*k,pool*.66*k,turn,1,.88,.60,Math.min(1,power),SOFT_GLOW);}
+  if(!lamp)glow.flat(ox+dx*pool*.5,.036,oz+dz*pool*.5,1.3+pool*.3,pool*.58,turn,1,.84,.54,.22*power,SOFT_GLOW);
   if(reach<JOE_LAMP.reach-.01){
    const hx=ox+dx*(reach-.12),hz=oz+dz*(reach-.12),near=1-reach/JOE_LAMP.reach,size=.9+reach*.2;
-   for(let i=0;i<2;i++)lit.put(hx-dx*i*.02,.62,hz-dz*i*.02,-dz*size*(1-i*.3),0,dx*size*(1-i*.3),0,size*.72*(1-i*.3),0,1,.88,.60,Math.min(1,power*(.55+near)),SOFT_GLOW);
+   if(!lamp)for(let i=0;i<2;i++)lit.put(hx-dx*i*.02,.62,hz-dz*i*.02,-dz*size*(1-i*.3),0,dx*size*(1-i*.3),0,size*.72*(1-i*.3),0,1,.88,.60,Math.min(1,power*(.55+near)),SOFT_GLOW);
    glow.put(hx,.6,hz,-dz*size*.8,0,dx*size*.8,0,size*.6,0,1,.88,.62,.10*power*(.4+near),SOFT_GLOW);counts.lamp++;
   }
   // Clippings fly out of the deck and through the beam while the blade is cutting.
@@ -119,29 +151,34 @@ export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blo
   }
  }
  // Each recorded footfall throws what the ground is made of: water from a wet
- // zone, a few blades from the rough.
+ // zone, torn blades from the rough. A walker's own feet are below the frame
+ // and each print is left behind at once, so the throw is kicked forward off
+ // the toe, into the ground the walker is actually looking at.
  function footfalls(frame,density){
   const steps=frame.steps;if(!steps||!steps.length)return;
   for(let n=Math.max(0,steps.length-(software?2:4));n<steps.length;n++){
-   const step=steps[n],t=clamp(step.age/step.duration);if(t>=.8)continue;
-   const x=step.x*xScale,z=-step.y*scale,wet=step.kind==='wet',force=.55+.45*(step.intensity??.7),seed=step.id||n;
+   const step=steps[n],t=clamp(step.age/step.duration);if(t>=.85)continue;
+   const heading=step.heading||0,fx=Math.cos(heading),fz=-Math.sin(heading),wet=step.kind==='wet',force=.55+.45*(step.intensity??.7),seed=step.id||n;
+   const lead=1.05+.6*force,x=step.x*xScale+fx*lead,z=-step.y*scale+fz*lead;
    if(Math.hypot(x-cx,z-cz)>14)continue;
    if(wet){
-    fogLight(x,z,1);const r=fr*1.9+.1,g=fg*1.9+.1,b=fb*1.9+.1;
-    if(t<.4){const h=(.07+.34*t)*force,w=.13+.26*t;haze.upright(x,.03+h*.5,z,w,h,r,g,b,(1-t/.4)*.8,SOFT_CROWN);counts.steps++;}
-    for(let i=0;i<(software?3:7);i++){
-     const a=hash(i,seed)*6.283,out=(.35+.6*hash(i+3,seed))*force,up=(1.2+1.3*hash(i+5,seed))*force,time=t*.42,vx=Math.cos(a)*out,vz=Math.sin(a)*out,y=.03+up*time-4.6*time*time;if(y<.02)continue;
-     haze.along(x+vx*time,y,z+vz*time,vx,up-9.2*time,vz,.014,.03+.03*hash(i+1,seed),r,g,b,(1-t)*.85,SOFT_DROP);counts.steps++;
+    fogLight(x,z,1);const r=fr*2.1+.12,g=fg*2.1+.12,b=fb*2.1+.12,time=t*.7;
+    if(t<.45){const h=(.10+.55*t)*force,w=.18+.5*t;haze.upright(x,.03+h*.5,z,w,h,r,g,b,(1-t/.45)*.9,SOFT_CROWN);counts.steps++;}
+    if(t<.6){const size=.25+.7*t;haze.upright(x+fx*.25*t,.10+.16*t,z+fz*.25*t,size,size*.5,r*.6,g*.6,b*.6,(1-t/.6)*.22*density,SOFT_PUFF);counts.steps++;}
+    for(let i=0;i<(software?4:11);i++){
+     const a=hash(i,seed)*6.283,out=(.25+.75*hash(i+3,seed))*force,ahead=(1.9+2.6*hash(i+9,seed))*force,up=(1.8+2.2*hash(i+5,seed))*force,vx=Math.cos(a)*out+fx*ahead,vz=Math.sin(a)*out+fz*ahead,y=.03+up*time-4.6*time*time;if(y<.02)continue;
+     haze.along(x+vx*time,y,z+vz*time,vx,up-9.2*time,vz,.032,.08+.08*hash(i+1,seed),r,g,b,(1-t*t)*.95,SOFT_DROP);counts.steps++;
     }
-   }else if(step.kind!=='sand'&&step.kind!=='footing_mud'&&density>.3){
-    for(let i=0;i<(software?2:4);i++){
-     const a=(step.heading||0)+hash(i,seed)*6.283,out=.3+.4*hash(i+3,seed),up=.8+.8*hash(i+5,seed),time=t*.5,vx=Math.cos(a)*out,vz=Math.sin(a)*out,y=.04+up*time-3.6*time*time;if(y<.02)continue;
-     haze.along(x+vx*time,y,z+vz*time,vx+Math.sin(i+t*12),up-7.2*time,vz+Math.cos(i+t*10),.012,.045,.20,.30,.14,(1-t)*.8,SOFT_FLECK);counts.steps++;
+   }else if(step.kind==='rough'&&density>.3){
+    fogLight(x,z,1);const r=fr*.6+.05,g=fg*.8+.10,b=fb*.3+.03,time=t*.6;
+    for(let i=0;i<(software?3:7);i++){
+     const a=hash(i,seed)*6.283,out=.5+1.1*hash(i+3,seed),ahead=(1.2+1.8*hash(i+9,seed))*force,up=(1.2+1.5*hash(i+5,seed))*force,vx=Math.cos(a)*out+fx*ahead,vz=Math.sin(a)*out+fz*ahead,y=.06+up*time-3.4*time*time;if(y<.02)continue;
+     haze.along(x+vx*time,y,z+vz*time,vx+Math.sin(i+t*14),up-6.8*time+Math.cos(i*2+t*11),vz+Math.cos(i+t*12),.018,.07+.05*hash(i+1,seed),r,g,b,(1-t*t)*.95,SOFT_FLECK);counts.steps++;
     }
    }
   }
  }
- function hide(){if(haze.mesh.visible||glow.mesh.visible||lit.mesh.visible){for(const batch of [haze,glow,lit]){batch.mesh.count=0;batch.mesh.visible=false;}updates++;}lastTime=NaN;}
+ function hide(){if(haze.mesh.visible||glow.mesh.visible||lit.mesh.visible){for(const batch of [haze,glow,lit]){batch.mesh.count=0;batch.mesh.visible=false;}updates++;}if(lamp)lamp.intensity=0;lastTime=NaN;}
  function update(frame,camera,coverage=0){
   const density=clamp(frame.fx?.density??1),e=camera.matrixWorld.elements;
   if(frame.fx?.enabled===false||density<=0){hide();return;}
@@ -152,12 +189,12 @@ export function createNightAir(parent,{software=false,scale=.16,xScale=.1152,blo
   const started=performance.now();lastTime=frame.time;lastDensity=density;lastFov=camera.fov;lastAspect=camera.aspect;updates++;
   cx=e[12];cy=e[13];cz=e[14];counts.fog=counts.halos=counts.shafts=counts.lamp=counts.clippings=counts.exhaust=counts.steps=0;
   projection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(projection);
-  haze.begin(camera);glow.begin(camera);lit.begin(camera);
+  haze.begin(camera);glow.begin(camera);lit.begin(camera);if(lamp)lamp.intensity=0;
   const wind=frame.fx?.wind,windX=(wind?.direction<0?-1:1)*(.25+.75*clamp(wind?.strength||0)),moon=(1-clamp(coverage,0,.85)*.5)*(frame.fx?.nightfall?.moonScale??1);
   const thin=frame.fx?.clear?.7:1;
   fog(frame.time,density*thin,windX,moon);halos(density);shafts(frame.time,density*thin,moon,frame.yaw||0);mower(frame,frame.time,density);footfalls(frame,density);
   haze.finish();glow.finish();lit.finish();
   lastCost=performance.now()-started;maxCost=Math.max(maxCost,lastCost);
  }
- return {update,setLamps,stats:()=>({...counts,instances:haze.mesh.count+glow.mesh.count+lit.mesh.count,capacity:haze.capacity+glow.capacity+lit.capacity,drawCalls:Number(haze.mesh.visible)+Number(glow.mesh.visible)+Number(lit.mesh.visible),shaftSites:sites.length,lamps:lamps.length,beamReach,updates,updateMs:lastCost,maxUpdateMs:maxCost}),dispose(){haze.dispose();glow.dispose();lit.dispose();}};
+ return {update,setLamps,stats:()=>({...counts,instances:haze.mesh.count+glow.mesh.count+lit.mesh.count,capacity:haze.capacity+glow.capacity+lit.capacity,drawCalls:Number(haze.mesh.visible)+Number(glow.mesh.visible)+Number(lit.mesh.visible),shaftSites:sites.length,lampIntensity:lamp?lamp.intensity:0,lamps:lamps.length,beamReach,updates,updateMs:lastCost,maxUpdateMs:maxCost}),dispose(){haze.dispose();glow.dispose();lit.dispose();}};
 }
