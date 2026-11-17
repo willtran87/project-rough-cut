@@ -2,7 +2,8 @@ import {createJoeSurfaceFinish} from './under-green-actor-surfaces.js';
 import {attackActing} from './under-green-attack-acting.js';
 import {featheredContactGeometry,contactShadeMaterial} from './under-green-contact-shade.js';
 import {buildGrassScythe} from './under-green-scythe-scene.js';
-import {SCYTHE_GRIPS,SCYTHE_CONTACT} from './under-green-scythe.js';
+import {SCYTHE_HOLDS,SCYTHE_CONTACT} from './under-green-scythe.js';
+import {createSwingBody} from './under-green-swing-body.js';
 import {TRIMMER,trimmerPose} from './under-green-trimmer.js';
 import {solveTwoBoneGrip} from './two-bone-ik.js';
 import {createPlantedFootwork,createWalkingSupports} from './under-green-footwork.js';
@@ -11,6 +12,9 @@ import * as THREE from './vendor/three/three.module.js';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 // Longer steps retain the baked stance fraction and applied-distance timing.
 const WALK_CYCLE=1.1,BAKED_CYCLE=.46/.62,HIP_FORWARD=.12,HIP_DROP=.04;
+// The shared rig was proportioned to reach a mower's push bar. On foot with a
+// two-handed tool his arms are lengthened here only, never in the model file.
+const ARM_SCALE=1.18,PALM=.055,STOOP=.12;
 // Joe's shipped skinned model and original face/materials; the mower was
 // removed in the existing rider asset. The scythe is physical articulated art.
 const JOE_MODEL='./assets/models/joe-riding-pixel.glb';let joeModelBytes=null;
@@ -60,7 +64,15 @@ export async function createTrimmerJoe(scene,materials){
   position.y=Math.ceil((position.y+correction)*1e9)/1e9;return true;
  }
  action?.setEffectiveWeight(1);idle?.setEffectiveWeight(0);
- const arms=['L','R'].map((side,index)=>({side:index===0?-1:1,upper:bones.get('UpperArm'+side),lower:bones.get('Forearm'+side),hand:bones.get('Hand'+side),rest:bones.get('Hand'+side).getWorldQuaternion(new THREE.Quaternion())}));
+ const arms=['L','R'].map((side,index)=>{
+  const hold=SCYTHE_HOLDS[index],upper=bones.get('UpperArm'+side),lower=bones.get('Forearm'+side),hand=bones.get('Hand'+side);
+  // The rest hand closes around a bar lying across him; turn it onto this
+  // hold's own bar. The fist sits a palm's length beyond the wrist.
+  const align=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1,0,0),new THREE.Vector3(hold.axis[0],hold.axis[1],-hold.axis[2]).normalize());
+  const palm=hand.getWorldPosition(new THREE.Vector3()).sub(lower.getWorldPosition(new THREE.Vector3())).normalize();
+  return {side:index===0?-1:1,hold,upper,lower,hand,align,palm,rest:hand.getWorldQuaternion(new THREE.Quaternion())};
+ });
+ const swingBody=createSwingBody();
  const tool=new THREE.Group();root.add(tool);const body=new THREE.Group();body.position.set(0,-TRIMMER.pivotHeight,TRIMMER.pivotForward);tool.add(body);
  let lastRun=null,lastTime=0,blend=0,idleTime=0;const state={handError:0,handPositions:[],grips:[],footPositions:[],blade:null,pose:'carry'};
  const scythe=buildGrassScythe(body,materials);
@@ -68,7 +80,7 @@ export async function createTrimmerJoe(scene,materials){
 
  return {root,update(r,reduced){
   const j=r.joe,pose=trimmerPose(j);root.visible=j.phase!=='absent'&&(j.phase!=='enter'||j.age>.25);root.position.set(j.x,0,-j.y);root.rotation.y=-j.yaw;
-  if(lastRun!==r){lastRun=r;lastTime=r.time;blend=j.speed>.1?1:0;idleTime=0;footwork.reset();walkingSupports.reset();footEvents.reset();}
+  if(lastRun!==r){lastRun=r;lastTime=r.time;blend=j.speed>.1?1:0;idleTime=0;footwork.reset();walkingSupports.reset();footEvents.reset();swingBody.reset();}
   const dt=Math.max(0,Math.min(.1,r.time-lastTime));lastTime=r.time;
   // Mixer caches unchanged property values. Restore its last base pose before
   // procedural edits so duplicate renders cannot accumulate head/chest/IK turns.
@@ -77,6 +89,9 @@ export async function createTrimmerJoe(scene,materials){
   if(action){const phase=(j.walk+(j.turnDistance||0))/WALK_CYCLE%1;action.time=(j.phase==='water-recovery'?1-phase:phase)*clip.duration;action.setEffectiveWeight(idle?blend:1);}
   if(idle){idle.time=reduced?0:idleTime*.25%idleClip.duration;idle.setEffectiveWeight(1-blend);}mixer.update(0);
   for(const base of basePose){base.position.copy(base.bone.position);base.rotation.copy(base.bone.quaternion);base.scale.copy(base.bone.scale);}
+  for(const arm of arms)arm.upper.scale.multiplyScalar(ARM_SCALE);
+  // Stand him up out of the push-bar stoop; the head stays level.
+  const spine=bones.get('Spine');if(spine){spine.rotateX(STOOP);head?.rotateX(-STOOP*.5);}
   root.updateMatrixWorld(true);
   const rootRotationForFeet=root.getWorldQuaternion(new THREE.Quaternion());
   // Recenter the walking stance inside Joe's existing navigation body and
@@ -97,22 +112,31 @@ export async function createTrimmerJoe(scene,materials){
    raw:rawFeet.map(f=>f.position),rawRotations:rawFeet.map(f=>f.rotation),
    homes:legs.map(l=>root.localToWorld(l.home.clone())),
    rotations:legs.map(l=>rootRotationForFeet.clone().multiply(l.rotation))});
+  // Carry the cut through the hips. The feet keep the targets solved above,
+  // so turning and driving the hips bends the knees instead of sliding him.
+  const swing=swingBody.update(j,pose,dt);state.swing={...swing};
+  if(swing.active){
+   const drive=new THREE.Vector3(swing.shift,-swing.drop,-swing.reach).applyQuaternion(rootRotationForFeet);
+   hips.position.copy(hips.parent.worldToLocal(hips.getWorldPosition(new THREE.Vector3()).add(drive)));hips.rotateY(swing.turn);root.updateMatrixWorld(true);
+  }
   state.footError=0;state.footContacts=[];
   for(let i=0;i<legs.length;i++){
-   if(!placedFeet&&!rawFeet[i].corrected)continue;
+   if(!placedFeet&&!rawFeet[i].corrected&&!swing.active)continue;
    const leg=legs[i],foot=placedFeet?.[i]||rawFeet[i],pole=new THREE.Vector3(0,0,-1).applyQuaternion(rootRotationForFeet);
    clearSole(leg,foot.position,foot.rotation);
    state.footError=Math.max(state.footError,solveTwoBoneGrip(leg.upper,leg.lower,leg.foot,foot.position,pole,foot.rotation));
    state.footContacts[i]={planted:!!foot.planted,settling:!!foot.settling,target:foot.position.toArray()};
   }
   const acting=attackActing(j,pose);state.acting=acting;
-  if(chest){chest.rotateY(acting.yaw);chest.rotateX(acting.pitch);chest.rotateZ(acting.roll);}
-  if(head){head.rotateY(-acting.yaw);head.rotateX(pose.raised*.1-acting.pitch*.5);head.rotateZ(-acting.roll*.65);if(j.phase==='search'&&!reduced)head.rotateY(Math.sin(j.age*.8)*.2);}
+  if(chest){chest.rotateY(acting.yaw);chest.rotateX(acting.pitch+swing.pitch);chest.rotateZ(acting.roll+swing.roll);}
+  // His eyes stay on what he is cutting while the shoulders and hips turn.
+  if(head){head.rotateY(-acting.yaw-swing.turn*.9);head.rotateX(pose.raised*.1-(acting.pitch+swing.pitch)*.6);head.rotateZ(-(acting.roll+swing.roll)*.65);if(j.phase==='search'&&!reduced)head.rotateY(Math.sin(j.age*.8)*.2);}
   tool.position.set(0,pose.height,-TRIMMER.pivotForward);tool.rotation.set(pose.pitch,-pose.angle,0,'YXZ');root.updateMatrixWorld(true);
   state.handError=0;state.handPositions=[];state.grips=[];
   const rootRotation=root.getWorldQuaternion(new THREE.Quaternion()),toolRotation=tool.getWorldQuaternion(new THREE.Quaternion());
   for(const arm of arms){
-   const g=SCYTHE_GRIPS[arm.side<0?0:1][0],grip=body.localToWorld(new THREE.Vector3(g[0],g[1],-g[2])),pole=new THREE.Vector3(arm.side*.8,-.4,.6).applyQuaternion(rootRotation),rotation=toolRotation.clone().multiply(arm.rest);
+   const g=arm.hold.hand,turn=toolRotation.clone().multiply(arm.align),rotation=turn.clone().multiply(arm.rest);
+   const grip=body.localToWorld(new THREE.Vector3(g[0],g[1],-g[2])).addScaledVector(arm.palm.clone().applyQuaternion(turn),-PALM),pole=new THREE.Vector3(arm.side*.8,-.4,.6).applyQuaternion(rootRotation);
    state.handError=Math.max(state.handError,solveTwoBoneGrip(arm.upper,arm.lower,arm.hand,grip,pole,rotation));
    state.handPositions.push(arm.hand.getWorldPosition(new THREE.Vector3()).toArray());state.grips.push(grip.toArray());
   }
