@@ -47,7 +47,9 @@ const saved=read(SAVE),settings=campaignPreferences(reducedMotion.matches),prefs
 if(!validVariationSeed(saved.variationSeed)){saved.variationSeed=nextVariationSeed();writeRecord(SAVE,{...saved,variationSeed:saved.variationSeed});}
 let run=createRun(0,0,saved.variationSeed),world=null,ready=false,manual=false,last=performance.now(),accumulator=0,fence=null,events=0,needsDraw=true;
 const chaseControls=createChaseControls($('game'),()=>run,settings);
-if(saved.completed&&!new URLSearchParams(location.search).has('replay'))restoreEscape(run,saved.escape);
+// A finished escape is shown again only on a plain reload. Replaying from the
+// menu or continuing in from Night Order always starts the chase.
+if(saved.completed&&!['replay','from'].some(name=>new URLSearchParams(location.search).has(name)))restoreEscape(run,saved.escape);
 const driveButtons=new Map([...document.querySelectorAll('[data-drive]')].map(b=>[b.dataset.drive,b]));
 const keys=new Set(),touch=new Set(),audio=createChaseAudio(settings.volume??.72,settings),budget=createSoftwareFrameBudget({responsiveDownshift:true}),times=[];
 const {bindings}=bindKeyboardSettings($('chase-keyboard'),{profile:'chase',stored:settings.chaseKeyboardBindings,storageField:'chaseKeyboardBindings',
@@ -74,7 +76,7 @@ const opening=createOpeningStory({slides:BACK_NINE_SLIDES,storageKey:'rough-cut.
 });
 function showOpening(){if(openingActive)return;openingActive=true;prefetchBackNineCourse();keys.clear();touch.clear();setHidden('panel',true);setHidden('defeat-tableau',true);$('panel').dataset.defeat='false';setHidden('hud',true);setHidden('touch',true);$('dread').style.opacity='0';opening.open();}
 function freshRound(){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;save();world?.resetCamera();uiMode='';needsDraw=true;if(!opening.shouldSkip())showOpening();else{paintUI();prepareCourse();}}
-function save(){if(run.mode==='complete')RCProgression.complete('back-nine');if(!writeRecord(SAVE,{version:2,variationSeed:run.variation.seed,completed:run.mode==='complete',unlocked:true,escape:run.mode==='complete'?run.escape:null})){run.message='Browser storage is unavailable. This attempt can still be played.';run.messageTime=4;}}
+function save(){if(run.mode==='complete'){RCProgression.complete('back-nine');{const u=new URL(location.href);u.searchParams.delete('from');u.searchParams.delete('replay');if(u.href!==location.href)history.replaceState(null,'',u);}}if(!writeRecord(SAVE,{version:2,variationSeed:run.variation.seed,completed:run.mode==='complete',unlocked:true,escape:run.mode==='complete'?run.escape:null})){run.message='Browser storage is unavailable. This attempt can still be played.';run.messageTime=4;}}
 function input(){
  const pad=navigator.getGamepads?.()?.find?.(p=>p?.connected),pressed=i=>!!pad?.buttons[i]?.pressed;
  const deadzone=chaseDeadzone(settings.stickDeadzone),stickX=chaseStickAxis(pad?.axes[0],deadzone),stickY=chaseStickAxis(pad?.axes[1],deadzone);

@@ -27,7 +27,10 @@ const preferences=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce
 const feel=RCFoundation.readComfort(),touchRun=createTouchRunControl();let toggleCrouch=false,toggleSprint=false,dirty=true;
 const bindings=actionBindings('onFoot',preferences.keyboardBindings,preferences.keyboardBindingsVersion||0),label=id=>keyLabel(bindings[id]);
 let raw=null;try{raw=localStorage.getItem(SAVE_KEY);}catch{}
-const entry=finaleEntry(query.get('from')||RCProgression.state().finalRoute),saved=query.has('replay')?null:readSave(raw),initial=saved&&(!query.has('from')||saved.route===entry.route)?{...entry,...saved,priorEvidence:Math.max(entry.priorEvidence,saved.priorEvidence),groundskeeper:entry.groundskeeper||saved.groundskeeper,crewLogs:entry.crewLogs|saved.crewLogs}:entry;
+const entry=finaleEntry(query.get('from')||RCProgression.state().finalRoute),stored=query.has('replay')?null:readSave(raw),
+ // Arriving from a branch chapter starts the round: a finished earlier
+ // escape is only shown again on a plain reload, never in place of the round.
+ saved=stored?.completed&&query.has('from')?null:stored,initial=saved&&(!query.has('from')||saved.route===entry.route)?{...entry,...saved,priorEvidence:Math.max(entry.priorEvidence,saved.priorEvidence),groundskeeper:entry.groundskeeper||saved.groundskeeper,crewLogs:entry.crewLogs|saved.crewLogs}:entry;
 let resultView='summary',story=null,winStoryRunId=null;
 // A staged shot holds the capture/escape panel back for a short camera move.
 // It is presentation only: state, saves and timers are already final, any
@@ -40,7 +43,7 @@ const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
 function clearInput(){feedback.update(run,null,false,0);keys.clear();touch.clear();touchRun.reset();toggleCrouch=toggleSprint=false;usePressed=chipPressed=chipReleased=false;chipOwner=null;run.ballAim=freshAim();lookX=lookY=0;drag=null;mouse.reset();dirty=true;}
 function beginChip(source){if(!live())return;if(chipOwner!==source)run.ballAim=freshAim();chipOwner=source;chipPressed=true;chipReleased=false;}
 function releaseChip(source){if(chipOwner===source&&live())chipReleased=true;}
-function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed){recordFinaleCompletion(run);RCProgression.complete('final-cut');}text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
+function persist(){const saved=writeRecord(SAVE_KEY,snapshot(run));if(run.completed){recordFinaleCompletion(run);RCProgression.complete('final-cut');{const u=new URL(location.href);u.searchParams.delete('from');u.searchParams.delete('replay');if(u.href!==location.href)history.replaceState(null,'',u);}}text('save-note',saved?(run.completed?'Escape saved on this device.':'Checkpoint saved on this device. Completed preparation is retained.'):'Storage is unavailable. Checkpoints still work during this session.');savedSerial=run.saveSerial;}
 const staged=()=>!preferences.reducedMotion&&!manual&&!!world;
 function cue(name){$('curtain').dataset.cue='';if(!staged())return false;world.cue(name);$('curtain').style.setProperty('--cue',CUE_MS[name]+'ms');void $('curtain').offsetWidth;$('curtain').dataset.cue=name;return true;}
 function stage(mode){if(cue(mode))shot={mode,until:performance.now()+CUE_MS[mode]};}
