@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three/three.module.js';
 import {mergeIndexedGeometries} from './indexed-geometry.js';
 import {createScytheArt} from './under-green-scythe-art.js';
-import {SCYTHE_SHAFT,SCYTHE_GRIPS,SCYTHE_BLADE_HEIGHT,scytheOutline} from './under-green-scythe.js';
+import {SCYTHE_SNATH,SCYTHE_HOLDS,SCYTHE_BLADE_HEIGHT,scytheOutline} from './under-green-scythe.js';
 export function buildGrassScythe(parent){
  const art=createScytheArt(),materials=art.materials,batches=new Map();
  const point=p=>new THREE.Vector3(p[0],p[1],-p[2]);
@@ -10,9 +10,19 @@ export function buildGrassScythe(parent){
   a=point(a);b=point(b);const delta=b.clone().sub(a),q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),delta.clone().normalize());
   const g=new THREE.CylinderGeometry(rTop,r,delta.length(),10);if(material===materials.wood){const uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setY(i,(offset+uv.getY(i)*delta.length())/1.5);}g.applyQuaternion(q);g.translate(...a.add(b).multiplyScalar(.5).toArray());add(g,material);
  };
- let grainOffset=0;
- for(let i=1;i<SCYTHE_SHAFT.length;i++){segment(SCYTHE_SHAFT[i-1],SCYTHE_SHAFT[i],.025,materials.wood,i===1?.022:.025,grainOffset);grainOffset+=point(SCYTHE_SHAFT[i]).distanceTo(point(SCYTHE_SHAFT[i-1]));}
- for(const [a,b]of SCYTHE_GRIPS){segment(a,b,.026,materials.wood);segment([a[0]-.045,a[1],a[2]],[a[0]+.045,a[1],a[2]],.032,materials.grip);}
+ // One steamed snath, drawn as a single curve so it has no elbows. Grain runs
+ // along its length at the scale the straight shaft used.
+ const curve=new THREE.CatmullRomCurve3(SCYTHE_SNATH.map(point),false,'centripetal'),snathLength=curve.getLength();
+ const snath=new THREE.TubeGeometry(curve,28,.025,10,false),snathUv=snath.attributes.uv;
+ for(let i=0;i<snathUv.count;i++)snathUv.setXY(i,snathUv.getY(i),snathUv.getX(i)*snathLength/1.5);
+ add(snath,materials.wood);
+ const knob=(p,r,material)=>{const g=new THREE.SphereGeometry(r,10,6);g.translate(...point(p).toArray());add(g,material);};
+ knob(SCYTHE_SNATH[0],.027,materials.wood);
+ for(const hold of SCYTHE_HOLDS){
+  const along=k=>hold.hand.map((v,i)=>v+hold.axis[i]*k);
+  if(hold.handle){segment(hold.handle[0],hold.handle[1],.021,materials.wood,.024);knob(hold.handle[1],.027,materials.wood);}
+  segment(along(-.055),along(.055),.031,materials.grip);
+ }
  segment([.43,.73,.53],[.50,.67,.56],.047,materials.iron);
  // Fitted socket bands and peened rivets. The blade outline and grips retain
  // their shared simulation dimensions.
