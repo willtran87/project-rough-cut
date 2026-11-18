@@ -12,7 +12,7 @@ const INDICES=(WIDTHS.length-1)*(ROWS-1)*6+8*6+12*9;
 const tint=new THREE.Color();
 
 export async function loadMowerScarSoil(){
- const map=await new THREE.TextureLoader().loadAsync('./assets/under-green/sediment-field-v1.png');
+ const map=await new THREE.TextureLoader().loadAsync('./assets/under-green/sediment-field-v1.webp');
  map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;
  map.magFilter=THREE.NearestFilter;map.minFilter=THREE.NearestMipmapLinearFilter;
  return map;

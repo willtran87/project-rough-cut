@@ -1,21 +1,21 @@
 import * as THREE from './vendor/three/three.module.js';
 export async function loadRunnerCloth(){
- const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-work-cloth-v1.png');
+ const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-work-cloth-v1.webp');
  t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;
  return t;
 }
 export async function loadRunnerFace(){
- const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-face-v1.png');
+ const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-face-v1.webp');
  t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;
  return t;
 }
 export async function loadRunnerHair(){
- const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-hair-v1.png');
+ const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-hair-v1.webp');
  t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;t.wrapS=THREE.RepeatWrapping;
  return t;
 }
 export async function loadRunnerGear(){
- const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-work-gear-v1.png');
+ const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-work-gear-v1.webp');
  t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;
  return t;
 }

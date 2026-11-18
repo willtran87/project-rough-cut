@@ -3,7 +3,7 @@ import * as THREE from './vendor/three/three.module.js';
 // Close-range metal artwork is independent of the wall-panel sheet. Geometry
 // supplies seams/bolts; these swatches supply enamel, abrasion and corrosion.
 export async function createMachinerySurfaces(){
- const image=new Image();image.src='./assets/under-green/machinery-surfaces-v1.png';await image.decode();
+ const image=new Image();image.src='./assets/under-green/machinery-surfaces-v1.webp';await image.decode();
  const tile=Math.floor(image.naturalWidth/2),owned=[],sets={};
  const texture=(canvas,color)=>{
   const t=new THREE.CanvasTexture(canvas);t.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;
@@ -25,5 +25,5 @@ export async function createMachinerySurfaces(){
   canvas.getContext('2d').drawImage(image,i%2*tile,Math.floor(i/2)*tile,tile,tile,0,0,tile,tile);
   sets[name]={map:texture(canvas,true),wet};
  }
- return {sets,stats:()=>({asset:'machinery-surfaces-v1.png',tilePixels:tile,worldTileMetres:1,texelsPerMetre:tile,colorMaps:4,wetMaps:1,separateWetness:true,rgba8MipBytes:Math.round((4*tile*tile+256*256)*4*4/3)}),dispose(){owned.forEach(t=>t.dispose());}};
+ return {sets,stats:()=>({asset:'machinery-surfaces-v1.webp',tilePixels:tile,worldTileMetres:1,texelsPerMetre:tile,colorMaps:4,wetMaps:1,separateWetness:true,rgba8MipBytes:Math.round((4*tile*tile+256*256)*4*4/3)}),dispose(){owned.forEach(t=>t.dispose());}};
 }
