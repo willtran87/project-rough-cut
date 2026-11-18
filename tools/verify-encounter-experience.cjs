@@ -1,7 +1,7 @@
 // Controlled fixtures test the new interaction/state boundaries. Full normal
 // input victory runs remain separate from these isolated scenarios.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const software=process.argv.includes('--software'),out='output/encounter-followup-20261108/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];

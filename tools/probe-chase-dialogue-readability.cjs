@@ -1,4 +1,4 @@
-const fs=require('node:fs'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{const software=process.argv.includes('--software'),tag=software?'software':'hardware',branch=Number(process.argv.find(a=>a.startsWith('--branch='))?.split('=')[1]||0),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/back-nine-experience/route-acceptance'+(process.argv.includes('--stick-audit')?'/stick-controls':'');fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[],views=[],banners=[];p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
  if(process.argv.includes('--sound-captions'))await p.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({soundCaptions:true,subtitles:true})));

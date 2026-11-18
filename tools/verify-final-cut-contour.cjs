@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),out='output/final-cut/contours/'+(baseline?'baseline':software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
 const hook=`window.__contourAudit=()=>{

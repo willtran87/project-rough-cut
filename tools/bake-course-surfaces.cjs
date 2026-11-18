@@ -1,4 +1,4 @@
-const fs=require('node:fs'),crypto=require('node:crypto'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),crypto=require('node:crypto'),{chromium}=require('playwright');
 (async()=>{const types=['stone','wood','sand','plaster','cart-enamel','paint','rust','iron','rubber','brass'],dir='web/assets/baked/course-surfaces';fs.mkdirSync(dir,{recursive:true});
  const b=await chromium.launch({headless:true});try{
  const p=await b.newPage();await p.route('**/__surface-bake',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await p.goto('http://127.0.0.1:4187/__surface-bake');

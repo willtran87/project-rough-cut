@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true});try{const p=await b.newPage();await p.route('**/__audio',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await p.goto('http://127.0.0.1:4187/__audio');
  const report=await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js'),{createChaseAudio}=await import('./back-nine-audio.js');
  async function render(bell,muted=false){const ctx=new OfflineAudioContext(2,24000*5,24000),Native=window.AudioContext;window.AudioContext=function(){return ctx};const a=createChaseAudio(.72);a.start();window.AudioContext=Native;if(muted)a.toggle();const r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:-25.2,y:150});Object.assign(r.joe,{x:5,y:144,speed:9});r.hunt.occluded=true;r.tension.intensity=.8;

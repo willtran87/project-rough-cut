@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict'),out='output/final-cut/signage/disposal';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));
  const source=fs.readFileSync('web/final-cut-scene.js','utf8'),app=fs.readFileSync('web/final-cut.js','utf8'),anchor="ready=true;$('primary').disabled=false;";assert(app.includes(anchor));

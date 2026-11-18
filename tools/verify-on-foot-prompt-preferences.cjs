@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/on-foot-prompt-preferences',baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});
 if(baseline)assert(!fs.existsSync(out+'/baseline.json'),'Preserve the original baseline');
 (async()=>{

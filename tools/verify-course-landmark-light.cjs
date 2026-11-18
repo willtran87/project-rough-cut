@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const {restoreFullIndexReference}=require('./fixtures/full-index-reference.cjs');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
  const base='output/level-one-landmark-light',out=`${base}/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});

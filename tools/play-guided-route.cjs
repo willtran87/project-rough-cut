@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const out = path.resolve(process.argv[2] || 'output/guided-route');
   const tactical = process.argv.includes('--tactical');

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),quick=process.argv.includes('--quick'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass71/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 const fixtures=[['gallery',0,8,0,.1],['crossing',0,19,0,-.05],['pump',-25.7,40,Math.PI/2,-.27],['range',12,35,Math.PI,.05],['keeper',12,13.5,-2.4,.05],['release',14.65,15.9,Math.PI,-.48],['bunker',-29.5,65,Math.PI,.15]];
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],rows=[];try{

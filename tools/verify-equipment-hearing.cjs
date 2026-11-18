@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/equipment-hearing';fs.mkdirSync(out,{recursive:true});
  const source=fs.readFileSync('web/game.js','utf8'),marker='  window.advanceTime = (milliseconds) => {';assert(source.includes(marker));

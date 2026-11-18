@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
+const {chromium}=require('playwright');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||`output/level-one-sign-lighting/${before?'before':'after'}-${software?'software':'native'}`;
  fs.mkdirSync(out,{recursive:true});

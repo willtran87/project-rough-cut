@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software');
  const out=`output/level-one-sky-hierarchy/${before?'before':'after'}-${software?'software':'native'}`;

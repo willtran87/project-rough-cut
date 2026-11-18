@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out=process.env.CHASE_QA_OUT||'output/chase-audio-mix';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true});

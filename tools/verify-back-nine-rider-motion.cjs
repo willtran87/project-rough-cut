@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2],software=process.argv.includes('--software'),before=process.argv.includes('--before');if(!out)throw Error('Output directory required');
 const cases=[{name:'idle'},{name:'turn-left',turn:-1.4,speed:12},{name:'turn-right',turn:1.4,speed:12},{name:'braking',speed:14,brake:12},{name:'brace',load:1,speed:3},{name:'reverse',turn:.8,speed:-2.5},{name:'head-right',target:5},{name:'reduced',turn:1.4,speed:12,load:1,reduced:true}];
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{

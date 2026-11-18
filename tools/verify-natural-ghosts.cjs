@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const reduced=process.argv.includes('--reduced'),zero=process.argv.includes('--zero-density'),fallback=process.argv.includes('--fallback');
  const out=(process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/visible-ghosts-20261107')+(reduced?'/reduced':'')+(zero?'/zero-density':'')+(fallback?'/fallback':'');fs.mkdirSync(out,{recursive:true});

@@ -1,7 +1,7 @@
 /* Ordinary keyboard/mouse input only. Storage selects the course configuration;
  * all checks, pickups and exits must be earned through the live game. */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const {chromium}=require(path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
   const out=path.resolve(process.argv[2]||'output/next-pass/natural');fs.mkdirSync(out,{recursive:true});
   const variant=process.argv.includes('--east')?'eastern_exception':process.argv.includes('--west')?'closing_shift':'standard_review';

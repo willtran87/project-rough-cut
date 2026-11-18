@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const {chromium}=require(path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 const percentile=(a,q)=>[...a].sort((a,b)=>a-b)[Math.min(a.length-1,Math.ceil(a.length*q)-1)];
 (async()=>{const hardware=process.argv.includes('--hardware'),sustained=process.argv.includes('--sustained'),baseline=process.argv.includes('--baseline'),out=path.resolve(sustained?'output/quality-reset/sustained-hardware':hardware?'output/quality-reset/hardware':baseline?'output/quality-reset/before-after':process.argv.includes('--video')?'output/quality-reset/recorded':'output/quality-reset/presentation');fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:hardware?['--use-angle=d3d11','--ignore-gpu-blocklist']:[]}),results=[];
 try{for(const build of (sustained?['direct']:baseline?['baseline','direct']:['copy','direct'])){

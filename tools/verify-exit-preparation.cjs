@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
-const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const out = path.resolve('output/exit-preparation');
   fs.mkdirSync(out,{recursive:true});

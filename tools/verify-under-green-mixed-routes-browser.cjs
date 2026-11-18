@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/mixed-routes',baseline=process.argv.includes('--baseline');
  const tapes=JSON.parse(fs.readFileSync(out+'/tapes.json'));

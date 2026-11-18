@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software'),out=`output/final-cut/transfer/${baseline?'baseline':software?'software-clearance':'current'}`;fs.mkdirSync(out,{recursive:true});
 const instrument=`scene.updateMatrixWorld(true);const auditedSurfaces=walkingSurfaces.map(({mesh,index})=>{const matrix=new THREE.Matrix4();mesh.getMatrixAt(index,matrix);matrix.premultiply(mesh.matrixWorld);return {top:new THREE.Vector3(0,.5,0).applyMatrix4(matrix).y,inverse:matrix.clone().invert()};});

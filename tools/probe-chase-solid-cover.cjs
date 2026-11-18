@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 // Experimental source is served only to this browser. Production remains
 // unchanged until both pixel equivalence and completed-frame evidence pass.
 (async()=>{

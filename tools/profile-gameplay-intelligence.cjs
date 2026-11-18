@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const moving=process.argv.includes('--moving');
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out='output/gameplay-intelligence',label=(before?'before':'after')+'-'+(software?'software':'hardware')+(moving?'-moving':'');fs.mkdirSync(out,{recursive:true});

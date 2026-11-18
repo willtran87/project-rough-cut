@@ -1,5 +1,5 @@
 const fs=require('node:fs');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const spotProbe=process.argv.includes('--spot');
  const out=spotProbe?'output/course-render-cost/spot-probe':'output/course-render-cost';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader']}),p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],rows=[];

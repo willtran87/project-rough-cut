@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright'),fs=require('fs'),assert=require('assert/strict');
+const {chromium}=require('playwright'),fs=require('fs'),assert=require('assert/strict');
 const out='output/final-cut/opaque-profile';fs.mkdirSync(out,{recursive:true});
 const instrument=`
  const primeMaterials=[THREE.FrontSide,THREE.BackSide,THREE.DoubleSide].map(side=>new THREE.MeshDepthMaterial({colorWrite:false,side}));

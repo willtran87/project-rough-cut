@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
-const sharp=require(require.resolve('sharp',{paths:[process.cwd(),path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules')]}));
+const {chromium}=require('playwright');
+const sharp=require(require.resolve('sharp'));
 (async()=>{
  const variantId=process.argv.find(a=>a.startsWith('--variant='))?.split('=')[1]||'standard_review';
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});

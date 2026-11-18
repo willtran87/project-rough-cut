@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out=`output/final-cut/actor-culling/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 const instrument=`
  const cullMeshes=[];rider.traverse(o=>{if(o.isMesh)cullMeshes.push(o);});

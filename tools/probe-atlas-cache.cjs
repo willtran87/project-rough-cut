@@ -1,4 +1,4 @@
-const {chromium}=require(require('node:path').join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{const b=await chromium.launch({headless:true});try{for(const mode of ['canvas','readback','bitmap','direct-bitmap','decoded-source','software']){const p=await b.newPage();await p.goto('http://127.0.0.1:4187');console.log(mode,await p.evaluate(async mode=>{
  const img=new Image();img.src='./assets/optimized/rough-cut-stone-cover-v2.webp';await img.decode();
  const buffer=document.createElement('canvas');buffer.width=384;buffer.height=176;const c=buffer.getContext('2d',{willReadFrequently:mode==='software'});

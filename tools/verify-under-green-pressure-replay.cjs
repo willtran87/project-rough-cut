@@ -1,6 +1,6 @@
 // Render retained simulation input tapes. These are placement fixtures, not human sessions.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/pressure-envelopes',examples=JSON.parse(fs.readFileSync(out+'/examples.json'));
  const selected=examples.filter(e=>e.kind==='protected-recovery');

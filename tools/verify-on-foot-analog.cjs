@@ -1,5 +1,5 @@
 // Actual chapter input polling; fixtures place the player on clear ground only.
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/on-foot-analog',baseline=process.argv.includes('--baseline');
 const base='http://127.0.0.1:4187';

@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),before=process.argv.includes('--before'),root='output/final-cut/joe-garments',out=`${root}/${before?'before':software?'software':'hardware'}`;
 const hook=`window.__joeFinishAudit={

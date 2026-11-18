@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs');
 const source=fs.readFileSync('web/final-cut-scene.js','utf8');
 const oldTrees=`const landscape={stats:()=>({baseline:true}),dispose(){}};

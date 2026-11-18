@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{const out='output/joe-model/studio';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));try{
  await p.goto('http://127.0.0.1:4187/joe-model-preview.html');await p.waitForFunction(()=>window.joePreview?.actor.stats().ready);
  await p.screenshot({path:out+'/oblique.png'});const phase=await p.evaluate(()=>joePreview.actor.stats().phase);await p.waitForTimeout(170);assert.notEqual(await p.evaluate(()=>joePreview.actor.stats().phase),phase);

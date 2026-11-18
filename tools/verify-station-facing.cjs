@@ -1,7 +1,7 @@
 // Controlled viewpoints validate fixed model orientation; objective completion
 // is exercised separately by verify-win-objectives.cjs using real E inputs.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/runner-route-refinement/stations';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});

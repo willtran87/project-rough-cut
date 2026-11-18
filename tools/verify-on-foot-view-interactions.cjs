@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const probe=process.argv.includes('--probe');
 const remapped=process.argv.includes('--remapped'),rearKey=remapped?'y':'r',useKey=remapped?'t':'e';
 (async()=>{

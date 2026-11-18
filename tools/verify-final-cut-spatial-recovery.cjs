@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const baseline=process.argv.includes('--baseline'),out='output/final-cut-spatial-recovery',base='http://127.0.0.1:4187',key='rough-cut.spatial.v1';
 const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=`output/under-green/visual-upgrade-local/pass52-hardware/${software?'software':'hardware'}`;
 const fixtures=[['gallery',0,8,0,.1],['crossing',0,19,0,-.05],['bunker',-29.5,65,Math.PI,.15],['pump',-23.4,42,-1,.05],['pump-return',-15,46,Math.PI/2,.05],['range',12,35,Math.PI,.05],['keeper',12,13.5,-2.4,.05],['door',0,44,Math.PI,0]];
 fs.mkdirSync(out,{recursive:true});

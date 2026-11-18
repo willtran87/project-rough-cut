@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const b=await chromium.launch({headless:true});try{const p=await b.newPage();await p.route('**/__panic-audio',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await p.goto('http://127.0.0.1:4187/__panic-audio');
  const result=await p.evaluate(async()=>{const{createRun}=await import('./back-nine-sim.js'),{createChaseAudio}=await import('./back-nine-audio.js'),{updatePanic}=await import('./chase-panic.js');
  async function render(muted=false){const ctx=new OfflineAudioContext(2,24000*9,24000),Native=window.AudioContext;window.AudioContext=function(){return ctx;};const audio=createChaseAudio(.72);audio.start();window.AudioContext=Native;if(muted)audio.toggle();const r=createRun();r.mode='driving';r.grace=0;r.tension.phase='stalk';r.cart.y=70;r.cart.speed=10;Object.assign(r.joe,{x:-12,y:48,speed:12});const states=[],waits=[];

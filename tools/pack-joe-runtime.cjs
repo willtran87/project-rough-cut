@@ -1,7 +1,7 @@
 // Lossless image repack only: vertex, skin, animation and morph buffer views
 // remain byte-for-byte identical, and decoded RGBA is checked for every image.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const sharp=require(require.resolve('sharp',{paths:[process.cwd(),path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules')]}));
+const sharp=require(require.resolve('sharp'));
 (async()=>{
  const file='web/assets/models/joe-pixel-rig.glb',source=fs.readFileSync(file),jsonLength=source.readUInt32LE(12),gltf=JSON.parse(source.toString('utf8',20,20+jsonLength)),bin=source.subarray(28+jsonLength),replacements=new Map();
  if(gltf.images.every(i=>i.mimeType==='image/webp')){console.log('Joe already losslessly packed');return;}

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass55-damp/${software?'software':'hardware'}`;
 const files=JSON.parse(fs.readFileSync('output/under-green/visual-upgrade-local/pass55-source/files.json'));
 const fixtures=[['gallery',0,8,0,.1],['crossing',0,19,0,-.05],['bark',0,13.5,-.875,.2],['bunker',-29.5,65,Math.PI,.15],['pump',-23.4,42,-1,.05],['pump-front',-25.1,40.8,-.45,-.12],['pump-return',-23.6,44,-2.2,-.12],['range',12,35,Math.PI,.05],['keeper',12,13.5,-2.4,.05]];

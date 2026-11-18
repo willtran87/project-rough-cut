@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
  const hardware=process.argv.includes('--hardware'),verify=process.argv.includes('--verify'),exercise=process.argv.includes('--exercise'),cancel=process.argv.includes('--cancel'),out='output/course-texture-lifecycle/'+(hardware?'hardware':'software')+(cancel?'-cancel':exercise?'-exercise':verify?'-final':'-before');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:hardware?['--use-angle=d3d11']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],rows=[];

@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{chromium}=require('playwright');
 (async()=>{const out='output/back-nine-experience/loading',b=await chromium.launch({headless:true});try{
  const rows=[];for(const failure of ['none','worker','missing','corrupt']){const fallback=failure!=='none',p=await b.newPage();if(failure==='worker')await p.addInitScript(()=>window.Worker=undefined);
  if(failure==='missing'||failure==='corrupt')await p.context().route('**/course-*.bin',r=>r.fulfill({status:failure==='missing'?404:200,contentType:'application/octet-stream',body:'invalid archive'}));

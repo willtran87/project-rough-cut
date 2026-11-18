@@ -8,7 +8,7 @@ const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ||
-  path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+  'playwright');
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'output/gameplay-polish-2026-09-08');
 const url = process.argv[2] || 'http://127.0.0.1:4187';

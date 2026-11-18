@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict'),software=process.argv.includes('--software');
 const out=`output/final-cut/signage/cost-${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 const hook=`const signPairs=[];scene.traverse(m=>{if(m.isMesh&&m.material.map&&m.material.emissiveMap===m.material.map)signPairs.push({mesh:m,full:m.material,basic:new THREE.MeshBasicMaterial({map:m.material.map})});});

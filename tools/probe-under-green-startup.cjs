@@ -1,7 +1,7 @@
 // Paired fresh-page opening measurements. Candidate enabled through routing
 // until a production decision is made; ordinary fixed-step inputs are retained.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/startup-candidate';fs.mkdirSync(out,{recursive:true});
 const replace=(s,a,b)=>{assert(s.includes(a),a);return s.replace(a,b);};
 (async()=>{

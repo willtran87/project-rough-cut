@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software');
  const base='output/level-one-woodland-composition',out=base+'/'+(before?'before':'after')+'-'+(software?'software':'native');fs.mkdirSync(out,{recursive:true});

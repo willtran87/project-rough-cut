@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 const pct=(a,p)=>[...a].sort((a,b)=>a-b)[Math.ceil(a.length*p)-1];
 (async()=>{const out='output/joe-model/performance';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[];
 try{for(const mode of ['sprite','model']){const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];p.on('pageerror',e=>errors.push(e.message));const source=fs.readFileSync('web/game.js','utf8');await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:source.replace('  window.advanceTime = (milliseconds) => {','  window.__perf={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));await p.goto('http://127.0.0.1:4187/?joe='+mode);await p.locator('canvas').click();await p.keyboard.press('Space');await p.waitForFunction(()=>window.__perf&&JSON.parse(render_game_to_text()).assets.course.ready);

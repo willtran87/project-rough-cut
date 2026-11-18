@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const probe=process.argv.includes('--probe');
 (async()=>{
  const out='output/campaign-message-priority';fs.mkdirSync(out,{recursive:true});

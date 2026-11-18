@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out='output/final-cut/cutting-drive/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
 const instrument=`window.__cutDriveMesh=()=>({position:rig.position.toArray(),wheels:wheels.map(w=>({roll:w.rotation.x,steering:w.rotation.y})),reels:machinery.stats().reels,joe:joeActor.stats()});`;

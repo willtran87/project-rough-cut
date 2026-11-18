@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),preview=process.argv.includes('--preview'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass100/${software?'software':'hardware'}`;
 const fixtures=[['east-repair',1.5,18.2,Math.PI/2,.05],['entrance-floor',0,8,0,-.28],['east-apron',1.3,10.8,Math.PI/2,-.65],['west-apron',-2.4,13.2,-Math.PI/2,-.5],['pillar-trail',0,16.8,-.7,-.65],['drain-approach',0,18,0,-.45],['approach',0,8,0,.1],['east-wall',3.2,10.8,Math.PI/2,.25],['east-close',3.8,9.2,Math.PI/2,.60],['east-low',3.6,11.7,Math.PI/2,-.2],['west-wall',-3.5,13.4,-Math.PI/2,.35],['west-close',-3.9,13.38,-Math.PI/2,.8],['floor',-3.6,12.4,0,-.8],['reverse',0,17,Math.PI,.2],['crossing',0,19,0,-.05],['pump-control',-25.7,40,Math.PI/2,-.27],['keeper-control',12,13.5,-2.4,.05]];
 fs.mkdirSync(out,{recursive:true});

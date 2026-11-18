@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/final-cut/masonry-culling-study';fs.mkdirSync(out,{recursive:true});
 const hook=`const masonryOriginals=scene.children.filter(m=>m.isInstancedMesh&&Object.entries(materials).some(([name,material])=>(name.startsWith('ashlar')||name==='coping')&&material===m.material));

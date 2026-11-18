@@ -1,7 +1,7 @@
 // Controlled positioning isolates objective gates. Full input-only runs are
 // separately recorded by play-complete-route.cjs; this is not a route playtest.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const out=process.argv[2]||'output/win-audit-20261108/objectives';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const {chromium} = require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium} = require('playwright');
 
 (async () => {
   const out = 'output/under-green/event-guidance';

@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
 const out='output/under-green/visual-upgrade/pass14-depth';fs.mkdirSync(out,{recursive:true});
 async function quiet(){

@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out='output/final-cut/overview/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
 const hook=`window.__overviewProbe=()=>{

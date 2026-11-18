@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/final-cut/visual-foundation';
 const software=process.argv.includes('--software');

@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const budgetOnly=process.argv.includes('--budget-only');
 const root='output/back-nine-visual-upgrade/headlights',software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),out=root+'/'+(software?'software':'native')+(baseline?'-before':'');fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{

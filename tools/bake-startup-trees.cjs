@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url'),{gzipSync}=require('node:zlib'),{createHash}=require('node:crypto');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});let jobs;
  try{

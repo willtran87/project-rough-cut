@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
 const baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software'),copy=process.argv.includes('--copy');
 const out='output/screen-fracture-20261108/'+(baseline?'before':copy?'copy':software?'software':'hardware');fs.mkdirSync(out,{recursive:true});

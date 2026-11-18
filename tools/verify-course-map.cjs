@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 // Night Order's course map was removed as a player option (COURSE_MAP_ENABLED=false in web/game.js).
 // This verifier asserts that it stays unreachable: no HUD button, no toggle, and the former map key pauses.
 (async()=>{

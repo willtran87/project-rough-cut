@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
  const out='output/back-nine-experience/ground-order',software=!process.argv.includes('--hardware'),label=software?'software':'hardware';fs.mkdirSync(out,{recursive:true});
  const scene=fs.readFileSync('web/back-nine-scene.js','utf8').replace('const mesh=new THREE.Mesh(g,b.material);scene.add(mesh);',"const mesh=new THREE.Mesh(g,b.material);mesh.userData.courseBatch=key.split(':')[0];scene.add(mesh);").replace('return {scene,camera,update,draw()','return window.__orderWorld={scene,camera,renderer,mowerLight,update,draw()');

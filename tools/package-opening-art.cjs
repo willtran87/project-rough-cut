@@ -1,6 +1,6 @@
 // Preserve native generated pixels; compression only, no enlargement or filtering.
 const fs=require('node:fs'),path=require('node:path');
-const sharp=require(require.resolve('sharp',{paths:[process.cwd(),'C:/Users/Will/.codex/skills/develop-web-game/node_modules']}));
+const sharp=require(require.resolve('sharp'));
 (async()=>{
   const folder=process.argv.includes('--back-nine')?'back-nine-opening':'level-one-opening';
   const source='assets/cutscenes/'+folder,target='web/assets/optimized/'+folder,assets=[];

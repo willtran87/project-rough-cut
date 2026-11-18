@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const phase=process.argv.find(a=>a.startsWith('--phase='))?.slice(8)||'reference';
 const out=`output/under-green/visual-pass103/${phase}`;fs.mkdirSync(out,{recursive:true});
 const digest=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');

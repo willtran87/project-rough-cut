@@ -11,3 +11,6 @@ Thumbs.db
 Desktop.ini
 *.log
 *.tmp
+
+# Tool dependencies (npm install)
+node_modules/

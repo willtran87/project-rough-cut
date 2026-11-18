@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const base='http://127.0.0.1:4187',key='rough-cut.settings.v1',out='output/on-foot-keyboard-scope';
 const baseline=process.argv.includes('--legacy-baseline');
 (async()=>{

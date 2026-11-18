@@ -1,7 +1,7 @@
 // Diagnostic integration of existing conservative opaque-cover projection.
 // Runtime files remain unchanged while pixels and completed work are compared.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const focus=process.argv.includes('--focus'),conservative=process.argv.includes('--conservative');
 const highPitch=process.argv.includes('--high-pitch');
 const out='output/under-green/solid-culling-candidate'+(conservative?'/conservative':'')+(focus?'/focus':'')+(highPitch?'/high-pitch':'');fs.mkdirSync(out,{recursive:true});

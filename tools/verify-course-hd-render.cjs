@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software'),dpr=process.argv.includes('--dpr2')?2:1,noPools=process.argv.includes('--no-pools');
  const out='output/level-one-hd-foundation/'+(baseline?'before':'after')+(software?'-software':'')+(dpr===2?'-dpr2':'')+(noPools?'-physical-light':'');fs.mkdirSync(out,{recursive:true});

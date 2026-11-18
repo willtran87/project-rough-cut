@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),ablate=process.argv.includes('--ablate');
 const out=`output/final-cut/runtime-performance/${software?'software':'native'}-${baseline?'before':'after'}`;fs.mkdirSync(out,{recursive:true});
 const hook=`window.__renderProbe={renderer,scene,gl,camera,moonlight,headlights,rig};`;

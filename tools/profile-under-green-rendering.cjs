@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),live=process.argv.includes('--live');
 const scale=Number(process.argv.find(a=>a.startsWith('--scale='))?.split('=')[1]||1);
 const liveFrames=Number(process.argv.find(a=>a.startsWith('--frames='))?.split('=')[1]||240);

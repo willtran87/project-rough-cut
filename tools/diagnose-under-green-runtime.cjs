@@ -1,6 +1,6 @@
 // Fixed views from complete pilot routes. Diagnostic timings, not FPS acceptance.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const {sceneModule,instrumentScene}=require('./under-green-soak-hooks.cjs');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/runtime-fix/baseline';
 fs.mkdirSync(out,{recursive:true});

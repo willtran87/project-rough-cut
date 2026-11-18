@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/dense-clearance';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const {traverse}=await import('./probe-under-green-folded.mjs'),{step,createRun}=await import('../web/under-green-sim.js');

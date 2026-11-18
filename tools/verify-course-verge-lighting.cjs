@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),budget=process.argv.includes('--budget'),pond=process.argv.includes('--pond');
  const out=(pond?'output/level-one-pond-banks/budget/':'output/level-one-verge-lighting/')+(before?'before':'after')+(software?'-software':'');fs.mkdirSync(out,{recursive:true});

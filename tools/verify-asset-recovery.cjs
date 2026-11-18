@@ -1,6 +1,6 @@
 /* Browser network tests: cold loading and bounded transient/permanent failures. */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const out=path.resolve(process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/a-grade-closure/loading');fs.mkdirSync(out,{recursive:true});
  const sourceHash=require('node:crypto').createHash('sha256').update(fs.readFileSync('web/game.js')).digest('hex');

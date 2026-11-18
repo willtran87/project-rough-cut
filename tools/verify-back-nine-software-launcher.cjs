@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=path.resolve(process.argv[2]||'output/back-nine-software-launcher');
 fs.mkdirSync(out,{recursive:true});
 const delay=ms=>new Promise(r=>setTimeout(r,ms));

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/keeper-counterplay',baseline=process.argv.includes('--baseline');
  const tapes=[-1,1].map(side=>({side,...JSON.parse(fs.readFileSync(`${out}/attempt-${side}.json`))}));

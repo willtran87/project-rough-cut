@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const option=name=>process.argv.find(a=>a.startsWith(`--${name}=`))?.slice(name.length+3);
  const out=option('output')||'output/under-green/reactive-routes';fs.mkdirSync(out,{recursive:true});

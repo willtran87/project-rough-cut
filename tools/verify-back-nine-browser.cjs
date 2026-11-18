@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
 (async()=>{
  const out='output/back-nine';fs.mkdirSync(out,{recursive:true});const software=process.argv.includes('--software');const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});

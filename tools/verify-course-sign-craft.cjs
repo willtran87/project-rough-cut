@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=`output/level-one-sign-craft/${before?'before':'after'}-${software?'software':'native'}`;
  fs.mkdirSync(out,{recursive:true});

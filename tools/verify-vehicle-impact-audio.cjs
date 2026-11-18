@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({headless:true});try{const page=await browser.newPage();await page.route('**/__impact-audio',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await page.goto('http://127.0.0.1:4187/__impact-audio');
  const result=await page.evaluate(async()=>{
   const{createChaseAudio}=await import('./back-nine-audio.js'),{createRun}=await import('./back-nine-sim.js');

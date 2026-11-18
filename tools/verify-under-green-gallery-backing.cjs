@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-const {PNG}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright-core/lib/utilsBundle.js');
+const {chromium}=require('playwright');
+const {PNG}=require(require('node:path').join(require('node:path').dirname(require.resolve('playwright-core/package.json')),'lib/utilsBundle.js'));
 const referencePixels=new Map(),pixelChecks=[];
 // Retriangulation can move a texture sample across one quantization boundary.
 // Software upscaling spreads these isolated samples over more output pixels.

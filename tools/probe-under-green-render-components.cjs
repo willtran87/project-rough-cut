@@ -1,6 +1,6 @@
 // Component omissions are diagnostic only; none of these variants may ship.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/route-view-costs/components';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});

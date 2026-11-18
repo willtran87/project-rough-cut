@@ -1,7 +1,7 @@
 /* Controlled interaction fixtures, not human balance or completion evidence. */
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict');
-const {chromium} = require(path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium} = require('playwright');
 (async () => {
   const out = path.resolve('output/engagement-2026-11-05'); fs.mkdirSync(out, {recursive:true});
   const browser = await chromium.launch({headless:true});
