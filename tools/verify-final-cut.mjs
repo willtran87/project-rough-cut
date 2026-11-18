@@ -5,6 +5,7 @@ import {CHECKPOINTS,SECTORS,solid,RIG,rigContact,PUMP,BELL,refuge} from '../web/
 import {traverse} from './probe-final-cut.mjs';
 import {rigWallHit} from '../web/final-cut-rig.js';
 import {WALLS} from '../web/final-cut-course.js';
+import {valveState,basinById,swaleArmed} from '../web/final-cut-basins.js';
 const checks=[],runs=[],tick=(r,seconds,input={},hz=60)=>{for(let i=0;i<seconds*hz;i++)step(r,input,1/hz);};
 for(const p of CHECKPOINTS)assert(!solid(p));checks.push('Every checkpoint has valid physical clearance');
 let r=createRun();tick(r,10);assert.equal(r.time,0);r.mode='paused';tick(r,10);assert.equal(r.time,0);checks.push('Briefing/pause freeze encounter');
@@ -13,9 +14,16 @@ for(const hz of [30,60,120]){r=createRun();r.mode='playing';Object.assign(r.play
 r=createRun();r.mode='playing';Object.assign(r.player,{x:0,y:26});Object.assign(r.rig,{x:12,y:26,yaw:-Math.PI/2,phase:'pass',deployment:1,direction:-1});tick(r,2,{forward:-1,sprint:true});assert.equal(r.mode,'playing');checks.push('Ordinary lateral escape from a sufficient warning distance clears committed cutting footprint');
 r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,CHECKPOINTS[1]);tick(r,200);assert.equal(r.mode,'playing');assert(refuge(r.player));checks.push('Permanent masonry refuge remains safe through repeated passes');
 r=createRun();r.mode='playing';Object.assign(r.player,CHECKPOINTS[1]);Object.assign(r.rig,{x:20,y:43.5,yaw:-Math.PI/2,phase:'pass',deployment:1,direction:-1});tick(r,1);assert(r.events.some(e=>e.type==='blocked-pass'));assert(!rigWallHit({...r.rig,phase:'pass',deployment:1},WALLS));assert(rigWallHit({...r.rig,phase:'pass',deployment:1,x:r.rig.x-.06},WALLS));assert.equal(r.mode,'playing');checks.push('A physically blocked pass stops at masonry and must announce a new approach');
-r=createRun();r.mode='playing';Object.assign(r.player,{x:8.5,y:38,yaw:Math.atan2(-.5,1)});assert.equal(nearbyAction(r)?.id,'pump');step(r,{use:true});assert(r.pump);assert.equal(r.checkpoint,1);const saved=readSave(JSON.stringify(snapshot(r)));r=createRun(saved);assert(r.pump&&r.water===1);assert(!solid(r.player));checks.push('Real pump interaction and coherent persistent prepared checkpoint');
+r=createRun();r.mode='playing';Object.assign(r.player,{x:8.5,y:38,yaw:Math.atan2(-.5,1)});assert.equal(nearbyAction(r)?.id,'pump');step(r,{use:true});assert(r.pump);assert.equal(r.checkpoint,1);const saved=readSave(JSON.stringify(snapshot(r)));r=createRun(saved);
+// Since a501e79 priming no longer floods the swale: the pump gives the valves
+// pressure, and standing water never survives a retry or reload.
+assert(r.pump&&r.water===0&&r.stage===0);assert(Object.values(r.basins).every(b=>b.state==='dry'));assert(valveState(r,basinById('near')).ok);assert(!solid(r.player));checks.push('Real pump interaction and coherent persistent prepared checkpoint');
 r=createRun({checkpoint:1,pump:true});r.mode='playing';tick(r,240);assert(!r.won);checks.push('Prepared water alone does not automatically win the ordinary mowing schedule');
-r=createRun({checkpoint:1,pump:true});r.mode='playing';Object.assign(r.player,{x:BELL.x,y:BELL.y-1,yaw:0});step(r,{use:true});const before=r.rig.x;tick(r,1);assert(Math.abs(r.rig.x-before)<=RIG.speed+.1);tick(r,180);assert(r.won);assert.equal(r.checkpoint,2);Object.assign(r.player,{x:r.rig.x,y:r.rig.y});tick(r,4);assert.notEqual(r.mode,'caught');assert(readSave(JSON.stringify(snapshot(r))).won);checks.push('Bell earns physical trap approach, victory survives contact and save');
+// a501e79: the bell only sets a trap over a flooded swale, and the swale valve
+// needs two fairway holds. Start from a saved two-hold checkpoint and open it
+// with a real Use before ringing the bell from its spot on the open bank.
+r=createRun({checkpoint:1,pump:true,basins:{spent:['near','far']}});r.mode='playing';assert.equal(r.stage,2);Object.assign(r.player,{x:.8,y:77.7,yaw:Math.PI});assert.equal(nearbyAction(r)?.id,'valve-swale');step(r,{use:true});assert(swaleArmed(r));
+Object.assign(r.player,{x:BELL.x,y:BELL.y+.9,yaw:Math.PI});assert.equal(nearbyAction(r)?.id,'bell');step(r,{use:true});assert.equal(r.lure?.trap,true);const before=r.rig.x;tick(r,1);assert(Math.abs(r.rig.x-before)<=RIG.speed+.1);tick(r,180);assert(r.won);assert.equal(r.checkpoint,2);Object.assign(r.player,{x:r.rig.x,y:r.rig.y});tick(r,4);assert.notEqual(r.mode,'caught');assert(readSave(JSON.stringify(snapshot(r))).won);checks.push('Bell earns physical trap approach, victory survives contact and save');
 assert.equal(readSave('bad'),null);assert.equal(readSave('{"version":99}'),null);assert.equal(readSave('{"version":1,"checkpoint":-8}'),null);checks.push('Malformed saves safely rejected');
 for(const options of [{},{sprint:true},{evidence:true},{checkpoint:1},{seed:1},{seed:2},{fullyCut:true}]){const {run}=traverse(options);assert.equal(run.mode,'complete');assert(run.won);if(options.evidence)assert(run.evidence);runs.push({options,seconds:run.time,crossings:run.stats.crossings,cut:run.cut.length});}checks.push('Seven complete ordinary-control simulation routes: walk, sprint, evidence, prepared checkpoint, both replay seeds and fully cut arena');
 r=createRun({checkpoint:1,pump:true,cut:SECTORS.map(s=>s.id)});assert.equal(r.cut.length,9);assert(!solid(r.player));checks.push('Fully cut checkpoint preserves permanent shelter');

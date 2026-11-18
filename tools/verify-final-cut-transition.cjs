@@ -2,14 +2,20 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[],checks=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:4187/final-cut.html');
+ {const fixture=require('./lib/campaign-fixture.cjs');await fixture.unlockChapters(page);await fixture.skipStories(page);}await page.goto('http://127.0.0.1:4187/final-cut.html');
  await page.evaluate(()=>{
   localStorage.removeItem('rough-cut.final-cut.v1');localStorage.setItem('rough-cut.under-green.v1',JSON.stringify({version:3,checkpoint:3,completed:true,bypass:true,evidence:true}));
   localStorage.setItem('rough-cut.career.v1',JSON.stringify({filedChangeRequests:['standard','crosswind']}));
  });
- await page.goto('http://127.0.0.1:4187/under-green.html');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
+ // Under the Green never restores a finished run on reload (every attempt starts
+ // at the drain entrance), so finish the sluice for real over the legacy save.
+ await page.goto('http://127.0.0.1:4187/under-green.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
+ assert(await page.locator('#continue-final-cut').isHidden());
+ await page.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js'),{SLUICE,GATE}=await import('./under-green-course.js');const r=createRun(3);r.mode='playing';r.time=90;Object.assign(r.player,{x:SLUICE.x,y:SLUICE.y+1,yaw:Math.PI,grace:0});Object.assign(r.joe,{x:GATE.x,y:GATE.y+6,phase:'walk',last:{x:SLUICE.x,y:SLUICE.y+1}});__underGreen.run=r;advanceTime(0);});
+ await page.keyboard.press('e');await page.evaluate(()=>advanceTime(1700));await page.evaluate(()=>advanceTime(4500));assert.equal(await page.evaluate(()=>JSON.parse(render_game_to_text()).mode),'under_green_complete');
+ await page.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{polling:100});
  await page.locator('#continue-final-cut').click();await page.waitForURL('**/final-cut.html?from=drain');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
- const drain=await page.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(drain.route,'drain');assert(drain.evidence);await page.screenshot({path:'output/final-cut/from-drain.png'});checks.push('Completed legacy drain save offers actual continuation; route and evidence arrive');
+ const drain=await page.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(drain.route,'drain');assert(drain.evidence);await page.screenshot({path:'output/final-cut/from-drain.png'});checks.push('Completed drain chapter offers actual continuation; route and legacy evidence arrive');
  await page.evaluate(()=>{localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({version:1,checkpoint:2,completed:true,collected:1}));localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true}));});
  await page.goto('http://127.0.0.1:4187/back-nine.html');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
  await page.locator('#continue-final-cut').click();await page.waitForURL('**/final-cut.html?from=garage');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});

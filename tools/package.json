@@ -1,0 +1,13 @@
+{
+  "name": "project-rough-cut-tools",
+  "private": true,
+  "description": "Development and verification tooling for Rough Cut. The game itself in web/ is static and needs no install.",
+  "scripts": {
+    "serve": "cd .. && python -m http.server 4187 --bind 127.0.0.1 --directory web",
+    "check": "cd .. && node tools/verify-release.mjs && node tools/verify-campaign-preferences.mjs && node tools/verify-back-nine.mjs && node tools/verify-under-green.mjs && node tools/verify-final-cut-hollows.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0",
+    "sharp": "0.34.5"
+  }
+}

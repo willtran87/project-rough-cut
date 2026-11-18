@@ -5,9 +5,9 @@ const {chromium}=require('playwright');
  try{
   const page=await browser.newPage();
   await page.route('**/pixel-trees.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/pixel-trees.js','utf8').replace('  function tree(x,z,height,radius){','  function tree(x,z,height,radius){\n    if(typeof window!=="undefined")(window.__treeJobs??=[]).push([x,z,height,radius]);')}));
-  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__bake={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
+  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__bake={state,resetFirstHole,dismissHoleTutorial,render};\n  window.advanceTime = (milliseconds) => {')}));
   await page.goto('http://127.0.0.1:4187');await page.locator('canvas#game').click();await page.keyboard.press('Space');await page.waitForFunction(()=>window.__bake&&JSON.parse(render_game_to_text()).assets.course.ready);
-  await page.evaluate(()=>{__bake.resetFirstHole();__bake.state.mode='first_hole';__bake.state.manualTime=true;__bake.render();});
+  await page.evaluate(()=>{__bake.resetFirstHole();__bake.state.mode='first_hole';__bake.state.manualTime=true;__bake.dismissHoleTutorial(false);__bake.render();});
   await page.waitForFunction(()=>RCScene3D.stats().constructionMs>0,null,{timeout:120000});jobs=await page.evaluate(()=>__treeJobs);
  }finally{await browser.close();}
  const T=await import(pathToFileURL(path.resolve('web/vendor/three/three.module.js'))),{createTrees}=await import(pathToFileURL(path.resolve('web/pixel-trees.js')));

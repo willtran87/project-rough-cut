@@ -6,7 +6,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  try{
   const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
+  {const fixture=require('./lib/campaign-fixture.cjs');await fixture.unlockChapters(page);await fixture.skipStories(page);}await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
   const read=()=>page.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>page.evaluate(ms=>advanceTime(ms),ms);
   async function shot(name){await tick(0);await page.screenshot({path:`${out}/${name}.png`,fullPage:true});}
   await shot('briefing-2560');await page.click('#primary');await shot('arrival-2560');
@@ -20,7 +20,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   for(const [width,height]of [[1280,720],[844,390],[390,844]]){await page.setViewportSize({width,height});await shot(`briefing-${width}`);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
   await page.setViewportSize({width:2560,height:1600});await page.click('#primary');
   await page.evaluate(()=>{const r=__finalCut.run;Object.assign(r.player,{x:-10,y:85,yaw:-Math.PI/2});});await tick(0);await shot('pavilion-2560');
-  await page.evaluate(()=>{const r=__finalCut.run;Object.assign(r.player,{x:-9.5,y:83.3,yaw:0});});await tick(0);assert.equal((await read()).action?.id,'bell');await page.keyboard.press('e');await tick(17);assert((await read()).rig);checks.push('Bell action reachable from pavilion approach');
+  // Controlled placement: the two fairway hollows have already held him (the
+  // nursery valve needs that pressure), then the swale valve is opened for real.
+  await page.evaluate(async()=>{const {BASINS}=await import('./final-cut-basin-layout.js');const r=__finalCut.run;for(const b of BASINS.filter(b=>!b.final).slice(0,2))Object.assign(r.basins[b.id],{state:'spent',level:.3,age:0});const swale=BASINS.find(b=>b.final);Object.assign(r.player,{x:swale.valve.x,y:swale.valve.y-1.7,yaw:0});});await tick(0);
+  assert.equal((await read()).action?.id,'valve-swale');await page.keyboard.press('e');await tick(17);assert(await page.evaluate(()=>['filling','full'].includes(__finalCut.run.basins.swale.state)));checks.push('Nursery swale valve floods after two held hollows');
+  await page.evaluate(async()=>{const {BELL}=await import('./final-cut-course.js');const r=__finalCut.run;Object.assign(r.player,{x:BELL.x+.1,y:BELL.y-1.7,yaw:0});});await tick(0);assert.equal((await read()).action?.id,'bell');await page.keyboard.press('e');await tick(17);assert((await read()).rig);checks.push('Bell action reachable from pavilion approach');
   await page.evaluate(()=>{const r=__finalCut.run;Object.assign(r.player,{x:-16,y:86,yaw:Math.PI/2});});
   for(let i=0;i<30&&!(await read()).won;i++)await tick(5000);
   assert((await read()).won);assert.equal((await read()).mode,'final_cut_aftermath');await shot('trap-2560');checks.push('Actual rig traversal reaches the prepared swale after bell');

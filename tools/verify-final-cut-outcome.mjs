@@ -43,14 +43,16 @@ r.mode='playing';Object.assign(r.player,{x:16,y:42,yaw:0});step(r,{chipStart:tru
 assert.equal(r.stats.ballRedirects,1);assert(r.saveSerial>serial);assert.equal(r.rig.evidence,'golf ball');assert.equal(createRun(readSave(JSON.stringify(snapshot(r)))).stats.ballRedirects,1);
 r.completed=true;assert(earnedMastery(r).includes('borrowed-attention'));
 checks.push('Thrown balls are saved immediately; only a landed ball actually selected for the next pass earns distraction credit');
-const {run:full}=traverse();assert.deepEqual(earnedMastery(full),['unbroken','read-the-wake']);
+// The pilot floods two hollows and the swale: exactly three valves, so it also
+// earns the flood-and-bait loop's 'no-wasted-water' award added in a501e79.
+const {run:full}=traverse();assert.equal(full.stats.floods,3);assert.deepEqual(earnedMastery(full),['unbroken','no-wasted-water','read-the-wake']);
 const {run:prepared}=traverse({checkpoint:1});assert.deepEqual(earnedMastery(prepared),[]);
 const legacy=createRun(readSave(JSON.stringify({version:1,checkpoint:2,completed:true,won:true})));assert.deepEqual(earnedMastery(legacy),[]);
-checks.push('Full ordinary-input pilot earns its clean crossings; checkpoint-only and untracked legacy completions earn no mastery');
+checks.push('Full ordinary-input pilot earns its clean crossings and three-valve round; checkpoint-only and untracked legacy completions earn no mastery');
 put(FINAL_CAREER_KEY,{version:1,completed:true,bestSeconds:0,mastery:{bad:true},routes:['invalid']});
 recordFinaleCompletion(legacy);assert.equal(career().bestSeconds,null);
 recordFinaleCompletion(full);const best=career().bestSeconds;assert(best>70);const once=career();recordFinaleCompletion(createRun(readSave(JSON.stringify(snapshot(full)))));assert.deepEqual(career(),once);
-recordFinaleCompletion(prepared);assert.equal(career().bestSeconds,best);assert.deepEqual(career().mastery,['unbroken','read-the-wake']);
+recordFinaleCompletion(prepared);assert.equal(career().bestSeconds,best);assert.deepEqual(career().mastery,['unbroken','no-wasted-water','read-the-wake']);
 checks.push('Career merge survives malformed data; repeated completion is idempotent and checkpoint reloads cannot create a zero-time best');
 globalThis.localStorage={getItem:()=>{throw Error('denied');},setItem:()=>{throw Error('denied');}};
 assert.equal(recordFinaleCompletion(full),false);assert.equal(finaleEntry('garage').crewLogs,0);

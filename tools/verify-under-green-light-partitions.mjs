@@ -21,7 +21,9 @@ const flood=createDrainFlood(scene,floorLayout());scene.updateMatrixWorld(true);
 const envelopes=new Map();scene.traverse(m=>{if(m.isMesh){m.geometry.computeBoundingBox();envelopes.set(m,m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld).expandByScalar((m.userData.drainLightPadding??0)+1e-7));}});
 let samples=0,vertices=0;const v=new THREE.Vector3();
 for(let elapsed=0;elapsed<=150;elapsed+=.125){
- flood.update({elapsed},false);scene.updateMatrixWorld(true);const state=flood.stats();assert(state.depth<=.38&&state.depth>=0);
+ // Since #13 the flood also reads the run's waders (player first, Joe second)
+ // for shader-only wakes; a still player and an absent Joe leave geometry as before.
+ flood.update({elapsed,time:elapsed,player:{x:0,y:0},joe:{x:0,y:0,phase:'absent'}},false);scene.updateMatrixWorld(true);const state=flood.stats();assert(state.depth<=.38&&state.depth>=0);
  for(const [mesh,bounds]of envelopes){
   const p=mesh.geometry.attributes.position;
   // Every floor and wall-film vertex stays in the immutable light envelope
