@@ -25,7 +25,7 @@ export function finalCutMessages(r,preferences){
   {kind:'danger',priority:100,text:urgent?'Cutting pass approaching. Move off the cutting strip.':''},
   {kind:'warning',priority:95,text:ambushTell(r)?`Reeds shaking to the ${r.rig.attack.entry}. Move across his approach, toward stone.`:''},
   {kind:'warning',priority:80,text:middleCoverWarning(r)?'Middle rough is next. Leave the strip before the reels reach it; use the dry bank.':''},
-  {kind:'event',priority:60,text:r.messageTime>0?r.message:''},
+  {kind:'event',priority:60,text:r.messageTime>0&&(r.message!==r.messageDescriptive||preferences.soundCaptions)?r.message:''},
   {kind:'warning',priority:55,text:wetFooting(r)?'Saturated turf slows your feet. Get back onto the dry bank.':''},
  ]);
  return {urgent,caption:message?.text||'',kind:message?.kind||'',

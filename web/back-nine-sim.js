@@ -34,7 +34,7 @@ export function createRun(checkpoint=0,collected=0,seed=0,utilityRecord=null){
   joe:{senses:createSenses(),ram:createRam(),...(checkpoint?{x:joeX,y:joeY,yaw:0}:DEPARTURE_SPAWN),speed:0,mode:'starting',route:[],repath:0,lastSeen:null,seenAge:99,stuck:0,reverse:0,expanded:0,plans:0},
   pressure:createPressure(),panic:createPanic(checkpoint),story:createCourseStory(collected,checkpoint),decoys:createDecoys(),hunt:createHunt(),courseFX:createCourseFX(),finale:{age:0,gate:0,latched:false,tail:0},tension:{...createTension(),lastCheckpoint:checkpoint},impact:{serial:0,age:99,strength:0,x:0,y:0,damaged:false},impactCooldown:0,grace:checkpoint?3:2.5,lookBack:false,message:'',messageTime:0,finishHold:0,lastImpact:0,contact:0,events:[],distance:0};
 }
-export function objective(run){if(run.mode==='dying')return 'Joe ran you down';if(run.mode==='sealing')return 'Inside · the security shutter is closing';if(run.checkpoint<2)return run.checkpoint?'Reconnect the night-range relay':'Reconnect the maintenance relay';if(run.exitRelease&&!run.exitRelease.released)return 'Garage powered · free the jammed shutter';return run.foot?'Garage powered · run inside and hold Use':'Garage powered · drive inside and hold brake';}
+export function objective(run){if(run.mode==='dying')return 'Joe ran you down';if(run.mode==='sealing')return 'Inside · the security shutter is closing';if(run.checkpoint<2)return run.checkpoint?'Reconnect the night-range relay':'Reconnect the maintenance relay';if(run.exitRelease&&!run.exitRelease.released)return 'Garage powered · free the jammed shutter';return run.foot?'Garage powered · run inside and hold Use':'Garage powered · drive inside and hold Use';}
 function move(vehicle,dt,r,other,kind,from,run){
  const step=vehicle.speed*dt,dx=Math.sin(vehicle.yaw)*step,dy=Math.cos(vehicle.yaw)*step;
  const next={x:vehicle.x+dx,y:vehicle.y+dy};let hit=false;
@@ -50,7 +50,12 @@ export function updateRun(run,input,dt){
  if(run.mode==='dying'){updateRunover(run,dt);return;}
  if(run.mode==='complete'){run.finale.tail=Math.max(0,run.finale.tail-clamp(dt,0,1/30));return;}
  if(run.mode!=='driving'&&run.mode!=='sealing')return;
- const sealing=run.mode==='sealing';if(sealing)input={rear:input.rear,brake:true};
+ // Use (E / pad A) is separate from Brake (Space / pad B) so Use means the same
+ // thing in every chapter. Holding Use still brings the vehicle to rest; Brake
+ // alone never interacts. Scripted inputs that predate the split send only
+ // `brake`, which keeps its old meaning of brake-and-use.
+ if(input.use===undefined)input={...input,use:!!input.brake};else if(input.use)input={...input,brake:true};
+ const sealing=run.mode==='sealing';if(sealing)input={rear:input.rear,brake:true,use:false};
  dt=clamp(dt,0,1/30);run.time+=dt;run.checkpointGrace=Math.max(0,(run.checkpointGrace||0)-dt);run.grace=Math.max(0,run.grace-dt);run.messageTime=Math.max(0,run.messageTime-dt);run.lastImpact=Math.max(0,run.lastImpact-dt);
  run.impact.age+=dt;run.impactCooldown=Math.max(0,run.impactCooldown-dt);const wasContact=!!run.contact;
  advanceWreck(run,dt);

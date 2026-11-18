@@ -45,7 +45,9 @@ export function createRun(saved={},route='direct'){
 export function readSave(raw){try{const s=JSON.parse(raw);if(!s||s.version!==1||!Number.isInteger(s.checkpoint)||s.checkpoint<0||s.checkpoint>2)return null;return snapshot(createRun({...s,arrival:upgradeArrivalMotion(s.arrival),ending:upgradeEndingMotion(s.ending),runFacts:s.runFacts||{eligible:false}}));}catch{return null;}}
 export function snapshot(r){return {version:1,engine:{...r.engine},checkpoint:r.checkpoint,route:r.route,arrival:arrivalSnapshot(r),crossings:{...r.crossings},drama:dramaSnapshot(r),stationReceipt:r.stationReceipt?{...r.stationReceipt,stations:[...r.stationReceipt.stations]}:null,announcement:announcementSnapshot(r),unease:uneaseSnapshot(r),pump:r.pump,basins:basinSnapshot(r),recordChoice:r.recordChoice,won:r.won,completed:r.completed,ending:endingSnapshot(r),cut:[...r.cut],cutAreas:(r.cutAreas||[]).map(a=>({...a})),broken:[...(r.broken||[])],openingSeen:r.openingSeen,...evidenceFields(r),...ballSnapshot(r),priorEvidence:r.priorEvidence,runFacts:runFacts(r),seed:r.seed,schedule:scheduleSnapshot(r)};}
 function event(r,type,data={}){r.events.push({type,time:r.time,...data});if(r.events.length>24)r.events.shift();}
-function say(r,text,t=4){r.message=text;r.messageTime=t;}
+// `descriptive` lines only narrate what the player can already see or hear;
+// they show only with the optional Sound descriptions preference.
+function say(r,text,t=4,descriptive=false){r.message=text;r.messageTime=t;r.messageDescriptive=descriptive?text:"";}
 function phase(r,name){if(name==='disengage'&&r.rig.phase==='pass'&&r.rig.evidence==='observed player')queueJoeLine(r,'missed');r.rig.phase=name;r.rig.age=0;event(r,'phase',{phase:name});}
 export function nearbyAction(r){
  if(r.won)return r.mode==='aftermath'&&distance(r.player,ROAD_EXIT)<2.5?ROAD_EXIT:null;
@@ -122,7 +124,7 @@ function deploy(j,target){
 function blockedRig(r){r.rig.turnPlan=null;r.rig.reverse=false;event(r,'blocked-pass');queueJoeLine(r,'blocked');phase(r,'disengage');}
 function updateRig(r,dt){
  const j=r.rig;j.age+=dt;j.speed=0;
- if(j.phase==='waiting'){if(r.arrival.ready&&r.arrival.requested){phase(r,'reveal');say(r,'Two high lamps wait across the near fairway.',2);}return;}
+ if(j.phase==='waiting'){if(r.arrival.ready&&r.arrival.requested){phase(r,'reveal');say(r,'Two high lamps wait across the near fairway.',2,true);}return;}
  if(j.phase==='disabled')return;
  if(j.phase==='bogged'){
   if(j.age>7){phase(r,'disabled');say(r,'The reels have stopped. Follow the stone path to the public road.',6);}return;
@@ -133,7 +135,7 @@ function updateRig(r,dt){
  }
  if(j.phase==='reveal'){
   if(!deploy(j,clamp((j.age-2)/4,0,1))){blockedRig(r);return;}
-  if(j.age>2&&!j.spoken){j.spoken=true;queueJoeLine(r,'opening');event(r,'reveal');say(r,'The lamps spread apart. One machine spans the strip.',4);}
+  if(j.age>2&&!j.spoken){j.spoken=true;queueJoeLine(r,'opening');event(r,'reveal');say(r,'The lamps spread apart. One machine spans the strip.',4,true);}
   if(j.age>=8){r.openingSeen=true;r.saveSerial++;phase(r,'announce');}return;
  }
  if(j.phase==='turn'){
@@ -254,7 +256,11 @@ export function threat(r){
  if(['announce','pass'].includes(j.phase))return `${j.phase==='announce'?'ALIGNING':'CUTTING'} · ${['NEAR','MIDDLE','FINAL'][j.lane]} FAIRWAY · ${side.toUpperCase()}`;
  if(j.phase==='waiting')return !r.arrival.reached?'SERVICE WALK · FOLLOW THE RAMP':r.arrival.requested?'JOE IS STARTING THE MACHINE · STAY BEHIND THE RAIL':'THE OVERLOOK IS SAFE · BEGIN WHEN READY';if(j.phase==='reveal')return 'THE CUTTING WINGS ARE OPENING';return 'REELS LIFTED · JOE IS TURNING';
 }
-// After the first cycles the routine status lines are dropped: lamps, reeds and
-// sound carry them. What remains is what the player could not otherwise know.
-export function threatEssential(r){const j=r.rig;return j.passSerial<3||r.won||j.phase==='mired'||blackedOut(r)||!!j.clearanceWarning||!!ambushTell(r)||(!!j.attack&&j.phase==='pass');}
+// Without Listen, the threat line keeps only what the player could not otherwise
+// know or must act on: the arrival guidance, alignment and stuck-rig warnings,
+// the blackout, clearance, ambush tells and charges, and a pass over the flooded
+// swale. Lines that only narrate what the lamps and engine already show (wings
+// opening or lifting, routine cutting lanes, the rig sinking after a win) are left
+// to the scene.
+export function threatEssential(r){const j=r.rig;if(r.won)return false;return j.phase==='waiting'||j.phase==='align'||j.phase==='mired'||blackedOut(r)||!!j.clearanceWarning||!!ambushTell(r)||(!!j.attack&&['turn','align','pass'].includes(j.phase))||(!!j.trapApproach&&['announce','pass'].includes(j.phase));}
 export function diagnostics(r){return {mode:'final_cut_'+r.mode,coordinates:'metres; x east, y towards road; yaw 0 north',seconds:+r.time.toFixed(2),engine:{...r.engine},player:{...r.player},arrival:{...r.arrival,joe:{...r.arrival.joe}},rig:{...r.rig,travel:r.rig.travel?{time:r.rig.travel.time,distance:r.rig.travel.distance,duration:r.rig.travel.route.duration,length:r.rig.travel.route.length}:null,turnPlan:r.rig.turnPlan?{segment:r.rig.turnPlan.index,segments:r.rig.turnPlan.segments.length,at:r.rig.turnPlan.at,speed:r.rig.turnPlan.speed,shift:r.rig.turnPlan.shift}:null,path:r.rig.path.map(p=>({...p}))},ambush:{tell:ambushTell(r),noise:heardPlayer(r),wetFooting:wetFooting(r)},objective:objective(r),action:nearbyAction(r),shelter:refuge(r.player)?.name||null,cut:[...r.cut],cutAreas:r.cutAreas,broken:r.broken,opening:r.opening,crossings:crossingState(r),openingSeen:r.openingSeen,pump:r.pump,water:r.water,stage:r.stage,basins:Object.fromEntries(BASINS.map(b=>[b.id,{...r.basins[b.id]}])),blackout:{...r.blackout,active:blackedOut(r)},won:r.won,completed:r.completed,ending:r.ending,checkpoint:r.checkpoint,route:r.route,cutPlan:{...cutPlan(r),...r.schedule},...evidenceFields(r),runFacts:runFacts(r),balls:r.ballCount,ballAim:{active:r.ballAim.active,power:r.ballAim.power,target:r.ballAim.plan?.target,blocked:r.ballAim.plan?.blocked,reason:r.ballAim.plan?.reason},worldBalls:r.balls.map(b=>({id:b.id,x:b.x,y:b.y,z:b.z,age:b.age,landed:b.landed})),failure:r.failure,stationReceipt:r.stationReceipt,announcement:{...r.announcement,board:championshipBoard(r)},unease:{...r.unease},drama:{phase:r.drama.phase,pressure:r.drama.pressure,heard:r.drama.heard,active:r.drama.active,pending:r.drama.pending},stats:r.stats};}

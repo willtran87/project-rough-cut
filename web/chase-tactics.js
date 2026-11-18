@@ -42,7 +42,7 @@ export function updateTactics(run,input,dt,visible){
   const station=TACTIC_STATIONS[i];if(s.used&(1<<i)||s.brokenAt[i]!==null||station.kind==='cart'&&state.brokenAt!==null)continue;
   if(distance(c,station)<4.5){s.near=i;break;}
  }
- if(s.near<0||!input.brake||Math.abs(c.speed)>.7||distance(c,j)<6){s.hold=0;return;}
+ if(s.near<0||!(input.use??input.brake)||Math.abs(c.speed)>.7||distance(c,j)<6){s.hold=0;return;}
  s.hold+=dt;if(s.hold<TACTIC_HOLD)return;
  const i=s.near,station=TACTIC_STATIONS[i];s.used|=1<<i;s.hold=0;s.serial++;s.started=run.time;
  if(station.kind==='water'){
@@ -73,7 +73,7 @@ export function updateExitRelease(run,input,dt,from){
  const s=run.exitRelease,c=run.foot||run.cart;if(!s||run.mode!=='driving')return;
  s.near=distance(c,EXIT_RELEASE)<4.5;
  if(!s.released){
-  s.hold=run.checkpoint===2&&s.near&&input.brake&&Math.abs(c.speed)<.7?s.hold+dt:0;
+  s.hold=run.checkpoint===2&&s.near&&(input.use??input.brake)&&Math.abs(c.speed)<.7?s.hold+dt:0;
   if(s.hold>=EXIT_RELEASE_SECONDS){s.released=true;run.message='Shutter freed · get inside and hold Use to lock it!';run.messageTime=4;emitCourseCue(run.courseFX,'metal',EXIT_RELEASE,.8);run.events.push({type:'exit-released',time:run.time});}
  }
  if(s.released)s.open=Math.min(1,s.open+dt/1.15);

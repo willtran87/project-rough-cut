@@ -45,7 +45,7 @@ export function panicCaption(run){const p=run.panic;if(!p)return '';
  if(p.phase==='reveal')return 'His headlights find you. The engine falls silent…';
  if(p.phase==='recover'&&p.hidden>1.25)return 'Out of sight. Keep moving; listen for the engine.';
  if(p.phase!=='panic')return '';
- if(chaseActor(run).y>730&&run.checkpoint===2)return run.foot?'GARAGE AHEAD · run inside, then hold Use.':'GARAGE AHEAD · get fully inside, then hold the brake.';
+ if(chaseActor(run).y>730&&run.checkpoint===2)return run.foot?'GARAGE AHEAD · run inside, then hold Use.':'GARAGE AHEAD · get fully inside, then hold Use.';
  for(const [start,end,side]of [[55,155,'left'],[350,465,'left'],[610,700,'right']])if(chaseActor(run).y>=start&&chaseActor(run).y<end)return `TAKE THE ${side.toUpperCase()} SERVICE LANE for cover · fairway for speed.`;
  return 'HE HAS SEEN YOU · keep moving and find cover.';
 }

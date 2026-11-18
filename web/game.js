@@ -21,7 +21,7 @@ import {createGamepadSession} from './gamepad-session.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
 import {actionBindings,keyLabel,onFootActionVerb,bindingCodeAllowed as allowedBindingCode} from './control-profiles.js';
 import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261111-quiet-messages';
-import {descriptiveMessage,levelOneMessage} from './message-presentation.js?v=20261111-quiet-messages';
+import {descriptiveMessage,levelOneMessage} from './message-presentation.js?v=20261118-quiet-narration';
 import { ghostSchedulingPolicy } from './ghost-scheduling.js';
 import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-regional-sound';
 import { createMouseLook } from './mouse-look.js';
@@ -53050,7 +53050,7 @@ import { createJoeVoice } from './joe-voice.js';
       }
     }
     // The checks put the course's lanterns out, a row at a time.
-    if (completed > d.darkLevel) { d.darkLevel = completed; d.darkAt = h.elapsed; if (completed < 3) setHoleMessage(`${h.message ? h.message + " " : ""}A row of lanterns gutters out.`, 3); }
+    if (completed > d.darkLevel) { d.darkLevel = completed; d.darkAt = h.elapsed; if (completed < 3 && state.soundCaptions) setHoleMessage(`${h.message ? h.message + " " : ""}A row of lanterns gutters out.`, 3); }
     const wait = lyingInWaitPost();
     if (wait && !wait.arrived && worldDistance(h.joe, wait) < DREAD.wait.reach + 1) { wait.arrived = true; joeWhisper(JOE_DREAD_LINES.wait, 2.6); }
     // A carried key rings with every running stride.
@@ -57373,7 +57373,7 @@ import { createJoeVoice } from './joe-voice.js';
     else if(h.engagement.closeEscape.remaining>0){context=threat.advice;}
     else if(h.escapeFiling.active){context='Opening exit · stay still · move to cancel';progress=h.escapeFiling.progress/h.escapeFiling.duration;}
     else if(h.quietLog){context=h.quietLog.quiet?'Quiet work · stay still · move to cancel':'Working the station · Joe can hear it · move to abandon';progress=h.quietLog.progress/h.quietLog.duration;}
-    else if(h.ballAim.active){context=inputCopy(`Release ${keyboardBindingLabel('chip')} to chip · Escape cancels`,'Release X to chip · B cancels','Release CHIP to shoot · Pause cancels')+' · '+shotDecisionHint();progress=h.ballAim.power;progressLabel=`Shot power · ${Math.round(progress*100)}%`;}
+    else if(h.ballAim.active){context=inputCopy(`Release ${keyboardBindingLabel('chip')} to chip · ${keyboardBindingLabel('interact')} or Escape cancels`,'Release X to chip · B cancels','Release CHIP to shoot · Pause cancels')+' · '+shotDecisionHint();progress=h.ballAim.power;progressLabel=`Shot power · ${Math.round(progress*100)}%`;}
     else if(danger){context=threat.advice;}
     else if(choice){context=(choice.targetId==='release-review'?stationPlan(NIGHT_ORDER_ACTIONS[2]).hint+' · ':'')+inputCopy('Choose 1 or 2',`RB switches · A: ${choice.labels[h.rebuild.padChoice]}`,'Choose your approach');}
     else if(owner){context=owner.targetId==='audit-bell'?'Ring once, then reach the hedge tunnel · '+inputCopy(`${keyboardBindingLabel('interact')} to ring`,'A to ring','USE to ring'):owner.targetId==='release-review'&&stationPlan(NIGHT_ORDER_ACTIONS[2]).active?'Joe is checking your lure · '+inputCopy(`${keyboardBindingLabel('interact')} to sign`,'A to sign','USE to sign'):h.prompt;}
@@ -57515,7 +57515,7 @@ import { createJoeVoice } from './joe-voice.js';
       if(owner){const target=[...NIGHT_ORDER_ACTIONS,...activeSprintReviews(),...COURSE_OBSTACLES].find(o=>o.id===owner.targetId);if(target){const q=RCScene3D.project(target,1.7);if(q?.visible){ctx.strokeStyle='#f2d9a0';ctx.lineWidth=2;ctx.strokeRect(q.x-12,q.y-12,24,24);}}}
       if(h.ballAim.active){drawText('Release to chip · '+Math.round(h.ballAim.power*100)+'% power',640,520,25,'#eedca5','center',true);}
       else if(h.quietLog){drawText((h.quietLog.quiet?'Quiet work · ':'Working · ')+Math.round(h.quietLog.progress/h.quietLog.duration*100)+'% · Move to '+(h.quietLog.quiet?'cancel':'abandon'),640,530,24,h.quietLog.quiet?'#c3e1c1':'#eedca5','center',true);}
-      else if(!owner&&!lesson&&h.messageTimer>0&&h.message&&!h.mapOpen&&!h.tutorialVisible&&!h.escapeFiling.active){drawText(h.message,640,550,fittedTextSize(h.message,20,920,15,true),'#d7deca','center',true);}
+      else if(!owner&&!lesson&&h.messageTimer>0&&levelOneMessage(h.message)&&!h.mapOpen&&!h.tutorialVisible&&!h.escapeFiling.active){drawText(levelOneMessage(h.message),640,550,fittedTextSize(levelOneMessage(h.message),20,920,15,true),'#d7deca','center',true);}
       drawCourseMiniMap();drawStatusRequestFeedback();drawEscapeFiling();drawThreatCaptions();drawJoeBark();
       if(h.tutorialVisible)drawTutorialBriefing();
     }
@@ -64651,8 +64651,11 @@ import { createJoeVoice } from './joe-voice.js';
         gameplayAction === "interact" &&
         !event.repeat
       ) {
+        // Use cancels a shot being aimed, as in the Final Cut.
         if (!state.hole.ballAim.active) {
           interactWithCourse();
+        } else {
+          cancelGolfBallAim();
         }
         event.preventDefault();
       } else if (
@@ -74663,7 +74666,7 @@ import { createJoeVoice } from './joe-voice.js';
       },
       gamepad: {
         menu: "D-pad left/right selects a chapter; up/down selects an action; A confirms; B returns",
-        firstHole: `Left stick or D-pad moves relative to your view; right stick looks horizontally; ${onFootActionVerb('sprint','gamepad',state)} RT to sprint; ${onFootActionVerb('crouch','gamepad',state)} LB to crouch; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; Y shows controls; B cancels a shot; Start pauses`,
+        firstHole: `Left stick or D-pad moves relative to your view; right stick looks horizontally; ${onFootActionVerb('sprint','gamepad',state)} RT to sprint; ${onFootActionVerb('crouch','gamepad',state)} LB to crouch; LT listens; hold R3 to look behind without changing movement direction; marked footing patches slow and expose you, while bunker sand slows both player and mower but leaves loud tracks; A interacts, answers a Status Request while standing still, reclaims a ball, starts Final Filing, or sacrifices a carried Change Request as an Emergency Appeal during close pursuit; movement aborts filing or a status response; hold X and use the left stick to aim, then release to chip; B cancels a shot; Start pauses`,
         pause: "D-pad selects; A confirms; B or Start resumes",
         result: "D-pad left/right selects an action; A confirms; B returns to the main menu",
       },

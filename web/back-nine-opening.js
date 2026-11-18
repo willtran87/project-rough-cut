@@ -21,20 +21,20 @@ export const BACK_NINE_SLIDES=[
 export function backNineControls(method='keyboard',foot=false,bindings=CONTROL_PROFILES.chase){
  if(foot)return backNineHint(method,true,bindings)+'. The camera follows your heading.';
  if(method==='touch')return 'Drive: Drive / Reverse · steer: ◀ ▶ · hold Brake to stop or service · Rear looks back.';
- if(method==='gamepad')return 'Left stick steers · RT accelerates · LT reverses · hold B to brake or service · R3 looks back · Menu pauses.';
+ if(method==='gamepad')return 'Left stick steers · RT accelerates · LT reverses · B brakes · hold A to use · R3 looks back · Menu pauses.';
  const label=id=>keyLabel(bindings[id]);
- return `${label('move_up')} / ↑ accelerate · ${label('move_left')} ${label('move_right')} / ← → steer · ${label('move_down')} / ↓ brake, then reverse · hold ${label('brake')} / ${label('interact')} to brake or service · ${label('look_back')} looks back · Esc pauses.`;
+ return `${label('move_up')} / ↑ accelerate · ${label('move_left')} ${label('move_right')} / ← → steer · ${label('move_down')} / ↓ brake, then reverse · ${label('brake')} brakes · hold ${label('interact')} to use · ${label('look_back')} looks back · Esc pauses.`;
 }
 
 export function backNineHint(method='keyboard',foot=false,bindings=CONTROL_PROFILES.chase){
- if(method==='gamepad')return foot?'Left stick turn / run · R3 glance · Hold B to use':'RT drive · Left stick steer · LT reverse · Hold B to brake · R3 glance';
+ if(method==='gamepad')return foot?'Left stick turn / run · R3 glance · Hold A to use':'RT drive · Left stick steer · LT reverse · B brake · Hold A to use · R3 glance';
  if(method==='touch')return foot?'Arrows turn · Run / Back · Rear glance · Hold Use':'Drive / Reverse · Arrows steer · Hold Brake · Rear glance';
  const label=id=>keyLabel(bindings[id]);
- return foot?`${label('move_up')}/${label('move_down')} run / back · ${label('move_left')}/${label('move_right')} turn · ${label('look_back')} glance · ${label('interact')} / ${label('brake')} use`:`${label('move_up')} / ↑ drive · ${label('move_left')} ${label('move_right')} / ← → steer · ${label('move_down')} / ↓ reverse · ${label('interact')} / ${label('brake')} brake · ${label('look_back')} glance`;
+ return foot?`${label('move_up')}/${label('move_down')} run / back · ${label('move_left')}/${label('move_right')} turn · ${label('look_back')} glance · ${label('interact')} use`:`${label('move_up')} / ↑ drive · ${label('move_left')} ${label('move_right')} / ← → steer · ${label('move_down')} / ↓ reverse · ${label('brake')} brake · ${label('interact')} use · ${label('look_back')} glance`;
 }
 
 export function backNineInstruction(text,method='keyboard',bindings=CONTROL_PROFILES.chase){
- const use=method==='gamepad'?'B':method==='touch'?'Use':`${keyLabel(bindings.interact)} / ${keyLabel(bindings.brake)}`;
+ const use=method==='gamepad'?'A':method==='touch'?'Use':keyLabel(bindings.interact);
  return text.replace(/\b(hold|release) Use\b/gi,(_,action)=>action+' '+use);
 }
 
@@ -52,7 +52,7 @@ export function paintBackNineBrief(run,method,review=false,bindings=CONTROL_PROF
  if(run.mode==='paused')document.getElementById('guide-situation').textContent=run.foot?'Your cart is wrecked. You are on foot, but the escape is still possible. Keep restoring the relays, then get inside the service garage.':'Your escape is paused. The relays you have restored remain online. Choose your next route before returning to the chase.';
  if(run.foot&&checkpoint===2)document.getElementById('guide-goal').textContent='NEXT: RUN INSIDE THE GARAGE · HOLD USE';
  document.getElementById('guide-foot').hidden=!run.foot;
- document.getElementById('guide-garage').textContent=run.foot?'With both relays online, stop at the garage and hold Use to free the jammed shutter. Run fully inside and hold Use again to lock it.':'With both relays online, stop at the garage release and hold the brake to free the jammed shutter. Park fully inside and hold again to lock it.';
+ document.getElementById('guide-garage').textContent=run.foot?'With both relays online, stop at the garage and hold Use to free the jammed shutter. Run fully inside and hold Use again to lock it.':'With both relays online, stop at the garage release and hold Use to free the jammed shutter. Park fully inside and hold Use again to lock it.';
  document.getElementById('guide-foot-look').textContent=method==='gamepad'?'The camera follows your heading; hold R3 to glance behind.':method==='touch'?'Arrows turn; the camera follows. Hold Rear to glance behind.':`${keyLabel(bindings.move_left)}/${keyLabel(bindings.move_right)} or left/right turn you, just like the cart. The camera follows; hold ${keyLabel(bindings.look_back)} to glance behind.`;
  for(const [i,li]of [...root.querySelectorAll('li[data-relay]')].entries()){
    li.dataset.complete=String(i<checkpoint);li.querySelector('span').textContent=i<checkpoint?'ONLINE · power restored':'Pass through the amber-lit shelter. The relay reconnects automatically.';

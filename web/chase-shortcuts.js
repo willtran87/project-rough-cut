@@ -35,7 +35,7 @@ export function updateShortcuts(run,input,dt,from){
    const near=Math.abs(after.across)<1.35&&Math.abs(after.along)<4.4;
    if(near&&state.open<1)f.gateNear=i;
    if(!state.unlatched){
-    state.press=near&&input.brake&&Math.abs(c.speed)<.7?Math.min(GATE_UNLATCH_SECONDS,state.press+dt):0;
+    state.press=near&&(input.use??input.brake)&&Math.abs(c.speed)<.7?Math.min(GATE_UNLATCH_SECONDS,state.press+dt):0;
     if(state.press>=GATE_UNLATCH_SECONDS){
      state.unlatched=true;state.swingDirection=after.along<0?-1:1;
      run.events.push({type:'gate-unlatched',index:gate.shortcut,time:run.time});

@@ -8,8 +8,8 @@ function enter(p,phase,seconds){p.phase=phase;p.age=0;p.remaining=seconds;}
 // This is computed at an opening, not every render frame; the player keeps control.
 function choose(run){const c=chaseActor(run);
  for(let i=0;i<COURSE.shortcuts.length;i++){const s=COURSE.shortcuts[i],index=COURSE.hurdles.findIndex(h=>h.shortcut===i);if(s.y>c.y+5&&s.y<c.y+85&&run.courseFX.breaks[index]?.age<0)return {kind:'gate',index:i,text:'OPENING · timber gap ahead for cover, or stay on the fast path.'};}
- for(let i=0;i<COURSE.alarms.length;i++){const a=COURSE.alarms[i];if(!(run.decoys.used&(1<<i))&&a.y>c.y&&a.y<c.y+75)return {kind:'alarm',index:i,text:run.foot?'OPENING · side-lane treadle ahead. Hide, then hold Use to ring it.':'OPENING · side-lane treadle ahead. Hide, then brake to draw him away.'};}
- if(run.checkpoint===2&&c.y>700)return {kind:'garage',index:0,text:run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · take the bend, get fully inside, then hold brake.'};
+ for(let i=0;i<COURSE.alarms.length;i++){const a=COURSE.alarms[i];if(!(run.decoys.used&(1<<i))&&a.y>c.y&&a.y<c.y+75)return {kind:'alarm',index:i,text:run.foot?'OPENING · side-lane treadle ahead. Hide, then hold Use to ring it.':'OPENING · side-lane treadle ahead. Hide, then hold Use to draw him away.'};}
+ if(run.checkpoint===2&&c.y>700)return {kind:'garage',index:0,text:run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · take the bend, get fully inside, then hold Use.'};
  return {kind:'cover',index:Math.min(2,run.checkpoint),text:'OPENING · build distance on the path, or take cover before he turns.'};
 }
 export function pressureOpening(run){return run.mode==='driving'&&run.pressure?.phase==='opening';}
@@ -41,4 +41,4 @@ export function updatePressure(run,dt,visible){
  }
 }
 export function pressurePose(run){const p=run.pressure||{},active=run.mode==='driving',opening=active&&p.phase==='opening',gather=active&&p.phase==='gather',pressure=active&&p.phase==='pressure',gasp=active&&p.gaspAge<.7?Math.sin(Math.PI*p.gaspAge/.7):0;return {opening,gather,pressure,gasp,level:pressure?clamp(.82-(p.age||0)*.012,0,1):gather?.3:0,release:pressure?clamp(1-(p.age||0)/.6,0,1):0,gain:opening?.3:gather?.18:1};}
-export function pressureCaption(run){const p=run.pressure;if(!p||run.mode!=='driving')return '';if(p.phase==='opening')return p.choice?.text||'';if(p.phase==='gather')return p.finale?'The garage is lit beyond the bend. His engine rises again.':'The engine takes a breath. Choose your escape line.';if(p.finale&&chaseActor(run).y>730)return run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · take the bend, get fully inside, then hold brake.';return '';}
+export function pressureCaption(run){const p=run.pressure;if(!p||run.mode!=='driving')return '';if(p.phase==='opening')return p.choice?.text||'';if(p.phase==='gather')return p.finale?'The garage is lit beyond the bend. His engine rises again.':'The engine takes a breath. Choose your escape line.';if(p.finale&&chaseActor(run).y>730)return run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · take the bend, get fully inside, then hold Use.';return '';}
