@@ -22,4 +22,4 @@ for(const seed of [0,1,2]){
  tick(r,60);assert(r.won);assert.equal(r.mode,'aftermath');assert.equal(r.checkpoint,2);traps.push({seed,openingRemainingAtLure:remaining,won:r.won});
 }
 checks.push('Actual reusable bell Use overrides every advertised opening and earns a physical saturated-swale victory');
-fs.writeFileSync('output/final-cut/replays/safety.json',JSON.stringify({passed:true,checks,refuges,traps},null,2));console.log(JSON.stringify({passed:true,checks,refuges,traps}));
+fs.mkdirSync('output/final-cut/replays',{recursive:true});fs.writeFileSync('output/final-cut/replays/safety.json',JSON.stringify({passed:true,checks,refuges,traps},null,2));console.log(JSON.stringify({passed:true,checks,refuges,traps}));
