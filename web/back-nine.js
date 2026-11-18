@@ -53,7 +53,7 @@ if(saved.completed&&!['replay','from'].some(name=>new URLSearchParams(location.s
 const driveButtons=new Map([...document.querySelectorAll('[data-drive]')].map(b=>[b.dataset.drive,b]));
 const keys=new Set(),touch=new Set(),audio=createChaseAudio(settings.volume??.72,settings),budget=createSoftwareFrameBudget({responsiveDownshift:true}),times=[];
 const {bindings}=bindKeyboardSettings($('chase-keyboard'),{profile:'chase',stored:settings.chaseKeyboardBindings,storageField:'chaseKeyboardBindings',
- labels:{move_up:'Forward / accelerate',move_down:'Back / reverse',move_left:'Steer left',move_right:'Steer right',brake:'Brake / use',interact:'Alternate brake / use',look_back:'Rear glance'},
+ labels:{move_up:'Forward / accelerate',move_down:'Back / reverse',move_left:'Steer left',move_right:'Steer right',brake:'Brake',interact:'Use',look_back:'Rear glance'},
  onChange(value){settings.chaseKeyboardBindings={...value};keys.clear();touch.clear();briefSignature='';needsDraw=true;paintUI();}});
 const down=action=>keys.has(bindings[action]);
 const campaignUI=bindCampaignSettings($('chase-comfort'),settings,()=>{needsDraw=true;audio.update(run,['driving','sealing','dying'].includes(run.mode));paintUI();});
@@ -91,7 +91,7 @@ function input(){
  const menuConsumed=gamepadMenu.update(pad,!openingActive&&['briefing','paused','caught','complete'].includes(run.mode));
  gamepadButtons=pad?pad.buttons.map(b=>b.pressed):[];
  if(wasMenu||menuConsumed)return {};
- return {steer:clamp(steer+stickX,-1,1),throttle:clamp(Number(gas)-Number(reverse)+(pad?.buttons[7]?.value||0)-(pad?.buttons[6]?.value||0)+(run.foot?-stickY:0),-1,1),brake:down('brake')||down('interact')||touch.has('brake')||pressed(1),rear:down('look_back')||touch.has('rear')||pressed(11)};
+ return {steer:clamp(steer+stickX,-1,1),throttle:clamp(Number(gas)-Number(reverse)+(pad?.buttons[7]?.value||0)-(pad?.buttons[6]?.value||0)+(run.foot?-stickY:0),-1,1),brake:down('brake')||touch.has('brake')||pressed(1),use:down('interact')||touch.has('brake')||pressed(0),rear:down('look_back')||touch.has('rear')||pressed(11)};
 }
 function primary(){if(openingActive||!ready||run.mode==='sealing'||run.mode==='dying')return;audio.start();if(run.mode==='caught'){run=createRun(0,0,nextVariationSeed(run.variation.seed));events=0;world.resetCamera();}if(run.mode==='complete'){location.assign(finalCutLink.link.href);return;}run.mode=run.mode==='paused'?pausedMode:'driving';keys.clear();touch.clear();chaseControls.reset();save();uiMode='';$('game').focus();paintUI();}
 function togglePause(){if(!ready)return;if(['driving','sealing','dying'].includes(run.mode)){pausedMode=run.mode;run.mode='paused';keys.clear();touch.clear();chaseControls.reset();}else if(run.mode==='paused')run.mode=pausedMode;audio.update(run,run.mode==='driving'||run.mode==='sealing'||run.mode==='dying'||run.mode==='complete'&&run.finale.tail>0);uiMode='';paintUI();}

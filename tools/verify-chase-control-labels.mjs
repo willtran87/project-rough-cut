@@ -19,15 +19,16 @@ for(const method of ['keyboard','gamepad','touch'])for(const [name,prepare]of Ob
  // The jammed shutter is a separate step before the garage hold; these labels are for the hold once it is freed. Alarm decoys were removed from the chapter.
  Object.assign(r.exitRelease,{released:true,open:1});prepare(r);
  const banner=chaseMessages(r,{method,bindings}).banner;
- assert.match(banner,method==='keyboard'?/hold O \/ B/i:method==='gamepad'?/hold B/i:/hold Use/i,`${name}/${method}: ${banner}`);
+ // Use is its own key (custom O here; E by default) and never the brake key.
+ assert.match(banner,method==='keyboard'?/hold O\b(?! \/)/i:method==='gamepad'?/hold A/i:/hold Use/i,`${name}/${method}: ${banner}`);
  assert.doesNotMatch(banner,/E \/ Space|W\/S|A\/D/);
  if(name==='ejection')assert.match(banner,method==='keyboard'?/I\/K.*J\/L/:method==='gamepad'?/Left stick/:/Arrows turn/);
- assert.match(backNineInstruction(objective(r),method,bindings),method==='keyboard'?/O \/ B/:method==='gamepad'?/hold B/:/hold Use/);
+ assert.match(backNineInstruction(objective(r),method,bindings),method==='keyboard'?/hold O\b(?! \/)/:method==='gamepad'?/hold A/:/hold Use/);
  checked++;
 }
-assert.match(backNineControls('keyboard',false,bindings),/I.*J L.*K.*B \/ O.*U/);
-assert.match(backNineHint('keyboard',true,bindings),/I\/K.*J\/L.*U.*O \/ B/);
-assert.match(backNineHint(),/W.*A D.*S.*E \/ Space.*Q/);
+assert.match(backNineControls('keyboard',false,bindings),/I.*J L.*K.*B brakes.*hold O to use.*U/);
+assert.match(backNineHint('keyboard',true,bindings),/I\/K.*J\/L.*U.*O use/);
+assert.match(backNineHint(),/W.*A D.*S.*Space brake.*E use.*Q/);
 assert.equal(actionBindings('onFoot',{interact:'KeyT'}).interact,'KeyT');
 assert.equal(actionBindings('chase',{move_up:'KeyQ',look_back:'KeyQ'}).move_up,'KeyW');
 const result={passed:true,scenarios:checked,checks:['keyboard/gamepad/touch labels for garage, closure, record and ejection','default chase controls preserved','on-foot profile independent','conflicting stored keys rejected']};

@@ -16,7 +16,7 @@ export function updateService(run,input,dt){
  if(run.mode==='paused')return;
  const s=run.service||(run.service=createService(run.story?.collected)),c=run.cart;
  s.near=run.mode==='driving'&&!run.foot&&c.health>0&&c.health<100&&utilityPad(c)<0?COURSE.checkpoints.findIndex((p,i)=>s.remaining[i]>0&&distance(c,p)<4.5):-1;
- const next=s.near>=0&&input.brake&&Math.abs(c.speed)<.7?s.near:-1;
+ const next=s.near>=0&&(input.use??input.brake)&&Math.abs(c.speed)<.7?s.near:-1;
  if(next!==s.active){transfer(run,s.active);s.credit=0;s.active=next;}
  if(s.active<0)return;
  s.credit+=dt*SERVICE_CAPACITY/SERVICE_SECONDS;
@@ -27,5 +27,5 @@ export function updateService(run,input,dt){
 export function serviceCaption(run){
  const s=run.service;if(!s||s.near<0)return '';
  const remaining=Math.ceil(s.remaining[s.near]);
- return s.active>=0?`CHARGER · ${remaining} repair left · release brake to leave`:`Hold the brake for up to ${remaining} repair. Joe keeps moving while you charge.`;
+ return s.active>=0?`CHARGER · ${remaining} repair left · release Use to leave`:`Hold Use for up to ${remaining} repair. Joe keeps moving while you charge.`;
 }

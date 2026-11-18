@@ -32,7 +32,7 @@ export function chaseMessages(run,{soundCaptions=false,routeHints=false,coarse=f
  else if(run.foot?.ejection&&run.time-run.foot.ejection.at<.86)banner=run.time-run.foot.ejection.at<.64?'CART WRECKED':'CART WRECKED · Getting back up…';
  else if(run.foot&&run.foot.invulnerable>0)banner='CART WRECKED · RUN! '+backNineMovement(method,bindings)+' '+(run.checkpoint<2?'Relays still work on foot.':'Hold Use inside the garage.');
  else if(run.mode==='sealing')banner=run.finale.latched?'Shutter secured.':'Stay inside · shutter closing.';
- else if(run.finishHold>0)banner=run.foot?'Hold Use · securing the shutter.':'Hold the brake · parking inside.';
+ else if(run.finishHold>0)banner=run.foot?'Hold Use · securing the shutter.':'Hold Use · parking inside.';
  else if(run.messageTime>0&&showObjective&&/^(?:Maintenance relay online|Both relays online|Checkpoint held|Brake, reverse|Crew log recovered|Hold drive to push|Keep moving into the loose rails)/.test(run.message))banner=run.message;
  else if(run.messageTime>0&&/^Watch your /.test(run.message))banner=run.message.split('.')[0]+' · take cover.';
  else if(run.messageTime>0&&/^He overshot/.test(run.message))banner='CHARGE MISSED · cross behind him and reach cover.';
@@ -48,8 +48,8 @@ export function chaseMessages(run,{soundCaptions=false,routeHints=false,coarse=f
  else if(run.story?.cueTime>0&&run.story.cue.startsWith('Crew log recovered'))banner=run.story.cue;
  else if(run.messageTime>0&&run.decoys?.result==='failed'&&/alarm rings/i.test(run.message))banner='Distraction failed · keep moving.';
  else if(run.messageTime>0&&run.decoys?.active>=0)banner=run.foot?'Distraction active · move behind cover.':'Distraction active · coast behind cover below 12 mph.';
- else if(run.checkpoint===2&&insideGarage(actor,!!run.foot))banner=Math.abs(actor.speed)>=3?'Inside the garage · stop in the marked bay.':run.foot?'Hold Use · secure the shutter.':'Hold the brake · secure the shutter.';
- else if(run.checkpoint===2&&actor.y>730)banner=run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · park fully inside and hold the brake.';
+ else if(run.checkpoint===2&&insideGarage(actor,!!run.foot))banner=Math.abs(actor.speed)>=3?'Inside the garage · stop in the marked bay.':run.foot?'Hold Use · secure the shutter.':'Hold Use · secure the shutter.';
+ else if(run.checkpoint===2&&actor.y>730)banner=run.foot?'GARAGE AHEAD · run inside and hold Use.':'GARAGE AHEAD · park fully inside and hold Use.';
  if(!banner)banner=experienceCaption(run);
  if(!banner&&routeHints&&gap>=18&&!struck)banner=routeHint(run);
  if(soundCaptions&&run.mode==='driving'){
@@ -63,6 +63,7 @@ export function chaseMessages(run,{soundCaptions=false,routeHints=false,coarse=f
  else if(run.tension?.cueTime>0&&soundCues[run.tension.cue])sound=soundCues[run.tension.cue];
  else if(run.messageTime>0&&/^(?:Branches scrape|Timber cracks)/.test(run.message))sound='['+run.message+']';
  else sound=(gap>42?courseAmbienceCaption(run):'')||mowerSoundCaption(run);
+ const described=experienceCaption(run,{descriptive:true});if(described)sound='['+described+']';
  }
  // Steady engine/location descriptions share the separate accessibility rail
  // with occasional subtitles. Discrete contact/attack sounds still interrupt

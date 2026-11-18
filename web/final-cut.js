@@ -65,7 +65,7 @@ $('story-replay').onclick=()=>story.open(run.completed?'win':'intro');
 $('show-credits').onclick=()=>showResultView('credits');$('credits-back').onclick=()=>showResultView('summary');$('show-notice').onclick=()=>showResultView('notice');$('notice-back').onclick=$('notice-skip').onclick=()=>showResultView('summary');
 $('primary').onclick=primary;$('pause').onclick=pause;$('restart').onclick=()=>{run=createRun({route:run.route,stationReceipt:run.stationReceipt,...evidenceFields(run),priorEvidence:run.priorEvidence,seed:run.seed});savedSerial=-1;primary();};$('use').onclick=()=>usePressed=true;
 const campaignUI=bindCampaignSettings($('comfort'),preferences,()=>{dirty=true;audio.update(run);});$('sound').onclick=()=>campaignUI.set('muted',!preferences.muted);
-const keyboard=bindKeyboardSettings($('keyboard'),{profile:'onFoot',stored:bindings,storageField:'keyboardBindings',labels:{move_up:'Forward',move_down:'Backward',move_left:'Left',move_right:'Right',sprint:'Run',crouch:'Crouch',focus:'Listen',look_back:'Rear glance',interact:'Use',chip:'Chip ball',controls:'Map / guide'},onChange:b=>{Object.assign(bindings,b);clearInput();paint();}});
+const keyboard=bindKeyboardSettings($('keyboard'),{profile:'onFoot',stored:bindings,storageField:'keyboardBindings',labels:{move_up:'Forward',move_down:'Backward',move_left:'Left',move_right:'Right',sprint:'Run',crouch:'Crouch',focus:'Listen',look_back:'Rear glance',interact:'Use',chip:'Chip ball',controls:'Pause / controls'},onChange:b=>{Object.assign(bindings,b);clearInput();paint();}});
 let selectedVisualTier=visualTier(readRecord(VISUAL_KEY).tier);
 $('visual-tier').value=selectedVisualTier;
 $('visual-tier').addEventListener('change',()=>{selectedVisualTier=visualTier($('visual-tier').value);dirty=true;text('visual-settings-status',writeRecord(VISUAL_KEY,{tier:selectedVisualTier})?'':'Settings apply for this session. Browser storage is unavailable.');});
@@ -113,10 +113,10 @@ function input(dt){
  if(wasMenu||consumed)return {};
  const down=id=>keys.has(bindings[id]),axis=v=>Math.sign(v||0)*Math.pow(clamp((Math.abs(v||0)-deadzone)/(1-deadzone),0,1),1.35),rear=down('look_back')||touch.has('rear')||pressed[11];
  if(rear||device!=='keyboard')mouse.reset();const m=mouse.sample(dt),i={
- forward:(down('move_up')||keys.has('ArrowUp')||touch.has('forward')?1:0)-(down('move_down')||keys.has('ArrowDown')||touch.has('back')?1:0)+stick.y,
- strafe:(down('move_right')||keys.has('ArrowRight')||touch.has('right')?1:0)-(down('move_left')||keys.has('ArrowLeft')||touch.has('left')?1:0)+stick.x,
+ forward:(down('move_up')||keys.has('ArrowUp')||touch.has('forward')?1:0)-(down('move_down')||keys.has('ArrowDown')||touch.has('back')?1:0)+(pressed[12]?1:pressed[13]?-1:stick.y),
+ strafe:(down('move_right')||keys.has('ArrowRight')||touch.has('right')?1:0)-(down('move_left')||keys.has('ArrowLeft')||touch.has('left')?1:0)+(pressed[14]?-1:pressed[15]?1:stick.x),
  lookX:m.x+lookX+axis(pad?.axes[2])*2.2*dt*spatial.controller*(preferences.invertLook?-1:1),lookY:m.y+lookY+axis(pad?.axes[3])*1.6*dt*spatial.controller,rear,acceleration:!!spatial.acceleration,
- crouch:toggleCrouch||down('crouch')||touch.has('crouch')||pressed[4],sprint:toggleSprint||down('sprint')||touchRun.active||pressed[7]||pressed[5],focus:down('focus')||touch.has('focus')||pressed[6],use:usePressed,chipStart:chipPressed,chipRelease:chipReleased,chipHeld:chipOwner==='keyboard'?down('chip'):chipOwner==='touch'?touch.has('chip'):chipOwner==='gamepad'?!!pressed[2]:false};
+ crouch:toggleCrouch||down('crouch')||touch.has('crouch')||pressed[4],sprint:toggleSprint||down('sprint')||(bindings.sprint==='ShiftLeft'&&keys.has('ShiftRight'))||touchRun.active||pressed[7]||pressed[5],focus:down('focus')||touch.has('focus')||pressed[6],use:usePressed,chipStart:chipPressed,chipRelease:chipReleased,chipHeld:chipOwner==='keyboard'?down('chip'):chipOwner==='touch'?touch.has('chip'):chipOwner==='gamepad'?!!pressed[2]:false};
  if(chipReleased)chipOwner=null;usePressed=chipPressed=chipReleased=false;lookX=lookY=0;return i;
 }
 function paint(){
