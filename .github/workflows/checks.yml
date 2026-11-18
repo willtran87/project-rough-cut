@@ -1,0 +1,45 @@
+name: Checks
+
+# Browser-free contract and simulation suites. Runs on every pull request and
+# push to main, so problems surface before merge rather than at deploy time.
+# Browser/Playwright tools still run locally; see docs/development.md.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Release assets, scripts and scenario fixtures
+        run: node tools/verify-release.mjs
+
+      - name: Campaign preferences
+        run: node tools/verify-campaign-preferences.mjs
+
+      - name: Back Nine simulation
+        run: node tools/verify-back-nine.mjs
+
+      - name: Under the Green simulation
+        run: node tools/verify-under-green.mjs
+
+      - name: Final Cut hollows simulation
+        run: node tools/verify-final-cut-hollows.mjs

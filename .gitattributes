@@ -1,0 +1,25 @@
+# Store and check out text with LF everywhere. GitHub Pages serves LF, and
+# runtime caches hash source files (baked trees, course surfaces), so a CRLF
+# working copy on Windows would bake hashes that never match production.
+* text=auto eol=lf
+
+# Windows launchers need CRLF to run correctly.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets: never diff or convert.
+*.png binary
+*.webp binary
+*.gif binary
+*.jpg binary
+*.jpeg binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.glb binary
+*.bin binary
+*.gz binary
+*.wasm binary
+*.blend binary
+*.blend1 binary
+*.docx binary
