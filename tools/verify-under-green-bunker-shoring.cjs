@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass67/${software?'software':'hardware'}`;
 const fixtures=[['dry-corridor',-29.5,65,Math.PI,.15],['dry-return',-30,55,0,.1],['shoring-repair',-30,65.4,Math.PI,.7],['north-shoring',-20,72.6,Math.PI,.65],['west-spill',-30.5,62.8,-Math.PI/2,.1],['inner-spill',-29.4,65.6,Math.PI/2,-.05],['repair',-29.2,60.8,Math.PI/2,-.4],['main-route',-20,66,Math.PI,.1],['main-repair',-19,60.4,Math.PI/2,-.2],['south-mouth',-27.2,54,-Math.PI/2,.12],['upper-seam',-30,66,Math.PI,.5],['flood',-29.5,65,Math.PI,-.2,49],['gallery-control',0,19,0,.1],['keeper-control',12,13.5,-2.4,.05]];

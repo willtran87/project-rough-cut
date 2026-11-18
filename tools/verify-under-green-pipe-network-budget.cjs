@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass42-budget/${software?'software':'hardware'}`;
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],results=[];

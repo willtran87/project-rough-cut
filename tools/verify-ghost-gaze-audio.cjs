@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const variant=Number(process.argv.find(a=>a.startsWith('--variant='))?.slice(10)||0);const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/ghost-gaze-20261107';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true}),p=await b.newPage();

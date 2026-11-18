@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const{chromium}=require('playwright');
 const out=process.argv[2],before=process.argv.includes('--before'),software=process.argv.includes('--software');if(!out)throw Error('Output directory required');
 const views=[['nursery-chase',20,65,0],['fern-edge',5,45,.3],['glasshouse',30,83,.25],['windbreak',-3,108,-.2],['west-garden',-23,173,-.4],['irrigation',1,220,-.1],['range-meadow',18,350,0],['range-rise',6,394,-.2],['reservoir',8,452,-.3],['last-range',12,531,-.2],['members',8,597,.1],['formal-border',13,656,-.15],['flower-walk',17,710,-.3],['frontage',8,748,-.3]];
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{

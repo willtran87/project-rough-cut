@@ -1,6 +1,6 @@
 // Experimental full opaque depth pass. This file does not change runtime code.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=!process.argv.includes('--hardware'),out=`output/under-green/visual-pass85/depth-${software?'software':'hardware'}`;
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[];

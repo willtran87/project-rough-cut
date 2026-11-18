@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs');const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/final-cut/software-cost';fs.mkdirSync(out,{recursive:true});
 const hook=`window.__softwareCost=()=>{const meshes=[],basic=new THREE.MeshBasicMaterial({color:'#789179'});scene.traverse(m=>{if(m.isMesh)meshes.push(m);});const visible=meshes.map(m=>m.visible),pixels=new Uint8Array(width*height*4),reports=[];
  for(const mode of ['normal','no-reeds','no-vegetation','no-machine','no-shadow','basic','normal']){

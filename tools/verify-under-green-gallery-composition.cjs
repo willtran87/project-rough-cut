@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass82/${software?'software':'hardware'}`;
 const files=['under-green-scene'];

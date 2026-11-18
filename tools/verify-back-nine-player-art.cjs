@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const facePass=process.argv.includes('--face'),root='output/back-nine-visual-upgrade/'+(facePass?'player-face':'player'),software=process.argv.includes('--software'),out=root+'/'+(software?'software':'native')+(process.argv.includes('--after-only')?'-final':'');fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const results=[];

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2],native=process.argv.includes('--native');if(!out)throw Error('Provide output directory');fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:native?['--use-angle=d3d11','--ignore-gpu-blocklist']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});

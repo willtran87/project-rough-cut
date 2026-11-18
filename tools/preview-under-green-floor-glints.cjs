@@ -1,4 +1,4 @@
-const fs=require('node:fs'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),{chromium}=require('playwright');
 const out='output/under-green/visual-pass93/preview';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[];try{
  for(const version of ['before','masked','stone-film']){

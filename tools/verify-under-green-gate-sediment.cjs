@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=`output/under-green/visual-upgrade-local/pass41-visible/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[],travel=[];try{
 for(const before of [true,false]){

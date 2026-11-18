@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const baseline=process.argv.includes('--baseline'),out='output/level-one-hand-finish/geometry'+(baseline?'-before':'');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:1280,height:900}}),errors=[];

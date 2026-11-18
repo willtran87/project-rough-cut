@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const baseline=process.argv.find(a=>a.startsWith('--baseline='))?.slice(11)||'output/under-green/visual-pass88/source',facingGuard=process.argv.includes('--facing-guard');
 const grouping=process.argv.includes('--group');
 const nearest=process.argv.includes('--nearest');

@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const wreckVariant=process.argv.includes('--opposite-wreck'),software=process.argv.includes('--software'),lifecycleOnly=process.argv.includes('--lifecycle-only'),out=`output/final-cut/ground/${software?'software':'hardware'}${wreckVariant?'/opposite-wreck':''}${lifecycleOnly?'/lifecycle-only':''}`;fs.mkdirSync(out,{recursive:true});
 const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));

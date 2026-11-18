@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const{chromium}=require('playwright');
 const out=process.argv[2],before=process.argv.includes('--before'),software=process.argv.includes('--software');if(!out)throw Error('Output directory required');
 const views=[['approach',0,288,0],['inside',0,300,0],['exit',0,306,0],['reverse',0,302,Math.PI],['gable',0,300,Math.PI/2],['range',0,580,0]];
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{

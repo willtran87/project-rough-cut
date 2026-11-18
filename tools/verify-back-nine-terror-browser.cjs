@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const outIndex=process.argv.indexOf('--output-dir'),out=outIndex>=0?process.argv[outIndex+1]:'output/back-nine-terror-2026-11-13/browser';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],samples={};page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});

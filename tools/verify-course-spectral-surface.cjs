@@ -1,12 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
- process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out='F:/CodexArtifacts/project-rough-cut/level-one-spectral-surface/'+(before?'before-':'after-')+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
+ const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=require('./lib/artifacts.cjs').dir('level-one-spectral-surface')+'/'+(before?'before-':'after-')+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__ghostCheck={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
- if(before)await p.route('**/ghost-joe.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('F:/CodexArtifacts/project-rough-cut/level-one-spectral-surface/ghost-joe-before.js','utf8')}));
+ if(before)await p.route('**/ghost-joe.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(require('./lib/artifacts.cjs').dir('level-one-spectral-surface')+'/ghost-joe-before.js','utf8')}));
  const draw=()=>p.evaluate(async()=>{__ghostCheck.render();await RCScene3D.whenPresented();return RCScene3D.stats().effects;});
  try{
   await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__ghostCheck);await p.locator('#game').click();

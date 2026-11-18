@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass54-timber-roots/${software?'software':'hardware'}`;
 const files=JSON.parse(fs.readFileSync('output/under-green/visual-upgrade-local/pass54-source/files.json'));
 const fixtures=[['gallery',0,8,0,.1],['offshoots',0,18,0,.75],['gallery-branches',0,19,-.5,.6],['bunker',-29.5,65,Math.PI,.15],['bunker-shoring',-29.5,65,Math.PI,.65],['range-timber',21,30,Math.PI/2,.65],['pump',-23.4,42,-1,.05],['keeper',12,13.5,-2.4,.05]];

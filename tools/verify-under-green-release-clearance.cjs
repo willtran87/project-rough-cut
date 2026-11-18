@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const {step}=await import('../web/under-green-sim.js'),{SLUICE,distance}=await import('../web/under-green-course.js');
  const tapes=[-1,1].map(side=>({name:'occupied-'+side,...JSON.parse(fs.readFileSync(`output/under-green/keeper-counterplay/attempt-${side}.json`))}));

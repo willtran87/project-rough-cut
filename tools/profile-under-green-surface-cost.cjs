@@ -1,6 +1,6 @@
 // Diagnostic draw omissions isolate component cost; omitted images are not candidates.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/visual-pass80/profile';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--ignore-gpu-blocklist']}),errors=[],rows=[];
 try{const p=await b.newPage({viewport:{width:960,height:600}});p.on('pageerror',e=>errors.push(e.stack));

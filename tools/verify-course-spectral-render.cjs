@@ -1,9 +1,9 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software');
- const base='F:/CodexArtifacts/project-rough-cut/level-one-spectral-surface',out=base+'/'+(before?'before-':'after-')+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+ const base=require('./lib/artifacts.cjs').dir('level-one-spectral-surface'),out=base+'/'+(before?'before-':'after-')+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/__spectral-fixture',r=>r.fulfill({contentType:'text/html',body:'<style>body{margin:0;background:#030b0f}canvas{display:block;width:100vw;height:100vh}</style>'}));

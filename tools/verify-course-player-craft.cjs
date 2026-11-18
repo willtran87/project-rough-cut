@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/course-player-craft',software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
  if(baseline)for(const name of ['course-player-craft.js','course-arrival-presentation.js'])await p.route('**/'+name+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-hand-finish/baseline-source/'+name,'utf8')}));

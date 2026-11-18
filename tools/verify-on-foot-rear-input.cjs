@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/on-foot-rear-input',baseline=process.argv.includes('--baseline');
 const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);

@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
  const out='output/back-nine-experience/buffer-budget',baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software'),label=(software?'software':'hardware')+(baseline?'-baseline':'-candidate');
  fs.mkdirSync(out+'/baseline-source',{recursive:true});

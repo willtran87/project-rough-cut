@@ -1,6 +1,6 @@
 // Package generated drawings without inventing motion or retouching their pixels.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const sharp=require(require.resolve('sharp',{paths:[process.cwd(),path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules')]}));
+const sharp=require(require.resolve('sharp'));
 const {execFileSync}=require('node:child_process');
 const root=path.resolve('assets/enemies/joe-hd');
 const natural=process.argv.includes('--natural'),cols=natural?3:4,rows=natural?4:2,count=cols*rows,fps=natural?10:8;

@@ -1,6 +1,6 @@
 const fs=require('node:fs');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const spotProbe=process.argv.includes('--spot');
  const out=spotProbe?'output/course-render-cost/spot-probe':'output/level-one-local-spot-culling/interleaved';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader']}),p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],rows=[];

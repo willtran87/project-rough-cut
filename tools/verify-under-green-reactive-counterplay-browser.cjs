@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/reactive-counterplay',study=JSON.parse(fs.readFileSync(out+'/expanded.json'));
  const selected=[study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===-1),study.reports[1].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===1),study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.5&&r.side===-1)].map(row=>({row,tape:JSON.parse(fs.readFileSync(row.file))}));

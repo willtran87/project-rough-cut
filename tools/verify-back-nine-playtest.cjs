@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out='output/back-nine-experience/playtest';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test&playtest');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});assert(await p.locator('#playtest-feedback').isHidden());await p.click('#primary');await p.evaluate(()=>advanceTime(0));await p.keyboard.press('Escape');assert(await p.locator('#playtest-feedback').isVisible());

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 // Isolate HUD work from GPU rasterization. Both versions receive the same
 // simulation steps; screenshot and state equivalence guard visible behavior.
 (async()=>{

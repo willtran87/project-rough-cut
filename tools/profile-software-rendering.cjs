@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const noPreserve=process.argv.includes('--no-preserve');
  const moving=process.argv.includes('--moving');

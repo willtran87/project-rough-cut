@@ -1,4 +1,4 @@
-const fs=require('node:fs'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),{chromium}=require('playwright');
 const root='output/back-nine-visual-upgrade/'+(process.argv.includes('--face')?'player-face':'player'),out=root+'/budget';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const results=[];

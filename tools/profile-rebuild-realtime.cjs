@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const {chromium}=require(path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 const percentile=(a,q)=>[...a].sort((a,b)=>a-b)[Math.min(a.length-1,Math.ceil(a.length*q)-1)];
 (async()=>{const out=path.resolve('output/rebuild/realtime');fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true}),results=[];
 try{for(const build of ['baseline','rebuilt']){

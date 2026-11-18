@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out='output/final-cut/contours/profile-'+(software?'software':'hardware')+'.json';
 const sources={baseline:fs.readFileSync('output/final-cut/contours/baseline-scene.js','utf8'),current:fs.readFileSync('web/final-cut-scene.js','utf8')};

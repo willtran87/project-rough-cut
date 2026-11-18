@@ -1,6 +1,6 @@
 // Per-frame first/repeated entrance diagnostic. No forced GC or simulated time.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const {gameModule,sceneModule,instrumentGame,instrumentScene}=require('./under-green-soak-hooks.cjs');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/entrance-audit/hardware';
 const prewarm=process.argv.includes('--prewarm-navigation');

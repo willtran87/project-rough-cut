@@ -1,6 +1,6 @@
 // Diagnostic omissions isolate cost; these altered images are never a release candidate.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/visual-upgrade/pass14-profile';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),rows=[],errors=[];

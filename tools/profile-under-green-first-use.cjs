@@ -1,7 +1,7 @@
 // Diagnostic first/repeated walking laps, ordinary production scheduling.
 // One-second observations identify workload and uploads; not a budget soak.
 const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/first-use';
 fs.mkdirSync(out,{recursive:true});
 const hash=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');

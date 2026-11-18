@@ -1,7 +1,7 @@
 /* Controlled prerequisites isolate camera/control regressions from pursuit balance. */
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict');
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const extended = process.argv.includes('--perf-extended');
   const out = path.resolve(extended ? 'output/a-grade-closure/turn-investigation/extended' : 'output/free-look'); fs.mkdirSync(out, { recursive: true });

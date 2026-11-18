@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{chromium}=require('playwright');
 (async()=>{
  const out='output/back-nine-experience/fog-shading-probe';fs.mkdirSync(out,{recursive:true});
  const original=fs.readFileSync('web/back-nine-scene.js','utf8'),expose=s=>s.replace('return {scene,camera,update,draw()','return window.__fogWorld={scene,camera,renderer,mowerLight,update,draw()');

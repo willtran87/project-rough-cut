@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[];
  try{for(const version of !process.argv.includes('--after-only')&&fs.existsSync('output/structures/scene-before.js')&&fs.existsSync('output/structures/pixel-world-before.js')?['before','after']:['after']){

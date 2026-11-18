@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright'),fs=require('fs'),assert=require('assert/strict');
+const {chromium}=require('playwright'),fs=require('fs'),assert=require('assert/strict');
 const out='output/final-cut/shadow-cache-profile';fs.mkdirSync(out,{recursive:true});
 const instrument=`
 

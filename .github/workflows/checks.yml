@@ -19,7 +19,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -43,3 +43,22 @@ jobs:
 
       - name: Final Cut hollows simulation
         run: node tools/verify-final-cut-hollows.mjs
+
+      - name: Final Cut round, arrival, balls, crossings and outcome
+        run: |
+          node tools/verify-final-cut.mjs
+          node tools/verify-final-cut-arrival.mjs
+          node tools/verify-final-cut-balls.mjs
+          node tools/verify-final-cut-crossings.mjs
+          node tools/verify-final-cut-outcome.mjs
+
+      - name: Final Cut lures and replay safety
+        run: |
+          node tools/verify-final-cut-visual-lure.mjs
+          node tools/verify-final-cut-replay-safety.mjs
+
+      - name: Under the Green light partitions
+        run: node tools/verify-under-green-light-partitions.mjs
+
+      - name: Final Cut replays (36 routes, slowest)
+        run: node tools/verify-final-cut-replays.mjs

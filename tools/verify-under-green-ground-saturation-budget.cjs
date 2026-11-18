@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const baseline=process.argv.find(a=>a.startsWith('--baseline='))?.slice(11)||'output/under-green/visual-pass90/source';
 const turning=process.argv.includes('--turning');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass90/budget/${software?'software':'hardware'}`;

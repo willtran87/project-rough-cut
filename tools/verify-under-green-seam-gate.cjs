@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));

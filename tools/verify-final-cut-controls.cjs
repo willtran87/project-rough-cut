@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 // Chapters are gated by campaign progress: unlock the finale and skip its opening story before each page loads.
 const unlock=()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.final-cut-story.v1',JSON.stringify({skipIntro:true}));};

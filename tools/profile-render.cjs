@@ -1,6 +1,6 @@
 /* Diagnostic fixtures only: repeatable render workloads, not input-earned play. */
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os'), crypto = require('node:crypto');
-const { chromium } = require(path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const { chromium } = require('playwright');
 let source = fs.readFileSync('web/game.js','utf8');
 if(process.argv.includes('--software-cache')) source=source.replace('buffer.getContext("2d");\r\n    bufferContext.imageSmoothingEnabled','buffer.getContext("2d", { willReadFrequently: true });\r\n    bufferContext.imageSmoothingEnabled');
 const out = path.resolve(process.argv[2] || 'output/a27/performance/baseline'); fs.mkdirSync(out,{recursive:true});

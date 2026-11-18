@@ -1,4 +1,4 @@
-const fs=require('node:fs'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),{chromium}=require('playwright');
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const p=await b.newPage({viewport:{width:1280,height:720}});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__profile={scene,camera,renderer,practicalLights,headlights,mowerLight,components:{storyArt,tracks,garageMotion,sceneryContacts,greenFlags,breakFragments,irrigationArt,ghosts,clippings,experienceArt,courseFeatures,hurdleArt,destructionArt,runner,riderMotion,headlights,nightShadows,beaconShadows,courseDetail,contactShadows,localMist,windbreakArt,riderCulling,staffSighting,batchCulling,localLights,pines,backdrop},update,draw()')}));

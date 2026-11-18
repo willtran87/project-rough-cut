@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2],software=process.argv.includes('--software'),before=process.argv.includes('--before');if(!out)throw Error('Output directory required');
 const cases=[{name:'idle-inhale',idle:2},{name:'idle-exhale',idle:3.7},{name:'running',run:1},{name:'first-recovery',run:1,stop:.1},{name:'second-recovery',run:1,stop:.3},{name:'settled',run:1,stop:.6},{name:'reverse-stop',run:1,stop:.1,reverse:true},{name:'slope-stop',run:1,stop:.3,x:25,y:260,yaw:-.7},{name:'reduced',run:1,stop:.3,reduced:true}];
 cases.push({name:'brake-detail',run:1,stop:.1,inspect:true},{name:'settled-detail',run:1,stop:.6,inspect:true},{name:'restart-detail',run:1,stop:.07,resume:.07,inspect:true},{name:'breath-detail',idle:2,inspect:true});

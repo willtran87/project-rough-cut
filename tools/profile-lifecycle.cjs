@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const snapshots=process.argv.includes('--snapshots');
  const out=path.resolve(process.env.ROUGH_CUT_QA_OUT || (snapshots?'output/a-grade-closure/soak-investigation':'output/a-grade-closure/soak'));fs.mkdirSync(out,{recursive:true});

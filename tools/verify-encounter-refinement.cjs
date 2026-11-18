@@ -1,7 +1,7 @@
 /* Controlled encounters exercise real inputs and authoritative simulation.
  * These checks do not replace the deferred human balance/playtest sessions. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
   const out='output/encounter-refinement';fs.mkdirSync(out,{recursive:true});
   const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});

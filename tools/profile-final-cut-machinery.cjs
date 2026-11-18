@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const source=fs.readFileSync('web/final-cut-machinery.js','utf8'),reference=source.slice(0,source.indexOf('export function createFinalCutMachinery'))+`
 export function createFinalCutMachinery(audit){

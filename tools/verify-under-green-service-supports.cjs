@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const baseline=process.argv.includes('--baseline'),out='output/under-green/service-supports/'+(baseline?'before':'after');fs.mkdirSync(out,{recursive:true});
  if(baseline&&fs.existsSync(out+'/browser.json'))throw Error('Preserve the retained pre-change views; run without --baseline for current verification.');

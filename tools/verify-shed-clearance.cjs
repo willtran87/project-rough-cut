@@ -3,7 +3,7 @@
  * node tools/verify-shed-clearance.cjs [--probe] [--url URL]
  */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(os.homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
   const probe=process.argv.includes('--probe');
   const urlIndex=process.argv.indexOf('--url');

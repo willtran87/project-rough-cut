@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage(),errors=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});

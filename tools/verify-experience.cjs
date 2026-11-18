@@ -2,7 +2,7 @@
  * isolates geometry and choice rules; it does not certify human fun/balance. */
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict');
-const {chromium} = require(process.env.PLAYWRIGHT_MODULE || path.join(os.homedir(), '.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const out = path.resolve(process.env.ROUGH_CUT_QA_OUT || 'output/experience'); fs.mkdirSync(out, {recursive:true});
   const browser = await chromium.launch({headless:true});

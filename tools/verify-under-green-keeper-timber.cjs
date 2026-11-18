@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out=process.argv.find(x=>x.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade/pass34-final/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 const sourceFiles=['under-green-scene','under-green-districts','under-green-keeper-workspace','under-green-keeper-art','under-green-keeper-overhead'];

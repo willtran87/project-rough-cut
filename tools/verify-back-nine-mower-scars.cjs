@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const out=process.argv[2],software=process.argv.includes('--software');if(!out)throw Error('Provide evidence directory');fs.mkdirSync(out,{recursive:true});fs.rmSync(out+'/report.json',{force:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];

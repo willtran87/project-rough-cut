@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/service-grate',routes=JSON.parse(fs.readFileSync(`${out}/routes.json`));
 (async()=>{
  const viewsOnly=process.argv.includes('--views-only');

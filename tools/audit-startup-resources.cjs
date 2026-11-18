@@ -1,6 +1,6 @@
 // Read-only browser audit: route diagnostic hooks into responses, never runtime files.
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/startup-resource-audit-20261107';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});

@@ -3,7 +3,7 @@
 // Full framebuffer readback completes every measured frame; no finish-only
 // or command-submission timing is presented as completed GPU work.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const runtime=process.argv.includes('--runtime'),full=process.argv.includes('--full'),audioOnly=process.argv.includes('--audio-only');
 const out='output/under-green/actor-culling-candidate'+(runtime?'/runtime':'')+(full?'/full':'');
 const candidate=`

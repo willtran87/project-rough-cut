@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const verify=process.argv.includes('--verify'),moving=process.argv.includes('--moving'),out='output/course-budget-review/'+(verify?'batch-visuals-final':moving?'batch-moving-final':'batches-final');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),p=await b.newPage({viewport:{width:1280,height:720}}),rows=[],errors=[];

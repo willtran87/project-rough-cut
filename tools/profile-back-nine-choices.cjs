@@ -1,6 +1,6 @@
 // Compare added scenery with the saved pre-change course. Both versions use
 // the corrected initial cart bounds, so missing body meshes cannot skew cost.
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
  const out=process.argv.includes('--on-foot')?'output/back-nine-on-foot':'output/back-nine-route-choices',results=[];
  for(const baseline of (process.argv.includes('--quick')?[false]:[true,false,false,true])){

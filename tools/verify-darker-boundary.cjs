@@ -1,6 +1,6 @@
 // Controlled camera fixtures inspect art and the actual existing boundary clamp.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const software=process.argv.includes('--software'),out='output/darker-boundary-20261108/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];

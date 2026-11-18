@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/gallery-clearance';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const {traverse}=await import('./probe-under-green-folded.mjs'),{galleryBallPositions}=await import('../web/under-green-services.js'),{FLOORS,OBSTACLES,solid}=await import('../web/under-green-course.js');

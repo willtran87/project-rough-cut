@@ -1,5 +1,5 @@
 const fs=require('node:fs');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/visual-pass61/preview';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  for(const [name,x,y]of [['before',-2.6,8],['near-wall',-3.9,11.5],['near-root',-3.7,13],['east',3.8,12]]){

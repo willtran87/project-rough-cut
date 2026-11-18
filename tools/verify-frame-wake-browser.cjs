@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{const out='output/foliage-mower-performance',b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__gpu={active:new Set(),max:0,observe:false};const proto=WebGL2RenderingContext.prototype,fence=proto.fenceSync,del=proto.deleteSync;proto.fenceSync=function(...a){const f=fence.apply(this,a);if(__gpu.observe){__gpu.active.add(f);__gpu.max=Math.max(__gpu.max,__gpu.active.size);}return f;};proto.deleteSync=function(f){__gpu.active.delete(f);return del.call(this,f);};});

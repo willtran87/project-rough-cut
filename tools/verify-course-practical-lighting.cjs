@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const baselineField=process.argv.includes('--baseline-field'),before=process.argv.includes('--before'),software=process.argv.includes('--software'),budget=process.argv.includes('--budget');
  const out=(process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/level-one-practical-lighting')+'/'+(baselineField?'baseline-':before?'before-':'after-')+(software?'software':'native');fs.mkdirSync(out,{recursive:true});

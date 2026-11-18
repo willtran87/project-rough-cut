@@ -1,6 +1,6 @@
 // Diagnostic removal only. None of these omissions are candidates for shipping.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/visual-upgrade-local/pass51-components';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--ignore-gpu-blocklist']}),rows=[],errors=[];try{
  const p=await b.newPage({viewport:{width:960,height:600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='log'&&m.text().startsWith('component:'))console.log(m.text());});

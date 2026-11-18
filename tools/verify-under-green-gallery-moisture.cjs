@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(x=>x.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass72/${software?'software':'hardware'}`;
 const files=['under-green-damp-finish','under-green-ground-finish'];
 const fixtures=[['entry',0,8,0,.1],['canopy',0,12,-.5,.25],['pillar',0,13.5,-.875,.2],['ground',0,12,-.6,-.48],['east',2,10,.45,.5],['reverse',0,18,Math.PI,.15],['crossing',0,19,0,-.05],['bunker',-29.5,65,Math.PI,.15],['pump',-25.7,40,Math.PI/2,-.27],['range',12,35,Math.PI,.05],['keeper',12,13.5,-2.4,.05]];

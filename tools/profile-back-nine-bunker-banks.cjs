@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2],native=process.argv.includes('--native'),tessellation=process.argv.includes('--bank-tessellation');
 if(!out)throw Error('Provide an output directory');fs.mkdirSync(out,{recursive:true});
 (async()=>{

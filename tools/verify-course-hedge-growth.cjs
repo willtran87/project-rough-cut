@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {restoreFullIndexReference}=require('./fixtures/full-index-reference.cjs');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-process.env.TEMP=process.env.TMP='F:/CodexArtifacts/project-rough-cut/browser-temp';
+const {chromium}=require('playwright');
+process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
  const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=`output/level-one-hedge-growth/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];

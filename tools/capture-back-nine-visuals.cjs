@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2]||'output/back-nine-visual-upgrade/current';
 // Fixed playable viewpoints allow honest before/after comparisons; simulation
 // is frozen only after entering through the real menu and presentation fence.

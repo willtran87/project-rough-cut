@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const stats=values=>{const a=values.slice().sort((x,y)=>x-y);return{samples:a.length,median:a[Math.floor(a.length/2)],p95:a[Math.floor(a.length*.95)],max:a.at(-1),over100:a.filter(x=>x>100).length};};
 (async()=>{
  const software=process.argv.includes('--software'),label=software?'software':'hardware',out='output/back-nine-experience/construction-yield',results=[];

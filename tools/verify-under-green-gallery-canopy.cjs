@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),preview=process.argv.includes('--preview'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass58/${software?'software':'hardware'}`;
 const fixtures=process.argv.includes('--joinery')?[['west-entry',-3.5,12.6,-Math.PI/2,.8],['east-entry',3.5,14.7,Math.PI/2,.75],['under',0,13,0,.65]]:[['approach',0,8,0,.1],['near',0,11,0,.3],['under',0,13,0,.65],['reverse',0,18,Math.PI,.25],['east',3.3,13,Math.PI/2,.6],['west',-3.5,11,-Math.PI/2,.55],['pillar',.1,16,-2.1,.45],['crossing',0,19,0,-.05],['pump-control',-23.4,42,-1,.05],['bunker-control',-29.5,65,Math.PI,.15]];
 fs.mkdirSync(out,{recursive:true});

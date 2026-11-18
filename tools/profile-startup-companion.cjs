@@ -1,6 +1,6 @@
 // A controlled second graphics client, not a claim about a particular user app.
 const fs=require('node:fs'),path=require('node:path');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 const out='output/startup-decode-20261107',args=['--use-angle=d3d11','--ignore-gpu-blocklist'];
 (async()=>{
  const peer=await chromium.launch({headless:true,args}),probe=await peer.newPage({viewport:{width:640,height:360}});let game;

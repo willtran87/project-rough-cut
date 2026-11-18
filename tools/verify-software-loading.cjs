@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(path.join(require('node:os').homedir(),'.codex/skills/develop-web-game/node_modules/playwright'));
+const {chromium}=require('playwright');
 (async()=>{
  const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/software-rendering',software=process.argv.includes('--software'),reports=[];fs.mkdirSync(out,{recursive:true});let b;
  try{for(const before of (process.argv.includes('--current-only')?[false]:[true,false])){

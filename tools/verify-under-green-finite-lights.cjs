@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),label=software?'software':'hardware';
 const out='output/under-green/finite-lights';fs.mkdirSync(out,{recursive:true});
 (async()=>{

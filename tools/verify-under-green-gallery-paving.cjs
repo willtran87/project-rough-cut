@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
-const {PNG}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright-core/lib/utilsBundle.js');
+const {chromium}=require('playwright');
+const {PNG}=require(require('node:path').join(require('node:path').dirname(require.resolve('playwright-core/package.json')),'lib/utilsBundle.js'));
 const software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
 const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass102/${preview?'preview-':''}${software?'software':'hardware'}`;
 fs.mkdirSync(out,{recursive:true});

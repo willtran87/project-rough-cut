@@ -1,7 +1,7 @@
 // Real-time production-renderer soak. Replays recorded ordinary simulation
 // inputs from the existing map-aware QA pilot; this is not a human playtest.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const {gameModule,sceneModule,instrumentGame,instrumentScene}=require('./under-green-soak-hooks.cjs');
 const software=process.argv.includes('--software'),seconds=Number(process.argv.find(a=>a.startsWith('--seconds='))?.split('=')[1]||300);
 const label=software?'software':'hardware',out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/soak';

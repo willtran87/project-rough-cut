@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out=process.env.CHASE_QA_OUT||'output/back-nine-experience/survival-audio';fs.mkdirSync(out,{recursive:true});
  const source=fs.readFileSync('web/back-nine-audio.js','utf8'),from='(proximity*.10+(run.lastImpact*.25+surge*.035+approachLevel*.065)*Math.min(1,proximity*2))',to='(proximity*.10+run.lastImpact*.25+surge*.035+approachLevel*.065)';assert(source.includes(from));
  const legacy=source.replace(from,to);fs.writeFileSync(out+'/previous-range-audio.js',legacy);

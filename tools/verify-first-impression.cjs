@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/first-impression';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];

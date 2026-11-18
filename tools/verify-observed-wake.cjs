@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const baseline=process.argv.includes('--baseline'),out='output/observed-wake/'+(baseline?'baseline':'final');fs.mkdirSync(out,{recursive:true});
  const source=fs.readFileSync('web/game.js','utf8'),legacy=/updateVerticalPassPressure\(\s*dt,\s*moving,\s*environment,\s*\);/.test(source);

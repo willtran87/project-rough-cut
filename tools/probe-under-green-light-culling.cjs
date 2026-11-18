@@ -1,6 +1,6 @@
 // Candidate evaluation in one warmed context; no production source mutation.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const variant=process.argv.find(a=>a.startsWith('--variant='))?.slice(10)||'light';assert(['light','geometry','both'].includes(variant));
 const out=`output/under-green/light-culling/${variant}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{

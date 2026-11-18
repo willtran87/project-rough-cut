@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const sharp=require(require.resolve('sharp',{paths:[process.cwd(),'C:/Users/Will/.codex/skills/develop-web-game/node_modules']}));
+const sharp=require(require.resolve('sharp'));
 (async()=>{
  const source='assets/enemies/joe/final-cut-expressions-v1',target='web/assets/optimized/joe-expressions-v1',assets=[];
  fs.mkdirSync(target,{recursive:true});

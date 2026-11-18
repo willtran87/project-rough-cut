@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const hardware=process.argv.includes('--hardware'),tag=hardware?'hardware':'software',out='output/back-nine-experience/terrain-cost',rows=[];
 for(const baseline of [true,false,false,true]){
  const b=await chromium.launch({headless:true,args:[...(hardware?['--use-angle=d3d11','--ignore-gpu-blocklist']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']),'--disable-gpu-shader-disk-cache']});try{

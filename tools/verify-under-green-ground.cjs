@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software');

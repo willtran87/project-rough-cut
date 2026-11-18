@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const b=await chromium.launch({headless:true});try{const p=await b.newPage();await p.route('**/__runner-audio',r=>r.fulfill({contentType:'text/html',body:'<html></html>'}));await p.goto('http://127.0.0.1:4187/__runner-audio');
 const results=await p.evaluate(async()=>{const {createChaseAudio}=await import('./back-nine-audio.js'),{createRun}=await import('./back-nine-sim.js');const results=[];
  for(const [name,viewYaw,rear,muted]of [['right',0,0,false],['turned',Math.PI,0,false],['glance',0,1,false],['muted',0,0,true]]){

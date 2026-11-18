@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/directional-captions';
  const cases=JSON.parse(fs.readFileSync('output/under-green/range-captures/diagnostic.json')).reports.map(({name})=>JSON.parse(fs.readFileSync(`output/under-green/range-captures/${name}.json`)));

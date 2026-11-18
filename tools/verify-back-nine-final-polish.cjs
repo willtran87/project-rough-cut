@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const out=process.argv[2],warp=process.argv.includes('--warp'),software=warp||process.argv.includes('--software'),softwareBrowser=process.argv.includes('--software-browser')?process.argv[process.argv.indexOf('--software-browser')+1]:undefined;fs.mkdirSync(out,{recursive:true});
 const option=name=>process.argv.includes(name)?process.argv[process.argv.indexOf(name)+1]:undefined;
 (async()=>{const b=option('--cdp')?await chromium.connectOverCDP(option('--cdp')):await chromium.launch({headless:true,executablePath:softwareBrowser,args:warp?['--use-angle=d3d11-warp','--ignore-gpu-blocklist']:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{

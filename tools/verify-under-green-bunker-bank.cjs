@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const baseline=process.argv.includes('--baseline'),out='output/under-green/bunker-bank/'+(baseline?'before':'after');
 if(baseline&&fs.existsSync(out+'/browser.json'))throw Error('Preserve the existing baseline');
 fs.mkdirSync(out,{recursive:true});

@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 (async()=>{
  const contract={window:{}};vm.runInNewContext(fs.readFileSync('web/foundation.js','utf8'),contract);vm.runInNewContext(fs.readFileSync('web/quality-core.js','utf8'),contract);

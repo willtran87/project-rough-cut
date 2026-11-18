@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out=process.argv[2]||'output/back-nine-ui-pacing',index=process.argv.indexOf('--software-browser');
 fs.mkdirSync(out,{recursive:true});
 (async()=>{

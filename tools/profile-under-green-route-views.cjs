@@ -1,7 +1,7 @@
 // Map cost to actual views reached by the ordinary-input pilot. Fixed-pose
 // complete framebuffer readback is diagnostic, not production FPS acceptance.
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright');
+const {chromium}=require('playwright');
 const out='output/under-green/route-view-costs';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const {traverse}=await import('./probe-under-green-folded.mjs');const fixtures=[],outcomes=[];
