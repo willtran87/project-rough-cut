@@ -10,12 +10,12 @@ export async function createCraftedDrainSurfaces(){
  const hash=n=>{const v=Math.sin(n*127.1+43.71)*43758.5453;return v-Math.floor(v);};
  // Bark, sand and concrete/tile ship as the exact tiles formerly cut from
  // three 2x2 atlases; the unused quadrants are archived outside the bundle.
- const definitions=[['surfaces-bark-v1.png',['bark'],1],['surfaces-sand-v1.png',['sand'],1],['surfaces-concrete-tile-v3.png',['concrete','tile'],2,1],['masonry-field-v4.png',['masonry'],1],['sediment-field-v1.png',['mud'],1],['paving-field-v3.png',['floor'],1]];
- definitions.push(['bunker-earth-sand-v1.png',['bankSoil','bankSand'],2,1]);
+ const definitions=[['surfaces-bark-v1.webp',['bark'],1],['surfaces-sand-v1.webp',['sand'],1],['surfaces-concrete-tile-v3.webp',['concrete','tile'],2,1],['masonry-field-v4.webp',['masonry'],1],['sediment-field-v1.webp',['mud'],1],['paving-field-v3.webp',['floor'],1]];
+ definitions.push(['bunker-earth-sand-v1.webp',['bankSoil','bankSand'],2,1]);
  // A full four-metre painted-steel field replaces the two-metre repeating
  // peel strip. Quiet coating between unequal corrosion islands lets the
  // physical range ribs and folded lining explain the construction.
- definitions.push(['range-painted-steel-v2.png',['panel'],1]);
+ definitions.push(['range-painted-steel-v2.webp',['panel'],1]);
  const images=await Promise.all(definitions.map(async([name])=>{const img=new Image();img.src='./assets/under-green/'+name;await img.decode();return img;}));
  for(let a=0;a<images.length;a++){
   const atlas=images[a],columns=definitions[a][2]||2,rows=definitions[a][3]||columns,width=Math.floor(atlas.naturalWidth/columns),height=Math.floor(atlas.naturalHeight/rows);

@@ -24,9 +24,9 @@
   {
     "source": "web/back-nine-mower-finish.js",
     "images": [
-      "optimized/back-nine-mower-paint-v1.png",
-      "optimized/back-nine-mower-steel-v1.png",
-      "optimized/back-nine-mower-rust-v1.png"
+      "optimized/back-nine-mower-paint-v1.webp",
+      "optimized/back-nine-mower-steel-v1.webp",
+      "optimized/back-nine-mower-rust-v1.webp"
     ]
   },
   {
@@ -42,20 +42,20 @@
   {
     "source": "web/under-green-crafted-surfaces.js",
     "images": [
-      "under-green/surfaces-bark-v1.png",
-      "under-green/surfaces-sand-v1.png",
-      "under-green/surfaces-concrete-tile-v3.png",
-      "under-green/masonry-field-v4.png",
-      "under-green/sediment-field-v1.png",
-      "under-green/paving-field-v3.png",
-      "under-green/bunker-earth-sand-v1.png",
-      "under-green/range-painted-steel-v2.png"
+      "under-green/surfaces-bark-v1.webp",
+      "under-green/surfaces-sand-v1.webp",
+      "under-green/surfaces-concrete-tile-v3.webp",
+      "under-green/masonry-field-v4.webp",
+      "under-green/sediment-field-v1.webp",
+      "under-green/paving-field-v3.webp",
+      "under-green/bunker-earth-sand-v1.webp",
+      "under-green/range-painted-steel-v2.webp"
     ]
   },
   {
     "source": "web/under-green-keeper-timber.js",
     "images": [
-      "under-green/keeper-timber-v1.png"
+      "under-green/keeper-timber-v1.webp"
     ]
   },
   {

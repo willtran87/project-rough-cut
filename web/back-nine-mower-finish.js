@@ -2,7 +2,7 @@ import {createCraftedCourseSurfaces} from './course-crafted-surfaces.js';
 import * as THREE from './vendor/three/three.module.js';
 
 export async function loadMowerSurfaceMaps(){
- const entries=await Promise.all(['paint','steel','rust'].map(async name=>{const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-mower-'+name+'-v1.png');t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;t.repeat.setScalar(name==='paint'?.65:.4);return [name==='steel'?'iron':name,t];}));
+ const entries=await Promise.all(['paint','steel','rust'].map(async name=>{const t=await new THREE.TextureLoader().loadAsync('./assets/optimized/back-nine-mower-'+name+'-v1.webp');t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;t.repeat.setScalar(name==='paint'?.65:.4);return [name==='steel'?'iron':name,t];}));
  return Object.fromEntries(entries);
 }
 

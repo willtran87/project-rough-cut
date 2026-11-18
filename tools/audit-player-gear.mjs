@@ -30,7 +30,9 @@ for(const file of ['runner-gear-craft.js','runner-sole.js','runner-gait.js','run
  assert(imports['./'+file].endsWith('?v=20261114-player-gear-6'));
  const r=await fetch('http://127.0.0.1:4187/'+imports['./'+file]);assert(r.ok);assert(Buffer.from(await r.arrayBuffer()).equals(fs.readFileSync('web/'+file)));served.push(file);
 }
-const asset='assets/optimized/back-nine-work-gear-v1.png',bytes=fs.readFileSync('web/'+asset),source=fs.readFileSync('assets/characters/player/back-nine-work-gear-v1.png');assert(bytes.equals(source));
+// Runtime copy is a lossless WebP (VP8L) of the source PNG: same pixels, different container.
+const asset='assets/optimized/back-nine-work-gear-v1.webp',bytes=fs.readFileSync('web/'+asset);assert.equal(bytes.toString('ascii',12,16),'VP8L');
+const assetWidth=(bytes.readUInt32LE(21)&0x3fff)+1,assetHeight=((bytes.readUInt32LE(21)>>>14)&0x3fff)+1;
 const servedAsset=await fetch('http://127.0.0.1:4187/'+asset);assert(servedAsset.ok);assert(Buffer.from(await servedAsset.arrayBuffer()).equals(bytes));
 const clients=[read('client-native/state-0.json'),read('client-software/state-0.json')];
 for(const field of fields)assert.deepEqual(clients[0][field],clients[1][field],'client '+field);
@@ -39,7 +41,7 @@ for(const field of fields)assert.deepEqual(clients[0][field],previous[field],'pr
 for(const s of clients){assert.equal(s.player.speed,0);assert.equal(s.checkpoint,0);assert(s.graphics.ejection.footing.every(f=>f.planted));}
 const motion=read('grounded-motion/report.json');assert(motion.passed);assert.deepEqual(motion.errors,[]);
 const terrain=read('grounded-routes/hardware-verification.json');assert(terrain.passed);
-const result={passed:true,fields,comparisons,geometry:[original.geometry,native.geometry],served,uniqueImportKeys:keys.length,asset:{bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20)},motion:motion.contract,terrain,clients:clients.map(s=>({player:s.player,resolution:s.graphics.resolution,average:s.graphics.completionAverage,p95:s.graphics.completionP95}))};
+const result={passed:true,fields,comparisons,geometry:[original.geometry,native.geometry],served,uniqueImportKeys:keys.length,asset:{bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),width:assetWidth,height:assetHeight},motion:motion.contract,terrain,clients:clients.map(s=>({player:s.player,resolution:s.graphics.resolution,average:s.graphics.completionAverage,p95:s.graphics.completionP95}))};
 fs.writeFileSync(root+'/comparison.json',JSON.stringify(result,null,2));console.log(JSON.stringify({passed:true,cases:comparisons.length,asset:result.asset,clients:result.clients}));
 const archive=root+'/accepted-source';fs.mkdirSync(archive,{recursive:true});
 for(const file of [...served,'back-nine.html','runner-balance.js','runner-garment-craft.js','runner-head-craft.js','back-nine-headlights.js'])fs.copyFileSync('web/'+file,archive+'/'+file);

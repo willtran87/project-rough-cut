@@ -9,9 +9,10 @@ let baked;
 async function bakedTree(job){
   baked??=(async()=>{
     try{
-      const [response,source]=await Promise.all([fetch('./assets/baked/trees.json'),fetch('./pixel-trees.js').then(r=>r.arrayBuffer())]);
+      const [response,source]=await Promise.all([fetch('./assets/baked/trees.json'),fetch('./pixel-trees.js').then(r=>r.text())]);
       if(!response.ok)return null;const manifest=await response.json();
-      const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',source))].map(n=>n.toString(16).padStart(2,'0')).join('');
+      // Hash LF-normalized source so Windows (CRLF) bakes match Linux-served builds.
+      const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source.replace(/\r\n/g,'\n'))))].map(n=>n.toString(16).padStart(2,'0')).join('');
       if(hash!==manifest.sourceHash)return null;
       const compressed=await fetch('./assets/baked/trees.bin.gz');if(!compressed.ok||!compressed.body)return null;
       const buffer=await new Response(compressed.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
