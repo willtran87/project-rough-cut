@@ -80,6 +80,7 @@ import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import * as Art from './pixel-art.js';
 import {createParallax} from './parallax-scene.js';
 import {loadBakedCourseSurfaces} from './baked-course-surfaces.js';
+import {loadBakedContours,releaseBakedContours} from './baked-contours.js';
 import {createCoursePines,loadCoursePineGeometry} from './course-pines.js';
 import {COURSE,noise,clamp,distance,angleDelta,surfaceAt,lineClear} from './back-nine-course.js';
 
@@ -119,6 +120,9 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  // in the HTTP cache now so that late request does not wait on the network.
  fetch('./assets/models/ghost-joe.glb?v=20261107-motion').then(response=>response.ok?response.arrayBuffer():null).catch(()=>{});
  const surfaceAssets=loadBakedCourseSurfaces();surfaceAssets.catch(()=>{});
+ // Exact ground tessellation for the authored layout; must be in place before
+ // the first contoured patch. A missing or stale bake builds it live.
+ const contourAsset=loadBakedContours();
  const backdrop=createParallax({travelScale:.08,showEstate:false,storm:.97,night:.92,stormCanopy:true,estateHorizon:true});
  const glassMap=Art.texture('back-nine-glass-v1',null,null,true);
  const groundMap=Art.texture('back-nine-short-turf-v2',null,null,true);
@@ -129,6 +133,7 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  const slateMap=Art.texture('rough-cut-architecture-surfaces-v1',[512,512,512,512],null,true);
  await Promise.all(['back-nine-weathered-turf-v1','back-nine-storm-density-v1','back-nine-glass-v1','back-nine-short-turf-v2','rough-cut-architecture-surfaces-v1','rough-cut-night-sky-v2','rough-cut-moon-v1','rough-cut-far-ridge-v1','rough-cut-distant-treeline-v1','rough-cut-hedge-hide-v2'].map(Art.source));
  const surfaces=await surfaceAssets;
+ await contourAsset;
  const scarSoilMap=await scarSoilAsset;
  const turfConditionField=createTurfConditionField();
  const maintenanceCanvas=await runnerClothAsset;
@@ -709,6 +714,7 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  // software path keeps its ground shaders exactly as they were.
  if(!software){for(const name of ['road','track','trackMargin','pathEdge'])if(finishWetSheen(materials[name],nightFx.lamps,nightFx.wetTime,1))wetSheenMaterials++;for(const name of ['grass','mown','turfMargin','soilMargin','rough'])if(finishWetSheen(materials[name],nightFx.lamps,nightFx.wetTime,.5))wetSheenMaterials++;}
  const instanceCulling=software?(/swiftshader/i.test(rendererInfo?context.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL):'')?createRigidVertexBatches(scene):createRigidInstanceCulling(scene)):null;instanceCulling?.update(camera);
+ releaseBakedContours();
  const programsReady=(async()=>{await renderer.compileAsync(backdrop.scene,backdrop.camera);await renderer.compileAsync(scene,camera);})();programsReady.catch(()=>{});
  const texturePreparation=await prepareCourseTextures(renderer,maps,()=>closed);await programsReady;onProgress('Preparing course details…');preparation=await prepareCourseBuffers(renderer,scene,camera,()=>closed);const skyPreparation=await prepareCourseBuffers(renderer,backdrop.scene,backdrop.camera,()=>closed);preparation.textures=texturePreparation;preparation.surfaces=surfaces.stats();preparation.batches+=skyPreparation.batches;preparation.maxBytes=Math.max(preparation.maxBytes,skyPreparation.maxBytes);if(localLights)scene.remove(localLights.preparation);pines.finishWarm();tracks.finishWarm();staffSighting.finishWarm();pines.update(camera,localSources);if(closed)throw new Error('Level closed');beaconShadows.warm(renderer,camera);await waitForGPU(renderer,()=>closed);
  const runoverVisible=()=>wasOnFoot&&runner.root.visible&&presentedDeath!==null;

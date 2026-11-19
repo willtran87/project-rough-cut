@@ -58,7 +58,42 @@ function weldUnit(v){
  if(Math.abs(Math.abs(s-Math.floor(s))-.5)<1e-4){const text=v.toFixed(5);r=Math.round(Number(text)*1e5);if(r===0)return text.charCodeAt(0)===45?.5:0;return r;}
  return r===0?(v<0?.5:0):r;
 }
-export function contourGround(THREE,g,{retainFlatTriangles=false}={}){
+// The authored course feeds the same geometry in on every visit, so a checked-in
+// bake (web/baked-contours.js, made by tools/bake-course-contours.cjs) can hand
+// back the finished tessellation while the course is built. Its key covers every
+// input bit contourGround reads; anything it does not hold is computed exactly as
+// before. The terrain data is fingerprinted separately; bump the version whenever
+// contourGround's output for the same input and terrain changes.
+export const CONTOUR_BAKE_VERSION=1;
+let bakedContour=null;
+export function installContourBake(lookup){bakedContour=lookup;}
+// Two independent 32-bit lanes (murmur3 and xxhash32 rounds) over exact bits.
+let laneA=0,laneB=0;
+function hashWords(a){
+ const w=a instanceof Float32Array?new Uint32Array(a.buffer,a.byteOffset,a.length):a;let x=laneA,y=laneB;
+ for(let i=0;i<w.length;i++){const v=w[i];let k=Math.imul(v,0xcc9e2d51);k=k<<15|k>>>17;x^=Math.imul(k,0x1b873593);x=x<<13|x>>>19;x=Math.imul(x,5)+0xe6546b64|0;y=y+Math.imul(v,0x85ebca77)|0;y=y<<13|y>>>19;y=Math.imul(y,0x9e3779b1);}
+ laneA=x;laneB=y;
+}
+const finishLane=h=>{h^=h>>>16;h=Math.imul(h,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);return (h^h>>>16)>>>0;};
+const finishKey=()=>finishLane(laneA)+':'+finishLane(laneB);
+export function contourFingerprint(){
+ const text=JSON.stringify([CONTOUR_BAKE_VERSION,TERRAIN_FORMS,foundations]),codes=new Uint32Array(text.length);
+ for(let i=0;i<text.length;i++)codes[i]=text.charCodeAt(i);laneA=0x5bd1e995;laneB=0x27d4eb2f;hashWords(codes);return finishKey();
+}
+// Null when an input is not a plain typed array the key can cover exactly.
+export function contourBakeKey(g,{retainFlatTriangles=false}={}){
+ const {position,uv,color}=g.attributes,parts=[position,uv,color,g.index],header=new Uint32Array(17);header[0]=retainFlatTriangles?1:0;
+ for(let i=0;i<4;i++){const a=parts[i];if(!a)continue;const index=i===3,array=a.array;
+  if(a.isInterleavedBufferAttribute||a.normalized||!(index?array instanceof Uint16Array||array instanceof Uint32Array:array instanceof Float32Array)||array.length!==a.count*a.itemSize)return null;
+  header.set([1,a.itemSize,a.count,index?array.BYTES_PER_ELEMENT:4],1+i*4);}
+ if(!position)return null;
+ laneA=0x9747b28c;laneB=0x165667b1;hashWords(header);for(const a of parts)if(a)hashWords(a.array);return finishKey();
+}
+export function contourGround(THREE,g,options={}){
+ if(bakedContour){const key=contourBakeKey(g,options),baked=key&&bakedContour(THREE,key);if(baked)return baked;}
+ return tessellateGround(THREE,g,options);
+}
+function tessellateGround(THREE,g,{retainFlatTriangles=false}={}){
  const p=g.attributes.position,u=g.attributes.uv,color=g.attributes.color,idx=g.index,positions=[],uvs=[],colors=[],indices=[],cache=new Map();
  // cache maps a hash to the newest vertex id; welded holds each vertex's
  // rounded components and chain links ids sharing a hash. Equality is always
