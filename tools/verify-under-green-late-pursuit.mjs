@@ -4,6 +4,7 @@ import {createRun,step} from '../web/under-green-sim.js';
 import {distance,solid} from '../web/under-green-course.js';
 import {rangeY} from '../web/under-green-layout.js';
 import {RANGE_INSPECTION} from '../web/under-green-encounters.js';
+import {floodState} from '../web/under-green-flood.js';
 import {traverse} from './probe-under-green-folded.mjs';
 
 const out='output/under-green/late-pursuit';
@@ -20,7 +21,10 @@ function hidden(r,position={x:-24,y:37},frames=120){
  for(let i=0;i<frames;i++){
   const previous={...r.joe};step(r);
   assert.equal(r.joe.seen,false);
-  assert(distance(previous,r.joe)<=2.1/60+.00001);
+  // Ordinary standard walking pace, scaled only by the unseen catch-up pace
+  // (under-green-unseen.js, up to 2.6x while hidden and far) and flood drag.
+  assert(r.joe.paceScale>=1&&r.joe.paceScale<=2.6+1e-9);
+  assert(distance(previous,r.joe)<=2.1*r.joe.paceScale*floodState(r.elapsed).speedScale/60+.00001);
   assert(!solid(r.joe,.72));
  }
  return r;
@@ -57,7 +61,10 @@ for(const options of [{dodge:true},{dodge:true,wet:true},{dodge:true,sprint:true
  }});
  assert.equal(result.mode,'complete',JSON.stringify(options));
  assert.equal(result.solid,false);
- if(!options.cp&&!options.wet)assert(result.j.rangeInspectionUsed);
+ // Flood drag and unseen catch-up pacing now leave Joe out of sight of the
+ // walking pilot at the range junction, so only the sprint route still
+ // presents the witnessed southward choice; it must use the inspection.
+ if(!options.cp&&!options.wet&&options.sprint)assert(result.j.rangeInspectionUsed);
  results.push({options,result});
  console.log(JSON.stringify({options,mode:result.mode,seconds:result.elapsed,gap:result.gap,evasions:result.evasions}));
 }

@@ -58,10 +58,13 @@ for(let f=0;f<1800&&cover.mode==='driving';f++){
  if(cursor===1&&d<2&&held<3){held+=1/60;stop=true;}else if(d<2){if(cursor===route.length-1)break;cursor++;}
  const target=route[cursor],delta=Math.atan2(Math.sin(Math.atan2(target[0]-p.x,target[1]-p.y)-p.yaw),Math.cos(Math.atan2(target[0]-p.x,target[1]-p.y)-p.yaw)),prior={...cover.joe};
  updateRun(cover,{throttle:stop||Math.abs(delta)>1.1?0:1,steer:stop?0:Math.max(-1,Math.min(1,delta*2))},1/60);
- maxStep=Math.max(maxStep,distance(prior,cover.joe));if(cover.hunt.occluded)hidden+=1/60;if(cover.joe.mode==='search'){searchSeconds+=1/60;sawSearch=true;}if(cover.encounter.owner==='relief')relief+=1/60;
+ maxStep=Math.max(maxStep,distance(prior,cover.joe));if(cover.hunt.occluded)hidden+=1/60;if(cover.joe.mode==='search'){searchSeconds+=1/60;sawSearch=true;}if(['relief','silence'].includes(cover.encounter.owner))relief+=1/60;
  if(sawSearch&&cover.joe.senses.visible)reacquired=true;assert(!blocked(cover.foot,.32));
 }
-assert.equal(cover.mode,'driving');assert(cover.foot.y>477);assert(hidden>7&&searchSeconds>6&&relief>4);assert(reacquired);assert(maxStep<18.3/60+.003);
+assert.equal(cover.mode,'driving');assert(cover.foot.y>477);// Engine silence (e9f6118) outranks an earned relief window but holds Joe at
+// a standstill, so both count as the protected quiet the runner earned.
+assert(cover.events.some(e=>e.type==='earned-relief'&&e.reason==='broke-sight'),'Breaking sight earns relief');
+assert(hidden>7&&searchSeconds>6&&relief>4);assert(reacquired);assert(maxStep<18.3/60+.003);
 const coverResult={hidden,searchSeconds,relief,reacquired,maxStep,plans:cover.joe.plans,seconds:cover.time,player:{x:cover.foot.x,y:cover.foot.y}};
 checks.push('An input-driven runner crosses behind the windbreak, waits, gains separation and emerges into a real reacquisition');
 

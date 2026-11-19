@@ -2,15 +2,18 @@ import assert from 'node:assert/strict';
 import * as THREE from '../web/vendor/three/three.module.js';
 import {floorLayout,onFloor} from '../web/under-green-course.js';
 import {buildBunkerRetainingFinish,isBunkerRetainingWall} from '../web/under-green-bunker-retaining.js';
-const layout=floorLayout(),materials={bunkerStone:new THREE.MeshPhongMaterial(),bankEarth:new THREE.MeshPhongMaterial(),mudBank:new THREE.MeshPhongMaterial({vertexColors:true}),pumpStone:new THREE.MeshPhongMaterial()};
+const layout=floorLayout(),materials={bunkerStone:new THREE.MeshPhongMaterial(),bankEarth:new THREE.MeshPhongMaterial(),mudBank:new THREE.MeshPhongMaterial({vertexColors:true}),pumpStone:new THREE.MeshPhongMaterial(),soil:new THREE.MeshPhongMaterial(),sand:new THREE.MeshPhongMaterial()};
 const pieces=[];
 const result=buildBunkerRetainingFinish({layout,materials,box(){throw Error('Unexpected box');},put(g,type,x,y,z){const copy=g.clone();copy.translate(x,y,z);pieces.push({g:copy,type});}});
 assert.equal(result.replacedMetalCaps,63);assert.equal(result.edges,22);assert.equal(result.deposits.length,8);assert.equal(result.repairs.length,2);assert(result.stones.length>100);
+// The finish now opens with the three-layer earthen bank faces above each
+// retaining edge (buildBunkerBankFaces); those rise to the upper bank (4.90).
+const bankParts=result.bankFaces.parts.length;assert.equal(bankParts,result.edges*3);assert(pieces.slice(0,bankParts).every(p=>['soil','sand'].includes(p.type)));assert(pieces.slice(bankParts).every(p=>!['soil','sand'].includes(p.type)));
 let triangles=0,finiteVertices=0,closedParts=0;
-for(const {g,type}of pieces){
+for(const [pieceIndex,{g,type}]of pieces.entries()){const bank=pieceIndex<bankParts;
  const p=g.attributes.position,idx=g.index,edgeUses=new Map();let volume=0;
  if(materials[type].vertexColors)assert.equal(g.attributes.color.count,p.count);
- for(let i=0;i<p.count;i++){const x=p.getX(i),h=p.getY(i),y=-p.getZ(i);assert([x,h,y].every(Number.isFinite));assert(h>.45&&h<2.13);finiteVertices++;}
+ for(let i=0;i<p.count;i++){const x=p.getX(i),h=p.getY(i),y=-p.getZ(i);assert([x,h,y].every(Number.isFinite));assert(bank?h>1.879&&h<4.901:h>.45&&h<2.13);finiteVertices++;}
  for(let i=0;i<(idx?.count||p.count);i+=3){
   const points=[];for(let j=0;j<3;j++){const k=idx?idx.getX(i+j):i+j;points.push([p.getX(k),p.getY(k),p.getZ(k)]);}
   const a=new THREE.Vector3(...points[0]),b=new THREE.Vector3(...points[1]),c=new THREE.Vector3(...points[2]);assert(b.clone().sub(a).cross(c.clone().sub(a)).length()>1e-9,'Degenerate triangle');volume+=a.dot(b.clone().cross(c))/6;

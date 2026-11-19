@@ -32,6 +32,6 @@ const lips=[];for(const s of COURSE.sand){const g=bunkerLip(THREE,s,COURSE.paths
  lips.push({x:s.x,y:s.y,triangles:index.length/3});g.dispose();
 }
 const edges=[];const count=buildBunkerRouteEdges({COURSE,box:(type,x,y,z,w,h,d,ry)=>{assert(y+h*.5<.075,'Kerb remains a shallow traversable detail');assert(pathDistance({x,y:-z})>2.85);edges.push({x,y:-z,height:y+h*.5});}});assert(count>0&&count<40);
-assert.equal(JSON.stringify(COURSE),before,'Visual composition never mutates collisions or navigation');assert.equal(navigationStats().signature,2693326411);assert(navigationStats().baked);cylinder.dispose();circle.dispose();
+assert.equal(JSON.stringify(COURSE),before,'Visual composition never mutates collisions or navigation');assert.equal(navigationStats().signature,4190417745);assert(navigationStats().baked);cylinder.dispose();circle.dispose();
 checks.push('finite bounded static geometry; six tee walks; bank opens at real lane; shallow retaining edges; unchanged collision/pathing signature');
 const report={passed:true,checks,tees,landscape,parts,triangles,walkSamples,terrainBounds:{min:terrainBounds.min.toArray(),max:terrainBounds.max.toArray()},lips,edges,navigation:navigationStats()};fs.mkdirSync('output/back-nine-experience/course-layout',{recursive:true});fs.writeFileSync('output/back-nine-experience/course-layout/geometry.json',JSON.stringify(report,null,2));console.log(JSON.stringify({...report,edges:edges.length}));

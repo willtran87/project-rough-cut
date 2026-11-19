@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createRun,step} from '../web/under-green-sim.js';
 import {WATERS,waterPoint,waterState,inWater,distance,solid} from '../web/under-green-course.js';
 import {JOE_RADIUS} from '../web/under-green-clearance.js';
+import {WATER_TIMING} from '../web/under-green-water-state.js';
 
 const out='output/under-green/close-recovery';fs.mkdirSync(out,{recursive:true});
 const baseline=process.argv.includes('--baseline'),rows=[],examples=[],failures=[];
@@ -12,8 +13,11 @@ if(baseline&&fs.existsSync(out+'/baseline.json'))throw Error('Preserve the retai
 // The actual water transition starts recovery; no recovery flags are injected.
 function fixture(w,side,lateral,dt){
  const r=createRun();r.mode='playing';r.bypass=true;
- r.time=24+(w.lowSeconds??3)+1.5-w.offset-dt/2;
- if(w.id==='return')r.bypassAt=r.time-2+dt/2;
+ // Pump-controlled outlets carry no cycle offset (under-green-water-state.js
+ // explicit controls); the return warns for pumpReturnWarning after the pump.
+ r.time=w.control==='cycle'?24+w.lowSeconds+WATER_TIMING.warning-w.offset-dt/2:24;
+ if(w.control==='pump-return')r.bypassAt=r.time-WATER_TIMING.pumpReturnWarning+dt/2;
+ assert(Number.isFinite(r.time)&&waterState(w,r.time,r.bypass,r.bypassAt).phase==='warning');
  Object.assign(r.player,waterPoint(w,0,side*(w.depth/2-.1)),{yaw:side>0?0:Math.PI,grace:0});
  Object.assign(r.joe,waterPoint(w,lateral,side*(w.depth/2-.1)),{phase:'walk',yaw:side>0?0:Math.PI,last:{...r.player}});
  assert(!solid(r.player,.3)&&!solid(r.joe,JOE_RADIUS));

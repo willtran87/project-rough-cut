@@ -20,7 +20,7 @@ check('Every prop blocks both player forms; only a mower strike destroys it',()=
   constrainMaintenanceProps(r,actor,from,kind);
   assert.equal(r.destruction.props[i].brokenAt!==null,kind==='mower');
   if(kind!=='mower'){assert(actor.y<p.y);assert.equal(actor.speed,0);}
-  else {assert.equal(r.destruction.serial,1);assert.equal(r.courseFX.cue.kind,'timber');assert.equal(actor.y,p.y+1);}
+  else {assert.equal(r.destruction.serial,1);assert.equal(r.courseFX.cue.kind,['crates','bench'].includes(p.kind)?'timber':'metal','Wooden props splinter; washers and trolleys buckle');assert.equal(actor.y,p.y+1);}
  }
 });
 check('Near misses do not destroy props',()=>{const r=createRun(),p=BREAKABLE_PROPS[0],from={x:p.x+5,y:p.y-6,yaw:0},actor={...from,y:p.y+1,speed:30};constrainMaintenanceProps(r,actor,from,'mower');assert.equal(r.destruction.serial,0);});

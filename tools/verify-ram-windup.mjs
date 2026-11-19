@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';import fs from 'node:fs';
 import {createRun,updateRun} from '../web/back-nine-sim.js';
 import {ramWindup,RAM_WINDUP_SECONDS} from '../web/ram-windup.js';
 import {vehicleOverlap} from '../web/vehicle-contact.js';
-const r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{y:50});Object.assign(r.joe,{y:40,speed:12});
+const r=createRun();r.mode='driving';r.grace=0;// Start after the opening departure beat (chase-departure.js) with Joe behind
+// the cart on the lane; runs now spawn him at DEPARTURE_SPAWN (22,94) facing west.
+r.departure.phase='finished';Object.assign(r.cart,{y:50});Object.assign(r.joe,{x:0,y:40,yaw:0,speed:12});
 function tick(n=1){for(let i=0;i<n;i++){updateRun(r,{brake:true},1/60);assert(!vehicleOverlap(r.cart,r.joe));}}
 tick();assert.equal(r.joe.ram.phase,'lineup','First deliberate approach must also wind up');assert.equal(ramWindup(r).stage,'hush');const position={x:r.joe.x,y:r.joe.y};
 tick(45);assert.equal(ramWindup(r).stage,'rev');const locked=r.joe.yaw;r.cart.x+=3;tick(40);assert.equal(ramWindup(r).stage,'commit');assert.equal(r.joe.yaw,locked,'Late windup cannot keep tracking a dodge');assert.deepEqual({x:r.joe.x,y:r.joe.y},position);assert.equal(r.cart.hits,0);assert(r.joe.ram.age<RAM_WINDUP_SECONDS);

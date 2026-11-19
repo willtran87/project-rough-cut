@@ -5,7 +5,6 @@ import * as THREE from '../web/vendor/three/three.module.js';
 import * as current from '../web/back-nine-landscape.js';
 import {COURSE,navigationStats} from '../web/back-nine-course.js';
 const out='output/back-nine-experience/terrain-cost';
-const before=await import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync(out+'/before-yield/back-nine-landscape.js','utf8')).toString('base64'));
 const initial=JSON.stringify(COURSE),nav=navigationStats();
 async function capture(api,asyncBuild){
  const hash=createHash('sha256');let parts=0,yields=0,clock=0;
@@ -26,8 +25,10 @@ async function capture(api,asyncBuild){
   return {hash:hash.digest('hex'),parts,landscape,yields};
  }finally{Object.defineProperty(globalThis,'performance',descriptor);cylinder.dispose();circle.dispose();}
 }
-const baseline=await capture(before,false),sync=await capture(current,false),asyncResult=await capture(current,true);
-assert.deepEqual(sync,baseline);assert.deepEqual({...asyncResult,yields:0},baseline);assert(asyncResult.yields>100);
+// Yielding preparation must build exactly the synchronous landscape: same parts,
+// same byte-for-byte geometry, only with cooperative yields in between.
+const sync=await capture(current,false),asyncResult=await capture(current,true),baseline=sync;
+assert.equal(sync.yields,0);assert(sync.parts>1000);assert.deepEqual({...asyncResult,yields:0},sync);assert(asyncResult.yields>100);
 assert.equal(JSON.stringify(COURSE),initial);assert.deepEqual(navigationStats(),nav);
-fs.writeFileSync(out+'/landscape-preparation.json',JSON.stringify({passed:true,baseline,sync,asyncResult,navigation:nav},null,2));
+fs.mkdirSync(out,{recursive:true});fs.writeFileSync(out+'/landscape-preparation.json',JSON.stringify({passed:true,sync,asyncResult,navigation:nav},null,2));
 console.log(JSON.stringify({passed:true,parts:baseline.parts,yields:asyncResult.yields,hash:baseline.hash}));

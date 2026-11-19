@@ -8,7 +8,9 @@ const tick=(r,input={},n=1)=>{for(let i=0;i<n;i++)updateRun(r,input,1/60);},out=
 const checks=[];
 assert.equal(impactDamage(.32),8);assert.equal(impactDamage(1),16);assert.equal(Math.ceil(100/impactDamage(1)),7);assert.equal(Math.ceil(100/impactDamage(.32)),13);
 const stationary=createRun();stationary.mode='driving';stationary.grace=0;Object.assign(stationary.cart,{x:0,y:35});Object.assign(stationary.joe,{x:0,y:23,speed:16});const hitTimes=[];let previous=0;
-for(let f=0;f<90*60&&stationary.mode!=='caught';f++){tick(stationary);if(stationary.cart.hits!==previous){previous=stationary.cart.hits;hitTimes.push(stationary.time);}assert(!vehicleOverlap(stationary.cart,stationary.joe));}
+for(let f=0;f<90*60&&stationary.mode!=='caught';f++){tick(stationary);if(stationary.cart.hits!==previous){previous=stationary.cart.hits;hitTimes.push(stationary.time);}// A fully crushed abandoned wreck is flattened and no longer blocks Joe
+ // (chase-destruction strikeWreck returns false at crush 1).
+ if(!(stationary.foot&&stationary.cart.health<=0&&stationary.wreck.crush>=1))assert(!vehicleOverlap(stationary.cart,stationary.joe));}
 assert.equal(stationary.mode,'caught');assert.equal(hitTimes.length,7);for(let i=1;i<hitTimes.length;i++)assert(hitTimes[i]-hitTimes[i-1]>2.15&&hitTimes[i]-hitTimes[i-1]<5);assert(stationary.death.travel>0);assert.equal(stationary.events.filter(e=>e.type==='run-over').length,1);assert.equal(stationary.events.filter(e=>e.type==='caught').length,1);checks.push('Seven distinct strong rams, physical backoff between hits, wreck detour and run-over');
 const directions=[];
 for(const [name,x,y,yaw]of [['rear',0,37,0],['front',0,43,Math.PI],['side',-3,40,Math.PI/2]]){

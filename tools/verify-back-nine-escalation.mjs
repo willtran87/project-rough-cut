@@ -12,7 +12,8 @@ test('Cart gate admits the cart but not the mower; service lane is visibly wet',
  assert(lineClear(a,b,.85));assert(!lineClear(a,b,1.65));assert.equal(surfaceAt({x:-29,y:449}),'wet');
 });
 test('Alongside attack warns, freezes prediction, cannot stack with surge, and recovers',()=>{
- const r=createRun(1);r.mode='driving';r.grace=0;Object.assign(r.cart,{x:0,y:325,speed:12});Object.assign(r.joe,{x:0,y:304,speed:12});r.hunt.cooldown=0;r.tension.phase='stalk';
+ // Joe must have established a threat (a reveal) before an optional passing show.
+ const r=createRun(1);r.mode='driving';r.grace=0;r.panic.serial=1;Object.assign(r.cart,{x:0,y:325,speed:12});Object.assign(r.joe,{x:0,y:304,speed:12});r.hunt.cooldown=0;r.tension.phase='stalk';
  updateHunt(r,1/60,true);assert.equal(r.hunt.kind,'alongside');assert.equal(r.hunt.phase,'signal');const points=JSON.stringify(r.hunt.waypoints);r.cart.x+=7;
  for(let i=0;i<120;i++)updateHunt(r,1/60,false);assert.equal(r.hunt.phase,'signal');for(let i=0;i<15;i++)updateHunt(r,1/60,false);
  assert.equal(r.hunt.phase,'alongside');assert.equal(JSON.stringify(r.hunt.waypoints),points);assert.equal(r.hunt.alongside,1);
@@ -28,7 +29,7 @@ test('Three acts and actual checkpoint respite; hidden atmosphere quiets without
 test('Breakage is caused by physical proximity, bounded, directional, and never repeats',()=>{
  const r=createRun();r.mode='driving';r.grace=0;const p=COURSE.hurdles[0];Object.assign(r.joe,{x:p.x,y:p.y-2,speed:10});updateCourseFX(r,1/60);
  assert.equal(r.courseFX.breaks[0].age,0);assert.equal(r.courseFX.cue.kind,'timber');assert.equal(r.courseFX.cue.x,p.x);const serial=r.courseFX.cue.serial;
- for(let i=0;i<600;i++)updateCourseFX(r,1/60);assert.equal(r.courseFX.cue.serial,serial);assert.equal(r.courseFX.breaks[0].age,3);assert.equal(r.courseFX.breaks.length,6);
+ for(let i=0;i<600;i++)updateCourseFX(r,1/60);assert.equal(r.courseFX.cue.serial,serial);assert.equal(r.courseFX.breaks[0].age,3);assert.equal(r.courseFX.breaks.length,COURSE.hurdles.length);assert.equal(COURSE.hurdles.length,12,'Nine timber hurdles plus three latched shortcut gates');
  const frozen=JSON.stringify(r);r.mode='paused';const paused=JSON.stringify(r);updateRun(r,{},1);assert.equal(JSON.stringify(r),paused);r.mode='driving';assert.equal(JSON.stringify(r),frozen);
 });
 test('Brush rustle uses the hidden mower position once, with checkpoint and cooldown protection',()=>{
@@ -46,6 +47,7 @@ test('A cautious actual drive encounters the new attack without overlapping eith
   updateRun(r,{throttle:r.cart.speed<10.5?1:0,steer:clamp(delta*2,-1,1),brake:Math.abs(delta)>.7&&r.cart.speed>8},1/60);
   assert(!vehicleOverlap(r.cart,r.joe));maxStep=Math.max(maxStep,distance(last,r.joe));last={...r.joe};if(r.hunt.alongside>0&&r.hunt.phase==='recover')break;
  }
- assert(r.hunt.alongside>0,JSON.stringify(r.hunt));assert(maxStep<.28);cautious={seconds:r.time,alongside:r.hunt.alongside,hits:r.cart.hits,maxStep};
+ // Joe's pursuit cap is 42 m/s plus up to 2 m/s catch-up (back-nine-sim.js).
+ assert(r.hunt.alongside>0,JSON.stringify(r.hunt));assert(maxStep<44/60+.003);cautious={seconds:r.time,alongside:r.hunt.alongside,hits:r.cart.hits,maxStep};
 });
 fs.mkdirSync('output/back-nine-escalation',{recursive:true});fs.writeFileSync('output/back-nine-escalation/simulation.json',JSON.stringify({passed:true,checks,cautious},null,2));console.log(JSON.stringify({passed:true,checks,cautious}));

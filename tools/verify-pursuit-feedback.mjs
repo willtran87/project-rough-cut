@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {createRun} from '../web/back-nine-sim.js';
 import {createPursuitFeedback} from '../web/pursuit-feedback.js';
-const make=()=>{const r=createRun();r.mode='driving';r.grace=0;r.cart.y=60;r.cart.speed=14;r.joe.y=48;r.joe.speed=24;r.joe.seenAge=0;r.tension.phase='stalk';return r;};
+// Runs now spawn Joe at DEPARTURE_SPAWN (22,94) facing west; place him
+// directly behind the cart, driving up the lane, as the scenario intends.
+const make=()=>{const r=createRun();r.mode='driving';r.grace=0;r.cart.y=60;r.cart.speed=14;r.joe.x=0;r.joe.yaw=0;r.joe.y=48;r.joe.speed=24;r.joe.seenAge=0;r.tension.phase='stalk';return r;};
 function settle(r,reduced=false){const f=createPursuitFeedback();for(let i=0;i<60;i++){r.time=i/60;f.update(r,reduced);}return f;}
 const near=make(),a=settle(near),before=JSON.stringify(near),pose={...a.stats()};assert(pose.level>.8);assert(pose.fov>2.5&&pose.fov<=3.2);assert(Math.abs(pose.roll)<=.01);assert(Math.abs(pose.heave)<=.033);a.update(near);assert.equal(JSON.stringify(near),before,'Presentation cannot mutate gameplay');
 const far=make();far.joe.y=5;assert.equal(settle(far).stats().level,0);

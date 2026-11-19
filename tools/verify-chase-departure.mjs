@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import {pathToFileURL} from 'node:url';
 import {createRun,updateRun} from '../web/back-nine-sim.js';
 import {leaveBrokenCart} from '../web/chase-player.js';
 import {COURSE,clamp,angleDelta,distance,blocked} from '../web/back-nine-course.js';
@@ -8,6 +7,9 @@ import {vehicleOverlap,hullOverlap} from '../web/vehicle-contact.js';
 import {departureActive} from '../web/chase-departure.js';
 import {panicPose} from '../web/chase-panic.js';
 import {chaseMessages} from '../web/back-nine-messages.js';
+// Joe's pursuit cap in back-nine-sim.js is 42 m/s plus up to 2 m/s catch-up
+// (pursuitCatchup clamps to 1): no frame may move him farther than that.
+const JOE_TOP_SPEED=44;
 const out='output/back-nine-experience/opening-pacing',rows=[];
 for(const behavior of ['drive','wait','slow'])for(const hz of [30,60]){
  const r=createRun(0,0,42);r.mode='driving';assert(distance(r.cart,r.joe)>70);assert(!blocked(r.joe,2.8));let i=1,firstHit=null,notice=null,released=null,ramStart=null,ramLength=null,maxStep=0,quiet=true;const stages=new Set();
@@ -21,12 +23,13 @@ for(const behavior of ['drive','wait','slow'])for(const hz of [30,60]){
   if(oldRam==='lineup'&&r.joe.ram.phase!=='lineup'&&ramLength===null)ramLength=r.time-ramStart;
   if(r.cart.hits&&firstHit===null)firstHit=r.time;
  }
- assert(notice!==null&&released!==null);assert(released-notice>=1.65-1e-8);assert(released-notice<1.65+1/hz+.001);assert(firstHit>released+1.8);assert(ramLength>=1.8-1/hz-1e-8,JSON.stringify({behavior,hz,ramLength}));assert(maxStep<36.5/hz+.003);assert(quiet);assert(stages.has('departure')&&stages.has('pursuit'));rows.push({behavior,hz,notice,released,firstHit,ramLength,maxStep,health:r.cart.health,stages:[...stages]});
+ assert(notice!==null&&released!==null);assert(released-notice>=1.65-1e-8);assert(released-notice<1.65+1/hz+.001);assert(firstHit>released+1.8);assert(ramLength>=1.8-1/hz-1e-8,JSON.stringify({behavior,hz,ramLength}));assert(maxStep<JOE_TOP_SPEED/hz+.003);assert(quiet);assert(stages.has('departure')&&stages.has('pursuit'));rows.push({behavior,hz,notice,released,firstHit,ramLength,maxStep,health:r.cart.health,stages:[...stages]});
 }
 for(const checkpoint of [1,2]){const r=createRun(checkpoint);assert.equal(r.departure.phase,'finished');assert.equal(r.joe.y,COURSE.checkpoints[checkpoint-1].y-28);assert.equal(r.joe.yaw,0);}
 const paused=createRun();paused.mode='paused';const frozen=JSON.stringify(paused);updateRun(paused,{throttle:1},10);assert.equal(JSON.stringify(paused),frozen);
-// Same starting wreck and live Joe: the former selection put the landing
-// behind the rear panel, although a safe side exit was available.
-const source=fs.readFileSync(out+'/baseline-source/chase-player.js','utf8').replace(/from '(\.\/[^']+)'/g,(_,name)=>`from '${pathToFileURL(process.cwd()+'/web/'+name.slice(2)).href}'`),before=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')),ejections=[];
-for(const [kind,leave]of [['before',before.leaveBrokenCart],['after',leaveBrokenCart]]){const r=createRun();r.mode='driving';leave(r);const start={...r.foot};for(let n=0;n<140;n++){updateRun(r,{throttle:1},1/60);assert(!hullOverlap(r.foot,'foot',r.cart,'cart'));assert(!blocked(r.foot,.32));}ejections.push({kind,start:{x:start.x,y:start.y},moved:distance(start,r.foot),forward:r.foot.y-start.y});}
-assert(ejections[0].forward<2,JSON.stringify(ejections));assert(ejections[1].forward>8);fs.writeFileSync(out+'/simulation.json',JSON.stringify({passed:true,rows,ejections},null,2));console.log(JSON.stringify({passed:true,rows,ejections}));
+// Ejection from the starting wreck must land on a safe side exit with clear
+// running room (the one-off comparison against a saved pre-change
+// chase-player.js in output/ is retired).
+const ejections=[];
+{const r=createRun();r.mode='driving';leaveBrokenCart(r);const start={...r.foot};for(let n=0;n<140;n++){updateRun(r,{throttle:1},1/60);assert(!hullOverlap(r.foot,'foot',r.cart,'cart'));assert(!blocked(r.foot,.32));}ejections.push({kind:'current',start:{x:start.x,y:start.y},moved:distance(start,r.foot),forward:r.foot.y-start.y});}
+assert(ejections[0].forward>8,JSON.stringify(ejections));fs.mkdirSync(out,{recursive:true});fs.writeFileSync(out+'/simulation.json',JSON.stringify({passed:true,rows,ejections},null,2));console.log(JSON.stringify({passed:true,rows,ejections}));

@@ -8,7 +8,9 @@ import {COURSE} from '../web/back-nine-course.js';
 const results=[];
 const tick=(r,n,input={brake:true})=>{for(let i=0;i<n;i++)updateRun(r,input,1/60);};
 for(const [kind,health,hits,logs] of [['running-cart',100,0,0],['running-cart',70,3,1],['battered-cart',20,7,3],['on-foot',0,8,2]]){
- const r=createRun(2,logs);r.mode='driving';r.grace=0;Object.assign(r.cart,{x:-23,y:807,health:health||1,hits});Object.assign(r.joe,{x:-23,y:790,speed:12});
+ const r=createRun(2,logs);r.mode='driving';r.grace=0;
+ // Stage after the jammed shutter has been freed and fully lifted (chase-tactics exit release).
+ Object.assign(r.exitRelease,{released:true,open:1});Object.assign(r.cart,{x:-23,y:807,health:health||1,hits});Object.assign(r.joe,{x:-23,y:790,speed:12});
  if(kind==='on-foot'){Object.assign(r.cart,{x:-24,y:749});assert(leaveBrokenCart(r));Object.assign(r.foot,{...COURSE.finish,ejection:null,invulnerable:0});r.grace=0;}
  tick(r,60);assert.equal(r.mode,'driving');assert.equal(r.escape,null,'No success until the shutter is secure');
  tick(r,30);assert.equal(r.mode,'sealing');assert.equal(r.escape,null);const paused=JSON.stringify(r.finale);r.mode='paused';tick(r,120);assert.equal(JSON.stringify(r.finale),paused);r.mode='sealing';

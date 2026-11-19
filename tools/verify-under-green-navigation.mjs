@@ -5,6 +5,9 @@ import {WATERS,waterState,distance,solid} from '../web/under-green-course.js';
 import {planJoeRoute,crossingWait} from '../web/under-green-navigation.js';
 import {updatePump,PUMP_KNOCKS} from '../web/under-green-pump.js';
 const checks=[],runs=[];
+// Joe walks at 2.1 m/s (standard), scaled up only while unseen by paceScale
+// (under-green-unseen.js). Measure each step against that per-frame limit.
+const stepLimit=j=>2.1*Math.max(1,j.paceScale??1)/60+.00001;
 const spill=WATERS.find(w=>w.id==='spillway');
 assert.equal(waterState(spill,1).phase,'warning');
 assert.equal(waterState(spill,2.5).danger,true);
@@ -17,7 +20,7 @@ for(const id of ['spillway','bunker','range-a','range-b'])for(let phase=0;phase<
  Object.assign(r.joe,{x:w.x,y:w.y+w.depth/2+1,yaw:Math.PI,phase:'walk',last:{...r.player}});
  let waterRecoveries=0,maximumStep=0,reached=false;
  for(let i=0;i<2400;i++){
-  const before={...r.joe};step(r);maximumStep=Math.max(maximumStep,distance(before,r.joe));
+  const before={...r.joe};step(r);maximumStep=Math.max(maximumStep,distance(before,r.joe));assert(distance(before,r.joe)<=stepLimit(r.joe),JSON.stringify({id,phase,i,step:distance(before,r.joe),pace:r.joe.paceScale}));
   if(r.joe.phase==='water-recovery')waterRecoveries++;
   assert(!solid(r.joe,.72));
   if(distance(r.joe,r.player)<1.7){reached=true;break;}
@@ -25,9 +28,8 @@ for(const id of ['spillway','bunker','range-a','range-b'])for(let phase=0;phase<
  runs.push({id,phase,reached,seconds:r.elapsed,waterRecoveries,maximumStep});
  assert(reached,JSON.stringify(runs.at(-1)));
  assert.equal(waterRecoveries,0,JSON.stringify(runs.at(-1)));
- assert(maximumStep<=2.1/60+.00001);
 }
-checks.push('48 arrival-phase scenarios reach observed targets without walking into a foreseeable surge or exceeding walking speed');
+checks.push('48 arrival-phase scenarios reach observed targets without walking into a foreseeable surge or exceeding pace-scaled walking speed');
 // Planning accepts evidence positions, never a run/player object.
 const point={x:12,y:33,yaw:Math.PI},target={x:12,y:24};
 const routes=[0,4,8].map(time=>planJoeRoute(point,target,time,{bypass:true}));
@@ -40,7 +42,7 @@ assert.deepEqual(knocks.map(({id,x,y})=>({id,x,y})),PUMP_KNOCKS.map(({id,x,y})=>
 r=createRun(2);r.mode='playing';for(let i=0;i<60;i++){r.time+=1/60;updatePump(r,1/60);}assert.equal(r.events.length,0);
 checks.push('Pump sequence emits three fixed-world evidence cues once; restoring durable progress does not replay them');
 r=createRun(1);r.mode='playing';r.time=20;Object.assign(r.joe,{x:0,y:69,yaw:0,phase:'walk'});Object.assign(r.player,{x:-2,y:73,yaw:0,grace:999});step(r);assert(!r.joe.sawBunkerRoute);step(r,{strafe:-1});assert(r.joe.sawBunkerRoute);
-const hiddenRuns=[{x:-25,y:40},{x:21,y:20}].map(player=>{const copy=structuredClone(r);Object.assign(copy.player,player);for(let i=0;i<225;i++){const previous={...copy.joe};step(copy);assert(distance(previous,copy.joe)<=2.1/60+.00001);}return copy;});
+const hiddenRuns=[{x:-25,y:40},{x:21,y:20}].map(player=>{const copy=structuredClone(r);Object.assign(copy.player,player);for(let i=0;i<225;i++){const previous={...copy.joe};step(copy);assert(distance(previous,copy.joe)<=stepLimit(copy.joe));}return copy;});
 assert(hiddenRuns.every(r=>r.joe.bunkerInspectionUsed));
 assert.deepEqual(hiddenRuns[0].joe.last,hiddenRuns[1].joe.last);assert.equal(hiddenRuns[0].joe.x,hiddenRuns[1].joe.x);assert.equal(hiddenRuns[0].joe.y,hiddenRuns[1].joe.y);
 const unseen=structuredClone(r);unseen.joe.sawBunkerRoute=false;Object.assign(unseen.player,{x:21,y:20});for(let i=0;i<225;i++)step(unseen);assert(!unseen.joe.bunkerInspectionUsed);

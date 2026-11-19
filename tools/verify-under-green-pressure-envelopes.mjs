@@ -43,7 +43,7 @@ export function execute(w,phase,stance,gap,policy,{diagnostic=false}={}){
  else Object.assign(r.joe,{phase:'absent'});
  const advice=crossingAdvice(r.player,w,waterState(w,r.time,r.bypass,r.bypassAt),stance[1]);
  const original=structuredClone(r),trace=[],samples=[];
- let firstHit=null,recoveredAt=null,minimumGap=Infinity,attacks=0,priorPhase=r.joe.phase,dodge=null,dodgedThisAttack=false,committed=false,route=[],repath=0,goals=[],goalIndex=0,usedDry=false,cleared=false,maximumStep=0,maximumJoeStep=0,protectedCapture=false,protectedFrames=0;
+ let firstHit=null,recoveredAt=null,minimumGap=Infinity,attacks=0,priorPhase=r.joe.phase,dodge=null,dodgedThisAttack=false,committed=false,route=[],repath=0,goals=[],goalIndex=0,usedDry=false,cleared=false,maximumStep=0,maximumJoeStep=0,joeOverspeed=0,protectedCapture=false,protectedFrames=0;
  // A dry detour must actually rejoin the destination bank. Merely passing its
  // longitudinal coordinate in a separate parallel corridor is not a clear.
  const farther=()=>{const local=waterLocal(r.player,w);return direction*local.y>=w.depth/2+.5&&Math.abs(local.x)<=w.width/2-.35;};
@@ -89,6 +89,8 @@ export function execute(w,phase,stance,gap,policy,{diagnostic=false}={}){
   if(diagnostic&&frame%15===0)samples.push({frame,player:{x:r.player.x,y:r.player.y},joe:{x:r.joe.x,y:r.joe.y,phase:r.joe.phase,yaw:r.joe.yaw},gap:distance(r.player,r.joe),goalIndex,goal:goals[goalIndex],next:route[0],dodge:dodge&&{...dodge},input:{...input},waterHits:r.waterHits});
   trace.push(input);step(r,input);
   maximumStep=Math.max(maximumStep,distance(previous,r.player));maximumJoeStep=Math.max(maximumJoeStep,distance(previousJoe,r.joe));
+  // Unseen Joe walks up to paceScale x 2.1 m/s (under-green-unseen.js).
+  joeOverspeed=Math.max(joeOverspeed,distance(previousJoe,r.joe)-2.1*Math.max(1,r.joe.paceScale??1)/60);
   minimumGap=Math.min(minimumGap,distance(r.player,r.joe));
   if(r.joe.phase==='windup'&&priorPhase!=='windup')attacks++;priorPhase=r.joe.phase;
   if(firstHit===null&&r.waterHits)firstHit=r.elapsed;
@@ -98,7 +100,7 @@ export function execute(w,phase,stance,gap,policy,{diagnostic=false}={}){
   if(solid(r.player,.3)||solid(r.joe,JOE_RADIUS)&&r.joe.phase!=='absent')failures.push({...key,type:'solid overlap',frame});
  }
  const row={...key,actualGap:initial.gap,firstAdvice:advice.action,cleared,mode:r.mode,seconds:r.elapsed,waterHits:r.waterHits,firstHit,recoveredAt,attacks,minimumGap,usedDry,protectedCapture,protectedFrames,maximumStep,maximumJoeStep};
- if(maximumStep>(MOVEMENT.sprint+8)/60+.0001||maximumJoeStep>2.1/60+.0001)failures.push({...row,type:'discontinuous motion'});
+ if(maximumStep>(MOVEMENT.sprint+8)/60+.0001||joeOverspeed>.0001)failures.push({...row,type:'discontinuous motion'});
  if(protectedCapture)failures.push({...row,type:'capture during protected displacement'});
  if(policy==='signal-only'&&['cross','approach'].includes(advice.action)&&(!cleared||r.waterHits))failures.push({...row,type:'advertised crossing failed with live Joe'});
  rows.push(row);

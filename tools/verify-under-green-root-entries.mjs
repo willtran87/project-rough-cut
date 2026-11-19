@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+
 import * as T from '../web/vendor/three/three.module.js';
 import {buildDrainRootCompositions} from '../web/under-green-root-compositions.js';
 import {drainRootGeometry} from '../web/under-green-root-geometry.js';
@@ -27,7 +27,9 @@ for(const lowDetail of [false,true]){
    const i=ring*(sides+1)+side;assert.equal(p.getX(i),old.getX(i));assert.equal(p.getY(i),old.getY(i));assert.equal(p.getZ(i),old.getZ(i));report.unchangedVertices++;
   }report.buriedRoots++;current.geometry.dispose();original.geometry.dispose();
  }});
- if(!lowDetail)report.entries=stats.entries;for(const m of Object.values(materials))m.dispose();
+ if(!lowDetail){report.entries=stats.entries;report.canopyEntries=stats.galleryCanopy.entries;}for(const m of Object.values(materials))m.dispose();
 }
-assert.equal(report.fragments,42);assert.equal(report.buriedRoots,22);assert.equal(report.entries.length,6);
-fs.writeFileSync('output/under-green/visual-upgrade-local/pass49-source/geometry.json',JSON.stringify({passed:true,...report},null,2));console.log(JSON.stringify({passed:true,...report}));
+// Seven masonry fragments surround each of the six wall entries and the two
+// gallery-canopy entries (under-green-gallery-canopy.js).
+assert.equal(report.entries.length,6);assert.equal(report.canopyEntries.length,2);assert.equal(report.fragments,7*(report.entries.length+report.canopyEntries.length));assert.equal(report.buriedRoots,22);
+console.log(JSON.stringify({passed:true,...report}));

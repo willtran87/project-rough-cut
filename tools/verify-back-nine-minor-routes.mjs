@@ -7,13 +7,11 @@ import {createRun,updateRun} from '../web/back-nine-sim.js';
 import {createRouteMargins} from '../web/back-nine-route-margins.js';
 import {courseServiceSpurs,routeDistanceXY} from '../web/back-nine-landscape.js';
 import {buildRouteClues} from '../web/chase-route-art.js';
-const baselineFile=process.argv[2];assert(baselineFile,'Provide saved pre-change chase-route-art.js');
-// Compare actual unchanged stepping-stone geometry/placements and jamb work,
-// excluding the rectangular bedding this pass intentionally replaces.
-const oldSource=fs.readFileSync(baselineFile,'utf8').replace(/from '(\.\/[^']+)'/g,(_,path)=>`from '${new URL('../web/'+path.slice(2),import.meta.url).href}'`);
-const old=await import('data:text/javascript;base64,'+Buffer.from(oldSource).toString('base64'));
+// The one-off before/after comparison against a saved pre-change
+// chase-route-art.js is retired; keep the stepping-stone/jamb clue geometry
+// pinned to its current count and stable across repeated builds instead.
 function clues(build){const hash=createHash('sha256');let pavers=0;const result=build({THREE,COURSE,put(g,type,...args){if(type==='track')return;if(type==='road')pavers++;hash.update(type+JSON.stringify(args));hash.update(Buffer.from(g.attributes.position.array.buffer));},box(...args){hash.update(JSON.stringify(args));}});return{pavers,hash:hash.digest('hex'),result};}
-const before=clues(old.buildRouteClues),after=clues(buildRouteClues);assert.deepEqual(after,before);assert.equal(after.pavers,141);
+const after=clues(buildRouteClues);assert.deepEqual(clues(buildRouteClues),after,'Route clue art must be deterministic');assert.equal(after.pavers,141);
 const spurs=courseServiceSpurs(COURSE);assert.equal(spurs.length,14);
 for(const s of spurs){const f=COURSE.features.find(f=>f.id===s.id);assert.deepEqual(s.route[0],[f.x,f.y]);assert(routeDistanceXY(...s.route[1],COURSE.paths)<1e-8);const length=Math.hypot(s.route[1][0]-f.x,s.route[1][1]-f.y);assert(length>1&&length<22);}
 const margins=createRouteMargins(COURSE);let footVertices=0,footMaxWidth=0,soilHeight=0;

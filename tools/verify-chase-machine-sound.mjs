@@ -29,7 +29,9 @@ for(const gap of [70,71,120]){r.joe.x=gap;r.joe.y=330;for(const phase of ['none'
 r.joe.x=12;r.panic.phase='quiet';r.joe.ram.phase='none';r.message='Maintenance relay online · checkpoint saved.';r.messageTime=3;
 assert.match(chaseMessages(r,{soundCaptions:true}).banner,/checkpoint saved/);
 r.impact.age=.1;r.impact.damaged=true;assert.match(chaseMessages(r,{soundCaptions:true}).sound,/Metal buckles/);
-r.impact.age=99;r.decoys.ring=2;assert.match(chaseMessages(r,{soundCaptions:true}).sound,/bell ringing/);
+// Bell treadles were removed from Back Nine (dfbb6e5); a leftover ring value
+// must not resurrect a bell caption, and the mower stays the audible cue.
+r.impact.age=99;r.decoys.ring=2;{const s=chaseMessages(r,{soundCaptions:true}).sound;assert(!/bell/i.test(s));assert.match(s,/Mower/);}
 for(const mode of ['paused','briefing','dying','caught','complete','sealing']){r.mode=mode;assert.equal(chaseMessages(r,{soundCaptions:true}).sound,'');}
 fs.writeFileSync(out+'/caption-rules.json',JSON.stringify({passed:true,cases,hidden,stages},null,2));
-console.log(JSON.stringify({passed:true,directions:cases.length,checks:['cart and foot camera-relative side','rear glance reverses side','no front/back or hidden search disclosure','actual speed and windup descriptions','range','quiet defaults','objective/impact/bell priority','inactive modes']}));
+console.log(JSON.stringify({passed:true,directions:cases.length,checks:['cart and foot camera-relative side','rear glance reverses side','no front/back or hidden search disclosure','actual speed and windup descriptions','range','quiet defaults','objective/impact priority, no bell','inactive modes']}));

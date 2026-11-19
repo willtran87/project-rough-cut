@@ -11,7 +11,9 @@ for(const w of waters){
  for(const side of [-1,1])for(const lane of [-2.2,2.2])for(const steer of ['left','right','switch'])cases.push({side,lane,steer});
  for(const side of [-1,1])for(const steer of ['right','return','switch'])cases.push({side,steer,reduced:true});
  for(const options of cases){
-  const attempt=recoveryAttempt(w,options),r=attempt.row;rows.push(r);
+  // The event-driven return has no cycle offset; the planner now rejects the
+  // NaN clock that produced (RangeError). Its timing comes from bypassAt only.
+  const attempt=recoveryAttempt(w.offset===undefined?{...w,offset:0}:w,options),r=attempt.row;rows.push(r);
   const errors=[];
   if(r.bodyOverlap||r.protectedCapture)errors.push('Body overlap or capture during protected displacement');
   if(r.maxStep>(8+6.08)/60+.00001)errors.push('Unbounded movement');

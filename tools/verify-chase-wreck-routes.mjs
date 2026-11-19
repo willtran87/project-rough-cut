@@ -6,15 +6,20 @@ import {createRun} from '../web/back-nine-sim.js';
 import {leaveBrokenCart,moveRunner} from '../web/chase-player.js';
 import {hullOverlap,constrainVehicleMotion} from '../web/vehicle-contact.js';
 import {insideGarage} from '../web/chase-garage.js';
+import {isDestructibleFeature} from '../web/course-destruction-state.js';
 
 // Offline fine-grid audit only. No runtime route planner or collision override.
 const out='output/back-nine-experience/wreck-routes';fs.mkdirSync(out,{recursive:true});
 const step=.5,cols=161,rows=1671,count=cols*rows,points=Array.from({length:count},(_,id)=>({x:id%cols*step-40,y:Math.floor(id/cols)*step,yaw:0}));
-const free=Uint8Array.from(points,p=>!blocked(p,.32)),edges=new Uint8Array(count),known=new Uint8Array(count),cost=new Float64Array(count),parents=new Int32Array(count),closed=new Uint8Array(count),queue=createStableSearchQueue(count);
+// Crushable fixtures (fallen trees, fences, parked carts) are no longer static
+// obstacles but still stop a runner until Joe breaks them (constrainFeatureMotion).
+const crushable=COURSE.features.filter(isDestructibleFeature);
+const solid=p=>blocked(p,.32)||crushable.some(f=>Math.abs(p.x-f.x)<f.rx+1&&Math.abs(p.y-f.y)<f.ry+1&&hullOverlap({...p,yaw:0},'foot',f,'feature'));
+const free=Uint8Array.from(points,p=>!solid(p)),edges=new Uint8Array(count),known=new Uint8Array(count),cost=new Float64Array(count),parents=new Int32Array(count),closed=new Uint8Array(count),queue=createStableSearchQueue(count);
 const dirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
 function segment(a,b,wreck){
  const n=Math.ceil(distance(a,b)/.08);
- for(let i=1;i<=n;i++)if(blocked({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n},.32))return false;
+ for(let i=1;i<=n;i++)if(solid({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;
  if(wreck){const p={...b,speed:0};if(constrainVehicleMotion(p,a,wreck,'foot','cart'))return false;}
  return true;
 }

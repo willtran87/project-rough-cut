@@ -24,10 +24,12 @@ for(const f of COURSE.features)for(let i=0;i<12;i++)for(let h=0;h<4;h++){
  const angle=i*Math.PI/6,cart={x:f.x+Math.sin(angle)*(f.rx+2.1),y:f.y+Math.cos(angle)*(f.ry+2.1),yaw:h*Math.PI/4};check(cart,{x:cart.x-Math.sin(cart.yaw)*6,y:cart.y-Math.cos(cart.yaw)*6,yaw:cart.yaw},'feature');
 }
 function cover(wreck){const r=createRun();r.mode='driving';Object.assign(r.cart,{x:0,y:40});Object.assign(r.joe,{x:0,y:32,yaw:0,speed:0});leaveBrokenCart(r);r.time=2;r.grace=0;Object.assign(r.foot,{x:0,y:43,yaw:0,invulnerable:0});if(!wreck)Object.assign(r.cart,{x:25,y:25});let maxSide=0;
- while(r.time<40&&r.mode==='driving'){updateRun(r,{},1/60);maxSide=Math.max(maxSide,Math.abs(r.joe.x));assert(!vehicleOverlap(r.cart,r.joe),'Mower respects the wreck');}
- assert.equal(r.mode,'dying','Wreck is temporary cover, not permanent immunity');assert(r.joe.plans<80);return {seconds:r.time-2,maxSide,plans:r.joe.plans};
+ while(r.time<40&&r.mode==='driving'){updateRun(r,{},1/60);maxSide=Math.max(maxSide,Math.abs(r.joe.x));assert(!vehicleOverlap(r.cart,r.joe)||r.wreck.crush>=1,'Mower respects the wreck until it has battered it flat (chase-destruction.js strikeWreck)');}
+ assert.equal(r.mode,'dying','Wreck is temporary cover, not permanent immunity');assert(r.joe.plans<80);const strikes=r.events.filter(e=>e.type==='wreck-struck').length;return {seconds:r.time-2,maxSide,plans:r.joe.plans,strikes,crush:r.wreck.crush};
 }
-const wreck=cover(true),exposed=cover(false);assert(wreck.seconds>exposed.seconds+1.5);assert(wreck.maxSide>4);
+const wreck=cover(true),exposed=cover(false);assert(wreck.seconds>exposed.seconds+1.5);// Joe now batters the wreck aside (strikeWreck) rather than detouring round it;
+// the cover must take several real strikes before he reaches the runner.
+assert(wreck.strikes>=3&&exposed.strikes===0,JSON.stringify({wreck,exposed}));
 const fatal=[];
 for(const [x,y]of [[0,40],[-10,200],[0,325],[-24,749]]){const r=createRun(y>580?2:y>300?1:0);r.mode='driving';r.grace=0;Object.assign(r.cart,{x,y,health:10});Object.assign(r.joe,{x,y:y-5,speed:20,yaw:0});r.joe.ram.armed=true;
  for(let i=0;i<180&&!r.foot;i++)updateRun(r,{},1/60);

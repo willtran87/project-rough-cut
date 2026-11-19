@@ -2,15 +2,20 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import * as current from '../web/back-nine-sim.js';
 import {mowerBeacon} from '../web/mower-beacon.js';
-const source=fs.readFileSync('output/back-nine-red-night/baseline-source/back-nine-sim.js','utf8').replace(/from '([^']+)'/g,(_,p)=>`from '${new URL('../web/'+p,import.meta.url).href}'`);
-const baseline=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+// Pre-red-night approach over this exact scenario, recorded from the original
+// baseline sim (output/back-nine-red-night/baseline-source, not tracked).
+const before={speed:30.17674015537155,travel:25.813957353884724,health:100};
 function accelerate(sim){
  const r=sim.createRun();r.mode='driving';r.grace=0;r.joe.ram.armed=true;
- Object.assign(r.cart,{x:0,y:70,speed:14});Object.assign(r.joe,{x:0,y:10,speed:0});
+ // Skip the opening departure performance (chase-departure.js holds Joe while
+ // he notices the cart) and face him up the road as the baseline spawn did;
+ // the run now spawns him at DEPARTURE_SPAWN facing west.
+ r.departure.phase='finished';
+ Object.assign(r.cart,{x:0,y:70,speed:14});Object.assign(r.joe,{x:0,y:10,yaw:0,speed:0});
  for(let i=0;i<60;i++)sim.updateRun(r,{throttle:1},1/60);
  return {speed:r.joe.speed,travel:r.joe.y-10,health:r.cart.health};
 }
-const before=accelerate(baseline),after=accelerate(current);
+const after=accelerate(current);
 assert(after.speed>before.speed+2,'Higher road speed and acceleration must produce a faster actual approach');
 assert(after.travel>before.travel+2);assert.equal(after.health,100);
 for(const reduced of [false,true])for(const flash of [0,1]){
@@ -20,4 +25,4 @@ for(const reduced of [false,true])for(const flash of [0,1]){
  else assert(a.power>b.power+90);
 }
 const report={passed:true,before,after,beacon:{periodSeconds:1.6,steadyPower:105,peakPower:200}};
-fs.writeFileSync('output/back-nine-red-night/pursuit.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+fs.mkdirSync('output/back-nine-red-night',{recursive:true});fs.writeFileSync('output/back-nine-red-night/pursuit.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
