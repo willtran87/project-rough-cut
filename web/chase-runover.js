@@ -23,7 +23,10 @@ export function updateRunover(run,dt){
   const next={x:j.x+Math.sin(j.yaw)*step,y:j.y+Math.cos(j.yaw)*step};
   const front=Math.max(...VEHICLE_HULLS.mower.map(h=>h.forward*Math.cos(j.yaw)+Math.abs(Math.sin(j.yaw))*h.width+Math.abs(Math.cos(j.yaw))*h.length));
   const gate=from.y<800&&next.x>-30&&next.x<-16&&next.y+front>799.72&&from.y+front<=799.72;
-  if(!gate&&!blocked(next,1.65)){j.x=next.x;j.y=next.y;constrainFeatureMotion(j,from,'mower',run);constrainVehicleMotion(j,from,run.cart,'mower','cart');}
+  if(!gate&&!blocked(next,1.65)){j.x=next.x;j.y=next.y;constrainFeatureMotion(j,from,'mower',run);
+   // A fully crushed wreck no longer blocks Joe in pursuit (strikeWreck), so it
+   // must not stop the roll-over either, or the mower freezes on top of it.
+   if(!(run.cart.health<=0&&run.wreck?.crush>=1))constrainVehicleMotion(j,from,run.cart,'mower','cart');}
   const moved=Math.hypot(j.x-from.x,j.y-from.y);death.travel+=moved;j.speed=moved/Math.max(dt,.0001);
  }else j.speed=0;
  if(death.age>=RUNOVER_SECONDS){death.age=RUNOVER_SECONDS;run.mode='caught';j.speed=0;run.events.push({type:'caught',time:run.time});}

@@ -46,7 +46,7 @@ export function createJoeReactions(pick=joeLine){
     const e=run.events[s.cursor];if(run.time-e.time>10)continue;
     if(e.type==='abandon-cart')offer(run,s,'foot');
     else if(e.type==='contact'&&e.damage>0&&!run.foot)offer(run,s,'damage');
-    else if(e.type==='shortcut')offer(run,s,'shortcut');
+    else if(e.type==='shortcut'||e.type==='gate-unlatched')offer(run,s,'shortcut');
    }
    // choiceMask is set only when Joe observes a cart-only fork and plans a detour.
    const mask=run.hunt?.choiceMask||0;
