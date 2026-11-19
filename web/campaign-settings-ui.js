@@ -2,15 +2,24 @@ import {patchRecord,CAMPAIGN_KEY} from './preference-store.js';
 
 // DOM adapter for campaign settings. Chapter-specific controls remain owned by
 // their chapter; Level 1's canvas settings use the same preference store.
-const sliders={volume:[0,1],musicVolume:[0,1],ambienceVolume:[0,1],mowerVolume:[0,1],effectsVolume:[0,1],dangerVolume:[0,1],subtitleSize:[.8,1.4],captionBackground:[0,1],stickDeadzone:[.1,.3]};
+const sliders={volume:[0,1],musicVolume:[0,1],ambienceVolume:[0,1],mowerVolume:[0,1],effectsVolume:[0,1],dangerVolume:[0,1],subtitleSize:[.8,1.4],captionBackground:[0,1],stickDeadzone:[.1,.3],brightness:[.8,1.6]};
 const toggles=new Set(['muted','reducedMotion','subtitles','soundCaptions','threatCaptions']);
+// Player brightness lifts only the 3D view (#game), never HUD, captions or
+// menus. At 100% no filter is set, so the authored image is untouched.
+export function applyBrightness(value,canvas=document.getElementById('game')){
+ const level=Number.isFinite(value)?Math.max(.8,Math.min(1.6,value)):1;
+ if(canvas)canvas.style.filter=level===1?'':`brightness(${level})`;
+ return level;
+}
 export function bindCampaignSettings(root,preferences,onChange=()=>{}){
  const controls=[...root.querySelectorAll('[data-campaign]')];
  // Failed writes still apply for this session. Retain only those user edits so
  // a later successful save retries them without overwriting other tabs' fields.
  const pending={};
  function sync(){
+  preferences.brightness=applyBrightness(preferences.brightness);
   for(const el of controls){const value=preferences[el.dataset.campaign];if(el.type==='checkbox')el.checked=!!value;else el.value=value;}
+  for(const out of root.querySelectorAll('[data-campaign-value]'))out.textContent=`${Math.round(preferences[out.dataset.campaignValue]*100)}%`;
   document.documentElement.style.setProperty('--caption-scale',preferences.subtitleSize);
   document.documentElement.style.setProperty('--caption-opacity',preferences.captionBackground);
  }

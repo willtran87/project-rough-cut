@@ -9,7 +9,7 @@ import {createOpeningStory} from './opening-story.js?v=20261117-crossfade';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
 import {observeJoe} from './under-green-senses.js';
 import {mountFinalCutLink} from './final-cut-campaign.js';
-import {bindCampaignSettings} from './campaign-settings-ui.js';
+import {bindCampaignSettings} from './campaign-settings-ui.js?v=20261119-brightness';
 import {bindKeyboardSettings} from './keyboard-binding-settings.js';
 import {soundDescription} from './under-green-observation.js';
 import {hudObjective} from './under-green-hud.js';

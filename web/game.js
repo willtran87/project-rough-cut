@@ -20,7 +20,7 @@ import {createTouchRunControl} from './touch-run-control.js';
 import {createGamepadSession} from './gamepad-session.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
 import {actionBindings,keyLabel,onFootActionVerb,bindingCodeAllowed as allowedBindingCode} from './control-profiles.js';
-import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261111-quiet-messages';
+import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261119-brightness';
 import {descriptiveMessage,levelOneMessage} from './message-presentation.js?v=20261118-quiet-narration';
 import { ghostSchedulingPolicy } from './ghost-scheduling.js';
 import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-regional-sound';
@@ -364,6 +364,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     { id: "guided_hints", group: "presentation", label: "CONTEXTUAL COACHING", key: "guidedHints", type: "toggle" },
     { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
     {id:"clear_navigation",group:"presentation",label:"CLEAR NAVIGATION",key:"clearNavigation",type:"toggle"},
+    { id: "brightness", group: "presentation", label: "BRIGHTNESS", key: "brightness", type: "slider", min: 0.8, max: 1.6, step: 0.1 },
   ];
   // The course map was removed as a player option. Its drawing and route code
   // remain for the listening view; nothing below can open it while this is false.
@@ -5748,6 +5749,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         lookSensitivity: Number.isFinite(parsed.lookSensitivity) ? clamp(parsed.lookSensitivity, 0.4, 1.8) : 1,
         stickDeadzone: Number.isFinite(parsed.stickDeadzone) ? clamp(parsed.stickDeadzone, 0.1, 0.3) : 0.22,
         uiScale: Number.isFinite(parsed.uiScale) ? clamp(parsed.uiScale, 1, 1.3) : 1,
+        brightness: Number.isFinite(parsed.brightness) ? clamp(parsed.brightness, 0.8, 1.6) : 1,
         invertLook: typeof parsed.invertLook === "boolean" ? parsed.invertLook : false,
         focusedHud: typeof parsed.focusedHud === "boolean" ? parsed.focusedHud : true,
         clearScenery: typeof parsed.clearScenery === "boolean" ? parsed.clearScenery : true,
@@ -5787,6 +5789,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         lookSensitivity: 1,
         stickDeadzone: 0.22,
         uiScale: 1,
+        brightness: 1,
         invertLook: false,
         focusedHud: true,
         clearScenery: true,
@@ -6093,6 +6096,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
 
   const savedPreferences = readSavedPreferences();
   const writePreferenceChanges = preferenceWriter(SETTINGS_STORAGE_KEY, savedPreferences);
+  window.RCScene3D?.setBrightness?.(savedPreferences.brightness);
   const savedCareer = readSavedCareer();
 
   const state = {
@@ -6105,6 +6109,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     subtitles: savedPreferences.subtitles,
     soundCaptions: savedPreferences.soundCaptions,
     subtitleSize: savedPreferences.subtitleSize,
+    brightness: savedPreferences.brightness,
     captionBackground: savedPreferences.captionBackground,
     threatCaptions: savedPreferences.threatCaptions,
     reducedMotion: savedPreferences.reducedMotion,
@@ -6607,6 +6612,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
           subtitles: state.subtitles,
       soundCaptions: state.soundCaptions,
           subtitleSize: Number(state.subtitleSize.toFixed(2)),
+          brightness: Number(state.brightness.toFixed(2)),
           captionBackground: Number(state.captionBackground.toFixed(2)),
           threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
@@ -11776,7 +11782,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     {name:"AUDIO",ids:["master","ambience","mower","effects","danger","mute"]},
     {name:"CONTROLS",ids:["look_sensitivity","invert_look","stick_deadzone","free_look"]},
     {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","sound_captions","threat_captions","ui_scale","focused_hud","guided_hints","clear_navigation"]},
-    {name:"ATMOSPHERE",ids:["reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
+    {name:"ATMOSPHERE",ids:["brightness","reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
     {name:"CHALLENGE",ids:["pursuit_intensity"]}
   ];
   function settingsCategory(index=state.settingsIndex) {return SETTINGS_CATEGORIES.findIndex(c=>c.ids.includes(SETTINGS_ROWS[index]?.id));}
@@ -11789,6 +11795,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     const defaults={muted:false,volume:.72,ambienceVolume:.9,mowerVolume:1,effectsVolume:1,dangerVolume:.9,subtitles:true,soundCaptions:false,subtitleSize:1,captionBackground:.78,threatCaptions:true,reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches,effectsDensity:1,highContrastNavigation:false,pursuitIntensity:1,lookSensitivity:1,stickDeadzone:.22,uiScale:1,invertLook:false,focusedHud:true,clearScenery:true,screenTexture:false,guidedHints:true,freeLook:true};
     defaults.routeGuidance = false;
     defaults.clearNavigation = false;
+    defaults.brightness = 1;
     for(const id of SETTINGS_CATEGORIES[settingsCategory()].ids) {const row=SETTINGS_ROWS.find(r=>r.id===id);if(row.type==="slider")applySliderSetting(row,defaults[row.key]);else if(state[row.key]!==defaults[row.key])toggleSetting(row);}
     state.settingsNotice="CATEGORY DEFAULTS RESTORED";
   }
@@ -63025,6 +63032,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         setting.max,
       ).toFixed(4),
     );
+    if (setting.key === "brightness") window.RCScene3D?.setBrightness?.(state.brightness);
     if (audioContext) {
       const gainTargets = {
         volume: { node: masterGain, scale: state.muted ? 0 : 0.55 },

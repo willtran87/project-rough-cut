@@ -12,7 +12,7 @@ import {CUE_MS} from './final-cut-camera-cues.js';
 import {createFinalCutAudio} from './final-cut-audio.js';
 import {campaignPreferences,readRecord,writeRecord,preferenceWriter} from './preference-store.js';
 import {createFinalCutFeedback,feedbackPreferences,FEEDBACK_KEY} from './final-cut-feedback.js';
-import {bindCampaignSettings} from './campaign-settings-ui.js';
+import {bindCampaignSettings} from './campaign-settings-ui.js?v=20261119-brightness';
 import {actionBindings,keyLabel,movementKeyLabel,onFootActionVerb} from './control-profiles.js';
 import {bindKeyboardSettings} from './keyboard-binding-settings.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
