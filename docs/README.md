@@ -1,6 +1,6 @@
 # Documentation index
 
-Current entry points, reviewed November 15, 2026. Start with the [project overview](../README.md), [browser/player guide](../web/README.md), and [development guide](development.md).
+Current entry points, reviewed November 19, 2026. Start with the [project overview](../README.md), [browser/player guide](../web/README.md), [development guide](development.md) and the current state reports for [November 19](../qa/current-state-2026-11-19.md) and [November 17](../qa/current-state-2026-11-17.md), which together cover everything published since November 15.
 
 ## Which documents describe the current build?
 
@@ -9,11 +9,11 @@ The READMEs describe the local working tree. Dated QA reports qualify only the s
 | Area | References |
 | --- | --- |
 | Runtime art and presentation | [Pixel 3D direction](../design/pixel-3d-art-direction.md), [world/presentation contract](../design/world-and-presentation-contract.md), [action/response contract](../design/action-response-contract.md) |
-| Night Order | [Single playable chapter](../qa/level-one-single-chapter-2026-11-14.md), [chapter picker](../qa/chapter-picker-2026-11-14.md), [visual upgrade plan](../design/level-one-comprehensive-visual-upgrade.md) |
+| Night Order | [Current state: timed field checks and dread beats](../qa/current-state-2026-11-17.md#night-order), [single playable chapter](../qa/level-one-single-chapter-2026-11-14.md), [chapter picker](../qa/chapter-picker-2026-11-14.md), [visual upgrade plan](../design/level-one-comprehensive-visual-upgrade.md) |
 | The Back Nine | [Experience implementation](../design/back-nine-experience-implementation.md), [visual ledger](../design/back-nine-visual-implementation-ledger.json), [Windows software launcher/evidence](../qa/back-nine-windows-software-2026-11-14.md) |
 | Under the Green | [Encounter authoring](../design/under-green-encounter-authoring.md), [water authoring](../design/under-green-water-authoring.md), [implementation ledger](../design/under-green-implementation-ledger.json), [visual ledger](../design/under-green-visual-upgrade-ledger.json) |
 | Under the Green performance | [Budget and qualification history](../design/under-green-performance-budget.md), [native entrance fix](../qa/under-green-entrance-fix-2026-11-15.md), [subsequent software entrance fix](../qa/under-green-software-stall-2026-11-15.md) |
-| The Final Cut | [Encounter build list](../design/final-cut-build-list-2026-11-12.md), [visual plan](../design/final-cut-visual-upgrade-plan-2026-11-13.md), [visual ledger](../design/final-cut-visual-implementation-ledger.json) |
+| The Final Cut | [Current state: flood-and-bait loop](../qa/current-state-2026-11-17.md#the-final-cut) (supersedes the pump-then-bell route in the build list), [encounter build list](../design/final-cut-build-list-2026-11-12.md), [visual plan](../design/final-cut-visual-upgrade-plan-2026-11-13.md), [visual ledger](../design/final-cut-visual-implementation-ledger.json) |
 | Shared UI | [Nine refinements](../qa/theme-nine-followup-2026-11-15.md), [seven refinements](../qa/theme-seven-followup-2026-11-15.md), [five subsequent refinements](../qa/theme-five-followup-2026-11-15.md) |
 | Further defeat-screen work | [Loss-screen review](../design/loss-screen-review-2026-11-15.md), a review/proposal rather than completed implementation |
 | Source art | [Directional masters](../art-source/README.md), [Joe model and Blender rebuild](../assets/enemies/joe-hd/model/README.md) |
@@ -23,9 +23,11 @@ The software entrance report supersedes the earlier native-fix report's unresolv
 
 ## Validation and remaining acceptance
 
-- [Documentation audit](../qa/documentation-audit-2026-11-15.md): checks rerun for this update, including the failing static release verifier.
+- [November 19 current state report](../qa/current-state-2026-11-19.md): fixed gameplay bugs, performance measurements and the remaining failing checks with their causes.
+- [November 17 current state report](../qa/current-state-2026-11-17.md): checks run on November 17; its eight failing Final Cut checks were repaired on November 18.
+- [Documentation audit](../qa/documentation-audit-2026-11-15.md): November 15 checks; its failing release verifier was fixed the same day.
 - [Under the Green human-playtest guide](../qa/under-green-human-playtest.md), [Back Nine human-playtest guide](../qa/back-nine-human-playtest.md), and [engagement study guide](../qa/engagement-playtest-guide.md): prepared protocols, not completed participant results.
-- [September 27 public release](../qa/release-2026-09-27.md): historical deployment evidence, not a claim of publication of the current local build.
+- [September 27 public release](../qa/release-2026-09-27.md): historical deployment evidence. The site has since been redeployed with each merge to `main`.
 
 Performance numbers, browser screenshots, scripted completions and physical-device or human acceptance are distinct evidence. Keep each result attached to its dated report and test conditions.
 
