@@ -10,6 +10,11 @@ import {isDestructibleFeature} from '../web/course-destruction-state.js';
 
 // Offline fine-grid audit only. No runtime route planner or collision override.
 const out='output/back-nine-experience/wreck-routes';fs.mkdirSync(out,{recursive:true});
+// The garage shutter starts jammed and only ever opens. A cart on or past its
+// line implies it was already raised, so stage that state for those carts.
+const SHUTTER={x:-23,y:800,rx:5.5,ry:.15};
+const raiseIfPast=(r,cart)=>{if(cart.y>800||hullOverlap(cart,'cart',SHUTTER,'feature'))Object.assign(r.exitRelease,{released:true,open:1});};
+
 const step=.5,cols=161,rows=1671,count=cols*rows,points=Array.from({length:count},(_,id)=>({x:id%cols*step-40,y:Math.floor(id/cols)*step,yaw:0}));
 // Crushable fixtures (fallen trees, fences, parked carts) are no longer static
 // obstacles but still stop a runner until Joe breaks them (constrainFeatureMotion).
@@ -55,7 +60,7 @@ for(const path of COURSE.paths)for(let i=1;i<path.length;i++){const a=path[i-1],
 for(const target of [...COURSE.checkpoints,...COURSE.decisions.map(d=>d.gate),{x:-23,y:800},COURSE.finish])for(const dx of [-2,0,2])for(const dy of [-3,0,3])for(let i=0;i<8;i++)add(target.x+dx,target.y+dy,i*Math.PI/4,'critical');
 const results=[],failures=[],replays=[];let skippedJoe=0;
 for(const [index,cart]of placements.entries()){
- const checkpoint=cart.y>587?2:cart.y>307?1:0,r=createRun(checkpoint,0,12345);Object.assign(r.cart,cart);r.mode='driving';
+ const checkpoint=cart.y>587?2:cart.y>307?1:0,r=createRun(checkpoint,0,12345);Object.assign(r.cart,cart);r.mode='driving';raiseIfPast(r,cart);
  let joe=null;for(const angle of [Math.PI,Math.PI/2,-Math.PI/2,0]){const yaw=cart.yaw+angle,p={x:cart.x+Math.sin(yaw)*7,y:cart.y+Math.cos(yaw)*7,yaw:yaw+Math.PI};if(legal(p,'mower')&&!hullOverlap(cart,'cart',p,'mower')){joe=p;break;}}
  if(!joe){skippedJoe++;continue;}Object.assign(r.joe,joe);
  if(!leaveBrokenCart(r)){failures.push({kind:'landing',cart,joe});continue;}

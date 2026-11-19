@@ -145,12 +145,20 @@ function updateJoe(r,dt){
  // the same blocked attack. Watch the witnessed opening until the player
  // moves or sight is lost. This preserves cover as an earned opportunity.
  if(j.coverHold){
-  if(!sees||distance(j,p)>1.8||distance(p,j.coverHold.observed)>.35||Math.abs(r.gate-j.coverHold.gate)>.05){j.coverHold=null;j.repath=0;}
+  if(!sees||distance(j,p)>(j.coverHold.reach??1.8)||distance(p,j.coverHold.observed)>.35||Math.abs(r.gate-j.coverHold.gate)>.05){j.coverHold=null;j.repath=0;}
   else{j.phase='guard';turnJoe(j,Math.atan2(p.x-j.x,p.y-j.y),dt,r.gate);return;}
  }
  if(advanceAttackReposition(r,sees,dt,walkingSpeed))return;
  const windup=r.difficulty==='steady'?1.25:.95;
- if(sees&&p.grace<=0&&(d<1.55||approachingStrike(j,p,j.approachVelocity,windup,r.gate))){const heading=Math.atan2(p.x-j.x,p.y-j.y);turnJoe(j,heading,dt,r.gate);if(Math.abs(wrap(heading-j.yaw))>.12){j.phase='turn';return;}j.phase='windup';j.age=0;j.recoveryFrom=null;return;}
+ if(sees&&p.grace<=0&&(d<1.55||approachingStrike(j,p,j.approachVelocity,windup,r.gate))){const heading=Math.atan2(p.x-j.x,p.y-j.y),turned=turnJoe(j,heading,dt,r.gate);if(Math.abs(wrap(heading-j.yaw))>.12){
+  // Scenery can stop the carried scythe from turning toward the player at all,
+  // so no swing is ever thrown and the blocked-recovery path never runs. After
+  // a short stall, use the same remedies: step to a clear stance, or guard.
+  j.turnStall=turned?0:(j.turnStall||0)+dt;
+  if(j.turnStall>.6){j.turnStall=0;j.attackReposition=planAttackReposition(r);
+   if(j.attackReposition){r.events.push({type:'joe-reposition',time:r.time,from:{x:j.x,y:j.y},target:{...j.attackReposition.target}});j.phase='walk';return;}
+   if(distance(j,p)<1.8)j.coverHold={observed:{x:p.x,y:p.y},gate:r.gate};}
+  j.phase='turn';return;}j.turnStall=0;j.phase='windup';j.age=0;j.recoveryFrom=null;return;}
  // Fresh sight can steer across clear ground without following a staircase
  // of stale grid centres. Losing sight immediately returns to evidence-based
  // pathfinding; no hidden player position enters this shortcut.
@@ -173,7 +181,7 @@ function updateJoe(r,dt){
  }
  let target=direct||j.route[0];while(!direct&&target&&distance(j,target)<.35){j.route.shift();target=j.route[0];}
  if(!target){j.phase=WATERS.some(w=>distance(j,w)<w.depth/2+2&&waterState(w,r.time,r.bypass,r.bypassAt).danger)?'water-wait':'search';return;}
- j.phase='walk';const angle=Math.atan2(target.x-j.x,target.y-j.y);turnJoe(j,angle,dt,r.gate);const alignment=Math.abs(wrap(angle-j.yaw));if(alignment>.22){j.phase='turn';return;}
+ j.phase='walk';const angle=Math.atan2(target.x-j.x,target.y-j.y),turned=turnJoe(j,angle,dt,r.gate);const alignment=Math.abs(wrap(angle-j.yaw));if(alignment>.22){j.phase='turn';if(!turned)walkStalled(r,sees,dt);else j.walkStall=0;return;}
  const crossing=target.crossing&&WATERS.find(w=>w.id===target.crossing);
  if(crossing&&!inWater(j,crossing,.6)&&crossingWait(crossing,r.time,distance(j,target)/walkingSpeed,r.bypass,r.bypassAt)>0){j.phase='water-wait';return;}
  let stride=Math.min(distance(j,target),speed*dt),next={x:j.x+Math.sin(j.yaw)*stride,y:j.y+Math.cos(j.yaw)*stride};
@@ -186,6 +194,17 @@ function updateJoe(r,dt){
  const count=Math.max(1,Math.ceil(stride/.05)),dx=(next.x-j.x)/count,dy=(next.y-j.y)/count;let traveled=0;
  for(let n=0;n<count;n++){const point={x:j.x+dx,y:j.y+dy};if(solid(point,JOE_RADIUS,gateBlocks(r.gate,1.9))||!weaponClear({...j,...point},r.gate))break;j.x=point.x;j.y=point.y;traveled+=Math.hypot(dx,dy);}
  j.speed=traveled/dt;j.walk+=traveled;
+ if(traveled>0)j.walkStall=0;else walkStalled(r,sees,dt);
+}
+// Body or scythe clearance can pin Joe in place just outside striking range,
+// turning or stepping into the same scenery every frame. After a short stall,
+// step to a clear stance, guard a close witnessed opening, or plan afresh.
+function walkStalled(r,sees,dt){
+ const j=r.joe,p=r.player;j.walkStall=(j.walkStall||0)+dt;if(j.walkStall<=.6)return;j.walkStall=0;
+ if(sees){j.attackReposition=planAttackReposition(r);
+  if(j.attackReposition){r.events.push({type:'joe-reposition',time:r.time,from:{x:j.x,y:j.y},target:{...j.attackReposition.target}});return;}
+  const gap=distance(j,p);if(gap<2.4){j.coverHold={observed:{x:p.x,y:p.y},gate:r.gate,reach:Math.max(1.8,gap+.1)};return;}}
+ j.repath=0;j.route=[];
 }
 export function step(r,input={},dt=1/60){
  if(!['playing','aftermath'].includes(r.mode))return;dt=clamp(dt,0,1/30);r.time+=dt;r.elapsed+=dt;r.steps++;r.messageTime=Math.max(0,r.messageTime-dt);r.waterLock=Math.max(0,r.waterLock-dt);

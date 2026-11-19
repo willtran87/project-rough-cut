@@ -7,6 +7,11 @@ import {COURSE,blocked,distance,navigationStats} from '../web/back-nine-course.j
 import {hullOverlap} from '../web/vehicle-contact.js';
 const fixtures='output/back-nine-experience/wreck-routes',out=process.env.CHASE_QA_OUT||fixtures,before=JSON.parse(fs.readFileSync(fixtures+'/garage-crossings-before.json')),navigationBefore=navigationStats().signature;
 fs.mkdirSync(out,{recursive:true});
+// The garage shutter starts jammed and only ever opens. A cart on or past its
+// line implies it was already raised, so stage that state for those carts.
+const SHUTTER={x:-23,y:800,rx:5.5,ry:.15};
+const raiseIfPast=(r,cart)=>{if(cart.y>800||hullOverlap(cart,'cart',SHUTTER,'feature'))Object.assign(r.exitRelease,{released:true,open:1});};
+
 const legal=(p,k)=>!blocked(p,k==='cart'?.85:1.65)&&!COURSE.features.some(f=>hullOverlap(p,k,f,'feature'));
 const crossings=[],missing=[],times=[];let checked=0,segments=0;
 function denseClear(a,b){const n=Math.ceil(distance(a,b)/.005);for(let i=0;i<=n;i++)if(blocked({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n},.32))return false;return true;}
@@ -14,7 +19,7 @@ for(let x=-27;x<=-19;x++)for(let y=795;y<=804;y+=.5)for(let h=0;h<16;h++){
  const cart={x,y,yaw:h*Math.PI/8};if(!legal(cart,'cart'))continue;
  for(const side of [Math.PI,Math.PI/2,-Math.PI/2,0]){
   const angle=cart.yaw+side,joe={x:x+Math.sin(angle)*7,y:y+Math.cos(angle)*7,yaw:angle+Math.PI};if(!legal(joe,'mower'))continue;
-  const r=createRun(2);Object.assign(r.cart,cart);Object.assign(r.joe,joe);const t=performance.now(),landed=leaveBrokenCart(r);times.push(performance.now()-t);checked++;
+  const r=createRun(2);Object.assign(r.cart,cart);Object.assign(r.joe,joe);raiseIfPast(r,cart);const t=performance.now(),landed=leaveBrokenCart(r);times.push(performance.now()-t);checked++;
   if(!landed){missing.push({cart,joe});continue;}
   const e=r.foot.ejection;for(const a of [cart,{x:e.seatX,y:e.seatY}]){segments++;if(!denseClear(a,r.foot))crossings.push({cart,joe,start:a,landing:r.foot});assert(ejectionPathClear(a,r.foot));}
  }
