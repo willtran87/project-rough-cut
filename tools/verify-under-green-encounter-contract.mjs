@@ -78,7 +78,7 @@ let observedFrames=0;const routes=[];
 // flood cycle (qa/under-green-haunting-flood-2026-11-13.md): this retained
 // cp2 reactive pilot is now caught on two of the four timings. Escape
 // guarantees for complete attempts live in the folded/approach-strike checks.
-for(const [timeOffset,crouch,expectedMode,expectedSeconds]of [[7,false,'caught',17.033333333333648],[8.5,false,'complete',19.916666666666817],[7,true,'complete',31.166666666666178],[8.5,true,'caught',32.41666666666611]]){
+for(const [timeOffset,crouch,expectedMode,expectedSeconds]of [[7,false,'caught',17.033333333333648],[8.5,false,'complete',19.916666666666817],[7,true,'complete',31.166666666666178],[8.5,true,'caught',32.516666666666104]]){
  const oldTelemetry=createLocalTelemetry(),newTelemetry=createLocalTelemetry();
  const result=traverse({cp:2,timeOffset,crouch,rangeRoute:'reactive',timedKeeper:true,adaptiveRun:true,adaptiveStance:crouch,rearChecks:crouch,dodge:true,inspect:r=>{
   // Both observers consume exactly the same live simulation state, with

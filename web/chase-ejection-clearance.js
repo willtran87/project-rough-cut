@@ -2,6 +2,12 @@ import {barrierFootprint} from './chase-barriers.js';
 import {hullOverlap} from './vehicle-contact.js';
 import {isDestructibleFeature,featureBroken,featurePose} from './course-destruction-state.js';
 import {COURSE,blocked} from './back-nine-course.js';
+import {EXIT_CLEARANCE} from './chase-tactics.js';
+
+// Matches the barrier in updateExitRelease (chase-tactics.js). It only exists
+// there, so a landing check must add it while the shutter is still closed or
+// an ejection can put the runner inside the garage with no way back out.
+const SHUTTER={x:-23,y:800,rx:5.5,ry:.15,box:true};
 
 const ejectionObstacles=[...COURSE.obstacles,...COURSE.features.filter(isDestructibleFeature).map(f=>({...f,box:true}))];
 // Ejection crosses only a few metres, but coarse sight/navigation samples can
@@ -17,10 +23,11 @@ export function ejectionPathClear(a,b,r=.32,run=null){
 
  const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;
  if(length2===0)return true;
+ const shut=run?.exitRelease&&run.exitRelease.open<EXIT_CLEARANCE;
  const left=Math.min(a.x,b.x),right=Math.max(a.x,b.x),bottom=Math.min(a.y,b.y),top=Math.max(a.y,b.y);
- for(const source of ejectionObstacles){
-  const o=featurePose(run,source);
-  if(featureBroken(run,o))continue;
+ for(const source of shut?[...ejectionObstacles,SHUTTER]:ejectionObstacles){
+  const o=source===SHUTTER?SHUTTER:featurePose(run,source);
+  if(o!==SHUTTER&&featureBroken(run,o))continue;
   const rx=(o.box?o.rx:o.r)+r,ry=(o.box?o.ry:o.r)+r;
   if(right<=o.x-rx||left>=o.x+rx||top<=o.y-ry||bottom>=o.y+ry)continue;
   if(!o.box){
