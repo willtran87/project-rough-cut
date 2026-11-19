@@ -80,7 +80,7 @@ const live=()=>['playing','aftermath'].includes(run.mode);
 const presentationWake=createFrameWake(()=>draw(),()=>ready&&!manual&&!document.hidden&&live());
 function beginEscape(){if(run.mode==='complete'){RCProgression.complete('under-green');location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
 let storyReturnMode='briefing';
-const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:'Replay from Controls & comfort. E continues; Esc skips.',advanceKeys:['KeyE','Enter','Space'],finalLabel:'Review chapter →',
+const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:`Replay from Controls & comfort. ${label('interact')} continues; Esc skips.`,advanceKeys:()=>[bindings.interact,'Enter','Space'],finalLabel:'Review chapter →',
  reducedMotion:()=>prefs.reduced,captions:()=>shared.soundCaptions,toggleFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},
  onGesture:()=>audio.start(),onSlide:(_,index)=>audio.setStory(index,run),
  finish:()=>{run.mode=storyReturnMode;audio.setStory(-1,run);clearInput();dirty=true;paint();(run.mode==='briefing'?$('primary'):$('replay-intro')).focus({preventScroll:true});}

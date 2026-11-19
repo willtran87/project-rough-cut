@@ -6868,6 +6868,7 @@ import { createJoeVoice } from './joe-voice.js';
   let atmosphericMusicHush = 1;
   let openingStorySlide = OPENING_SLIDES[0];
   const openingStory = createOpeningStory({
+    advanceKeys:()=>[state.keyboardBindings?.interact||'KeyE','Enter','Space'],
     reducedMotion:()=>state.reducedMotion,
     captions:()=>state.subtitles,
     onGesture:()=>ensureAudio(),
@@ -64058,14 +64059,14 @@ import { createJoeVoice } from './joe-voice.js';
     }
   }
 
+  // Start is the pause button in every chapter (B brakes in The Back Nine), so
+  // during play B only cancels an aimed ball; in menus it still goes back.
   function handleGamepadBack() {
     if (
       state.mode === "first_hole" &&
       state.hole.ballAim.active
     ) {
       cancelGolfBallAim();
-    } else if (state.mode === "first_hole") {
-      enterPause();
     } else if (state.mode === "paused") {
       resumeFirstHole();
     } else if (state.mode === "settings") {

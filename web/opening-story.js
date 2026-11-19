@@ -111,12 +111,16 @@ export function createOpeningStory({finish,onSlide,onGesture,reducedMotion,capti
   dialog.addEventListener('cancel',e=>{e.preventDefault();action('skip');});
   dialog.addEventListener('keydown',e=>{
     // Do not let the last Enter/Space also dismiss the following game guide.
-    e.stopPropagation();if(e.repeat&&[...advanceKeys,'ArrowRight','ArrowLeft','Escape'].includes(e.code)){e.preventDefault();return;}
+    e.stopPropagation();
+    // advanceKeys may be a function so a rebound Use key applies immediately;
+    // the first entry (Use) also advances while a story button has focus.
+    const keys=typeof advanceKeys==='function'?advanceKeys():advanceKeys;
+    if(e.repeat&&[...keys,'ArrowRight','ArrowLeft','Escape'].includes(e.code)){e.preventDefault();return;}
     if(e.code==='ArrowRight'){e.preventDefault();action('next');}
     else if(e.code==='ArrowLeft'){e.preventDefault();action('back');}
     else if(e.code==='Escape'){e.preventDefault();action('skip');}
     else if(e.code==='KeyF'){e.preventDefault();toggleFullscreen();}
-    else if(advanceKeys.includes(e.code)&&(e.code==='KeyE'||!e.target.closest('button,input'))){e.preventDefault();action('next');}
+    else if(keys.includes(e.code)&&(e.code===keys[0]||!e.target.closest('button,input'))){e.preventDefault();action('next');}
   });
   const pausePresentation=()=>{dialog.dataset.paused=String(document.hidden||!document.hasFocus());if(dialog.dataset.paused==='true')fade?.pause();else fade?.play();};
   document.addEventListener('visibilitychange',pausePresentation);

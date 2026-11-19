@@ -21,7 +21,7 @@ import {createTouchRunControl} from './touch-run-control.js';
 import {finalCutMessages} from './final-cut-messages.js';
 import {freshAim} from './final-cut-balls.js';
 import {cutPlan} from './final-cut-schedule.js';
-import {createFinalCutStory} from './final-cut-story.js?v=20261114-launch-theme';
+import {createFinalCutStory} from './final-cut-story.js?v=20261119-use-binding';
 const $=id=>document.getElementById(id),canvas=$('game'),query=new URLSearchParams(location.search),keys=new Set(),touch=new Set();
 const preferences=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce)').matches),spatialStore=RCSpatialPreferences.create();let spatial=spatialStore.get();
 const feel=RCFoundation.readComfort(),touchRun=createTouchRunControl();let toggleCrouch=false,toggleSprint=false,dirty=true;
@@ -53,7 +53,7 @@ function primary(){if(!ready||story?.active)return;if(shot){endShot();return;}en
 function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();persist();if(document.pointerLockElement)document.exitPointerLock();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}paint();audio.update(run);}
 function showResultView(view){if(run.mode!=='complete')return;resultView=view;panelMode='';clearInput();paint();$('panel').scrollTop=0;$(view==='credits'?'credits-back':view==='notice'?'notice-back':'show-credits').focus({preventScroll:true});}
 const menu=createDOMGamepadMenu({root:$('panel'),onStart:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();},onBack:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else if(run.mode==='paused')pause();},onDisconnect:()=>{if(device==='gamepad'&&live())pause();}});
-story=createFinalCutStory({root:$('shell'),reduced:()=>preferences.reducedMotion,onGesture:()=>audio.start(),fullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},onOpen:()=>{clearInput();if(document.pointerLockElement)document.exitPointerLock();},onClose:()=>{clearInput();dirty=true;paint();$('primary').focus({preventScroll:true});}});
+story=createFinalCutStory({useKey:()=>bindings.interact,root:$('shell'),reduced:()=>preferences.reducedMotion,onGesture:()=>audio.start(),fullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},onOpen:()=>{clearInput();if(document.pointerLockElement)document.exitPointerLock();},onClose:()=>{clearInput();dirty=true;paint();$('primary').focus({preventScroll:true});}});
 if(run.completed)winStoryRunId=run.runId;
 $('splash-image').src='./assets/menu/final-cut-scene.webp';$('defeat-image').src='./assets/optimized/final-cut-loss-v2.webp';$('defeat-image').alt='From your fallen viewpoint, Joe grins above the tournament mower as its cutting reels close in under the championship lights.';$('defeat-image').decode().catch(()=>{});
 const recordChoice=document.createElement('div');recordChoice.id='record-choice';recordChoice.hidden=true;

@@ -67,7 +67,7 @@ let guideReview=false,briefArtRequested=false;
 function prepareBriefArt(){if(briefArtRequested)return;briefArtRequested=true;const image=$('brief-image');image.src='./assets/menu/back-nine-scene.webp';image.decode().catch(()=>{$('brief-art').dataset.failed='true';});}
  let defeatArtRequested=false;
  function prepareDefeatArt(){if(defeatArtRequested)return;defeatArtRequested=true;const image=$('defeat-image');image.src='./assets/optimized/back-nine-run-down-v1.webp';image.decode().catch(()=>{$('defeat-tableau').dataset.failed='true';});}
-const opening=createOpeningStory({slides:BACK_NINE_SLIDES,storageKey:'rough-cut.back-nine-opening.v1',header:'THE BACK NINE',replayHint:'Replay it from the chase guide or pause menu.',
+const opening=createOpeningStory({advanceKeys:()=>[bindings.interact,'Enter','Space'],slides:BACK_NINE_SLIDES,storageKey:'rough-cut.back-nine-opening.v1',header:'THE BACK NINE',replayHint:'Replay it from the chase guide or pause menu.',
  reducedMotion:()=>settings.reducedMotion??reducedMotion.matches,captions:()=>settings.subtitles!==false,
  toggleFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('game-shell').requestFullscreen?.();},
  onGesture:()=>{if(navigator.userActivation?.hasBeenActive){audio.start();audio.intro(openingSlide,openingActive&&!document.hidden,settings);}},
