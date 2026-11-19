@@ -28,7 +28,12 @@ function authoredHeight(x,y){
 // Clipping overlay polygons to these cells avoids intersections/z-fighting
 // between independently triangulated turf, greens, paving and water.
 const heights=new Map();
-function gridHeight(x,y){const key=x+','+y;if(!heights.has(key))heights.set(key,authoredHeight(x,y));return heights.get(key);}
+// Grid corners are integers, so a numeric key names the same cell as the old
+// "x,y" string without building a string per lookup. Anything else keeps the string.
+function gridHeight(x,y){
+ const key=(x|0)===x&&(y|0)===y&&y>-1048576&&y<1048576?x*2097152+y:x+','+y;
+ let h=heights.get(key);if(h===undefined){h=authoredHeight(x,y);heights.set(key,h);}return h;
+}
 export function terrainHeight(x,y){
  const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;
  if(fx+fy<=1)return gridHeight(ix,iy)*(1-fx-fy)+gridHeight(ix+1,iy)*fx+gridHeight(ix,iy+1)*fy;
@@ -67,7 +72,7 @@ export function contourGround(THREE,g,{retainFlatTriangles=false}={}){
   let hash=a.length;for(let k=0;k<a.length;k++){const r=unit[k]=weldUnit(a[k]);hash=Math.imul(hash^(r*2|0),0x9e3779b1);hash^=hash>>>15;}
   const head=cache.get(hash);
   if(a.length===width)for(let id=head;id!==undefined;id=chain[id]){let same=true;for(let k=0,o=id*width;k<width;k++)if(welded[o+k]!==unit[k]){same=false;break;}if(same)return id;}
-  const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)colors.push(...a.slice(5,5+color.itemSize));
+  const id=positions.length/3;positions.push(a[0],a[1]+terrainHeight(a[0],-a[2]),a[2]);uvs.push(a[3],a[4]);if(color)for(let k=5;k<width;k++)colors.push(a[k]);
   for(let k=0;k<width;k++)welded.push(unit[k]);chain.push(head);cache.set(hash,id);return id;
  }
  function clip(poly,dist){
@@ -76,11 +81,11 @@ export function contourGround(THREE,g,{retainFlatTriangles=false}={}){
   for(const b of poly){const db=dist(b);if((da>=0)!==(db>=0)){const t=da/(da-db);out.push(a.map((v,i)=>v+(b[i]-v)*t));}if(db>=0)out.push(b);a=b;da=db;}return out;
  }
  function emit(poly){if(poly.length<3)return;const a=vertex(poly[0]);for(let i=1;i<poly.length-1;i++){const b=vertex(poly[i]),c=vertex(poly[i+1]);if(a!==b&&b!==c&&a!==c)indices.push(a,b,c);}}
- const v=i=>[p.getX(i),p.getY(i),p.getZ(i),u?.getX(i)||0,u?.getY(i)||0,...(color?Array.from({length:color.itemSize},(_,k)=>color.array[i*color.itemSize+k]):[])];
+ const v=i=>{const a=[p.getX(i),p.getY(i),p.getZ(i),u?.getX(i)||0,u?.getY(i)||0];if(color)for(let k=0,o=i*color.itemSize;k<color.itemSize;k++)a.push(color.array[o+k]);return a;};
  for(let i=0;i<(idx?.count||p.count);i+=3){
   const tri=[0,1,2].map(n=>v(idx?idx.getX(i+n):i+n));
-  const minX=Math.floor(Math.min(...tri.map(a=>a[0]))),maxX=Math.max(minX,Math.ceil(Math.max(...tri.map(a=>a[0])))-1);
-  const minY=Math.floor(Math.min(...tri.map(a=>-a[2]))),maxY=Math.max(minY,Math.ceil(Math.max(...tri.map(a=>-a[2])))-1);
+  const [t0,t1,t2]=tri,minX=Math.floor(Math.min(t0[0],t1[0],t2[0])),maxX=Math.max(minX,Math.ceil(Math.max(t0[0],t1[0],t2[0]))-1);
+  const minY=Math.floor(Math.min(-t0[2],-t1[2],-t2[2])),maxY=Math.max(minY,Math.ceil(Math.max(-t0[2],-t1[2],-t2[2]))-1);
   // Outside every authored height field, this triangle is exactly planar.
   // Keep its original topology instead of clipping thousands of redundant
   // cells into flat shoulders. Include a neighbouring-cell margin so normals

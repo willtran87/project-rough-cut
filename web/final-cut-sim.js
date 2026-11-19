@@ -230,7 +230,7 @@ export function step(r,input={},dt=1/60){
  const motionScale=movementStartScale(r.player,input.strafe||0,input.forward||0,Math.min(dt,.25),!!input.acceleration);
  for(let k=0;k<n&&['playing','aftermath'].includes(r.mode);k++)stepFixed(r,{...input,motionScale,lookX:(input.lookX||0)/n,lookY:(input.lookY||0)/n,use:k===0&&input.use,chipStart:k===0&&input.chipStart,chipRelease:k===n-1&&input.chipRelease},delta);
 }
-export function objective(r){if(r.won)return r.ending.secured?'You are safe. Follow the road sign to leave, or look back.':'Reach the public road';if(!r.arrival.reached)return 'Follow the service walk up to the protected overlook.';if(!r.arrival.requested)return 'Find the public road. When ready, use either final-round control.';if(!r.arrival.open)return 'Stay behind the rail. It opens after the first pass clears the walk.';if(!r.pump)return 'Cross behind the mower. Reach the pump shelter and prime the pump.';return floodObjective(r);}
+export function objective(r){if(r.won)return r.ending.secured?'You are safe. Follow the road sign to leave, or look back.':'Reach the public road';if(!r.arrival.reached)return 'Follow the service walk up to the protected overlook.';if(!r.arrival.requested)return 'When ready, use a ROUND post (amber lamp) on the overlook or at the rail to start the final round.';if(!r.arrival.open)return 'Stay behind the rail. It opens after the first pass clears the walk.';if(!r.pump)return 'Cross behind the mower. Reach the pump shelter and prime the pump.';return floodObjective(r);}
 function floodObjective(r){
  const j=r.rig,wet=flowing(r),held=`Held ${r.stage} of 2.`;
  if(j.phase==='mired')return 'He is stuck. The reels are still: cross now.';
