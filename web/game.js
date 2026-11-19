@@ -36,6 +36,12 @@ import {OLD_FINISH,freshDeadGreen,advanceDeadGreen} from './dead-green.js';
 import { createCourseAnnouncement } from './course-announcement.js';
 import { onFootCameraMotion } from './on-foot-camera-motion.js';
 import { createJoeVoice } from './joe-voice.js';
+import {clamp,lerp,smoothstep,inverseLerp,hash,wrapRadians,worldDistance} from './night-order/math.js?v=20261119-extract';
+import {SIGNAGE_ATLAS_CELL,SIGNAGE_ATLAS_CELLS,COURSE_ECHO_ART_CELLS,FOOTING_HAZARD_ART_CELLS,FOOTING_HAZARD_ART_CELL_BY_KIND,COURSE_BOUNDARY_KIT_CELLS,COURSE_BOUNDARY_PLACARD_WIDTH,COURSE_BOUNDARY_PLACARD_HEIGHT,EXPANDED_OBSTACLE_CELLS,DEAD_GREEN_SCENERY_CELLS,INTERACTABLE_PROP_CELLS,COURSE_MECHANIC_CELLS,NIGHT_ORDER_OBJECTIVE_CELLS,TURF_EVIDENCE_CELLS,COURSE_CLUTTER_CELLS,COURSE_VERGE_CELLS} from './night-order/atlas-cells.js?v=20261119-extract';
+import {obstacleFootprintAxes,obstacleNormalizedDistance,obstacleClearance,segmentObstacleIntersection} from './night-order/obstacle-geometry.js?v=20261119-extract';
+import {JOE_NAVIGATION_OFFSETS,JOE_NAVIGATION_REVERSE_OFFSET,pushNavigationHeap,popNavigationHeap} from './night-order/navigation-heap.js?v=20261119-extract';
+import {hudFocusSuppressesThreatCaptions,mostUrgentThreatCaption,threatCaptionTheme} from './night-order/threat-captions.js?v=20261119-extract';
+import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=20261119-extract';
 
 (() => {
   const mouseLook=createMouseLook(),touchRun=createTouchRunControl(),gamepadSession=createGamepadSession(),gamepadDialogs=new Map();
@@ -1435,26 +1441,6 @@ import { createJoeVoice } from './joe-voice.js';
     width: 2172,
     height: 342,
   };
-  const SIGNAGE_ATLAS_CELL = 512;
-  const SIGNAGE_ATLAS_CELLS = [
-    {
-      x: 0,
-      y: 0,
-      width: SIGNAGE_ATLAS_CELL,
-      height: SIGNAGE_ATLAS_CELL,
-    },
-    ...Array.from(
-      { length: 3 },
-      (_, column) => ({
-        x:
-          column *
-          SIGNAGE_ATLAS_CELL,
-        y: SIGNAGE_ATLAS_CELL,
-        width: SIGNAGE_ATLAS_CELL,
-        height: SIGNAGE_ATLAS_CELL,
-      }),
-    ),
-  ];
   const BUNKER_ATLAS_SOURCES = [
     { x: 18, y: 176, width: 395, height: 397 },
     { x: 435, y: 185, width: 488, height: 397 },
@@ -1949,24 +1935,6 @@ import { createJoeVoice } from './joe-voice.js';
       height: 397,
     },
   ];
-  const COURSE_ECHO_ART_CELLS = [
-    {
-      id: "mint_ahead",
-      x: 62,
-      y: 84,
-      width: 372,
-      height: 832,
-      heightMeters: 1.76,
-    },
-    {
-      id: "amber_behind",
-      x: 1094,
-      y: 84,
-      width: 370,
-      height: 832,
-      heightMeters: 1.76,
-    },
-  ];
   const BUNKER_SAND_ZONES = [
     {
       id: "west-tee-bunker",
@@ -2100,35 +2068,6 @@ import { createJoeVoice } from './joe-voice.js';
       noiseFloor: 0.64,
     },
   ];
-  const FOOTING_HAZARD_ART_CELLS = [
-    {
-      id: "thatch",
-      x: 10,
-      y: 270,
-      width: 648,
-      height: 245,
-    },
-    {
-      id: "mud",
-      x: 724,
-      y: 270,
-      width: 645,
-      height: 254,
-    },
-    {
-      id: "roots",
-      x: 1433,
-      y: 263,
-      width: 657,
-      height: 257,
-    },
-  ];
-  const FOOTING_HAZARD_ART_CELL_BY_KIND =
-    new Map(
-      FOOTING_HAZARD_ART_CELLS.map(
-        (cell) => [cell.id, cell],
-      ),
-    );
   const FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE =
     48;
   const FOOTING_PLAQUE_PRESSURE_CLOSE_DISTANCE =
@@ -2687,48 +2626,6 @@ import { createJoeVoice } from './joe-voice.js';
     { x: 662, y: 551, width: 453, height: 307, heightMeters: 1.75 },
     { x: 1115, y: 563, width: 476, height: 290, heightMeters: 1.55 },
   ];
-  const COURSE_BOUNDARY_KIT_CELLS = [
-    {
-      id: "reflective_stake",
-      x: 50,
-      y: 50,
-      width: 430,
-      height: 900,
-      heightMeters: 1.12,
-    },
-    {
-      id: "course_limit_placard",
-      x: 750,
-      y: 390,
-      width: 750,
-      height: 580,
-      heightMeters: 1.2,
-    },
-  ];
-  const COURSE_BOUNDARY_PLACARD_WIDTH =
-    180;
-  const COURSE_BOUNDARY_PLACARD_HEIGHT =
-    COURSE_BOUNDARY_PLACARD_WIDTH *
-    COURSE_BOUNDARY_KIT_CELLS[1]
-      .height /
-    COURSE_BOUNDARY_KIT_CELLS[1]
-      .width;
-  const EXPANDED_OBSTACLE_CELLS = [
-    { x: 50, y: 55, width: 520, height: 410, heightMeters: 3.2 },
-    { x: 610, y: 65, width: 480, height: 410, heightMeters: 1.55 },
-    { x: 1110, y: 45, width: 530, height: 420, heightMeters: 1.35 },
-    { x: 50, y: 565, width: 520, height: 325, heightMeters: 1.25 },
-    { x: 620, y: 495, width: 480, height: 380, heightMeters: 3.15 },
-    { x: 1180, y: 465, width: 285, height: 415, heightMeters: 5 },
-  ];
-  const DEAD_GREEN_SCENERY_CELLS = [
-    { x: 45, y: 50, width: 570, height: 410, heightMeters: 1.65 },
-    { x: 650, y: 25, width: 390, height: 450, heightMeters: 2.45 },
-    { x: 1110, y: 90, width: 430, height: 390, heightMeters: 0.95 },
-    { x: 100, y: 485, width: 460, height: 425, heightMeters: 2.6 },
-    { x: 635, y: 520, width: 430, height: 390, heightMeters: 1.65 },
-    { x: 1050, y: 570, width: 520, height: 350, heightMeters: 1 },
-  ];
   const PATH_LANTERN_CELLS = [
     {
       x: 143,
@@ -2761,146 +2658,6 @@ import { createJoeVoice } from './joe-voice.js';
       height: 561,
       heightMeters: 1.08,
       lightY: 0.43,
-    },
-  ];
-  const INTERACTABLE_PROP_CELLS = [
-    {
-      x: 34,
-      y: 107,
-      width: 566,
-      height: 475,
-      heightMeters: 0.38,
-    },
-    {
-      x: 643,
-      y: 33,
-      width: 578,
-      height: 594,
-      heightMeters: 0.72,
-    },
-    {
-      x: 55,
-      y: 641,
-      width: 493,
-      height: 569,
-      heightMeters: 0.82,
-    },
-    {
-      x: 635,
-      y: 627,
-      width: 585,
-      height: 575,
-      heightMeters: 0.3,
-    },
-  ];
-  const COURSE_MECHANIC_CELLS = [
-    {
-      x: 141,
-      y: 31,
-      width: 363,
-      height: 568,
-      heightMeters: 2.4,
-    },
-    {
-      x: 719,
-      y: 20,
-      width: 401,
-      height: 585,
-      heightMeters: 2.15,
-    },
-    {
-      x: 110,
-      y: 642,
-      width: 412,
-      height: 548,
-      heightMeters: 2.05,
-    },
-    {
-      x: 665,
-      y: 644,
-      width: 475,
-      height: 556,
-      heightMeters: 1.55,
-    },
-  ];
-  const NIGHT_ORDER_OBJECTIVE_CELLS = [
-    {
-      id: "audit_bell",
-      x: 62,
-      y: 65,
-      width: 466,
-      height: 752,
-      heightMeters: 2.35,
-    },
-    {
-      id: "field_log",
-      x: 636,
-      y: 101,
-      width: 486,
-      height: 716,
-      heightMeters: 2.25,
-    },
-    {
-      id: "release_review",
-      x: 1227,
-      y: 55,
-      width: 495,
-      height: 762,
-      heightMeters: 2.35,
-    },
-  ];
-  const TURF_EVIDENCE_CELLS = [
-    { x: 7, y: 167, width: 431, height: 249 },
-    { x: 437, y: 185, width: 442, height: 229 },
-    { x: 859, y: 187, width: 442, height: 224 },
-    { x: 1311, y: 164, width: 330, height: 254 },
-    { x: 85, y: 477, width: 269, height: 335 },
-    { x: 500, y: 482, width: 279, height: 334 },
-    { x: 917, y: 476, width: 288, height: 347 },
-    { x: 1293, y: 507, width: 308, height: 287 },
-  ];
-  const COURSE_CLUTTER_CELLS = [
-    {
-      x: 39,
-      y: 96,
-      width: 456,
-      height: 366,
-      heightMeters: 0.72,
-    },
-    {
-      x: 523,
-      y: 119,
-      width: 467,
-      height: 348,
-      heightMeters: 0.58,
-    },
-    {
-      x: 1031,
-      y: 122,
-      width: 484,
-      height: 346,
-      heightMeters: 0.34,
-    },
-    {
-      x: 39,
-      y: 535,
-      width: 455,
-      height: 383,
-      heightMeters: 0.42,
-    },
-    {
-      x: 538,
-      y: 563,
-      width: 451,
-      height: 356,
-      heightMeters: 0.28,
-    },
-    {
-      x: 1029,
-      y: 561,
-      width: 465,
-      height: 357,
-      heightMeters: 0.3,
     },
   ];
   const COURSE_CLUTTER = [
@@ -2996,50 +2753,6 @@ import { createJoeVoice } from './joe-voice.js';
     ...hazard,
     ...NOISE_HAZARD_TYPES[hazard.kind],
   }));
-  const COURSE_VERGE_CELLS = [
-    {
-      x: 0,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.02,
-    },
-    {
-      x: 418,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.34,
-    },
-    {
-      x: 836,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.08,
-    },
-    {
-      x: 0,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 1.04,
-    },
-    {
-      x: 418,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 0.98,
-    },
-    {
-      x: 836,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 1.02,
-    },
-  ];
   const COURSE_VERGE = [
     { id: "tee-ferns-west", type: 2, x: -88, y: 22, scale: 0.94 },
     { id: "tee-fescue-east", type: 0, x: 88, y: 48, scale: 0.92 },
@@ -6881,19 +6594,6 @@ import { createJoeVoice } from './joe-voice.js';
     },
   });
 
-  function clamp(value, low, high) {
-    return Math.max(low, Math.min(high, value));
-  }
-
-  function lerp(a, b, amount) {
-    return a + (b - a) * amount;
-  }
-
-  function smoothstep(value) {
-    const t = clamp(value, 0, 1);
-    return t * t * (3 - 2 * t);
-  }
-
   function savePreferences() {
     RCFoundation.saveComfort(state);
     try {
@@ -9452,15 +9152,6 @@ import { createJoeVoice } from './joe-voice.js';
     state.bindingCaptureId = null;
     state.keys.clear();
     playUiTone(190, 0.055, 0.018);
-  }
-
-  function inverseLerp(a, b, value) {
-    return clamp((value - a) / (b - a), 0, 1);
-  }
-
-  function hash(value) {
-    const raw = Math.sin(value * 12.9898) * 43758.5453;
-    return raw - Math.floor(raw);
   }
 
   const mowerWakeStampCache =
@@ -13620,160 +13311,6 @@ import { createJoeVoice } from './joe-voice.js';
       calculateRunResult("shed"),
       false,
     );
-  }
-
-  function worldDistance(a, b) {
-    return Math.hypot((a.x - b.x) * 0.72, a.y - b.y);
-  }
-
-  function obstacleFootprintAxes(
-    obstacle,
-    padding = 0,
-  ) {
-    return {
-      x: Math.max(
-        0.01,
-        (obstacle.radiusX ??
-          obstacle.radius ??
-          0) +
-          padding,
-      ),
-      y: Math.max(
-        0.01,
-        (obstacle.radiusY ??
-          obstacle.radius ??
-          0) +
-          padding,
-      ),
-    };
-  }
-
-  function obstacleNormalizedDistance(
-    point,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    if(obstacle.shape==='box')return Math.max(Math.abs((point.x-obstacle.x)*.72)/axes.x,Math.abs(point.y-obstacle.y)/axes.y);
-    return Math.hypot(
-      (point.x - obstacle.x) *
-        0.72 /
-        axes.x,
-      (point.y - obstacle.y) /
-        axes.y,
-    );
-  }
-
-  function obstacleClearance(
-    point,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    if(obstacle.shape==='box'){
-      const x=Math.abs((point.x-obstacle.x)*.72)-axes.x,y=Math.abs(point.y-obstacle.y)-axes.y;
-      return Math.hypot(Math.max(0,x),Math.max(0,y))+Math.min(0,Math.max(x,y));
-    }
-    const deltaX =
-      (point.x - obstacle.x) *
-      0.72;
-    const deltaY =
-      point.y - obstacle.y;
-    const centerDistance =
-      Math.hypot(deltaX, deltaY);
-    if (centerDistance < 0.0001) {
-      return -Math.min(
-        axes.x,
-        axes.y,
-      );
-    }
-    const normalizedDistance =
-      Math.hypot(
-        deltaX / axes.x,
-        deltaY / axes.y,
-      );
-    const boundaryDistance =
-      centerDistance /
-      Math.max(
-        0.0001,
-        normalizedDistance,
-      );
-    return centerDistance -
-      boundaryDistance;
-  }
-
-  function segmentObstacleIntersection(
-    start,
-    end,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    const startX =
-      (start.x - obstacle.x) *
-      0.72 /
-      axes.x;
-    const startY =
-      (start.y - obstacle.y) /
-      axes.y;
-    const endX =
-      (end.x - obstacle.x) *
-      0.72 /
-      axes.x;
-    const endY =
-      (end.y - obstacle.y) /
-      axes.y;
-    if(obstacle.shape==='box'){
-      let lo=0,hi=1;for(const [a,b]of [[startX,endX],[startY,endY]]){const d=b-a;if(Math.abs(d)<1e-9){if(Math.abs(a)>1){hi=-1;break;}}else{let t1=(-1-a)/d,t2=(1-a)/d;if(t1>t2)[t1,t2]=[t2,t1];lo=Math.max(lo,t1);hi=Math.min(hi,t2);}}
-      return {amount:clamp((lo+hi)/2,0,1),startDistance:Math.max(Math.abs(startX),Math.abs(startY)),endDistance:Math.max(Math.abs(endX),Math.abs(endY)),closestDistance:lo<=hi?0:1.01};
-    }
-    const segmentX = endX - startX;
-    const segmentY = endY - startY;
-    const segmentLengthSquared =
-      segmentX * segmentX +
-      segmentY * segmentY;
-    const amount =
-      segmentLengthSquared <= 0.0001
-        ? 0
-        : clamp(
-            -(
-              startX * segmentX +
-              startY * segmentY
-            ) /
-              segmentLengthSquared,
-            0,
-            1,
-          );
-    const closestX =
-      startX +
-      segmentX * amount;
-    const closestY =
-      startY +
-      segmentY * amount;
-    return {
-      amount,
-      startDistance:
-        Math.hypot(startX, startY),
-      endDistance:
-        Math.hypot(endX, endY),
-      closestDistance:
-        Math.hypot(
-          closestX,
-          closestY,
-        ),
-    };
   }
 
   function playerIsMoving() {
@@ -20710,32 +20247,6 @@ import { createJoeVoice } from './joe-voice.js';
     return "field";
   }
 
-  function hudFocusSuppressesThreatCaptions(
-    focus,
-  ) {
-    return [
-      "final_filing",
-      "emergency_appeal",
-      "status_request",
-      "golf_aim",
-      "practice_correction",
-      "active_distraction",
-      "risk_premium",
-      "delivery_award",
-      "pursuit",
-      "opening_briefing",
-      "blindside_transfer",
-      "cadence_read",
-      "counter_route",
-      "crosswind",
-      "nerve_hold",
-      "cut_trace",
-      "listening_search",
-      "zone_arrival",
-      "joe_dialogue",
-    ].includes(focus);
-  }
-
   function joeStateBannerVisible() {
     const hole = state.hole;
     return Boolean(
@@ -20962,34 +20473,6 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   /**
-   * Selects one warning without reordering the live caption queue. Newer copy
-   * wins ties, but a danger read cannot be displaced by later ambient flavor.
-   */
-  function mostUrgentThreatCaption(captions) {
-    const categoryPriority = {
-      world: 0,
-      mower: 1,
-      danger: 2,
-    };
-    let selected = null;
-    let selectedPriority = -1;
-    for (
-      let index = captions.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      const caption = captions[index];
-      const priority =
-        categoryPriority[caption.category] ?? 0;
-      if (priority > selectedPriority) {
-        selected = caption;
-        selectedPriority = priority;
-      }
-    }
-    return selected;
-  }
-
-  /**
    * Identifies the short Tension Director warning that already owns the
    * bottom rail while the mower echo supplies its spatial direction.
    */
@@ -21078,37 +20561,6 @@ import { createJoeVoice } from './joe-voice.js';
       gameplayEffect: "none",
       rule:
         "one_tension_director_beat_one_strongest_directional_caption_without_redundant_ambient_omen",
-    };
-  }
-
-  /**
-   * Keeps caption text and framing on the same semantic threat palette.
-   */
-  function threatCaptionTheme(category) {
-    if (category === "danger") {
-      return {
-        textColor: "#f09a69",
-        frameColor:
-          "rgba(240,116,65,0.86)",
-        frameTheme: "danger_orange",
-        minimumFrameOpacity: 0.42,
-      };
-    }
-    if (category === "mower") {
-      return {
-        textColor: "#e6b06d",
-        frameColor:
-          "rgba(214,158,76,0.78)",
-        frameTheme: "mower_amber",
-        minimumFrameOpacity: 0.42,
-      };
-    }
-    return {
-      textColor: "#c9d8bd",
-      frameColor:
-        "rgba(132,154,111,0.72)",
-      frameTheme: "world_sage",
-      minimumFrameOpacity: 0.42,
     };
   }
 
@@ -27103,17 +26555,6 @@ import { createJoeVoice } from './joe-voice.js';
     return true;
   }
 
-  function wrapRadians(angle) {
-    let wrapped = angle;
-    while (wrapped > Math.PI) {
-      wrapped -= Math.PI * 2;
-    }
-    while (wrapped < -Math.PI) {
-      wrapped += Math.PI * 2;
-    }
-    return wrapped;
-  }
-
   const JOE_NAVIGATION_X_COUNT =
     Math.floor(
       224 / JOE_NAVIGATION_GRID,
@@ -27126,18 +26567,6 @@ import { createJoeVoice } from './joe-voice.js';
   const JOE_NAVIGATION_CELL_COUNT =
     JOE_NAVIGATION_X_COUNT *
     JOE_NAVIGATION_Y_COUNT;
-  const JOE_NAVIGATION_OFFSETS = [
-    [-1, -1],
-    [0, -1],
-    [1, -1],
-    [-1, 0],
-    [1, 0],
-    [-1, 1],
-    [0, 1],
-    [1, 1],
-  ];
-  const JOE_NAVIGATION_REVERSE_OFFSET =
-    [7, 6, 5, 4, 3, 2, 1, 0];
   const joeNavigationCellState =
     new Int8Array(
       JOE_NAVIGATION_CELL_COUNT,
@@ -27220,60 +26649,6 @@ import { createJoeVoice } from './joe-voice.js';
     joeNavigationEdgeState[reverseIndex] =
       cacheValue;
     return clear;
-  }
-
-  function pushNavigationHeap(
-    heap,
-    entry,
-  ) {
-    heap.push(entry);
-    let index = heap.length - 1;
-    while (index > 0) {
-      const parentIndex = Math.floor(
-        (index - 1) / 2,
-      );
-      if (
-        heap[parentIndex].estimate <=
-        entry.estimate
-      ) {
-        break;
-      }
-      heap[index] = heap[parentIndex];
-      index = parentIndex;
-    }
-    heap[index] = entry;
-  }
-
-  function popNavigationHeap(heap) {
-    const first = heap[0];
-    const last = heap.pop();
-    if (heap.length === 0) {
-      return first;
-    }
-    let index = 0;
-    while (true) {
-      const left = index * 2 + 1;
-      if (left >= heap.length) {
-        break;
-      }
-      const right = left + 1;
-      const child =
-        right < heap.length &&
-        heap[right].estimate <
-          heap[left].estimate
-          ? right
-          : left;
-      if (
-        heap[child].estimate >=
-        last.estimate
-      ) {
-        break;
-      }
-      heap[index] = heap[child];
-      index = child;
-    }
-    heap[index] = last;
-    return first;
   }
 
   function planJoeRoute(
@@ -59677,64 +59052,6 @@ import { createJoeVoice } from './joe-voice.js';
     }
     ctx.restore();
   }
-
-  const DISPLAY_TEXT_REPLACEMENTS = [
-    ["\u00e2\u20ac\u201d", "\u2014"],
-    ["\u00e2\u0080\u0094", "\u2014"],
-    ["\u00e2\u20ac\u201c", "\u2013"],
-    ["\u00e2\u0080\u0093", "\u2013"],
-    ["\u00e2\u20ac\u00a2", "\u2022"],
-    ["\u00e2\u0080\u00a2", "\u2022"],
-    ["\u00e2\u2020\u2019", "\u2192"],
-    ["\u00e2\u0086\u0092", "\u2192"],
-    ["\u00e2\u2020\u0090", "\u2190"],
-    ["\u00e2\u0086\u0090", "\u2190"],
-    ["\u00e2\u2020\u2018", "\u2191"],
-    ["\u00e2\u0086\u0091", "\u2191"],
-    ["\u00e2\u2020\u201c", "\u2193"],
-    ["\u00e2\u0086\u0093", "\u2193"],
-    ["\u00e2\u20ac\u2122", "\u2019"],
-    ["\u00e2\u0080\u0099", "\u2019"],
-    ["\u00e2\u20ac\u00a6", "\u2026"],
-    ["\u00e2\u0080\u00a6", "\u2026"],
-    ["\u00e2\u2014\u20ac", "\u25c0"],
-    ["\u00e2\u0097\u0080", "\u25c0"],
-    ["\u00e2\u2013\u00b6", "\u25b6"],
-    ["\u00e2\u0096\u00b6", "\u25b6"],
-    ["\u00e2\u2014\u02c6", "\u25c8"],
-    ["\u00e2\u0097\u0088", "\u25c8"],
-    ["\u00e2\u2014\u2021", "\u25c7"],
-    ["\u00e2\u0097\u0087", "\u25c7"],
-    ["\u00e2\u0153\u201c", "\u2713"],
-    ["\u00e2\u009c\u0093", "\u2713"],
-    ["\u00e2\u2014\u2039", "\u25cb"],
-    ["\u00e2\u0097\u008b", "\u25cb"],
-    ["\u00e2\u2014\u008f", "\u25cf"],
-    ["\u00e2\u0097\u008f", "\u25cf"],
-    ["\u00e2\u2013\u00a3", "\u25a3"],
-    ["\u00e2\u0096\u00a3", "\u25a3"],
-    ["\u00e2\u2013\u00bc", "\u25bc"],
-    ["\u00e2\u0096\u00bc", "\u25bc"],
-    ["\u00e2\u2013\u00b2", "\u25b2"],
-    ["\u00e2\u0096\u00b2", "\u25b2"],
-    ["\u00e2\u2026\u00a1", "\u2161"],
-    ["\u00e2\u0085\u00a1", "\u2161"],
-    ["\u00e2\u20ac\u0153", "\u201c"],
-    ["\u00e2\u0080\u009c", "\u201c"],
-    ["\u00e2\u20ac\u009d", "\u201d"],
-    ["\u00e2\u0080\u009d", "\u201d"],
-    ["\u00e2\u2021\u00a9", "\u21e9"],
-    ["\u00e2\u0087\u00a9", "\u21e9"],
-    ["\u00e2\u0152\u201a", "\u2302"],
-    ["\u00e2\u008c\u0082", "\u2302"],
-    ["\u00e2\u2030\u00a5", "\u2265"],
-    ["\u00e2\u0089\u00a5", "\u2265"],
-    ["\u00e2\u2030\u00a4", "\u2264"],
-    ["\u00e2\u0089\u00a4", "\u2264"],
-    ["\u00c3\u2014", "\u00d7"],
-    ["\u00c3\u0097", "\u00d7"],
-    ["\u00c2\u00a0", " "],
-  ];
 
   /**
    * Repairs common UTF-8 punctuation interpreted through Windows-1252.
