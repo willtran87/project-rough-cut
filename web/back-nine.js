@@ -157,7 +157,7 @@ function paintUI(){
  window.RCGameTheme.recordText($('field-log'),journalText(run));setHidden('field-log',!['paused','complete'].includes(run.mode)||!run.story.collected);
  setText('checkpoint-note',defeated?'No checkpoints. Retry starts at the shed with a fresh cart and both relays offline. '+keyLabel(bindings.interact)+' / R also retries.':run.mode==='complete'?'The garage is secure. Continue to the championship grounds.':run.mode==='paused'?'The chase is paused. Resume when ready. Restart begins again at the shed.':'Time waits until you begin. Relays power the exit; death restarts the whole run.');
  if(defeated){
-  const review=pickDefeat(run,{nearExit:distance(player,COURSE.finish)<60,onFoot:!!run.foot,shortcut:!!run.hunt.choiceMask||run.events.some(e=>e.type==='shortcut'),damage:run.cart.hits>0,objectives:run.checkpoint>0});
+  const review=pickDefeat(run,{nearExit:distance(player,COURSE.finish)<60,onFoot:!!run.foot,shortcut:!!run.hunt.choiceMask||run.events.some(e=>e.type==='shortcut'||e.type==='gate-unlatched'),damage:run.cart.hits>0,objectives:run.checkpoint>0});
   setText('defeat-line',`“${review.lines[0]}\n${review.lines[1]}”`);joeVoice.say(review.lines);
   const failure=run.failure||captureFailure(run);setText('defeat-tip',failure.advice);setText('story',failure.cause);copy[2]=failure.cause;
   setText('defeat-review',`NEXT ACTION // ${failure.advice}\nRESTART FROM THE SHED // ${run.checkpoint}/2 relays reached this attempt · ${Math.ceil(distance(chaseActor(run),COURSE.finish))} m from the garage`);keys.clear();touch.clear();chaseControls.reset();$('primary').focus({preventScroll:true});}

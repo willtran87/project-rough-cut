@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three/three.module.js';
 import {terrainHeight} from './course-terrain.js';
-import {TACTIC_STATIONS,EXIT_RELEASE} from './chase-tactics.js';
+import {TACTIC_STATIONS,EXIT_RELEASE,tacticControl} from './chase-tactics.js';
 
 export function createExperienceArt({scene,materials,box,put,cylinder,batchVehicleParts}){
  const controls=[];
  const stations=[...TACTIC_STATIONS,{...EXIT_RELEASE,kind:'exit'}];
  for(const [i,s]of stations.entries()){
-  const root=new THREE.Group();root.position.set(s.x+(s.kind==='exit'?-4:2.6),terrainHeight(s.x+(s.kind==='exit'?-4:2.6),s.y),-s.y);scene.add(root);
+  const root=new THREE.Group();const at=s.kind==='exit'?{x:s.x-4,y:s.y}:tacticControl(s);root.position.set(at.x,terrainHeight(at.x,at.y),-at.y);scene.add(root);
   box('iron',0,.62,0,.12,1.24,.12,0,root);box('mower',0,1.3,0,.72,.65,.32,0,root);
   box('brass',0,1.66,.05,.8,.06,.36,0,root);box('iron',0,1.35,.18,.52,.35,.025,0,root);
   // Molded pipe runs / brake cable connect the control to its purpose.

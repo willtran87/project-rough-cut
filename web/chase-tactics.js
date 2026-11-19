@@ -6,15 +6,19 @@ import {emitCourseCue} from './back-nine-course-fx.js';
 export const TACTIC_STATIONS=[
  {id:'west-flush',kind:'water',x:-10,y:220,zone:0,label:'Flood the pump approach'},
  {id:'range-cart',kind:'cart',x:24,y:449,feature:'range-abandoned-cart',label:'Release the empty cart'},
- {id:'east-flush',kind:'water',x:30,y:480,zone:1,label:'Flood the range approach'}
+ // The usual east-side box would sit 0.4 m from the dry-range lane centre line
+ // (COURSE.paths[8], x=33) and stop carts dead; this one stands north instead.
+ {id:'east-flush',kind:'water',x:30,y:480,zone:1,label:'Flood the range approach',control:{dx:0,dy:2.6}}
 ];
+// Where a station's solid control box stands. Collision and art share this.
+export function tacticControl(station){const o=station.control||{dx:2.6,dy:0};return {x:station.x+o.dx,y:station.y+o.dy};}
 export const TACTIC_HOLD=.9;
 export function createTactics(){return {near:-1,hold:0,used:0,brokenAt:[null,null,null],active:-1,until:0,started:0,floodUntil:[0,0,0],result:'',serial:0,cartTravel:0};}
 export function constrainTacticControls(run,actor,from,kind){
  const s=run.tactics;if(!s)return false;let hit=false;
  for(const [i,station]of TACTIC_STATIONS.entries()){
   if(s.brokenAt[i]!==null)continue;
-  const solid={x:station.x+2.6,y:station.y,rx:.42,ry:.22},probe={...actor};
+  const solid={...tacticControl(station),rx:.42,ry:.22},probe={...actor};
   if(!constrainVehicleMotion(probe,from,solid,kind,'feature'))continue;
   if(kind==='mower'&&Math.abs(actor.speed)>.4){s.brokenAt[i]=run.time;emitCourseCue(run.courseFX,'metal',solid,.5);run.events.push({type:'joe-destruction',id:station.id+'-control',time:run.time});}
   else{Object.assign(actor,probe);hit=true;}
