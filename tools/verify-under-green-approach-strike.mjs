@@ -34,7 +34,11 @@ for(const delay of [.25,.5,.75])for(const action of ['sidestep','stop']){
 const blind=createRun(2);blind.mode='playing';blind.player.grace=0;Object.assign(blind.player,{x:-20,y:56});Object.assign(blind.joe,{x:-2,y:54,phase:'walk',yaw:Math.PI,previousSight:{x:-20.064,y:56,time:blind.time},approachVelocity:{x:3.84,y:0}});step(blind,{});assert.equal(blind.joe.seen,false);assert.equal(blind.joe.approachVelocity,null);assert.notEqual(blind.joe.phase,'windup');
 const reset=createRun(initial.checkpoint,false,'standard',snapshot(initial));assert(!reset.joe.previousSight&&!reset.joe.approachVelocity,'Retries do not invent observed motion');
 const routes=[];
-for(const options of [{dodge:true},{dodge:true,wet:true},{dodge:true,sprint:true},{dodge:true,decisionPause:3},{dodge:true,optional:true},{dodge:true,rangeRoute:'reactive',timedKeeper:true},{cp:1,dodge:true,durable:{bunkerRouteObserved:true}}]){
+for(const options of [{dodge:true},{dodge:true,wet:true},{dodge:true,sprint:true},{dodge:true,decisionPause:3},{dodge:true,optional:true},{dodge:true,rangeRoute:'reactive',timedKeeper:true},{dodge:true,pressure:'relentless'}]){
+ // Bunker-route memory now lasts one attempt and retries never resume at a
+ // checkpoint (under-green-sim.js), so the former checkpoint-1 remembered-route
+ // retry is replaced by complete attempts in which Joe witnesses the route and
+ // uses the bunker inspection (standard and relentless walking).
  const r=traverse(options);routes.push({options,mode:r.mode,seconds:r.elapsed,evasions:r.evasions,waterHits:r.waterHits,gap:r.gap});
  assert.equal(r.mode,'complete',JSON.stringify(routes.at(-1)));
 }

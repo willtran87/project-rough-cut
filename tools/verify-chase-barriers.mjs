@@ -13,16 +13,31 @@ import {createMowerTracks} from '../web/mower-tracks.js';
 import {canMarkMownGround} from '../web/mower-track-ground.js';
 import * as THREE from '../web/vendor/three/three.module.js';
 const out='output/back-nine-experience/barriers';fs.mkdirSync(out,{recursive:true});const crossings=[];
+// Current rules (chase-shortcuts.js): only Joe can smash timber. A player hull
+// stops at an intact rail and can always back away; Joe's mower opens it, after
+// which the player crosses. Shortcut gates instead unlatch with a held Use
+// (GATE_UNLATCH_SECONDS), swing clear, and admit the player without breaking.
 for(const [index,g]of COURSE.hurdles.entries())for(const foot of [false,true])for(const direction of [-1,1]){
  const r=createRun();r.mode='driving';r.grace=999;r.time=5;r.joe.x=38;r.joe.y=4;if(foot){leaveBrokenCart(r);r.time+=2;r.cart.x=38;r.cart.y=820;}
- const c=foot?r.foot:r.cart,yaw=(g.yaw||0)+(direction<0?Math.PI:0),f={x:Math.sin(yaw),y:Math.cos(yaw)};
+ const c=foot?r.foot:r.cart,yaw=(g.yaw||0)+(direction<0?Math.PI:0),f={x:Math.sin(yaw),y:Math.cos(yaw)},along=()=>(c.x-g.x)*f.x+(c.y-g.y)*f.y,state=r.courseFX.breaks[index];
  Object.assign(c,{x:g.x-f.x*3,y:g.y-f.y*3,yaw,viewYaw:yaw,speed:0});assert(!blocked(c,foot?.32:.85),'Fixture must be clear');
- let wait=0,brokenAt=null;for(let i=0;i<600;i++){updateRun(r,{throttle:1,brake:!foot},1/60);if(r.courseFX.breaks[index].press>0&&r.courseFX.breaks[index].age<0)wait+=1/60;if(r.courseFX.breaks[index].age>=0){brokenAt??=r.time;if((c.x-g.x)*f.x+(c.y-g.y)*f.y>2)break;}}
- assert(brokenAt!==null,`Barrier ${index} foot=${foot} dir=${direction} cannot be pushed`);assert(wait>=.65&&wait<.8);assert((c.x-g.x)*f.x+(c.y-g.y)*f.y>2,JSON.stringify({index,foot,direction,actor:c,gate:g}));
- const type=g.shortcut===undefined?'barrier':'shortcut';assert.equal(r.events.filter(e=>e.type===type&&(e.index===(g.shortcut??index))).length,1);crossings.push({index,foot,direction,wait,seconds:r.time-5});
+ const gateType=g.shortcut===undefined?null:'gate-unlatched',fixture={index,foot,direction,gate:g};
+ // Driving or running straight into it never gets through, nor breaks it.
+ for(let i=0;i<240;i++)updateRun(r,{throttle:1,use:false},1/60);assert(along()<0,JSON.stringify({...fixture,actor:c}));assert.equal(state.age,-1,'Player cannot smash timber');
+ const blockedAt=along();for(let i=0;i<30;i++)updateRun(r,{throttle:-1,use:false},1/60);assert(along()<blockedAt,'Backing away from a closed barrier is always possible');
+ let wait=0;
+ if(gateType){
+  for(let i=0;i<60;i++)updateRun(r,{use:false},1/60);for(let i=0;i<120&&!state.unlatched;i++){updateRun(r,{use:true},1/60);if(state.press>0)wait+=1/60;}
+  assert(state.unlatched,JSON.stringify({...fixture,actor:c,state}));assert(wait>=1.1-1/60-1e-9&&wait<1.1+2/60,String(wait));
+ }else{Object.assign(r.joe,{x:g.x,y:g.y,yaw:g.yaw||0,speed:12});updateCourseFX(r,1/60);assert(state.age>=0,'Joe opens the timber');Object.assign(r.joe,{x:38,y:4,speed:0});}
+ for(let i=0;i<600&&along()<=2;i++)updateRun(r,{throttle:1,use:false},1/60);
+ assert(along()>2,JSON.stringify({...fixture,actor:c}));
+ if(gateType){assert.equal(state.age,-1,'An unlatched gate swings open rather than breaking');assert.equal(r.events.filter(e=>e.type===gateType&&e.index===g.shortcut).length,1);}
+ crossings.push({index,foot,direction,kind:gateType?'gate':'timber',wait,seconds:r.time-5});
 }
 // A cutting deck clips the end even though the center is outside the old point test.
-const gate=COURSE.hurdles.find(g=>g.x===-9&&g.y===70),index=COURSE.hurdles.indexOf(gate),r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:-9,y:61});Object.assign(r.joe,{x:gate.x+3.4,y:gate.y-1.4,yaw:0,speed:14});assert(hullOverlap(r.joe,'mower',barrierFootprint(gate),'feature'));updateCourseFX(r,1/60);assert.equal(r.courseFX.breaks[index].age,0);const serial=r.courseFX.cue.serial;updateCourseFX(r,1/60);assert.equal(r.courseFX.cue.serial,serial);assert.equal(chaseMessages(r).sound,'');assert(chaseMessages(r,{soundCaptions:true}).sound.includes('Timber'));assert(!chaseMessages(r).banner.includes('Timber'));
+// The y=70 timber rail moved to x=-13.6 (e9f6118); locate it by row, not old x.
+const gate=COURSE.hurdles.find(g=>g.y===70&&g.shortcut===undefined),index=COURSE.hurdles.indexOf(gate),r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:gate.x,y:61});Object.assign(r.joe,{x:gate.x+3.4,y:gate.y-1.4,yaw:0,speed:14});assert(hullOverlap(r.joe,'mower',barrierFootprint(gate),'feature'));updateCourseFX(r,1/60);assert.equal(r.courseFX.breaks[index].age,0);const serial=r.courseFX.cue.serial;updateCourseFX(r,1/60);assert.equal(r.courseFX.cue.serial,serial);assert.equal(chaseMessages(r).sound,'');assert(chaseMessages(r,{soundCaptions:true}).sound.includes('Timber'));assert(!chaseMessages(r).banner.includes('Timber'));
 const near=createRun();near.mode='driving';Object.assign(near.joe,{x:gate.x+barrierHalfWidth(gate)+2.6,y:gate.y-1.4,yaw:0,speed:14});updateCourseFX(near,1/60);assert(near.courseFX.breaks[index].age<0,'Near miss must not shatter wood');
 for(const yaw of [0,.4,1.5,Math.PI])for(const sign of [-1,1])assert.equal(barrierBreakDirection({yaw},{yaw,speed:sign*5}),sign);
 const paused=JSON.stringify(r);r.mode='paused';const frozen=JSON.stringify(r);updateRun(r,{throttle:1},1);assert.equal(JSON.stringify(r),frozen);assert.notEqual(paused,frozen);assert(createRun().courseFX.breaks.every(b=>b.age===-1));
@@ -37,7 +52,7 @@ for(let i=0;i<600;i++){
  escaped ||= chase.joe.ram.phase==='missed';const old={...chase.joe};updateRun(chase,{throttle:1,steer:i<38?.9:escaped?Math.max(-1,Math.min(1,(.3-chase.foot.yaw)*1.8)):0},1/60);tracks.update(chase);
  if(chase.joe.mode==='charging'){heading??=chase.joe.yaw;assert.equal(chase.joe.yaw,heading);travel+=distance(old,chase.joe);}
  if(chase.joe.ram.phase==='missed')miss??={frame:i,x:chase.joe.x,y:chase.joe.y};
- if(chase.courseFX.breaks[6].age>=0)broken??={frame:i,x:chase.joe.x,y:chase.joe.y};
+ if(chase.courseFX.breaks[index].age>=0)broken??={frame:i,x:chase.joe.x,y:chase.joe.y};
  if(chase.encounter.owner==='relief'){enter??=distance(chase.foot,chase.joe);exit=distance(chase.foot,chase.joe);}
  maxSegments=Math.max(maxSegments,tracks.stats().segments);assert.equal(chase.mode,'driving');assert.equal(chase.cart.hits,0);
 }

@@ -27,10 +27,11 @@ run.time+=1;art.update(run,actor,phases());assert.equal(art.stats().clock,21);as
 const meshes=scene.children.filter(m=>m.isInstancedMesh),matrices=meshes.map(m=>m.instanceMatrix.array.slice());s=art.stats();
 run.mode='paused';for(let i=0;i<4;i++)art.update(run,actor,phases());assert.deepEqual(art.stats(),s);meshes.forEach((m,i)=>assert.deepEqual(m.instanceMatrix.array,matrices[i]));
 checks.push('Pressure override raises the head, rotates real jets and ripples; extra renders and pause preserve all poses');
-run.mode='driving';run.time+=1;art.update(run,actor,phases(),true);assert.equal(art.stats().clock,s.clock);assert.equal(art.stats().drops,0);assert.equal(art.stats().ripples,0);assert(art.stats().waterVisible[0]);
+// Reduced motion calms the camera, not the water (3caeb5f): spray keeps animating.
+run.mode='driving';run.time+=1;art.update(run,actor,phases(),true);assert.equal(art.stats().clock,s.clock+1);assert.equal(art.stats().drops,32);assert.equal(art.stats().ripples,8);assert(art.stats().waterVisible[0]);assert.notEqual(art.stats().heads[0].yaw,s.heads[0].yaw);
 run.tactics.floodUntil[0]=0;while(irrigationPhase(run,0).active)run.time+=.1;art.update(run,actor,phases());assert(!art.stats().waterVisible[0]);assert.equal(art.stats().drops,0);assert.notEqual(surfaceAt(actor,run),'wet');assert(Math.abs(art.stats().heads[0].height-terrainHeight(actor.x,actor.y)-.12)<1e-8);
 assert.equal(wetMasks.value[0].z,0);assert.equal(art.stats().mist,0);
-checks.push('Reduced motion retains flooding without animated spray; switching off removes water exactly with physical wetness and retracts the head');
+checks.push('Reduced motion keeps flooding and animated spray; switching off removes water exactly with physical wetness and retracts the head');
 const fresh=createRun(0,0,713);fresh.mode='driving';fresh.time=0;art.update(fresh,actor,COURSE.wet.map((_,i)=>irrigationPhase(fresh,i)));assert.equal(art.stats().clock,0);assert(art.stats().drops<=96);assert(art.stats().ripples<=24);
 art.dispose();assert.equal(scene.children.length,0);brass.dispose();cylinder.dispose();checks.push('Retry resets visual clock; bounded pools and all owned scene resources dispose');
 const out='output/back-nine-visual-upgrade/irrigation';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(out+'/contracts.json',JSON.stringify({passed:true,checks},null,2));console.log(JSON.stringify({passed:true,checks}));

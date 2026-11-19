@@ -24,16 +24,18 @@ checks.push('Joe clears the complete water collision margin and resumes navigati
 assert(!gateOccupied({x:0,y:2}));assert(!keeperInside({x:0,y:2}));const root={x:0,y:8};move(root,0,-4,.3,true);assert(root.y<5);
 for(const x of [-4,0,4])assert(solid({x:GATE.x+x,y:GATE.y},.3,true));
 checks.push('Gate occupancy is local to its room; closing it cannot block the adjacent root gallery');
-assert.equal(readSave(JSON.stringify({version:2,checkpoint:3,bypass:true})).checkpoint,2);
-assert.equal(readSave(JSON.stringify({version:3,checkpoint:3,bypass:true})).checkpoint,3);
-for(let cp=0;cp<CHECKPOINTS.length;cp++){const run=createRun(cp);assert(!solid(run.player,.3));assert(!solid(run.joe,.4));assert.equal(readSave(JSON.stringify(snapshot(run))).checkpoint,cp);}
-checks.push('Version 3 saves keep new checkpoints; old pre-range checkpoint migrates to the solved pump, without skipping the new range');
+// Retry resets to the entrance with pump, record and pursuit reset
+// (qa/under-green-cinematics-and-swing-2026-11-13.md): saves keep completion and
+// preferences only, so legacy checkpoint saves can no longer skip any of the run.
+for(const version of [1,2,3,4])for(const checkpoint of [1,2,3]){const legacy=readSave(JSON.stringify({version,checkpoint,bypass:true}));assert(legacy&&!('checkpoint' in legacy)&&!('bypass' in legacy));assert.equal(createRun(legacy.checkpoint).checkpoint,0);}
+for(let cp=0;cp<CHECKPOINTS.length;cp++){const run=createRun(cp);assert(!solid(run.player,.3));assert(!solid(run.joe,.4));const saved=readSave(JSON.stringify(snapshot(run)));assert(!('checkpoint' in saved));assert.equal(createRun(saved.checkpoint).checkpoint,0);}
+checks.push('Saves never carry an in-progress checkpoint; every legacy or current save resumes at the entrance, and every QA checkpoint start is clear of solids');
 const runs=[traverse({dodge:true}),traverse({wet:true,dodge:true}),traverse({decisionPause:3,dodge:true}),traverse({sprint:true,dodge:true}),traverse({optional:true,dodge:true}),...[1,2,3].map(cp=>traverse({cp,dodge:true}))];
 // Preserve the existing contact budgets. Changed pursuit can shift arrival
 // into an earlier safe opening; a route clearing without its old hit is valid.
 const maximumHits=[1,0,0,0,0,1,0,0];
 for(const [index,run]of runs.entries()){assert.equal(run.mode,'complete',`route ${index}`);assert(run.waterHits<=maximumHits[index],`route ${index}: ${run.waterHits} water hits`);assert(!run.solid);}
-assert(runs[1].checkpoint===3);assert(runs[4].evidence);assert(runs[0].gap<60);
+assert(runs.slice(0,5).every(run=>run.checkpoint===0),'Attempts no longer advance a saved checkpoint');assert(runs[4].evidence);assert(runs[0].gap<60);
 // A complete fast route may legitimately earn a clean escape. Test committed
 // attack counterplay at the service encounter itself, independent of subsequent
 // locomotion/arrival tuning that changes whether that route meets Joe there.

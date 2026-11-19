@@ -9,7 +9,8 @@ const out='output/under-green/obstacle-pursuit';const {stalls}=JSON.parse(fs.rea
 const results=[],tapes=[];
 function tick(r,input={}){
  const old={...r.joe};step(r,input);
- assert(distance(old,r.joe)<=2.1/60+.00001);assert(!solid(r.player,.3));assert(!solid(r.joe,.72));assert(weaponClear(r.joe,r.gate));
+ // Hidden Joe may exceed walking pace by paceScale (under-green-unseen.js).
+ assert(distance(old,r.joe)<=2.1*Math.max(1,r.joe.paceScale??1)/60+.00001);assert(!solid(r.player,.3));assert(!solid(r.joe,.72));assert(weaponClear(r.joe,r.gate));
 }
 for(const [index,fixture]of stalls.entries()){
  const r=structuredClone(fixture.initial),frames=[];let blocked=null;

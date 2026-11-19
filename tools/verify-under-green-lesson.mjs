@@ -17,7 +17,10 @@ for(const [stance,speed,input]of [['walk',MOVEMENT.walk,{}],['sprint',MOVEMENT.s
  }
  assert(r.lessonCrossed,JSON.stringify({stance,phase,y:r.player.y}));assert(r.player.y>=far);assert.equal(r.waterHits,0);assert.equal(r.checkpoint,0);assert.equal(r.events.filter(e=>e.type==='lesson-crossed').length,1);assert.equal(r.saveSerial,1);
  if(firstAdvice==='cross')assert.equal(wait,0,'An available opening must not impose a tutorial wait');
- const saved=readSave(JSON.stringify(snapshot(r))),retry=createRun(saved.checkpoint,saved.evidence,saved.difficulty,saved);assert(retry.lessonCrossed);assert.equal(retry.messageTime,0);
+ // Saves hold completion and preferences only, never an in-progress attempt
+ // (under-green-sim.js); every retry starts fresh with the lesson coaching.
+ const saved=readSave(JSON.stringify(snapshot(r)));assert.deepEqual(Object.keys(saved).sort(),['completed','difficulty','evidence']);
+ const retry=createRun(0,saved.evidence,saved.difficulty,saved);assert(!retry.lessonCrossed);assert(retry.messageTime>0);
  rows.push({stance,phase,wait,seconds:r.time-phase,firstAdvice});
 }
 const approaches=[];
@@ -43,6 +46,9 @@ const backed=createRun();backed.player.y=near;observeLesson(backed);backed.playe
 for(const w of WATERS.filter(w=>!w.detour&&!['return','bypass'].includes(w.id))){
  for(let t=0;t<12;t+=.25){const state=waterState(w,t),p={x:w.x,y:w.y-w.depth/2-.6};const a=crossingAdvice(p,w,state);assert(!a.advice.includes('dry route'),w.id);}
 }
-for(const value of ['true',1,{},null])assert(!readSave(JSON.stringify({version:3,checkpoint:0,lessonCrossed:value})).lessonCrossed);
-for(const version of [1,2,3]){assert(!readSave(JSON.stringify({version,checkpoint:0})).lessonCrossed);assert(readSave(JSON.stringify({version,checkpoint:1})).lessonCrossed);}
-fs.writeFileSync(out+'/rules.json',JSON.stringify({passed:true,rows,checks:['72 phase/stance crossings retire coaching only after far-bank clearance','No compulsory wait when the opening fits; no water hits or active Joe during protected completion','A missed opening recovers without teaching completion; reversal and fixture jump do not award it','Strict optional saved fact preserves existing checkpoints and legacy migration','No-detour crossings never advertise an imaginary dry route']},null,2));console.log(JSON.stringify({passed:true,cases:rows.length,maxWait:Math.max(...rows.map(r=>r.wait)),missedHits:missed.waterHits}));
+// Legacy or tampered in-progress fields are discarded, including a genuine
+// lessonCrossed flag; only isolated QA fixtures past checkpoint 0 skip coaching.
+for(const value of [true,'true',1,{},null])assert(!('lessonCrossed' in readSave(JSON.stringify({version:3,checkpoint:0,lessonCrossed:value}))));
+for(const version of [1,2,3,4]){for(const checkpoint of [0,1]){const legacy=readSave(JSON.stringify({version,checkpoint,lessonCrossed:true}));assert(!('lessonCrossed' in legacy)&&!('checkpoint' in legacy));assert(!createRun(0,legacy.evidence,legacy.difficulty,legacy).lessonCrossed);}}
+assert(createRun(1).lessonCrossed);assert(!createRun(0).lessonCrossed);
+fs.writeFileSync(out+'/rules.json',JSON.stringify({passed:true,rows,checks:['72 phase/stance crossings retire coaching only after far-bank clearance','No compulsory wait when the opening fits; no water hits or active Joe during protected completion','A missed opening recovers without teaching completion; reversal and fixture jump do not award it','Lesson completion belongs to the attempt: saves and legacy records never carry it into a fresh retry','No-detour crossings never advertise an imaginary dry route']},null,2));console.log(JSON.stringify({passed:true,cases:rows.length,maxWait:Math.max(...rows.map(r=>r.wait)),missedHits:missed.waterHits}));

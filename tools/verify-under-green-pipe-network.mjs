@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';import fs from 'node:fs';
+import assert from 'node:assert/strict';
 import * as T from '../web/vendor/three/three.module.js';
 import {buildDrainPipeNetwork,pipeInsulationGeometry} from '../web/under-green-pipe-network.js';
 import {DRAIN_DRIPS,drainDripSample} from '../web/under-green-water-contacts.js';
@@ -12,7 +12,11 @@ assert.equal(stats.runs.length,4);assert.equal(stats.repairs.length,3);assert.eq
 for(const p of [[-20,3.65,-40],[5.45,3.65,-40],[6,3.65,-39.45]]){
  const ray=new T.Raycaster(new T.Vector3(p[0],p[1]-.5,p[2]),new T.Vector3(0,1,0),0,.51);assert(ray.intersectObjects(meshes).length,'Unconnected branch/elbow at '+p);
 }
-for(const d of DRAIN_DRIPS){
+// Only pipe weeps hang from pipe metal; gallery runoff drips on roof/root surfaces
+// are owned by verify-under-green-gallery-runoff-geometry.
+const pipeDrips=DRAIN_DRIPS.filter(d=>!d.surface||d.surface==='pipe');assert(pipeDrips.length>=4);
+assert.equal(stats.leaks.length,pipeDrips.length);
+for(const d of pipeDrips){
  const ray=new T.Raycaster(new T.Vector3(d.x,d.height-.02,-d.y),new T.Vector3(0,1,0),0,.045);assert(ray.intersectObjects(meshes).length,'Floating drip origin');
  const a=drainDripSample(d,-d.offset,0);assert.equal(a.height,d.height);assert(a.falling);
 }
@@ -20,4 +24,4 @@ for(let seed=0;seed<12;seed++){
  const g=pipeInsulationGeometry(.123,.82,seed),edges=new Map();for(let i=0;i<g.index.count;i+=3)for(let j=0;j<3;j++){const e=[g.index.array[i+j],g.index.array[i+(j+1)%3]].sort((a,b)=>a-b).join(',');edges.set(e,(edges.get(e)||0)+1);}assert([...edges.values()].every(n=>n===2),'Open insulation shell');
  const p=g.attributes.position;for(let i=0;i<p.count;i++)assert(Math.hypot(p.getX(i),p.getY(i))>.1229,'Wrap penetrates pipe');
 }
-const report={passed:true,meshes:meshes.length,triangles,minHeight,stats};fs.writeFileSync('output/under-green/visual-upgrade-local/pass42-source/geometry.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+const report={passed:true,meshes:meshes.length,triangles,minHeight,stats};console.log(JSON.stringify(report));

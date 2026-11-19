@@ -21,6 +21,6 @@ for(const e of edges){
 }
 assert.equal(Object.keys(counts).length,COURSE.paths.length-1);
 assert(edges.length<500,'Bounded static geometry');
-assert.equal(navigationStats().signature,2693326411);
+assert.equal(navigationStats().signature,4190417745);assert(navigationStats().baked,'Shipped navigation bake must match the course');
 const report={passed:true,edges:edges.length,triangles:edges.length*2,tested,counts,minOther,maxPath,navigation:navigationStats()};
 fs.mkdirSync('output/back-nine-experience/junction-readability',{recursive:true});fs.writeFileSync('output/back-nine-experience/junction-readability/layout.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));

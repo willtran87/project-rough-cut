@@ -32,10 +32,13 @@ for(const [type,kind,extra]of [['contact','damage',{damage:12}],['shortcut','sho
  assert.match(c.caption(r),/foot/,'Actual cart abandonment beats damage in the same tick');
 }
 {
+ // Shortcut gates are now latched: stop in front and hold Use to unlatch
+ // (chase-shortcuts.js). Open one for real and require Joe to react to it,
+ // whatever the event is called.
  const r=run(),c=make(),g=COURSE.hurdles.find(h=>h.shortcut!==undefined);
- Object.assign(r.cart,{x:g.x,y:g.y,yaw:g.yaw,speed:5});
- updateShortcuts(r,{throttle:1},1/60,{x:g.x-Math.sin(g.yaw)*.4,y:g.y-Math.cos(g.yaw)*.4,yaw:g.yaw});
- assert(r.events.some(e=>e.type==='shortcut'));c.observe(r);assert.match(c.caption(r),/shortcut/,'Actual gate opening qualifies');
+ const at={x:g.x-Math.sin(g.yaw)*2.4,y:g.y-Math.cos(g.yaw)*2.4,yaw:g.yaw};Object.assign(r.cart,at,{speed:0});
+ for(let i=0;i<72;i++){r.time+=1/60;updateShortcuts(r,{use:true},1/60,{...at});}
+ assert(r.events.some(e=>e.type==='gate-unlatched'),'Use genuinely unlatches the gate');c.observe(r);assert.match(c.caption(r),/shortcut/,'Actual gate opening qualifies');
 }
 {
  const r=run(),c=make();event(r,'shortcut');c.observe(r);const first=c.caption(r);

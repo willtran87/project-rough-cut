@@ -4,7 +4,7 @@ import {distance,blocked} from '../web/back-nine-course.js';
 import {vehicleOverlap} from '../web/vehicle-contact.js';
 const scenarios=[['rear',[0,35,0],[0,30,0]],['head-on',[0,30,0],[0,37,Math.PI]],['side',[0,35,0],[-7,35,Math.PI/2]],['boundary',[39,30,Math.PI/2],[32,30,Math.PI/2]],['blocked-reverse',[0,7,0],[0,2,0]]];
 function setup(c,j){const r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:c[0],y:c[1],yaw:c[2]});Object.assign(r.joe,{x:j[0],y:j[1],yaw:j[2],speed:16});return r;}
-function step(r,input={brake:true}){const before={...r.joe};updateRun(r,input,1/60);assert(!vehicleOverlap(r.cart,r.joe));assert(!blocked(r.cart,.85));assert(!blocked(r.joe,1.65));assert(distance(before,r.joe)<=31.5/60+.003,'No teleport');}
+function step(r,input={brake:true}){const before={...r.joe};updateRun(r,input,1/60);assert(!vehicleOverlap(r.cart,r.joe)||r.foot&&r.wreck.crush>=1,'Only a fully crushed wreck may sit under the mower (chase-destruction.js)');assert(!blocked(r.cart,.85));assert(!blocked(r.joe,1.65));assert(distance(before,r.joe)<=44/60+.003,'No teleport: never beyond the 42+2 catch-up road cap (back-nine-sim.js)');}
 const checks=[];
 for(const[name,c,j]of scenarios){
  const r=setup(c,j);for(let i=0;i<180&&!r.cart.hits;i++)step(r);assert.equal(r.cart.hits,1,name);assert.equal(r.joe.ram.phase,'backoff');const contact={...r.joe},time=r.time,plans=r.joe.plans;

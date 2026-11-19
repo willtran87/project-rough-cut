@@ -6,13 +6,17 @@ import {crossingAdvice} from '../web/under-green-guidance.js';
 import {actionBindings,keyLabel} from '../web/control-profiles.js';
 const checks=[],tick=(r,n,input={})=>{for(let i=0;i<n;i++)step(r,input);};
 let r=createRun(1,true);r.mode='playing';Object.assign(r.player,{x:LEVER.x,y:LEVER.y+1,yaw:Math.PI});step(r,{use:true});assert(r.bypass);
-const save=readSave(JSON.stringify(snapshot(r))),loaded=createRun(save.checkpoint,save.evidence,save.difficulty,save);
-assert(loaded.bypass&&loaded.evidence);assert.equal(loaded.checkpoint,2);
-assert(waterState(WATERS.find(w=>w.id==='return'),loaded.time,loaded.bypass,loaded.bypassAt).danger);
-assert(readSave(JSON.stringify({version:1,checkpoint:2})).bypass);
-assert(!readSave(JSON.stringify({version:1,checkpoint:1})).bypass);
+// Saves record chapter completion and preferences only, never an in-progress
+// attempt (under-green-sim.js snapshot, dfbb6e5/1d36a4c).
+{const ret=WATERS.find(w=>w.id==='return');assert.equal(waterState(ret,r.time,r.bypass,r.bypassAt).phase,'warning');assert(waterState(ret,r.bypassAt+30,r.bypass,r.bypassAt).danger);}
+const mid=readSave(JSON.stringify(snapshot(r)));assert.equal(mid.completed,false);assert.equal(mid.evidence,false);
+r.mode='complete';const done=readSave(JSON.stringify(snapshot(r)));assert(done.completed&&done.evidence);assert.equal(done.difficulty,r.difficulty);
+const retry=createRun(0,done.evidence,done.difficulty,done);assert.equal(retry.checkpoint,0);assert(!retry.bypass);
+assert.equal(readSave(JSON.stringify({version:1,checkpoint:2})).completed,false);
+assert.equal(readSave(JSON.stringify({version:1,checkpoint:2,evidence:true})).evidence,false);
+assert.equal(readSave(JSON.stringify({version:4,completed:true,evidence:true})).evidence,true);
 assert.equal(readSave('{broken'),null);assert.equal(readSave('{"version":99}'),null);
-checks.push('Immediate bypass save and retry preserve durable facts; v1 migration infers only earned progress');
+checks.push('Bypass raises return danger; saves keep only completion, evidence earned by completion and difficulty, never mid-run state');
 
 const back=WATERS.find(w=>w.id==='return'),out=WATERS.find(w=>w.id==='bypass');
 for(const w of WATERS)for(const t of [0,1,2,4.5,6.5,10,11.999,12])for(const bypass of [false,true]){

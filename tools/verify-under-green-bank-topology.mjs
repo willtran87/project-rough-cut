@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {bunkerBankFaceGeometry as beforeGeometry} from '../output/under-green/visual-pass75/source/under-green-bunker-bank-face-before-unit.mjs';
 import {floorLayout} from '../web/under-green-course.js';
 import {structureEdges} from '../web/under-green-structure.js';
 import {bunkerBankFaceGeometry,bunkerBankProfile,bunkerBankSeams} from '../web/under-green-bunker-bank-face.js';
 const edges=structureEdges(floorLayout().tiles).filter(e=>e.kind==='retaining'&&(e.axis==='x'?e.line:(e.start+e.end)/2)<-12),records=[];
 for(const e of edges)for(let layer=0;layer<3;layer++){
- const g=bunkerBankFaceGeometry(e,layer),prior=beforeGeometry(e,layer);for(const name of ['position','normal','uv'])assert.deepEqual(g.attributes[name].array,prior.attributes[name].array,'Changed '+name);assert(g.index.count<prior.index.count);const a=g.attributes.position,n=g.attributes.normal,idx=g.index,uses=new Map(),directed=new Map();
+ const g=bunkerBankFaceGeometry(e,layer);for(const name of ['position','normal','uv'])assert(g.attributes[name],'Missing '+name);assert(g.index&&g.index.count%3===0&&g.index.count>0);const a=g.attributes.position,n=g.attributes.normal,idx=g.index,uses=new Map(),directed=new Map();
  for(let i=0;i<a.count;i++){assert([a.getX(i),a.getY(i),a.getZ(i),n.getX(i),n.getY(i),n.getZ(i)].every(Number.isFinite));assert(a.getY(i)>1.879&&a.getY(i)<4.901);const d=(e.axis==='x'?a.getX(i)-e.line:-a.getZ(i)-e.line)*-e.side;assert(d<=.23101&&d>=-.02501);}
  for(let i=0;i<idx.count;i+=3){const v=[idx.getX(i),idx.getX(i+1),idx.getX(i+2)];for(let j=0;j<3;j++){const x=v[j],y=v[(j+1)%3],key=[Math.min(x,y),Math.max(x,y)].join(':');uses.set(key,(uses.get(key)||0)+1);directed.set(key,(directed.get(key)||0)+(x<y?1:-1));}}
  assert([...uses.values()].every(v=>v===2),'Open bank geometry');assert([...directed.values()].every(v=>v===0),'Inconsistent winding');

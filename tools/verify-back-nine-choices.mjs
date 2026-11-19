@@ -6,11 +6,16 @@ import {ramDamageScale} from '../web/ram-damage.js';
 import {COURSE,blocked,lineClear,mowerLineClear,planMowerRoute,navigationStats,distance,angleDelta,clamp} from '../web/back-nine-course.js';
 import {hullOverlap,constrainFeatureMotion,vehicleOverlap} from '../web/vehicle-contact.js';
 import {updateHunt} from '../web/back-nine-hunt.js';
+import {isDestructibleFeature} from '../web/course-destruction-state.js';
 const out='output/back-nine-route-choices';fs.mkdirSync(out,{recursive:true});const checks=[],gateResults=[],drives=[];
 const tick=(r,input={},n=1)=>{for(let i=0;i<n;i++)updateRun(r,input,1/60);};
 function trace(g,kind){let p={x:g.x,y:g.y-5,yaw:0,speed:8};for(let i=0;i<100;i++){const before={...p};p.y+=.1;if(blocked(p,kind==='foot'?.32:kind==='cart'?.85:1.65)){p=before;break;}if(constrainFeatureMotion(p,before,kind))break;}return p.y-g.y;}
 for(const d of COURSE.decisions){
- assert(trace(d.gate,'cart')>4,d.id+' cart passes');assert(trace(d.gate,'mower')<0,d.id+' mower stops');assert(!mowerLineClear({x:d.gate.x,y:d.gate.y-6},{x:d.gate.x,y:d.gate.y+6}));
+ assert(trace(d.gate,'cart')>4,d.id+' cart passes');assert(trace(d.gate,'mower')<0,d.id+' mower stops');
+ // Service fences are crushable by the mower (course-destruction-state.js), so
+ // the planner may route through a gap only by smashing its flanking fences.
+ const fences=COURSE.features.filter(f=>distance(f,d.gate)<6);assert(fences.length>0&&fences.every(isDestructibleFeature),d.id+' gap is flanked only by crushable service fence');
+ if(mowerLineClear({x:d.gate.x,y:d.gate.y-6},{x:d.gate.x,y:d.gate.y+6})){const r=createRun();r.mode='driving';r.grace=0;Object.assign(r.cart,{x:d.gate.x,y:d.gate.y+12,yaw:0,speed:0});Object.assign(r.joe,{x:d.gate.x,y:d.gate.y-8,yaw:0,speed:10});tick(r,{},240);assert(fences.some(f=>r.destruction.features[f.id].brokenAt!==null),d.id+' mower crosses only by breaking the fence');}
  const plan=planMowerRoute(d.entry,d.merge);assert(plan.points.length,d.id+' mower has a wide detour');let prior=d.entry;for(const p of plan.points){assert(mowerLineClear(prior,p));prior=p;}
  if(d.foot){assert(trace(d.foot,'foot')>4,d.id+' runner passes');assert(trace(d.foot,'cart')<0,d.id+' cart cannot fit');}
  gateResults.push({id:d.id,detourPoints:plan.points.length,expanded:plan.expanded,footGap:!!d.foot});
@@ -36,7 +41,10 @@ const prediction=createRun(1);prediction.mode='driving';prediction.grace=0;predi
 const late=createRun(2);late.mode='driving';late.grace=0;late.cart.health=25;Object.assign(late.cart,{x:-24,y:749,yaw:0});Object.assign(late.joe,{x:-24,y:744,yaw:0,speed:20});late.joe.ram.armed=true;
 for(let i=0;i<180&&!late.foot;i++)tick(late,{});
 assert(late.foot,'Actual ram ejects the player');assert(late.foot.invulnerable>4.9);assert.equal(late.events.filter(e=>e.type==='abandon-cart').length,1);assert(!blocked(late.foot,.32));assert(!vehicleOverlap(late.cart,late.joe));
-const route=[{...late.foot},...COURSE.footPaths[1].map(([x,y])=>({x,y})),{x:-23,y:795},{...COURSE.finish}];assert(drive(late,route,50),JSON.stringify({foot:late.foot,joe:late.joe,mode:late.mode}));tick(late,{brake:true},400);assert.equal(late.mode,'complete');
+const route=[{...late.foot},...COURSE.footPaths[1].map(([x,y])=>({x,y})),{x:-23,y:795}];assert(drive(late,route,50),JSON.stringify({foot:late.foot,joe:late.joe,mode:late.mode}));
+// The garage shutter starts jammed: hold Use at its release, let it lift, then go inside.
+tick(late,{use:true},90);assert(late.exitRelease.released,'Use at the release frees the shutter');tick(late,{},80);
+assert(drive(late,[{...late.foot},{...COURSE.finish}],20),JSON.stringify({foot:late.foot,mode:late.mode}));tick(late,{use:true},400);assert.equal(late.mode,'complete');
 const retry=createRun(late.checkpoint,late.story.collected);assert.equal(retry.cart.health,100);assert.equal(retry.foot,null);assert.equal(retry.checkpoint,2);
 checks.push('Late ram -> protected ejection -> small fence gap -> garage victory with live Joe; retry restores the cart');
 assert(navigationStats().baked);assert.equal(navigationStats().edgeChecks,0);

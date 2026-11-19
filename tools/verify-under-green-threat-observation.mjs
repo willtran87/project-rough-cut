@@ -18,8 +18,9 @@ r.player.rearAngle=Math.PI;r.joe.phase='search';assert(observeJoe(r).visible);as
 r.joe.phase='water-wait';assert.match(pursuitCaption(r,'Y'),/WATER/);r.player.rearAngle=0;
 checks.push('Hidden idle/search/water/recovery states produce the same heard cue; a real rear glance permits visible-state descriptions');
 
-r.joe.y=56;r.joe.phase='windup';assert(observeJoe(r).imminent);assert.match(urgentThreatCaption(r),/revs close by/);assert(!urgentThreatCaption(r).includes('raises'));
-r.joe.phase='sweep';assert.match(urgentThreatCaption(r),/revs close by/);
+r.joe.y=56;r.joe.phase='windup';assert(observeJoe(r).imminent);// PR #15: Joe carries a scythe; unseen attacks are heard as a close swish.
+assert.match(urgentThreatCaption(r),/scythe swishes close by/);assert(!urgentThreatCaption(r).includes('raises'));
+r.joe.phase='sweep';assert.match(urgentThreatCaption(r),/scythe swishes close by/);
 r.player.yaw=0;assert.match(urgentThreatCaption(r),/blade is sweeping/);
 Object.assign(r.player,{x:LEVER.x-1,y:LEVER.y,yaw:Math.PI/2});Object.assign(r.joe,{x:LEVER.x+1.3,y:LEVER.y,phase:'windup'});
 assert(!observeJoe(r).imminent);assert.equal(urgentThreatCaption(r),'');
@@ -32,10 +33,10 @@ Object.assign(r.player,{x:0,y:43,yaw:-Math.PI/2,pitch:0});Object.assign(r.joe,{x
 checks.push('Aspect ratio, vertical look and real opaque walls constrain visible-state knowledge independently of Joe seeing the player');
 
 Object.assign(r.player,{x:0,y:30,yaw:0});Object.assign(r.joe,{x:0,y:35,phase:'enter',age:.3});r.time=0;
-assert.match(soundDescription(r),/door rattles/);assert(!soundDescription(r).includes('engine'));
-r.joe.age=1;assert.match(soundDescription(r),/engine sputters/);
+assert.match(soundDescription(r),/door rattles/);assert(!soundDescription(r).includes('breathing'));
+r.joe.age=1;assert.match(soundDescription(r),/Heavy breathing behind the door/);assert(!soundDescription(r).includes('rattles'));
 Object.assign(r.player,{x:0,y:58});Object.assign(r.joe,{x:0,y:50,phase:'walk'});r.time=1.2;
 assert.match(soundDescription(r),/pipes knock/);
 r.joe.phase='absent';r.player.y=5;r.time=0;assert.equal(pursuitCaption(r,'R'),'');assert.equal(soundDescription(r),'');
-checks.push('Entrance captions separate the door from the later starter; real nearby pressure warnings outrank ordinary engine description; absent Joe supplies no threat');
+checks.push('Entrance captions separate the door rattle from the breathing behind it; real nearby pressure warnings outrank ordinary engine description; absent Joe supplies no threat');
 fs.writeFileSync(out+'/rules.json',JSON.stringify({passed:true,checks,hidden},null,2));console.log(JSON.stringify({passed:true,checks}));

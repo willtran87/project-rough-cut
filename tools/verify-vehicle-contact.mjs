@@ -7,7 +7,9 @@ const checks=[];
 function test(name,fn){fn();checks.push(name);}
 const pose=(x,y,yaw=0)=>({x,y,yaw,speed:0});
 function fresh(c,j,grace=0){const r=createRun();r.mode='driving';r.grace=grace;Object.assign(r.cart,c);Object.assign(r.joe,j);return r;}
-function tick(r,input={},dt=1/60){updateRun(r,input,dt);assert(!vehicleOverlap(r.cart,r.joe),'Vehicles overlap '+JSON.stringify(r));}
+// The one deliberate exception: once Joe has battered an abandoned wreck flat
+// (chase-destruction.js strikeWreck, crush 1) the mower may drive over it.
+function tick(r,input={},dt=1/60){updateRun(r,input,dt);assert(!vehicleOverlap(r.cart,r.joe)||r.foot&&r.cart.health===0&&r.wreck.crush>=1,'Vehicles overlap '+JSON.stringify(r));}
 test('Rear impact stops at the cutting deck, before the old distance trigger',()=>{
  const r=fresh(pose(0,35),{...pose(0,30),speed:18});let impact=false;
  for(let i=0;i<120;i++){tick(r);if(r.contact){impact=true;break;}}
