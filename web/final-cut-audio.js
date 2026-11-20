@@ -81,5 +81,6 @@ export function createFinalCutAudio(preferences,initialRun){
    heard.add(id);if(heard.size>128)heard.delete(heard.values().next().value);stats.events++;const v=voices.bell,ex=(e.x??r.player.x)-r.player.x,ey=(e.y??r.player.y)-r.player.y,dist=Math.hypot(ex,ey);v.pan.pan.setValueAtTime((ex*Math.cos(yaw)-ey*Math.sin(yaw))/Math.max(1,dist),ctx.currentTime);v.source.frequency.setValueAtTime(e.type==='bell'?890:e.type==='ball-land'?1250:e.type==='pump'?280:105,ctx.currentTime);v.gain.gain.cancelScheduledValues(ctx.currentTime);v.gain.gain.setValueAtTime((e.type==='ball-land'?.09:.15)/(1+dist*.06),ctx.currentTime);v.gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+(e.type==='bell'?2.4:.5));
   }}running=live;
  }
- return {start,update,stats:()=>({...stats,footsteps:footsteps?.stats(),voice:speech?.stats()||{ready:false,playing:false},context:ctx?.state||'unstarted',running}),dispose(){footsteps?.silence();speech?.dispose();ctx?.close();}};
+ // The live context and category buses, for the chapter's extra sound layers.
+ return {start,update,graph:()=>ctx?{ctx,buses}:null,stats:()=>({...stats,footsteps:footsteps?.stats(),voice:speech?.stats()||{ready:false,playing:false},context:ctx?.state||'unstarted',running}),dispose(){footsteps?.silence();speech?.dispose();ctx?.close();}};
 }

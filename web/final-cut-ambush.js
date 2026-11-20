@@ -3,6 +3,7 @@ import {rigWallHit} from './final-cut-rig.js';
 import {AMBUSH_CORRIDOR_X} from './final-cut-route-layout.js';
 import {advanceRollingTravel} from './final-cut-travel.js';
 import {BLACKOUT} from './final-cut-basin-layout.js';
+import {tuning} from './final-cut-difficulty.js';
 
 export const AMBUSH={travelSpeed:18,travelAcceleration:12,cutSpeed:10.2,cutAcceleration:8.5,warning:1.05,lateWarning:.9,lift:.4};
 // Reeds screen the service roads and the ends of the clear eastern corridor.
@@ -17,7 +18,7 @@ export const AMBUSH_REEDS=[
  {id:'north-road-east',x:23.5,y:96.8,w:41,d:2.6,h:5.2},
 ];
 // Each time the machine is held he gives a little less warning.
-export function attackWarning(r){return Math.max(.72,(r.pump?AMBUSH.lateWarning:AMBUSH.warning)-.08*(r.stage||0));}
+export function attackWarning(r){return Math.max(.72,(r.pump?AMBUSH.lateWarning:AMBUSH.warning)-.08*(r.stage||0))*tuning(r).warning;}
 export function ambushTell(r){
  const j=r.rig,a=j.attack;if(!a||j.phase!=='announce'||r.won)return null;
  const reed=AMBUSH_REEDS.find(p=>p.id===a.entry);

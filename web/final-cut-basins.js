@@ -1,4 +1,5 @@
 import {BASINS,VALVES,BASIN_TIMING as T,BREAKER,BLACKOUT} from './final-cut-basin-layout.js';
+import {tuning} from './final-cut-difficulty.js';
 
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 export const basinById=id=>BASINS.find(b=>b.id===id);
@@ -35,7 +36,7 @@ export function advanceBasins(r,dt,event){
   const s=r.basins[b.id];
   if(b.final&&r.won){s.state='full';s.level=1;}
   else if(s.state==='filling'){s.level=clamp(s.level+dt/T.fill);if(s.level>=1){s.state='full';s.age=0;event(r,'basin-full',{id:b.id});}}
-  else if(s.state==='full'){s.age+=dt;if(s.age>=(b.final?T.swaleHold:T.hold)){s.state='draining';s.age=0;event(r,'basin-draining',{id:b.id});}}
+  else if(s.state==='full'){s.age+=dt;if(s.age>=(b.final?T.swaleHold:T.hold)*tuning(r).hold){s.state='draining';s.age=0;event(r,'basin-draining',{id:b.id});}}
   else if(s.state==='draining'){s.level=clamp(s.level-dt/T.drain);if(s.level<=0){s.state='dry';event(r,'basin-dry',{id:b.id});}}
   else if(s.state==='spent')s.level=Math.max(T.wetAt,s.level-dt/20);
   if(s.state==='filling'||s.state==='full')gauge=Math.max(gauge,s.level);
@@ -45,7 +46,7 @@ export function advanceBasins(r,dt,event){
  r.water=r.basins.swale.level;r.gauge=gauge;
 }
 /** Seconds of standing water left in a full basin, for prompts and the HUD. */
-export function holdRemaining(r,b){const s=r.basins[b.id];return s.state==='full'?Math.max(0,(b.final?T.swaleHold:T.hold)-s.age):0;}
+export function holdRemaining(r,b){const s=r.basins[b.id];return s.state==='full'?Math.max(0,(b.final?T.swaleHold:T.hold)*tuning(r).hold-s.age):0;}
 /** The basin under the machine's centre on its committed strip, if any. */
 export function basinUnder(r){
  const j=r.rig;
