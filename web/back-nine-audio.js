@@ -16,10 +16,12 @@ import {COURSE} from './back-nine-course.js';
 import {ramWindup} from './ram-windup.js';
 import {cartRumble} from './cart-rumble.js';
 import {panicPose} from './chase-panic.js';
+import {createBackNineAirAudio} from './back-nine-air-audio.js';
 const clampSpeed=speed=>Math.min(1,Math.abs(speed)/9);
 // Fourteen persistent voices, including the five-voice chase score and a short body thump and metal/noise strike.
 // Impact envelopes reuse the same nodes; sustained contact cannot grow a pool.
 export function createChaseAudio(volume=.72,settings={}){
+ let air=null,pulseLevel=0;
  let score=null,footsteps=null,courseAmbience=null,coolingTick=-1,coolingPlays=0,motorMix=1,rollingAudio=false;
  const buses={};
  const channels=Object.entries({effects:['effectsVolume',1],mower:['mowerVolume',1],ambience:['ambienceVolume',.9],danger:['dangerVolume',.9]});
@@ -57,11 +59,12 @@ export function createChaseAudio(volume=.72,settings={}){
   footsteps=createRunnerFootstepAudio(ctx,cart);
   damageAudio=createCartDamageAudio(ctx,{cart,crash,thump,impactPan});
   runoverAudio=createRunoverAudio(ctx,{cart,mower,blade,pan,drone,harmonic,pulse,wind,thump,crash,impactPan});
+  air=createBackNineAirAudio(ctx,{effects:buses.effects,ambience:buses.ambience});
  }
  function update(run,active){if(!ctx)return;const now=ctx.currentTime,c=chaseActor(run),ears=listenerYaw(run),j=run.joe,placement=mowerSoundPlacement(run,spatial),d=placement.distance,proximity=placement.proximity,running=active&&!muted&&!settings.muted,t=run.tension||{},panic=panicPose(run),fear=Math.max(t.intensity||0,panic.level*.85)*(encounterQuiet(run)&&d>16?.45:1),ram=ramWindup(run),commit=commitmentPose(run),wave=pressurePose(run),rev=Math.max(t.windup||0,ram.charge,commit.load*.9),surge=t.surge||0;
   mix();const atmospherePose=atmosphere.update(run),approachPose=approach.update(run);approachLevel=running?approachPose.level:0;
   score.update(run,running,settings);damageAudio.begin(run,running);footsteps.begin(run,running&&(settings.effectsVolume??1)>0);
-  if(run.death){courseAmbience.reset();mixerTarget(master.gain,running?(settings.volume??volume)*.24:0,now,.06);runoverAudio.update(run,running);panicLevel=0;percussion=0;rumbleLevel=0;lastTime=run.time;return;}
+  if(run.death){courseAmbience.reset();mixerTarget(master.gain,running?(settings.volume??volume)*.24:0,now,.06);runoverAudio.update(run,running);air.silence();pulseLevel=0;panicLevel=0;percussion=0;rumbleLevel=0;lastTime=run.time;return;}
   runoverAudio.release();const damageBusy=damageAudio.ownsStrike(run);
   panicLevel=running?panic.level:0;percussion=running?panic.percussion:0;
   if(lastRun!==run){lastRun=run;coolingTick=-1;rollingAudio=false;lastImpact=0;lastFX=0;lastLaunch=0;lastPanic=0;lastPass=0;lastWave=0;lastTime=run.time;beat=0;lastLatch=!!run.finale?.latched;}const impact=run.impact;
@@ -114,6 +117,8 @@ export function createChaseAudio(volume=.72,settings={}){
   harmonic.osc.frequency.setTargetAtTime(servicing?110:sting>.05?287+sting*61:44.3+fear*1.7-atmospherePose.rumble*8.5,now,.22);
   harmonic.level.gain.setTargetAtTime(servicing?.035:(.025+fear*.03+sting*.055+atmospherePose.rumble*.035)*quiet,now,.15);
   const heartbeat=Math.exp(-(((beat-.08)/.045)**2))+.6*Math.exp(-(((beat-.27)/.055)**2));
+  // The same beat drives the screen pulse (see pulse()), muted or not.
+  pulseLevel=active&&!finale.latched&&run.mode==='driving'?Math.min(1,Math.max(0,(fear-.45)/.5)*heartbeat):0;air.update(run,running,{fear,ears});
   const kick=Math.exp(-beat*18),rhythm=panic.percussion*(.19*kick+.055*Math.exp(-(((beat-.5)/.055)**2)));
   pulse.level.gain.setTargetAtTime(finale.latched?0:fear*heartbeat*.22*wave.gain*(panic.reveal?.15:1)+rhythm,now,.015);pulse.osc.frequency.setTargetAtTime(54+fear*8+panic.percussion*kick*19,now,.025);
   const rattle=rumbleLevel*clampSpeed(c.speed)*Math.pow(Math.max(0,Math.sin(run.time*31)*Math.sin(run.time*47)),8);
@@ -129,7 +134,7 @@ export function createChaseAudio(volume=.72,settings={}){
   damageAudio.update(run,running,!damageBusy&&!closing&&!tail&&(impact?.age??99)>.7&&fxPriorityAge>.85&&!(j.ram?.release>0)&&!(commit.release>0)&&!(wave.release>0)&&!(run.panic?.phase==='panic'&&run.panic.age<.5),rumble.mechanics);
  }
  function intro(index,active=true,preferences=settings){
-  introPlaying=active;if(!ctx)return;courseAmbience.reset();mix(preferences);score.silence();const now=ctx.currentTime,running=active&&!muted&&!preferences.muted;
+  introPlaying=active;if(!ctx)return;air.silence();courseAmbience.reset();mix(preferences);score.silence();const now=ctx.currentTime,running=active&&!muted&&!preferences.muted;
   const engine=[0,0,.035,.16,.29][index]||0,cartLevel=[0,.10,.08,.08,.15][index]||0;
   for(const v of [cart,mower,blade,drone,harmonic,pulse,wind,thump,crash])v.level.gain.cancelScheduledValues(now);
   mixerTarget(master.gain,running?(preferences.volume??volume)*.24:0,now,.09);
@@ -146,5 +151,5 @@ export function createChaseAudio(volume=.72,settings={}){
   }
   if(!active)introIndex=-1;
  }
- return {start,update,intro,presentRunner(run,events,active=false){footsteps?.present(run,events,active&&!muted&&!settings.muted&&(settings.effectsVolume??1)>0&&run.mode==='driving');},toggle(){muted=!muted;return muted;},stats:()=>({experience:{motorMix,coolingPlays,rollingAudio},courseAmbience:courseAmbience?.stats(),mix:Object.fromEntries(Object.entries(buses).map(([name,bus])=>[name,bus.gain.value])),atmosphere:{...atmosphere.stats()},spatial,voices:ctx?14:0,score:score?.stats(),introPlaying,introIndex,footsteps:footsteps?.stats(),cartDamage:damageAudio?.stats(),runOver:runoverAudio?.stats(),impactPlays,latchPlays,coursePlays,ramLaunchPlays,panicPlays,closePassPlays,wavePlays,panicLevel,percussion,approach:approachLevel,rumble:rumbleLevel,muted:muted||settings.muted===true,master:master?.gain.value??0,active:!!ctx}),stop(){score?.dispose();score=null;ctx?.close();ctx=null;}};
+ return {start,update,intro,presentRunner(run,events,active=false){footsteps?.present(run,events,active&&!muted&&!settings.muted&&(settings.effectsVolume??1)>0&&run.mode==='driving');},toggle(){muted=!muted;return muted;},pulse:()=>pulseLevel,stats:()=>({air:air?.stats(),experience:{motorMix,coolingPlays,rollingAudio},courseAmbience:courseAmbience?.stats(),mix:Object.fromEntries(Object.entries(buses).map(([name,bus])=>[name,bus.gain.value])),atmosphere:{...atmosphere.stats()},spatial,voices:ctx?14:0,score:score?.stats(),introPlaying,introIndex,footsteps:footsteps?.stats(),cartDamage:damageAudio?.stats(),runOver:runoverAudio?.stats(),impactPlays,latchPlays,coursePlays,ramLaunchPlays,panicPlays,closePassPlays,wavePlays,panicLevel,percussion,approach:approachLevel,rumble:rumbleLevel,muted:muted||settings.muted===true,master:master?.gain.value??0,active:!!ctx}),stop(){score?.dispose();score=null;ctx?.close();ctx=null;}};
 }

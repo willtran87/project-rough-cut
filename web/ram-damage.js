@@ -12,5 +12,6 @@ export function ramDamageScale(run){
 }
 export function scaledImpactDamage(strength,run=null,front=1){
  const direct=.72+.28*clamp(Math.abs(front),0,1);
- return Math.round((4+clamp(strength,0,1)*12)*direct*(run?ramDamageScale(run):1));
+ // Relaxed / Hard scale ram damage; a Standard run has no difficulty record.
+ return Math.round((4+clamp(strength,0,1)*12)*direct*(run?ramDamageScale(run):1)*(run?.difficulty?.damage??1));
 }

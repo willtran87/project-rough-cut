@@ -2,6 +2,9 @@ import {createSolidOcclusion} from './solid-occlusion.js';
 import {createRigidInstanceCulling} from './rigid-instance-culling.js';
 import {createRigidVertexBatches} from './rigid-vertex-batches.js';
 import {createBackNineWind} from './back-nine-wind.js';
+import {createScreenFinish,LOOKS} from './screen-finish.js';
+import {createBackNineCartMotion} from './back-nine-cart-motion.js';
+import {createBackNineTyreMarks} from './back-nine-tyre-marks.js';
 import {buildTreeIvy,composeEncounterTrees} from './back-nine-tree-finish.js';
 import {createBreakFragments} from './back-nine-break-fragments.js';
 import {createGreenFlags} from './back-nine-green-flags.js';
@@ -555,9 +558,19 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  let introAt=-99,introRun=null,introMode='',introPose=0,sealZoom=0;
  // The capture moment lingers: the camera's own pose runs behind for the first
  // beat and the weather hangs in the air. Simulation time is never touched.
- const fxFrame={actor:null,joe:null,reducedMotion:false,dip:0,beacon:null,headlights:null,fog:null,timeScale:1,impact:null},captureImpact={x:0,y:0,h:0,age:9,power:0};let captureSlow=0,wetSheenMaterials=0;
+ const fxFrame={actor:null,joe:null,reducedMotion:false,dip:0,beacon:null,headlights:null,fog:null,timeScale:1,impact:null,effects:true},captureImpact={x:0,y:0,h:0,age:9,power:0};let captureSlow=0,wetSheenMaterials=0;
  const lingerAge=age=>{if(age>=.9)return age;const t=age/.9;return age*(.42+.58*t*t*(3-2*t));};
- function update(run,{rear=false,reducedMotion=false,shake=1,flash=1}={}){
+ // Polish pass. Everything here is presentation: the shared screen finish
+ // (bloom, grade, vignette, grain), the quality preset's knobs, sprung cart
+ // suspension, tyre traces and a little lens feel. Software rendering keeps
+ // its measured path: no finish pass and no added draws.
+ const cartMotion=createBackNineCartMotion(cart),finish=software?null:createScreenFinish(THREE,renderer,{look:LOOKS.backNine,level:'high'});
+ const quality={viewScale:1,shadows:true,effects:true},shadowOwed=new Set(),baseFar=camera.far;let tyreMarks=null,polishTriangles=0,speedFov=0,feelHeave=0,feelApplied=0,polishFrame=0,finishPulse=0,finishFlash=0,photoActive=false;
+ const photoPose={yaw:0,pitch:.3,distance:7,fov:55,target:new THREE.Vector3()};
+ // The HUD's own dread vignette already darkens the frame edge with tension,
+ // so this chapter runs the shared vignette lighter.
+ finish?.setLook({vignette:.14});
+ function update(run,{rear=false,reducedMotion=false,shake=1,flash=1,pulse=0}={}){
   const cameraSweep=(from,to)=>runnerCameraFraction(from,to,run);
   if(run.mode==='driving'&&(introRun===run?introMode==='briefing':(run.time||0)<.25)){introAt=run.time||0;if(!reducedMotion&&!run.foot)initialized=false;}
   introRun=run;introMode=run.mode;
@@ -577,7 +590,8 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   for(let i=0;i<impactSparks.count;i++){const a=i*2.4,v=.7+noise(i+47)*1.5,t=hitAge,longitudinal=Math.abs(hit.front||0)>Math.abs(hit.side||0),side=i<6?-1:1,sx=longitudinal?side*(.85+v*t):Math.sin(a)*v*t,sz=longitudinal?Math.cos(a)*v*t:side*.4+Math.cos(a)*v*t,yaw=hit.yaw||0;dummy.position.set(hit.x+Math.cos(yaw)*sx+Math.sin(yaw)*sz,.65+(1.1+noise(i)*1.2)*t-5*t*t,-hit.y+Math.sin(yaw)*sx-Math.cos(yaw)*sz);dummy.rotation.set(a+t*8,a,0);dummy.scale.setScalar(1-t/.45);dummy.updateMatrix();impactSparks.setMatrixAt(i,dummy.matrix);}if(impactSparks.count)impactSparks.instanceMatrix.needsUpdate=true;
   const folding=j.ram?.phase==='backoff'||COURSE.checkpoints.some(p=>distance(p,j)<16)||['signal','flank'].includes(run.hunt?.phase);for(let i=0;i<mower.decks.length;i++){const d=mower.decks[i],target=(i-1)*-.85*(ram.active?ram.deckLift:commit.warning?.3+commit.load*.5:folding?1:reducedMotion?0:panic.deckLift);if(ram.active)d.rotation.z=target;else d.rotation.z+=(target-d.rotation.z)*(1-Math.exp(-dt*4));}
   const mouth=mowerMouthTarget(run),center=mower.decks[1];if(mouthRun!==run){mouthRun=run;center.position.y=mouth.height;}else if(run.mode==='paused'){}else if(reducedMotion)center.position.y=mouth.height;else center.position.y+=(mouth.height-center.position.y)*(1-Math.exp(-dt*(mouth.cutting?9:4)));mouthPose={cutting:mouth.cutting,target:mouth.height,height:center.position.y};
-  cart.damage.update(run,reducedMotion,rumble.mechanics);
+  cartMotion.body(run,dt,{reducedMotion,rough:rumble.intensity});
+  cart.damage.update(run,reducedMotion,rumble.mechanics);cartMotion.wheels(run);tyreMarks?.update(run);
   mower.mouthCraft.update(run,mouthPose,dt,reducedMotion);
   cart.driver.visible=!run.foot;runner.update(run.foot,dt,reducedMotion,run.death,run.time);if(run.foot)runner.root.position.y+=terrainHeight(runner.root.position.x,-runner.root.position.z);if(!run.foot)runner.seated(cart.driver,run.cart,reducedMotion,run.time);if(!!run.foot!==wasOnFoot){wasOnFoot=!!run.foot;}
   cart.repeated.update();mower.repeated.update();
@@ -620,11 +634,20 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   }
   desired.x=viewX+(desired.x-viewX)*cameraClearance;desired.z=-viewY+(desired.z+viewY)*cameraClearance;
   if(run.foot)desired.y=groundHeight+1.85+(desired.y-groundHeight-1.85)*(cameraClearance+(1-cameraClearance)*flightFocus);
+  camera.position.y-=feelApplied;feelApplied=0;
   if(!run.death){if(!initialized||reducedMotion&&run.foot||run.foot&&cameraClearance<.99||mowerBehind&&Math.hypot(camera.position.x-j.x,camera.position.z+j.y)<3.3)camera.position.copy(desired);else if(run.foot)camera.position.lerp(desired,1-Math.exp(-dt*8));else trackCartCamera(camera.position,desired,c,dt,chaseSweep);}
   // A clear desired eye does not guarantee that smoothing around a corner
   // keeps the actual lens clear. Constrain the presented eye every frame.
   if(!run.death){const clear=chaseSweep(camera.position);cameraClearance=Math.min(cameraClearance,clear);camera.position.x=viewX+(camera.position.x-viewX)*clear;camera.position.z=-viewY+(camera.position.z+viewY)*clear;camera.position.y=Math.max(camera.position.y,terrainHeight(camera.position.x,-camera.position.z)+.45);}
   if(!run.death)camera.position.y=Math.min(camera.position.y,shelterCeiling);
+  // Lens feel, scaled by the Camera shake preference and absent under
+  // Reduced motion: a slight widening at speed, a small stride bob and a
+  // landing dip on foot. Applied as a removable offset so the follow
+  // smoothing never integrates it.
+  {const still=reducedMotion||run.death||run.mode!=='driving',v=Math.abs(c.speed||0),want=still||run.foot||rear?0:clamp((v-6)/5,0,1)*4.5*shake;speedFov+=(want-speedFov)*(1-Math.exp(-dt*3));
+   const landAge=run.foot?.ejection?run.time-run.foot.ejection.at-1.18:-1;
+   feelHeave=still||!run.foot?0:(Math.sin(run.time*11.5)*.016*clamp(v/6,0,1)-(landAge>=0&&landAge<.42?Math.sin(landAge/.42*Math.PI)*.11:0))*shake;
+   camera.position.y+=feelHeave;feelApplied=feelHeave;}
   // Aim the automatic foot camera through the player at chest height. A fixed
   // mouse-look pitch cropped the legs whenever the camera moved near the wreck.
   // Side views aim closer to the cart so the vehicle and forward route both
@@ -636,7 +659,7 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   if(!run.death)presentedDeath=null;
   if(run.death){const d=run.death;if(presentedDeath!==d){presentedDeath=d;deathCameraStart.copy(camera.position);presentedDeathSide=runoverCameraSide(d,cameraSweep);}const a=d.yaw,p=runoverPose(reducedMotion?d.age:lingerAge(d.age),reducedMotion,deathPose);p.side=(6+(p.side-6)*shake)*presentedDeathSide;p.height=4.2+(p.height-4.2)*shake;p.roll*=shake;p.fov=64+(p.fov-64)*shake;desired.set(d.x+Math.cos(a)*p.side-Math.sin(a)*p.behind,p.height+terrainHeight(d.x,d.y),-d.y+Math.sin(a)*p.side+Math.cos(a)*p.behind);desired.y=Math.min(desired.y,shelterCeiling);const clear=cameraSweep(d,{x:desired.x,y:-desired.z});desired.x=d.x+(desired.x-d.x)*clear;desired.z=-d.y+(desired.z+d.y)*clear;const enter=clamp(d.age/.4,0,1),blend=enter*enter*(3-2*enter);if(reducedMotion)camera.position.copy(desired);else camera.position.lerpVectors(deathCameraStart,desired,blend);const entryClear=cameraSweep(d,{x:camera.position.x,y:-camera.position.z});camera.position.x=d.x+(camera.position.x-d.x)*entryClear;camera.position.z=-d.y+(camera.position.z+d.y)*entryClear;cameraTarget.set(d.x+Math.sin(a)*.4,.65+terrainHeight(d.x,d.y),-d.y-Math.cos(a)*.4);camera.lookAt(cameraTarget);camera.rotateZ(p.roll);}
   const slowLeft=run.death&&!reducedMotion?1-clamp((run.death.age-.3)/.65,0,1):0;captureSlow=slowLeft*slowLeft*(3-2*slowLeft);
-  const fov=run.death?deathPose.fov-captureSlow*3.5*shake:64+approachPose.fov+intro*6-sealZoom*7;if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
+  const fov=run.death?deathPose.fov-captureSlow*3.5*shake:64+approachPose.fov+intro*6-sealZoom*7+speedFov;if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   if(run.mode==='sealing'||run.mode==='complete'){const blend=reducedMotion||run.mode==='complete'?1:clamp((run.finale?.age||0)/.8,0,1);desired.set(-26,3.3,-811.5);camera.position.lerp(desired,blend);look.set(-23,1.5,-799);cameraTarget.lerp(look,blend);camera.lookAt(cameraTarget);}
   headlights.update(run,cart,mower,runner);
   // Slow circuit sag travels behind the cart. Road lamps retain a readable
@@ -651,7 +674,7 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   // Low-lying water sections carry denser, cool haze. This uses the existing
   // fog uniforms: no translucent layers, extra lights or particle overdraw.
   const valley=Math.max(Math.exp(-(((c.y-238)/43)**4)),Math.exp(-(((c.y-467)/52)**4)));
-  const shadow=reducedMotion?0:atmospherePose.shadow*flash;hemi.intensity=.43-dip*.025-shadow*.10;moon.intensity=.72-shadow*.35-valley*.07;scene.fog.color.copy(dryFog).lerp(valleyFog,valley);scene.fog.near=(software?40:54)-dip*4-valley*9;scene.fog.far=(software?92:120)-valley*8;
+  const shadow=reducedMotion?0:atmospherePose.shadow*flash;hemi.intensity=.43-dip*.025-shadow*.10;moon.intensity=.72-shadow*.35-valley*.07;scene.fog.color.copy(dryFog).lerp(valleyFog,valley);scene.fog.near=((software?40:54)-dip*4-valley*9)*quality.viewScale;scene.fog.far=((software?92:120)-valley*8)*quality.viewScale;
   nightShadows.update(c,run.time,reducedMotion);
   // Actual course geometry blocks the broad roof beacon. Losing player sight
   // no longer dims the whole world indiscriminately.
@@ -666,13 +689,18 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   mowerLight.intensity=beaconPose.power*clamp((75-distance(c,j))/20,0,1);beaconShadows.update(run.time);
   courseDetail.update(run,reducedMotion,j,headlamp,mowerLight,headlights.mower);
   beaconPose.range=mowerLight.distance;beaconPose.intensity=mowerLight.intensity;
+  // Low quality refreshes the three lamp shadow maps on every third frame.
+  // A skipped refresh is owed, so a lamp that stops never keeps a stale map.
+  polishFrame++;if(!quality.shadows)for(const light of localSources){if(!light.shadow||!light.castShadow)continue;if(light.shadow.needsUpdate)shadowOwed.add(light);if(polishFrame%3)light.shadow.needsUpdate=false;else if(shadowOwed.delete(light))light.shadow.needsUpdate=true;}
+  if(finish){const driving=run.mode==='driving',struck=driving&&hit?.damaged&&hitAge<.14&&!reducedMotion?(1-hitAge/.14)*.15*(hit.strength||0)*flash:0;finishPulse=driving&&!reducedMotion?clamp(pulse,0,1)*flash:0;finishFlash=struck;
+   finish.setReduced(reducedMotion);finish.setTension(driving||run.mode==='dying'?fear:0);finish.setPulse(finishPulse);finish.setFlash(struck,0xff7a48);}
   // The seated skeleton disables per-mesh culling because its rest bounds
   // do not follow the bones. A generous whole-vehicle sphere includes Joe,
   // the folding decks, wheels, impact recoil and windup without freezing them.
   camera.updateMatrixWorld();vehicleFrustum.setFromProjectionMatrix(vehicleProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   mowerBounds.center.set(j.x,2,-j.y);mower.root.visible=vehicleFrustum.intersectsSphere(mowerBounds);
   contactShadows.update(run);localMist.update(run,reducedMotion,headlights);windbreakArt.update(run,reducedMotion);
-  fxFrame.actor=c;fxFrame.joe=j;fxFrame.reducedMotion=reducedMotion;fxFrame.dip=dip;fxFrame.beacon=beaconPose;fxFrame.headlights=headlights;fxFrame.fog=scene.fog;fxFrame.timeScale=1-.85*captureSlow;fxFrame.impact=null;
+  fxFrame.actor=c;fxFrame.joe=j;fxFrame.reducedMotion=reducedMotion;fxFrame.dip=dip;fxFrame.beacon=beaconPose;fxFrame.headlights=headlights;fxFrame.fog=scene.fog;fxFrame.timeScale=1-.85*captureSlow;fxFrame.impact=null;fxFrame.effects=quality.effects;
   if(run.death&&!reducedMotion&&flash>0){captureImpact.x=run.death.x;captureImpact.y=run.death.y;captureImpact.h=terrainHeight(run.death.x,run.death.y);captureImpact.age=run.death.age;captureImpact.power=Math.min(1,flash);fxFrame.impact=captureImpact;}
   nightFx.update(run,fxFrame);
   riderCulling.update();staffSighting.update(run,camera);
@@ -713,10 +741,11 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
  // Rain sheen goes on last so it can read every earlier ground finish. The
  // software path keeps its ground shaders exactly as they were.
  if(!software){for(const name of ['road','track','trackMargin','pathEdge'])if(finishWetSheen(materials[name],nightFx.lamps,nightFx.wetTime,1))wetSheenMaterials++;for(const name of ['grass','mown','turfMargin','soilMargin','rough'])if(finishWetSheen(materials[name],nightFx.lamps,nightFx.wetTime,.5))wetSheenMaterials++;}
+ if(!software){tyreMarks=createBackNineTyreMarks(scene);tyreMarks.warm();}
  const instanceCulling=software?(/swiftshader/i.test(rendererInfo?context.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL):'')?createRigidVertexBatches(scene):createRigidInstanceCulling(scene)):null;instanceCulling?.update(camera);
  releaseBakedContours();
  const programsReady=(async()=>{await renderer.compileAsync(backdrop.scene,backdrop.camera);await renderer.compileAsync(scene,camera);})();programsReady.catch(()=>{});
- const texturePreparation=await prepareCourseTextures(renderer,maps,()=>closed);await programsReady;onProgress('Preparing course details…');preparation=await prepareCourseBuffers(renderer,scene,camera,()=>closed);const skyPreparation=await prepareCourseBuffers(renderer,backdrop.scene,backdrop.camera,()=>closed);preparation.textures=texturePreparation;preparation.surfaces=surfaces.stats();preparation.batches+=skyPreparation.batches;preparation.maxBytes=Math.max(preparation.maxBytes,skyPreparation.maxBytes);if(localLights)scene.remove(localLights.preparation);pines.finishWarm();tracks.finishWarm();staffSighting.finishWarm();pines.update(camera,localSources);if(closed)throw new Error('Level closed');beaconShadows.warm(renderer,camera);await waitForGPU(renderer,()=>closed);
+ const texturePreparation=await prepareCourseTextures(renderer,maps,()=>closed);await programsReady;onProgress('Preparing course details…');preparation=await prepareCourseBuffers(renderer,scene,camera,()=>closed);const skyPreparation=await prepareCourseBuffers(renderer,backdrop.scene,backdrop.camera,()=>closed);preparation.textures=texturePreparation;preparation.surfaces=surfaces.stats();preparation.batches+=skyPreparation.batches;preparation.maxBytes=Math.max(preparation.maxBytes,skyPreparation.maxBytes);if(localLights)scene.remove(localLights.preparation);pines.finishWarm();tracks.finishWarm();courseFeatures.finishWarm();staffSighting.finishWarm();pines.update(camera,localSources);if(closed)throw new Error('Level closed');beaconShadows.warm(renderer,camera);await waitForGPU(renderer,()=>closed);
  const runoverVisible=()=>wasOnFoot&&runner.root.visible&&presentedDeath!==null;
  return {scene,camera,update,draw(){
   instanceCulling?.update(camera);
@@ -727,5 +756,25 @@ export async function createChaseScene(renderer,software,onProgress=()=>{}){
   if(skySkippedRows){renderer.getScissor(skyScissor);renderer.setScissor(0,skySkippedRows,skySize.x,skySize.y-skySkippedRows);renderer.setScissorTest(true);}
   renderer.render(backdrop.scene,backdrop.camera);const backgroundDraws=renderer.info.render.calls;
   if(skySkippedRows){renderer.setScissor(skyScissor);renderer.setScissorTest(scissored);}
-  renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;drawCalls=backgroundDraws+renderer.info.render.calls;},staffSightingActive:()=>staffSighting.active(),drainRunnerContacts(){return runner.drainContacts();},resetCamera(){initialized=false;},stats:()=>({instanceCulling:instanceCulling?.stats(),wind:environmentWind.stats(),encounterVistas,breakFragments:breakFragments.stats(),greenFlags:greenFlags.stats(),sceneryContacts:sceneryContacts.stats(),garageMotion:garageMotion.stats(),practicalLights:practicalLights.stats(),windbreakArt:windbreakArt.stats(),localMist:localMist.stats(),turfCondition:{areas:TURF_CONDITION_AREAS.length,dryMap:'back-nine-weathered-turf-v1',fieldBytes:turfConditionField.image.data.byteLength,worldField:true},contactShadows:contactShadows.stats(),routeMargins:routeMargins.stats(),districtScenery,architecture,experience:experienceArt.stats(),courseDetail:courseDetail.stats(),mowerClippings:clippings.stats(),irrigation:irrigationState,irrigationArt:irrigationArt.stats(),nightFx:nightFx.stats(),transitions:{intro:introPose,sealZoom,captureSlow},weather:{drizzle:true,wetSheenMaterials,gameplay:false},tireSpray:{active:spray.count,capacity:32},ghosts:ghosts.stats(),terrain:{forms:TERRAIN_FORMS.length,cartHeight:cart.root.position.y,joeHeight:mower.root.position.y,runnerHeight:runner.root.position.y},destruction:destructionArt.stats(),mowerMouth:{...mouthPose,mechanism:mower.mouthCraft.stats()},riderCulling:riderCulling.stats(),shiftRecords:shiftRecords.stats(),staffSighting:staffSighting.stats(),beaconShadows:beaconShadows.stats(),headlights:headlights.stats(),landmarks,routeClues,alarmMeters:alarmMeters.map(m=>m.bars),serviceMeters:storyArt.stats(),cameraHeight:camera.position.y,nightShadows:nightShadows.stats(),skySkippedRows,landscape:{...landscape,lanterns:lanterns.length},atmosphere:{...atmospherePose},mowerTracks:tracks.stats(),beacon:{...beaconPose},cameraClearance,courseFeatures:courseFeatures.count,destructibleFeatures:courseFeatures.stats(),impactFeedback:{...impactPose},cartDamage:cart.damage.stats(),pursuitFeedback:{...approachPose},runOver:runoverVisible(),runOverCamera:runner.root.visible&&runoverVisible()?{...deathPose}:null,onFoot:runner.root.visible&&wasOnFoot,ejection:runner.stats(),localLights:localLights?.stats(),vehicleInstancing:{batches:cart.repeated.batches+mower.repeated.batches,savedDraws:cart.repeated.savedDraws+mower.repeated.savedDraws},mowerVisible:mower.root.visible,batchCulling:batchCulling.stats(),preparation,rider:!!rider,riderMotion:riderMotion.stats(),horrorLights:3,ramWindup:ramPose,hurdlePieces:hurdleArt.stats().pieces,hurdleUploads:hurdleArt.stats().uploads,impactParticles:impactSparks.count,impactRecoil,cartRumble:rumbleIntensity,cartRumbleHeave:rumbleMotion,cartBodyRoll:cart.body.rotation.z,artStyle:'shared-level-one',parallax:backdrop.stats(),pines:pines.stats(),roadLampBatches:roadLights.length,staticBatches:batches.size,programs:renderer.info.programs.length,textures:renderer.info.memory.textures,draws:drawCalls,triangles:renderer.info.render.triangles}),dispose(){closed=true;instanceCulling?.dispose();garageMotion.dispose();sceneryContacts.dispose();greenFlags.dispose();breakFragments.dispose();practicalLights.dispose();contactShadows.dispose();courseDetail.dispose();scarSoilMap.dispose();turfConditionField.dispose();mower.mouthCraft.dispose();mower.finish.dispose();irrigationArt.dispose();nightFx.dispose();experienceArt.dispose();clippings.dispose();ghosts.dispose();shiftRecords.dispose();staffSighting.dispose();headlights.dispose();beaconShadows.dispose();hurdleArt.dispose();destructionArt.dispose();nightShadows.dispose();tracks.dispose();runner.dispose();localLights?.dispose();cart.repeated.dispose();mower.repeated.dispose();backdrop.dispose();pines.dispose();surfaces.dispose();scene.traverse(o=>{o.geometry?.dispose();});Object.values(materials).forEach(m=>m.dispose());roadLights.forEach(l=>l.material.dispose());}};
+  renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;drawCalls=backgroundDraws+renderer.info.render.calls;polishTriangles=renderer.info.render.triangles;
+   // The finished frame is copied and redrawn through the grade. Its own
+   // passes are not counted in the scene's draw statistics above.
+   finish?.apply();},
+  // Quality preset knobs: finish level, fog/draw distance, lamp shadow refresh
+  // and decorative effects. Programs never change, so nothing recompiles.
+  setQuality(preset,{grain=true}={}){quality.viewScale=preset.viewScale;quality.shadows=preset.shadows;quality.effects=preset.effects;finish?.setLevel(preset.finish);finish?.setLook({grain:grain?LOOKS.backNine.grain:0});
+   camera.far=baseFar*preset.viewScale;camera.updateProjectionMatrix();tyreMarks?.setEnabled(preset.effects);if(preset.shadows)for(const light of shadowOwed){light.shadow.needsUpdate=true;shadowOwed.delete(light);}},
+  // Photo mode: a free orbit around the paused scene. Nothing is simulated;
+  // leaving it resets the chase camera.
+  photo:{
+   begin(run){const c=chaseActor(run);photoActive=true;photoPose.target.set(c.x,terrainHeight(c.x,c.y)+1.3,-c.y);const dx=camera.position.x-photoPose.target.x,dy=camera.position.y-photoPose.target.y,dz=camera.position.z-photoPose.target.z,span=Math.max(.1,Math.hypot(dx,dy,dz));
+    photoPose.distance=clamp(span,2.5,14);photoPose.yaw=Math.atan2(dx,dz);photoPose.pitch=clamp(Math.asin(clamp(dy/span,-1,1)),-.1,1.2);photoPose.fov=55;this.apply();},
+   look(dx,dy){photoPose.yaw-=dx*.006;photoPose.pitch=clamp(photoPose.pitch+dy*.005,-.12,1.3);this.apply();},
+   zoom(sign){photoPose.distance=clamp(photoPose.distance*(sign>0?1.12:.89),1.8,22);this.apply();},
+   move(x,y,dt){const s=Math.sin(photoPose.yaw),k=Math.cos(photoPose.yaw),step=6*dt;photoPose.target.x+=(x*k-y*s)*step;photoPose.target.z+=(-x*s-y*k)*step;photoPose.target.y=terrainHeight(photoPose.target.x,-photoPose.target.z)+1.3;this.apply();},
+   apply(){const p=photoPose,flat=Math.cos(p.pitch)*p.distance;camera.position.set(p.target.x+Math.sin(p.yaw)*flat,p.target.y+Math.sin(p.pitch)*p.distance,p.target.z+Math.cos(p.yaw)*flat);
+    camera.position.y=Math.max(camera.position.y,terrainHeight(camera.position.x,-camera.position.z)+.35);camera.lookAt(p.target);if(camera.fov!==p.fov){camera.fov=p.fov;camera.updateProjectionMatrix();}camera.updateMatrixWorld();batchCulling.update(camera,rasterSize.x,rasterSize.y);pines.update(camera,localSources);},
+   end(){photoActive=false;initialized=false;feelApplied=0;},
+   get active(){return photoActive;}},
+  finish,staffSightingActive:()=>staffSighting.active(),drainRunnerContacts(){return runner.drainContacts();},resetCamera(){initialized=false;},stats:()=>({instanceCulling:instanceCulling?.stats(),wind:environmentWind.stats(),encounterVistas,breakFragments:breakFragments.stats(),greenFlags:greenFlags.stats(),sceneryContacts:sceneryContacts.stats(),garageMotion:garageMotion.stats(),practicalLights:practicalLights.stats(),windbreakArt:windbreakArt.stats(),localMist:localMist.stats(),turfCondition:{areas:TURF_CONDITION_AREAS.length,dryMap:'back-nine-weathered-turf-v1',fieldBytes:turfConditionField.image.data.byteLength,worldField:true},contactShadows:contactShadows.stats(),routeMargins:routeMargins.stats(),districtScenery,architecture,experience:experienceArt.stats(),courseDetail:courseDetail.stats(),mowerClippings:clippings.stats(),irrigation:irrigationState,irrigationArt:irrigationArt.stats(),nightFx:nightFx.stats(),transitions:{intro:introPose,sealZoom,captureSlow},weather:{drizzle:true,wetSheenMaterials,gameplay:false},tireSpray:{active:spray.count,capacity:32},ghosts:ghosts.stats(),terrain:{forms:TERRAIN_FORMS.length,cartHeight:cart.root.position.y,joeHeight:mower.root.position.y,runnerHeight:runner.root.position.y},destruction:destructionArt.stats(),mowerMouth:{...mouthPose,mechanism:mower.mouthCraft.stats()},riderCulling:riderCulling.stats(),shiftRecords:shiftRecords.stats(),staffSighting:staffSighting.stats(),beaconShadows:beaconShadows.stats(),headlights:headlights.stats(),landmarks,routeClues,alarmMeters:alarmMeters.map(m=>m.bars),serviceMeters:storyArt.stats(),cameraHeight:camera.position.y,nightShadows:nightShadows.stats(),skySkippedRows,landscape:{...landscape,lanterns:lanterns.length},atmosphere:{...atmospherePose},mowerTracks:tracks.stats(),beacon:{...beaconPose},cameraClearance,courseFeatures:courseFeatures.count,destructibleFeatures:courseFeatures.stats(),impactFeedback:{...impactPose},cartDamage:cart.damage.stats(),pursuitFeedback:{...approachPose},runOver:runoverVisible(),runOverCamera:runner.root.visible&&runoverVisible()?{...deathPose}:null,onFoot:runner.root.visible&&wasOnFoot,ejection:runner.stats(),localLights:localLights?.stats(),vehicleInstancing:{batches:cart.repeated.batches+mower.repeated.batches,savedDraws:cart.repeated.savedDraws+mower.repeated.savedDraws},mowerVisible:mower.root.visible,batchCulling:batchCulling.stats(),preparation,rider:!!rider,riderMotion:riderMotion.stats(),horrorLights:3,ramWindup:ramPose,hurdlePieces:hurdleArt.stats().pieces,hurdleUploads:hurdleArt.stats().uploads,impactParticles:impactSparks.count,impactRecoil,cartRumble:rumbleIntensity,cartRumbleHeave:rumbleMotion,cartBodyRoll:cart.body.rotation.z,artStyle:'shared-level-one',parallax:backdrop.stats(),pines:pines.stats(),roadLampBatches:roadLights.length,staticBatches:batches.size,programs:renderer.info.programs.length,textures:renderer.info.memory.textures,draws:drawCalls,triangles:finish?polishTriangles:renderer.info.render.triangles,polish:{finish:finish?{level:finish.level,applied:finish.applied,pulse:finishPulse,flash:finishFlash}:null,quality:{...quality,far:camera.far},cartMotion:cartMotion.stats(),tyreMarks:tyreMarks?.stats()||null,speedFov,heave:feelHeave}}),dispose(){closed=true;finish?.dispose();tyreMarks?.dispose();instanceCulling?.dispose();garageMotion.dispose();sceneryContacts.dispose();greenFlags.dispose();breakFragments.dispose();practicalLights.dispose();contactShadows.dispose();courseDetail.dispose();scarSoilMap.dispose();turfConditionField.dispose();mower.mouthCraft.dispose();mower.finish.dispose();irrigationArt.dispose();nightFx.dispose();experienceArt.dispose();clippings.dispose();ghosts.dispose();shiftRecords.dispose();staffSighting.dispose();headlights.dispose();beaconShadows.dispose();hurdleArt.dispose();destructionArt.dispose();nightShadows.dispose();tracks.dispose();runner.dispose();localLights?.dispose();cart.repeated.dispose();mower.repeated.dispose();backdrop.dispose();pines.dispose();surfaces.dispose();scene.traverse(o=>{o.geometry?.dispose();});Object.values(materials).forEach(m=>m.dispose());roadLights.forEach(l=>l.material.dispose());}};
 }

@@ -15,9 +15,9 @@
 
 export const LOOKS={
  // shadowTint/highTint multiply dark and bright areas of the finished frame.
- nightOrder:{shadowTint:[.93,.99,1.08],highTint:[1.04,1.01,.95],saturation:1.06,contrast:1.03,vignette:.22,grain:.03,bloom:.4,threshold:.72},
+ nightOrder:{shadowTint:[.98,1.03,1.12],highTint:[1.06,1.02,.94],saturation:1.1,contrast:1,vignette:.15,grain:.03,bloom:.6,threshold:.6},
  backNine:{shadowTint:[.92,.98,1.1],highTint:[1.06,1.02,.93],saturation:1.08,contrast:1.03,vignette:.2,grain:.028,bloom:.45,threshold:.7},
- underGreen:{shadowTint:[.92,1.05,.97],highTint:[1.02,1.05,.92],saturation:.97,contrast:1.04,vignette:.28,grain:.04,bloom:.42,threshold:.68},
+ underGreen:{shadowTint:[1.04,1.16,1.1],highTint:[1.1,1.06,.96],saturation:1.0,contrast:1.0,vignette:.1,grain:.03,bloom:.5,threshold:.6},
  finalCut:{shadowTint:[.95,.98,1.06],highTint:[1.07,1.0,.92],saturation:1.06,contrast:1.03,vignette:.2,grain:.028,bloom:.4,threshold:.72},
 };
 export const FINISH_LEVELS=['off','low','high'];
@@ -33,7 +33,9 @@ void main(){vec3 c=texture2D(tMap,vUv).rgb*.227;
  gl_FragColor=vec4(c,1.);}`;
 const FINAL=`uniform sampler2D tScene,tBloomA,tBloomB;uniform float bloom,saturation,contrast,vignette,grain,time,pulse,flash,fade;
 uniform vec3 shadowTint,highTint,flashColor;varying vec2 vUv;
-float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+// Hash without sine or large multipliers: the earlier fract(p*k) form showed a
+// regular cross-hatch on dark sky.
+float hash(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 void main(){
  vec3 g=clamp(texture2D(tScene,vUv).rgb,0.,1.);
  if(bloom>0.){vec3 b=clamp((texture2D(tBloomA,vUv).rgb*.6+texture2D(tBloomB,vUv).rgb*.4)*bloom,0.,1.);g=1.-(1.-g)*(1.-b);}
@@ -43,7 +45,7 @@ void main(){
  g*=mix(shadowTint,highTint,smoothstep(0.,.75,l));
  vec2 q=(vUv-.5)*vec2(1.,.84);
  g*=1.-smoothstep(.34,.86,length(q))*(vignette+pulse*.4);
- g+=(hash(gl_FragCoord.xy+floor(time*24.)*17.13)-.5)*grain;
+ float tick=floor(time*24.);g+=(hash(gl_FragCoord.xy+vec2(mod(tick*37.,251.),mod(tick*91.,241.)))-.5)*grain;
  g=mix(g,flashColor,flash);
  gl_FragColor=vec4(clamp(g,0.,1.)*fade,1.);
 }`;
