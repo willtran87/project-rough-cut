@@ -24,6 +24,7 @@ The software entrance report supersedes the earlier native-fix report's unresolv
 ## Validation and remaining acceptance
 
 - [November 19 current state report](../qa/current-state-2026-11-19.md): fixed gameplay bugs, performance measurements and the remaining failing checks with their causes.
+- [November 20 polish-pass report](../qa/current-state-2026-11-20.md): the screen finish, quality, difficulty, feedback and wildlife work, with what was and was not confirmed. Not yet published.
 - [November 17 current state report](../qa/current-state-2026-11-17.md): checks run on November 17; its eight failing Final Cut checks were repaired on November 18.
 - [Documentation audit](../qa/documentation-audit-2026-11-15.md): November 15 checks; its failing release verifier was fixed the same day.
 - [Under the Green human-playtest guide](../qa/under-green-human-playtest.md), [Back Nine human-playtest guide](../qa/back-nine-human-playtest.md), and [engagement study guide](../qa/engagement-playtest-guide.md): prepared protocols, not completed participant results.

@@ -5,7 +5,7 @@ import {createJoeVoice} from './joe-voice.js';
 const joeVoice=createJoeVoice({muted:()=>prefs.muted||document.hidden});
 import {floodPace,floodCrossingScale} from './under-green-flood.js';
 import {drainTransitions} from './under-green-transitions.js';
-import {createOpeningStory} from './opening-story.js?v=20261117-crossfade';
+import {createOpeningStory} from './opening-story.js?v=20261120-keys';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
 import {observeJoe} from './under-green-senses.js';
 import {mountFinalCutLink} from './final-cut-campaign.js';

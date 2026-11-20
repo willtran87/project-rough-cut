@@ -27,7 +27,7 @@ import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-region
 import { createMouseLook } from './mouse-look.js';
 import { advanceCartTimer, courseSoundMix } from './encounter-timing.js';
 import { COURSE_CIRCUITS, CIRCUIT_SECONDS, circuitPower, advanceCircuits, traceUnseenSeconds } from './course-circuits.js';
-import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261117-crossfade';
+import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261120-keys';
 import { freshCourseArrival, advanceCourseArrival, arrivalPhoneVisible } from './course-arrival.js';
 import { freshFirstImpression, advanceFirstImpression, TEE_ANOMALY } from './course-first-impression.js';
 import {zoneCueAnchor,zoneCueSound} from './zone-cue-scene.js';

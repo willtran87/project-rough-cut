@@ -23,7 +23,7 @@ import {createChaseScene} from './back-nine-scene.js';
 import {createChaseAudio} from './back-nine-audio.js';
 import {createSoftwareFrameBudget} from './software-frame-budget.js';
 import {createFrameWake} from './frame-wake.js';
-import {createOpeningStory} from './opening-story.js?v=20261117-crossfade';
+import {createOpeningStory} from './opening-story.js?v=20261120-keys';
 import {BACK_NINE_SLIDES,paintBackNineBrief,backNineHint,backNineControls,backNineInstruction} from './back-nine-opening.js';
 import {createGraphicsQuality} from './graphics-quality.js';
 import {createRumble,firstPad} from './pad-rumble.js';
