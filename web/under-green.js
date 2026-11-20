@@ -9,7 +9,7 @@ import {createOpeningStory} from './opening-story.js?v=20261117-crossfade';
 import {UNDER_GREEN_SLIDES} from './under-green-opening.js';
 import {observeJoe} from './under-green-senses.js';
 import {mountFinalCutLink} from './final-cut-campaign.js';
-import {bindCampaignSettings} from './campaign-settings-ui.js?v=20261119-brightness';
+import {bindCampaignSettings} from './campaign-settings-ui.js?v=20261119-polish';
 import {bindKeyboardSettings} from './keyboard-binding-settings.js';
 import {soundDescription} from './under-green-observation.js';
 import {hudObjective} from './under-green-hud.js';
@@ -19,8 +19,8 @@ import {createLocalTelemetry} from './local-telemetry.js';
 import {campaignPreferences,readRecord,writeRecord,patchRecord,CAMPAIGN_KEY} from './preference-store.js';
 import {actionBindings,keyLabel,movementKeyLabel,onFootActionVerb} from './control-profiles.js';
 import {crossingAdvice,runningCrossingOption,walkingCrossingOption} from './under-green-guidance.js';
-import {SAVE_KEY,WATERS,waterState,inWater,distance,clamp,district,lineClear} from './under-green-course.js';
-import {createRun,readSave,snapshot,step,nearbyAction,objective,diagnostics,MOVEMENT,movementPace} from './under-green-sim.js';
+import {SAVE_KEY,WATERS,waterState,inWater,distance,clamp,district,lineClear,solid} from './under-green-course.js';
+import {createRun,readSave,snapshot,step,nearbyAction,objective,diagnostics,MOVEMENT,movementPace,CHECKPOINTS} from './under-green-sim.js';
 import {createUnderGreenScene} from './under-green-scene.js';
 import {createUnderGreenAudio} from './under-green-audio.js';
 import {createGratingCue} from './under-green-grating.js';
@@ -28,6 +28,11 @@ import {createMouseLook} from './mouse-look.js';
 import {createFrameWake} from './frame-wake.js';
 import {retryProgress} from './under-green-outcome.js';
 import {mountUnderGreenPlaytest} from './under-green-playtest.js';
+import {createGraphicsQuality} from './graphics-quality.js?v=20261119-polish';
+import {createRumble,firstPad} from './pad-rumble.js?v=20261119-polish';
+import {recordRun,summaryRows,renderSummary,markFound,foundIn,chapterRecord,formatSeconds} from './run-records.js?v=20261119-polish';
+import {createPhotoMode} from './photo-mode.js?v=20261119-polish';
+import {createDrainFeel,PRESSURE_FOR,DIFFICULTY_FOR,DISCOVERIES} from './under-green-feel.js?v=20261119-polish';
 const $=id=>document.getElementById(id),canvas=$('game'),keys=new Set(),touch=new Set(),audio=createUnderGreenAudio(()=>shared),test=new URLSearchParams(location.search).has('test');
 const finalCutLink=mountFinalCutLink(document.querySelector('#panel .actions'),'drain');
 const gratingCue=createGratingCue();
@@ -61,6 +66,28 @@ const touchRun=createTouchRunControl(),touchPointers=new Map();
 const saved=readSave(stored(SAVE_KEY));let run=createRun(0,false,saved?.difficulty),world=null,ready=false,manual=false,last=performance.now(),accumulator=0,usePressed=false,lookX=0,lookY=0,uiMode='',lastSave=-1,dirty=true,padButtons=[],drag=null,inputMethod=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';
 // Repairs campaign progress for players who finished this chapter while its
 // completion was saved to the chapter record but not to the campaign.
+// The shared Difficulty setting, once chosen, selects this chapter's pressure.
+// Until then the chapter's own saved pressure stands and the shared control shows it.
+if(typeof settings(CAMPAIGN_KEY).difficulty==='string')run.difficulty=PRESSURE_FOR[shared.difficulty]||run.difficulty;else shared.difficulty=DIFFICULTY_FOR[run.difficulty]||'standard';
+// Presentation-only observers: tension, heartbeat, near misses, rumble, quality.
+const feelObserver=createDrainFeel(),rumble=createRumble({strength:()=>shared.rumble??.5,enabled:()=>!prefs.reduced});
+const quality=createGraphicsQuality({onChange:preset=>{world?.setQuality(preset);dirty=true;}});
+const RUMBLES={'near-miss':{duration:180,strong:.55,weak:.7},'water-hit':{duration:320,strong:.85,weak:.5},caught:{duration:520,strong:1,weak:1},bypass:{duration:300,strong:.5,weak:.3},evidence:{duration:90,strong:0,weak:.35},closing:{duration:700,strong:.3,weak:.45},secured:{duration:380,strong:.8,weak:.4},'blade-blocked':{duration:120,strong:.2,weak:.6},'joe-enter':{duration:260,strong:.6,weak:.2},'pipe-knock':{duration:90,strong:.3,weak:0}};
+// Relaxed difficulty only: a caught attempt may restart at the last area
+// reached in this session. Standard and Hard never award or restore one, and
+// nothing about it is saved: a reload always starts at the drain entrance.
+let reachedCheckpoint=0,carriedSeconds=0;
+const checkpointPlace=index=>{const name=district(CHECKPOINTS[index]).toLowerCase();return name.startsWith('the ')?name:'the '+name;};
+const retryCheckpoint=()=>run.difficulty==='steady'?reachedCheckpoint:0;
+function observeCheckpoint(){
+ if(run.difficulty!=='steady'||run.mode!=='playing')return;
+ for(let index=reachedCheckpoint+1;index<CHECKPOINTS.length;index++)if(distance(run.player,CHECKPOINTS[index])<4.5&&(index<2||run.bypass)&&run.lessonCrossed)reachedCheckpoint=index;
+}
+function feelEvent(e){
+ const pad=inputMethod==='gamepad'?firstPad():null;
+ if(e.type==='heartbeat'){audio.heartbeat(e.strength);rumble.pulse(pad,{duration:70,strong:.14*e.strength,weak:0,kind:'heartbeat'});}
+ else if(RUMBLES[e.type])rumble.pulse(pad,{...RUMBLES[e.type],kind:e.type});
+}
 if(saved?.completed===true&&!RCProgression.state().completed['under-green'])RCProgression.complete('under-green');
 if(new URLSearchParams(location.search).has('telemetry'))run.telemetry=createLocalTelemetry();
 const playtest=new URLSearchParams(location.search).has('playtest')?mountUnderGreenPlaytest(document.querySelector('#panel .panel-body'),()=>({viewport:{width:innerWidth,height:innerHeight},inputMethod,settings:{muted:prefs.muted,reducedMotion:prefs.reduced,fov:prefs.fov,resolution:prefs.resolution,threatCaptions:shared.threatCaptions,soundCaptions:shared.soundCaptions},bindings:{...bindings}})):null;
@@ -71,14 +98,14 @@ function persist(){
  record.completed=record.completed||previous?.completed===true;
  record.evidence=record.evidence||previous?.evidence===true;
  const storedSuccessfully=writeRecord(SAVE_KEY,record);
- $('save-note').textContent='No checkpoints. Every new attempt starts at the drain entrance.'+(storedSuccessfully?'':' Browser storage is unavailable; completion and settings may not be kept.');
+ $('save-note').textContent=(run.difficulty==='steady'?'Relaxed difficulty: if Joe catches you, the attempt restarts at the last area you reached. Nothing is saved between visits.':'No checkpoints. Every new attempt starts at the drain entrance.')+(storedSuccessfully?'':' Browser storage is unavailable; completion and settings may not be kept.');
 }
 function savePrefs(){try{localStorage.setItem('rough-cut.under-green-comfort.v1',JSON.stringify({...prefs,muted:legacyMuted,reduced:legacyReduced}));}catch{}dirty=true;}
 function clearInput(){keys.clear();touch.clear();touchPointers.clear();touchRun.reset();lookX=lookY=0;mouseLook.reset();toggleCrouch=toggleSprint=false;usePressed=false;drag=null;}
 function release(){if(document.pointerLockElement===canvas)document.exitPointerLock();}
 const live=()=>['playing','aftermath'].includes(run.mode);
 const presentationWake=createFrameWake(()=>draw(),()=>ready&&!manual&&!document.hidden&&live());
-function beginEscape(){if(run.mode==='complete'){RCProgression.complete('under-green');location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught')run=createRun(0,false,run.difficulty);if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
+function beginEscape(){if(run.mode==='complete'){RCProgression.complete('under-green');location.assign(finalCutLink.link.href);return;}audio.start();const telemetryEnabled=run.telemetry?.enabled;if(run.mode==='caught'){const from=retryCheckpoint();if(from){carriedSeconds+=run.elapsed;run=createRun(from,from>=2&&run.evidence===true,run.difficulty,{lessonCrossed:true,bypass:run.bypass});}else{reachedCheckpoint=0;carriedSeconds=0;run=createRun(0,false,run.difficulty);}}if(telemetryEnabled&&!run.telemetry)run.telemetry=createLocalTelemetry();run.mode=run.finished?'aftermath':'playing';clearInput();dirty=true;persist();canvas.focus();}
 let storyReturnMode='briefing';
 const opening=createOpeningStory({slides:UNDER_GREEN_SLIDES,mount:$('shell'),storageKey:'rough-cut.under-green-opening.v1',header:'UNDER THE GREEN',replayHint:`Replay from Controls & comfort. ${label('interact')} continues; Esc skips.`,advanceKeys:()=>[bindings.interact,'Enter','Space'],finalLabel:'Review chapter →',
  reducedMotion:()=>prefs.reduced,captions:()=>shared.soundCaptions,toggleFullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},
@@ -92,8 +119,8 @@ $('replay-intro').onclick=()=>showIntro(false);
 document.addEventListener('visibilitychange',()=>{if(opening.snapshot().active)audio.update(run);});
 function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();release();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}dirty=true;paint();audio.update(run);}
 const gamepadMenu=createDOMGamepadMenu({root:$('panel'),onStart:pause,onBack:()=>{if(run.mode==='paused')pause();},onDisconnect:()=>{if(inputMethod==='gamepad'&&live())pause();}});
-$('primary').onclick=primary;$('pause').onclick=pause;$('restart').onclick=()=>{const telemetryEnabled=run.telemetry?.enabled;run=createRun(0,false,run.difficulty);if(telemetryEnabled)run.telemetry=createLocalTelemetry();run.mode='playing';clearInput();persist();dirty=true;canvas.focus();};$('use').onclick=()=>{usePressed=true;audio.start();};
-function applyCampaignSettings(key){if(key==='muted')legacyMuted=false;if(key==='reducedMotion')legacyReduced=false;prefs.muted=shared.muted||legacyMuted;prefs.reduced=shared.reducedMotion||legacyReduced;audio.setMuted(prefs.muted);audio.update(run);$('legacy-comfort').hidden=!legacyMuted&&!legacyReduced;savePrefs();}
+$('primary').onclick=primary;$('pause').onclick=pause;$('restart').onclick=()=>{const telemetryEnabled=run.telemetry?.enabled;reachedCheckpoint=0;carriedSeconds=0;run=createRun(0,false,run.difficulty);if(telemetryEnabled)run.telemetry=createLocalTelemetry();run.mode='playing';clearInput();persist();dirty=true;canvas.focus();};$('use').onclick=()=>{usePressed=true;audio.start();};
+function applyCampaignSettings(key){if(key==='graphicsQuality')quality.set(shared.graphicsQuality,{persist:false});if(key==='filmGrain')world?.setFilmGrain(shared.filmGrain!==false);if(key==='difficulty'){run.difficulty=PRESSURE_FOR[shared.difficulty]||'standard';$('pressure').value=run.difficulty;persist();}if(key==='muted')legacyMuted=false;if(key==='reducedMotion')legacyReduced=false;prefs.muted=shared.muted||legacyMuted;prefs.reduced=shared.reducedMotion||legacyReduced;audio.setMuted(prefs.muted);audio.update(run);$('legacy-comfort').hidden=!legacyMuted&&!legacyReduced;savePrefs();}
 const campaignUI=bindCampaignSettings($('comfort'),shared,applyCampaignSettings);
 bindKeyboardSettings($('keyboard'),{
  profile:'onFoot',stored:bindings,storageField:'keyboardBindings',
@@ -141,8 +168,8 @@ $('touch-run-toggle').checked=feel.touchSprintToggle;$('touch-run-toggle').oncha
 $('crossing-assist').checked=prefs.crossingAssist;
 $('crossing-assist').onchange=e=>{prefs.crossingAssist=e.target.checked;preferenceStatus('crossing',patchRecord('rough-cut.under-green-comfort.v1',{crossingAssist:prefs.crossingAssist}));dirty=true;paint();};
 $('sound').onclick=()=>campaignUI.set('muted',!prefs.muted);$('sound').setAttribute('aria-label','Toggle sound for all chapters');audio.setMuted(prefs.muted);
-$('pressure').value=run.difficulty;$('pressure').onchange=e=>{run.difficulty=e.target.value;persist();};
-document.addEventListener('keydown',e=>{if(!live()&&e.code==='Tab'){const list=[...$('panel').querySelectorAll('button:not(:disabled),a,summary,input,select,textarea')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]')),index=list.indexOf(document.activeElement);if((e.shiftKey&&index<=0)||(!e.shiftKey&&index===list.length-1)){e.preventDefault();list[e.shiftKey?list.length-1:0]?.focus();}return;}if(e.target.matches('input,select,textarea,summary')&&e.code!=='Escape')return;if(!live()&&e.target.matches('button,a')&&!['Escape','KeyF',bindings.interact].includes(e.code))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(inputMethod==='touch')clearInput();inputMethod='keyboard';if(e.code==='Escape'||!e.repeat&&e.code===bindings.controls&&(live()||run.mode==='paused')){e.preventDefault();pause();return;}if(e.code==='KeyF'){if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}if((e.code==='Enter'||e.code===bindings.interact)&&!live()){e.preventDefault();if(e.code==='Enter'||!e.repeat)primary();return;}if(!e.repeat&&e.code===bindings.interact)usePressed=true;if(!e.repeat&&e.code===bindings.crouch&&feel.crouchToggle)toggleCrouch=!toggleCrouch;if(!e.repeat&&e.code===bindings.sprint&&feel.sprintToggle)toggleSprint=!toggleSprint;keys.add(e.code);});
+$('pressure').value=run.difficulty;$('pressure').onchange=e=>{run.difficulty=e.target.value;persist();campaignUI.set('difficulty',DIFFICULTY_FOR[run.difficulty]||'standard');};
+document.addEventListener('keydown',e=>{if(!live()&&e.code==='Tab'){const list=[...$('panel').querySelectorAll('button:not(:disabled),a,summary,input,select,textarea')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]')),index=list.indexOf(document.activeElement);if((e.shiftKey&&index<=0)||(!e.shiftKey&&index===list.length-1)){e.preventDefault();list[e.shiftKey?list.length-1:0]?.focus();}return;}if(e.target.matches('input,select,textarea,summary')&&e.code!=='Escape')return;if(!live()&&e.target.matches('button,a')&&!['Escape','KeyF','KeyP',bindings.interact].includes(e.code))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(inputMethod==='touch')clearInput();inputMethod='keyboard';if(e.code==='Escape'||!e.repeat&&e.code===bindings.controls&&(live()||run.mode==='paused')){e.preventDefault();pause();return;}if(!e.repeat&&e.code==='KeyP'&&run.mode==='paused'&&ready){e.preventDefault();photo.toggle();return;}if(e.code==='KeyF'){if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}if((e.code==='Enter'||e.code===bindings.interact)&&!live()){e.preventDefault();if(e.code==='Enter'||!e.repeat)primary();return;}if(!e.repeat&&e.code===bindings.interact)usePressed=true;if(!e.repeat&&e.code===bindings.crouch&&feel.crouchToggle)toggleCrouch=!toggleCrouch;if(!e.repeat&&e.code===bindings.sprint&&feel.sprintToggle)toggleSprint=!toggleSprint;keys.add(e.code);});
 document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{if(live())pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&live())pause();});
 canvas.addEventListener('click',()=>{if(live()&&inputMethod!=='touch'){audio.start();canvas.requestPointerLock?.()?.catch?.(()=>{});}});
 canvas.addEventListener('pointerdown',e=>{if(!live()||drag)return;inputMethod=e.pointerType==='touch'?'touch':'keyboard';audio.start();drag={id:e.pointerId,x:e.clientX,y:e.clientY};try{canvas.setPointerCapture(e.pointerId);}catch{}});
@@ -207,11 +234,11 @@ function paint(){drainTransitions.observe(run,performance.now(),prefs.reduced);d
  text('control-guide',`${movementKeyLabel(bindings)} or arrows move relative to your view. Mouse or drag to look. ${onFootActionVerb('sprint','keyboard',feel)} ${label('sprint')} to run; ${onFootActionVerb('crouch','keyboard',feel)} ${label('crouch')} to crouch; ${label('focus')} listens; ${label('look_back')} glances behind; ${label('interact')} uses. F fullscreen. Controller: left stick move, right stick look, ${onFootActionVerb('sprint','gamepad',feel)} RT to run (RB also runs while held), ${onFootActionVerb('crouch','gamepad',feel)} LB to crouch, LT listen, A use, R3 rear, Start pause. Touch: movement pad and drag to look; ${onFootActionVerb('sprint','touch',feel)} Run to sprint, hold Crouch to crouch and Listen to focus. Listening Focus slows your movement, quiets water and brings Joe’s breathing and steps forward. It does not hide you from sight.`);
  text('sound',prefs.muted?'Sound off':'Sound on');text('district',district(run.player));text('objective',hudObjective(run));text('record-status',run.evidence?'RECORD KEPT':'');$('record-status').hidden=!run.evidence;
  text('hint',inputMethod==='gamepad'?'Left stick move · RT run · LB crouch · R3 rear · A use':inputMethod==='touch'?'Pad move · Drag look · Rear glance · Use':`${movementKeyLabel(bindings)} / arrows move · ${label('sprint')} run · ${label('crouch')} crouch · ${label('look_back')} rear · ${label('interact')} use`);
- const action=nearbyAction(run);document.body.classList.toggle('at-release',playing&&(action?.id==='gate'||run.closing));document.body.classList.toggle('closing',playing&&run.closing&&!run.finished);$('use').hidden=!action;text('use',(inputMethod==='gamepad'?'A':inputMethod==='touch'?'USE':label('interact'))+' · '+(action?.label||''));
+ const action=nearbyAction(run);document.body.classList.toggle('at-release',playing&&(action?.id==='gate'||run.closing));document.body.classList.toggle('closing',playing&&run.closing&&!run.finished);document.body.classList.toggle('can-use',playing&&!run.finished&&(!!action||run.closing));$('use-ring').style.setProperty('--hold',run.closing?run.gate.toFixed(3):'0');$('use').hidden=!action;text('use',(inputMethod==='gamepad'?'A':inputMethod==='touch'?'USE':label('interact'))+' · '+(action?.label||''));
  const observedJoe=observeJoe(run,{fov:prefs.fov,aspect:canvas.clientWidth/Math.max(1,canvas.clientHeight)}),imminent=observedJoe.imminent;
  // The world presents actions. This slot is only for explicitly enabled
  // accessibility sound descriptions, never action narration or coaching.
- const caption=shared.soundCaptions?(gratingCue.caption(run)||soundDescription(run,observedJoe)):'';
+ const caption=shared.soundCaptions?(gratingCue.caption(run)||soundDescription(run,observedJoe)||(playing&&feelObserver.state.pulse>0&&feelObserver.state.tension>.5?'Your heartbeat pounds':'')):'';
  text('caption',caption);$('caption').dataset.kind=caption?'sound':'';text('pursuit','');
  $('hint').hidden=run.elapsed>12||imminent;document.body.classList.toggle('imminent',imminent);
  const viewYaw=run.player.yaw+(run.player.rearAngle||0),viewCos=Math.cos(Math.atan(Math.tan(prefs.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight))+.04),water=!prefs.crossingAssist||run.closing?null:WATERS.filter(w=>{const dx=w.x-run.player.x,dy=w.y-run.player.y,forward=dx*Math.sin(viewYaw)+dy*Math.cos(viewYaw);return Math.hypot(dx,dy)<18&&lineClear(run.player,w,.02)&&(inWater(run.player,w,.5)||forward/Math.max(.01,Math.hypot(dx,dy))>viewCos);}).sort((a,b)=>distance(a,run.player)-distance(b,run.player))[0];$('water-read').hidden=!water||run.finished;
@@ -233,28 +260,56 @@ function paint(){drainTransitions.observe(run,performance.now(),prefs.reduced);d
  document.body.classList.toggle('crossing',!!water&&!run.finished);
  text('paused-objective',objective(run));$('paused-objective').hidden=mode!=='paused';
  document.body.classList.toggle('water-hit',!prefs.reduced&&run.waterLock>1.3);
- if(mode!==uiMode){uiMode=mode;joeVoice.stop();$('joe-loss-quote').hidden=mode!=='caught';if(mode==='caught'){const lines=defeatQuote(run).lines;text('joe-loss-quote','“'+lines.join(' ')+'”');joeVoice.say(lines);}if(!playing&&mode!=='intro'){release();clearInput();(mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}dirty=true;}
- $('journal').hidden=!run.evidence;$('restart').hidden=mode!=='paused';$('primary').hidden=mode==='complete';$('comfort').hidden=mode==='complete';document.querySelector('.chapters').hidden=true;$('guide').hidden=mode==='caught'||mode==='complete';$('result').hidden=mode!=='caught'&&mode!=='complete';
+ if(mode!==uiMode){uiMode=mode;joeVoice.stop();$('joe-loss-quote').hidden=mode!=='caught';if(mode==='caught'){const lines=defeatQuote(run).lines;text('joe-loss-quote','“'+lines.join(' ')+'”');joeVoice.say(lines);}if(!playing&&mode!=='intro'){release();clearInput();(mode==='complete'?finalCutLink.link:$('primary')).focus({preventScroll:true});}if(mode==='caught'){$('comfort').open=false;$('journal').open=false;}if(mode==='complete')showSummary();$('run-summary').hidden=mode!=='complete';showBest(mode);dirty=true;}
+ $('journal').hidden=!run.evidence;$('restart').hidden=mode!=='paused';$('photo').hidden=mode!=='paused';$('loading-bar').hidden=ready;$('primary').hidden=mode==='complete';$('comfort').hidden=mode==='complete';document.querySelector('.chapters').hidden=true;$('guide').hidden=mode==='caught'||mode==='complete';$('result').hidden=mode!=='caught'&&mode!=='complete';
  $('defeat-art').hidden=mode!=='caught';if(mode==='caught')$('restart').hidden=true;
  text('title',mode==='caught'?'Caught below the green':mode==='complete'?'Beyond his reach':mode==='paused'?'Take a breath.':'Under the Green');
- text('tagline',mode==='caught'?'The scythe found its mark. Start again at the drain entrance.':mode==='complete'?'The sluice holds. The course continues above.':mode==='paused'?'Water, Joe and the clock are paused.':'You escaped the mower. He brought something smaller.');
+ text('tagline',mode==='caught'?(retryCheckpoint()?`The scythe found its mark. Relaxed difficulty: start again at ${checkpointPlace(retryCheckpoint())}.`:'The scythe found its mark. Start again at the drain entrance.'):mode==='complete'?'The sluice holds. The course continues above.':mode==='paused'?'Water, Joe and the clock are paused.':'You escaped the mower. He brought something smaller.');
  text('result',mode==='caught'?run.reason:'You sealed Joe out. Applause drifts down from the empty championship grounds.'+(run.evidence?' The groundskeeper’s record is with you: the 18th’s saturated turf cannot support heavy machinery.':' The maintenance record remains below. The way forward is above.'));
  $('retry-advice').hidden=mode!=='caught';$('retry-progress').hidden=mode!=='caught';
  text('retry-advice',run.failure?'Next try: '+run.failure.advice:'Next try: move sideways when Joe plants his feet, or get behind solid cover.');
- text('retry-progress',retryProgress(run));
- text('primary',!ready?'Preparing…':mode==='caught'?'Retry from the start':mode==='complete'?'Continue to the Final Cut':mode==='paused'?'Resume escape':'Begin chapter');
+ text('retry-progress',retryCheckpoint()?`This attempt restarts at ${checkpointPlace(retryCheckpoint())} with Joe close behind.${run.bypass?' The pump bypass stays open.':''} Standard and Hard always restart at the drain entrance.`:retryProgress(run));
+ text('primary',!ready?'Preparing…':mode==='caught'?(retryCheckpoint()?`Retry from ${checkpointPlace(retryCheckpoint())}`:'Retry from the start'):mode==='complete'?'Continue to the Final Cut':mode==='paused'?'Resume escape':'Begin chapter');
  if(run.saveSerial!==lastSave&&ready){lastSave=run.saveSerial;persist();}
 }
-function update(dt){playtest?.observe(run,inputMethod);const i=input(dt);i.view={fov:prefs.fov,aspect:canvas.clientWidth/Math.max(1,canvas.clientHeight)};step(run,i,dt);playtest?.observe(run,inputMethod);audio.update(run);if(run.events.length>50)run.events.splice(0,run.events.length-50);}
-function draw(){if(world){dirty=!world.draw(run,prefs,manual);if(!dirty){const contacts=world.drainJoeFootsteps();gratingCue.update(run,contacts);audio.footContacts(run,contacts);}if(dirty&&!manual)presentationWake.request(Math.max(4,world.presentationDelay()));else presentationWake.cancel();}paint();}
-window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,opening:opening.snapshot(),inputMethod,touchRun:{toggle:feel.touchSprintToggle,active:touchRun.active},comfort:prefs,spatial:{...spatial,invertVertical:false},movementPreferences:{crouchToggle:feel.crouchToggle,sprintToggle:feel.sprintToggle},campaign:{...shared},graphics:world?.stats(),audio:audio.stats()});
+function update(dt){playtest?.observe(run,inputMethod);const i=input(dt);i.view={fov:prefs.fov,aspect:canvas.clientWidth/Math.max(1,canvas.clientHeight)};step(run,i,dt);playtest?.observe(run,inputMethod);observeCheckpoint();for(const e of feelObserver.observe(run))feelEvent(e);audio.setFeel(feelObserver.state);audio.update(run);if(run.events.length>50)run.events.splice(0,run.events.length-50);}
+// End-of-chapter summary, best-run record and optional goals (stored once per finished run).
+const summarised=new WeakSet();
+function showSummary(){
+ if(summarised.has(run))return;summarised.add(run);
+ const closeCalls=feelObserver.state.closeCalls,difficulty=DIFFICULTY_FOR[run.difficulty]||'standard';
+ if(run.evidence)markFound('under-green','record');if(run.waterHits===0)markFound('under-green','dry');if(closeCalls===0)markFound('under-green','clean');
+ const found=foundIn('under-green'),stats={seconds:Math.max(0,carriedSeconds+run.elapsed-Math.min(4.5,run.aftermathAge||0)),closeCalls,difficulty,extras:{Soakings:run.waterHits,Record:run.evidence?'Recovered':'Left below'}};
+ const rows=summaryRows(stats,recordRun('under-green',stats),{total:DISCOVERIES.length,found:found.length});
+ const missing=DISCOVERIES.filter(([id])=>!found.includes(id));if(missing.length)rows.push(['Still to do',missing.map(([,name])=>name).join(' · ')]);
+ renderSummary($('run-summary'),rows);
+}
+function showBest(mode){
+ const record=mode==='briefing'||mode==='paused'||mode==='caught'?chapterRecord('under-green'):null,found=record?foundIn('under-green').length:0;
+ $('best-run').hidden=!record?.best;if(record?.best)text('best-run',`Best escape ${formatSeconds(record.best.seconds)} · Optional goals ${found} of ${DISCOVERIES.length}`);
+}
+// Photo mode: a free camera near the player while paused. P or the pause-menu button.
+let photoPose=null;
+const photoView=()=>{world.setPhoto(photoPose);dirty=true;};
+const photo=createPhotoMode({canvas,shell:$('shell'),name:'under-the-green',renderNow:()=>{world.draw(run,prefs,true);},
+ onEnter(){photoPose={...world.cameraPose(),fov:prefs.fov};photoView();},
+ onExit(){photoPose=null;photoView();$('photo').focus({preventScroll:true});},
+ onLook(dx,dy){photoPose.yaw+=dx*.004;photoPose.pitch=clamp(photoPose.pitch-dy*.004,-1.3,1.3);photoView();},
+ onZoom(direction){photoPose.fov=clamp(photoPose.fov+direction*4,24,85);photoView();},
+ onMove(x,y,dt){const d=2.4*dt,next={x:photoPose.x+(Math.sin(photoPose.yaw)*y+Math.cos(photoPose.yaw)*x)*d,y:photoPose.y+(Math.cos(photoPose.yaw)*y-Math.sin(photoPose.yaw)*x)*d};if(solid(next,.25)||distance(next,run.player)>7)return;photoPose.x=next.x;photoPose.y=next.y;photoView();}});
+$('photo').onclick=()=>{if(run.mode==='paused'&&ready)photo.enter();};
+function draw(){if(world){world.setFeel(feelObserver.state);dirty=!world.draw(run,prefs,manual);if(!dirty){const contacts=world.drainJoeFootsteps();gratingCue.update(run,contacts);audio.footContacts(run,contacts);if(inputMethod==='gamepad'&&contacts.some(c=>distance(c,run.player)<5))rumble.pulse(firstPad(),{duration:60,strong:.22,weak:.08,kind:'joe-step'});}if(dirty&&!manual)presentationWake.request(Math.max(4,world.presentationDelay()));else presentationWake.cancel();}paint();}
+window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,opening:opening.snapshot(),inputMethod,touchRun:{toggle:feel.touchSprintToggle,active:touchRun.active},comfort:prefs,spatial:{...spatial,invertVertical:false},movementPreferences:{crouchToggle:feel.crouchToggle,sprintToggle:feel.sprintToggle},campaign:{...shared},graphics:world?.stats(),audio:audio.stats(),retryCheckpoint:retryCheckpoint(),feel:{...feelObserver.state,quality:{choice:quality.choice,level:quality.level,autoSteps:quality.autoSteps},rumble:rumble.stats,photo:photo.active}});
 window.advanceTime=ms=>{manual=true;presentationWake.cancel();const n=Math.max(0,Math.ceil(ms/(1000/60)));for(let i=0;i<n;i++)update(1/60);draw();};
 if(test)window.__underGreen={get run(){return run;},set run(v){run=v;uiMode='';dirty=true;},render:draw,async whenPresented(){await world.whenPresented();},setInput(v){for(const k of v)keys.add(k);},inspectClearance:points=>world.inspectClearance(points),inspectCameraClearance:poses=>world.inspectCameraClearance(poses),inspectGateTravel:()=>world.inspectGateTravel(),inspectJoeGeometry:()=>world.inspectJoeGeometry(),inspectCastShadow:()=>world.inspectCastShadow(),inspectJoeFooting:()=>world.inspectJoeFooting(),inspectView:points=>world.inspectView(points),inspectOverhead:points=>world.inspectOverhead(points),enableTelemetry(){run.telemetry=createLocalTelemetry();return run.telemetry;},clearInput};
 new ResizeObserver(()=>{dirty=true;}).observe(canvas);
 import {createMenuFrameGate} from './menu-frame-gate.js';
 const menuFrameDue=createMenuFrameGate();
-function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;{const moving=drainTransitions.observe(run,performance.now(),prefs.reduced);if(moving||transitionMoving)dirty=true;transitionMoving=moving;}if(ready&&!manual&&menuFrameDue(t,live())){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();}else{accumulator=0;const previous=inputMethod;input(.05);if(inputMethod!==previous)dirty=true;if(dirty&&run.mode!=='intro')draw();}}requestAnimationFrame(frame);}
-requestAnimationFrame(frame);if(!opening.shouldSkip())showIntro(false);world=await createUnderGreenScene(canvas,m=>text('loading',m),{captureBuffer:test,initialRun:run,reduced:prefs.reduced});
+function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;{const moving=drainTransitions.observe(run,performance.now(),prefs.reduced);if(moving||transitionMoving)dirty=true;transitionMoving=moving;}if(ready&&!manual&&menuFrameDue(t,live())){world.poll(live());if(live()){accumulator+=dt;while(accumulator>=1/60){update(1/60);accumulator-=1/60;}draw();quality.frame(dt*1000);}else{accumulator=0;const previous=inputMethod;input(.05);if(inputMethod!==previous)dirty=true;if(dirty&&run.mode!=='intro')draw();}}requestAnimationFrame(frame);}
+requestAnimationFrame(frame);if(!opening.shouldSkip())showIntro(false);// Real stage progress: each stage reports as it starts; the bar never runs on a timer.
+const LOADING_STAGES=['Preparing wet stone','Preparing Joe','Preparing the underground pursuit','Warming the underground course'],LOADING_AT=[.12,.58,.7,.78];
+world=await createUnderGreenScene(canvas,m=>{text('loading',m);const stage=LOADING_STAGES.findIndex(name=>m.startsWith(name));if(stage>=0)$('loading-bar').value=LOADING_AT[stage];},{captureBuffer:test,initialRun:run,reduced:prefs.reduced,filmGrain:shared.filmGrain!==false});
+world.setQuality(quality.preset);$('loading-bar').value=.95;
 // Driver pipelines may defer work until the first real raster. Keep simulation
 // and Begin chapter gated until that frame has actually completed as well.
 world.draw(run,prefs,true);await world.whenPresented();

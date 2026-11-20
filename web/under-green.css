@@ -104,3 +104,20 @@ body[data-mode=caught] .chapters,body[data-mode=caught] #save-note,body[data-mod
 body[data-mode=intro] #hud,body[data-mode=intro] #touch{display:none}
 @media(max-width:700px){#defeat-art{height:clamp(210px,35dvh,400px)}body[data-mode=caught] .panel-body{padding:18px}body[data-mode=caught] #result{font-size:14px}}
 @media(max-height:500px) and (min-width:701px){body[data-mode=caught] #panel{flex-direction:row}#defeat-art{width:52%;height:100%;position:sticky;top:0}body[data-mode=caught] .panel-body{width:48%;padding:14px 18px}body[data-mode=caught] h1{font-size:28px}}
+/* Polish pass: loading bar, end summary, interaction ring and photo mode. */
+#loading-bar{display:block;width:min(100%,340px);height:6px;margin:4px 0 10px;appearance:none;-webkit-appearance:none;border:1px solid #82927b;border-radius:3px;background:#0c1a17;overflow:hidden}
+#loading-bar::-webkit-progress-bar{background:#0c1a17}
+#loading-bar::-webkit-progress-value{background:linear-gradient(90deg,#4f8f78,#a7efb6 60%,#e8f0d8);background-size:200% 100%;transition:width .35s ease-out;animation:ug-loading 1.4s linear infinite}
+#loading-bar::-moz-progress-bar{background:#a7efb6}
+@keyframes ug-loading{from{background-position:100% 0}to{background-position:-100% 0}}
+#loading-bar[hidden]{display:none}
+dl.run-summary{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin:10px 0 14px;padding:10px 14px;border:1px solid #82927b66;border-left:3px solid #a7efb6;background:#0c1a17cc;font:13px UGMono,monospace;max-width:440px}
+dl.run-summary dt{color:#bdcca9;letter-spacing:.04em;text-transform:uppercase;font-size:11px;align-self:center}dl.run-summary dd{margin:0;color:#e8f0d8}
+#best-run{font:12px UGMono,monospace;color:#bdcca9;margin:6px 0 0}
+/* A ring gathers round the reticle beside something usable and fills while
+   the sluice closes. Same shape for every interaction in the chapter. */
+#use-ring{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;pointer-events:none;opacity:0;transform:scale(1.5);transition:opacity .16s ease-out,transform .22s cubic-bezier(.2,1.5,.4,1);background:conic-gradient(#a7efb6 calc(var(--hold,0)*1turn),#e8e9cd66 0);-webkit-mask:radial-gradient(circle,transparent 12px,#000 13px,#000 16px,transparent 17px);mask:radial-gradient(circle,transparent 12px,#000 13px,#000 16px,transparent 17px)}
+body.can-use #use-ring{opacity:.95;transform:scale(1)}
+@media (prefers-reduced-motion:reduce){#use-ring{transition:none}#loading-bar::-webkit-progress-value{animation:none}}
+html[data-photo-mode=true] #panel,html[data-photo-mode=true] #hud,html[data-photo-mode=true] #touch,html[data-photo-mode=true] #vignette{display:none!important}
+html[data-photo-mode=true] #game{cursor:grab}

@@ -77,8 +77,10 @@ import {prepareJoeNavigation} from './under-green-navigation.js';
 import {prepareDrainRendering} from './under-green-render-preparation.js';
 import {waitForGPU} from './render-preparation.js';
 import {createRun} from './under-green-sim.js';
+import {createDrainPolish,arrivalDoorAngle} from './under-green-polish-scene.js';
+import {createSignalBank,mergeStaticGroup} from './under-green-signal-bank.js';
 
-export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuffer=false,initialRun=createRun(),reduced=false}={}){
+export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuffer=false,initialRun=createRun(),reduced=false,filmGrain=true}={}){
  const renderer=new THREE.WebGLRenderer({canvas,stencil:true,antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureBuffer});renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;
  const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info'),gpu=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):'',software=/swiftshader|software|llvmpipe/i.test(gpu);
  // This chapter's software target is near 30fps, with room for polling jitter.
@@ -283,7 +285,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  for(const y of [57,67]){box('sand',-34,1.9,-y,3,.3,7);put(cyl,'white',-34,5.9,-y,.035,4,.035);box('red',-33.6,7.5,-y,.8,.45,.025);}
  for(let y=14;y<35;y+=5){box('wood',23.2,3.3,-rangeY(y),.18,6.6,.18);box('wood',23.2,6.5,-rangeY(y+2.5),.15,.12,5*RANGE_SCALE);box('grass',24,.02,-rangeY(y),1.6,.04,2.4*RANGE_SCALE);}
  for(const {x,y}of galleryBallPositions(FLOORS,OBSTACLES))put(ball,'white',x,.05,-y,.047,.047,.047);
- const waterObjects=[],drainWater=createDrainWater(scene,WATERS,camera,{software,renderHeight:()=>canvas.height,sediment:crafted.sets.mud}),wetGround=createDrainWetGround(scene,WATERS);
+ const signalBank=createSignalBank(),waterObjects=[],drainWater=createDrainWater(scene,WATERS,camera,{software,renderHeight:()=>canvas.height,sediment:crafted.sets.mud}),wetGround=createDrainWetGround(scene,WATERS);
  for(const w of WATERS){
   const group=new THREE.Group();group.position.set(w.x,0,-w.y);group.rotation.y=w.axis==='x'?-Math.PI/2:0;scene.add(group);
   box('iron',0,-.035,0,w.width,.06,w.depth,group);
@@ -342,13 +344,16 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   group.updateMatrixWorld(true);const inverse=group.matrixWorld.clone().invert(),fixtureParts=new Map(),original=[];
   group.traverse(mesh=>{if(!mesh.isMesh||mesh.userData.dynamic)return;const material=mesh.material;if(!fixtureParts.has(material))fixtureParts.set(material,[]);fixtureParts.get(material).push(mesh.geometry.clone().applyMatrix4(inverse.clone().multiply(mesh.matrixWorld)));original.push(mesh);});
   for(const mesh of original)mesh.removeFromParent();
+  // Every lens of every crossing draws from two shared meshes (lit and unlit).
+  signals.forEach(lights=>lights.forEach((light,i)=>{signalBank.add(waterObjects.length,i%3,light.geometry.clone().applyMatrix4(light.matrixWorld));light.removeFromParent();}));
   for(const [material,parts]of fixtureParts){
    const mesh=new THREE.Mesh(mergeIndexedGeometries(parts),material);
    mesh.name='Channel fixtures '+w.id;mesh.userData.drainStaticLight=true;
    group.add(mesh);parts.forEach(g=>g.dispose());
   }
-  waterObjects.push({w,signals,group});
+  waterObjects.push({w,group});
  }
+ materials.signalLit=signalBank.build(scene,materials);
  function makeSign(text,w=512,h=128,color='#e1d1a0'){const sign=signArt.make(text,w,h,color);signGroups.push(sign);return sign;}
 
  for(const [text,x,y,yaw=0,scale=.65]of [['DRY WALKWAY →',0,54,0,.75],['BUNKER / PUMP ←',0,73],['WEST WALK / RECORD',-20,71,Math.PI],['PUMP HOUSE',-20,52,Math.PI],['SERVICE PASSAGE / PUMP',-7,40,Math.PI/2],['RANGE / KEEPER →',1.2,38],['CLUBHOUSE IRRIGATION\nSECTOR 18 · MAINTENANCE ONLY',0,8,0,.7]]){const sign=makeSign(text);sign.scale.setScalar(scale);sign.position.set(x,3.05,-y);sign.rotation.y=yaw;scene.add(sign);services.sign(x,y,yaw,scale);}
@@ -357,14 +362,14 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  // Face the record toward the corridor, above its supported stand.
  box('white',0,NOTE.height,0,.48,.38,.025,noteRoot);box('brass',0,NOTE.height,-.02,.54,.44,.025,noteRoot);
  for(let i=0;i<4;i++)box('iron',0,NOTE.height+.09-i*.055,.015,i===0?.28:.34,.012,.004,noteRoot);
- box('brass',0,NOTE.height+.15,.025,.08,.05,.03,noteRoot);
+ box('brass',0,NOTE.height+.15,.025,.08,.05,.03,noteRoot);mergeStaticGroup(noteRoot);
  const nSign=makeSign('MAINTENANCE RECORDS',512,128);nSign.scale.setScalar(.42);nSign.position.set(NOTE.x,2.2,-57.30);scene.add(nSign);
  const keeperGate=createKeeperGate({scene,box,put,cyl,sediment:crafted.sets.mud,registerFixture:mesh=>structureMeshes.push(mesh)}),gate=keeperGate.root;
  const keeperRelease=createKeeperRelease({scene,box,put,cyl,materials});
  const releaseSign=makeSign('SLUICE RELEASE',512,128);releaseSign.scale.setScalar(.5);releaseSign.position.set(SLUICE.x,2.9,-SLUICE.y);scene.add(releaseSign);services.sign(SLUICE.x,SLUICE.y,0,.5,2.9);
  // The sealed entrance grille belongs to the back wall, not the walkable
  // floor in front of it. Its embedded back leaves only 35 mm of relief.
- const entryGate=new THREE.Group();scene.add(entryGate);for(let x=-4;x<=4;x+=.45)box('iron',x,1.5,-.085,.08,3,.12,entryGate);
+ const entryGate=new THREE.Group();scene.add(entryGate);for(let x=-4;x<=4;x+=.45)box('iron',x,1.5,-.085,.08,3,.12,entryGate);mergeStaticGroup(entryGate);
  const districtDetails=buildUnderGreenDistricts({scene,materials,layout,box,put,cyl,ball,makeSign,lamps,keeperTimber,bankSoil:crafted.sets.bankSoil,bankSand:crafted.sets.bankSand,registerFixture:mesh=>structureMeshes.push(mesh)});
  districtDetails.groundFinish=groundFinish.stats;
  districtDetails.vaults=buildDrainVaults({materials,put,box});
@@ -393,6 +398,9 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  onProgress('Preparing Joe and the grass scythe…');const joe=await createTrimmerJoe(scene,materials);
  const joeCastShadow=createJoeCastShadow({scene,joe,lamps});
  const strikeDebris=createStrikeDebris(scene);
+ // Screen finish, lamp moths, scythe trail and camera reactions (presentation only).
+ const polish=createDrainPolish({scene,camera,renderer,lamps,software,reduced,filmGrain});
+ let feel={},photoPose=null,qualityResolution=1,qualityName='high';
  structureDetails.bunkerRetaining.backingTrim=trimBunkerBacking(batches,structureDetails.bunkerRetaining.bankFaces);
  const staticLightMeshes=[],staticLightBounds=new Map();
  const renderBatches=software?groupDrainSurfaceLights(batches.values(),lamps):batches.values();
@@ -408,19 +416,19 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  const fogMaterials=createDrainFogMaterials(scene,structureMeshes);
  unit.dispose();cyl.dispose();ball.dispose();let frames=0,prevTime=0;
  let resolutionScale=1;
- function resize(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),cap=software?960:2560,scale=Math.min(1,cap/w)*Math.min(resolutionScale,software?budget.scale()/.75:1),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));if(canvas.width!==rw||canvas.height!==rh)renderer.setSize(rw,rh,false);if(camera.aspect!==w/h){camera.aspect=w/h;camera.updateProjectionMatrix();}}
+ function resize(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),cap=software?960:2560,scale=Math.min(1,cap/w)*Math.min(resolutionScale*qualityResolution,software?budget.scale()/.75:1),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));if(canvas.width!==rw||canvas.height!==rh)renderer.setSize(rw,rh,false);if(camera.aspect!==w/h){camera.aspect=w/h;camera.updateProjectionMatrix();}}
  function draw(r,prefs,manual=false){
   const busy=poll(!manual&&r.mode==='playing');
   if(software&&!manual&&(busy||presentationDelay()>0))return false;
   // Deterministic QA can explicitly request a new image. Ordinary gameplay
   // never replaces an in-flight frame or advances simulation from a GPU wake.
   if(fence){gl.deleteSync(fence);fence=null;}
-  resolutionScale=Number.isFinite(prefs.resolution)?Math.min(1,Math.max(.5,prefs.resolution)):1;resize();const p=r.player,yaw=p.yaw+(p.rearAngle||0),bob=panicCameraMotion(p,r.joe,prefs.cameraBob,prefs.reduced);if(camera.fov!==prefs.fov){camera.fov=prefs.fov;camera.updateProjectionMatrix();}camera.position.set(p.x,(p.eyeHeight??1.65)+bob.height,-p.y);camera.rotation.set(p.pitch+bob.pitch,-yaw,bob.roll,'YXZ');drainTransitions.apply(camera,r,performance.now(),prefs.fov);drainDraught.value=r.time;
+  resolutionScale=Number.isFinite(prefs.resolution)?Math.min(1,Math.max(.5,prefs.resolution)):1;resize();const p=r.player,yaw=p.yaw+(p.rearAngle||0),bob=panicCameraMotion(p,r.joe,prefs.cameraBob,prefs.reduced);if(camera.fov!==prefs.fov){camera.fov=prefs.fov;camera.updateProjectionMatrix();}camera.position.set(p.x,(p.eyeHeight??1.65)+bob.height,-p.y);camera.rotation.set(p.pitch+bob.pitch,-yaw,bob.roll,'YXZ');if(photoPose){camera.position.set(photoPose.x,photoPose.height,-photoPose.y);camera.rotation.set(photoPose.pitch,-photoPose.yaw,0,'YXZ');camera.fov=photoPose.fov;camera.updateProjectionMatrix();}else drainTransitions.apply(camera,r,performance.now(),prefs.fov);polish.update(r,prefs,feel,!!photoPose);drainDraught.value=r.time;
   batchCulling?.update(camera);contactShade.update(camera);flood.update(r,false);const apparition=haunting.sample(r,prefs.reduced);ghost.show(apparition?{x:apparition.x,y:0,z:-apparition.y,yaw:apparition.yaw}:null,apparition?.alpha||0,apparition?.motion);
   practicalLighting.update(camera,r.time,prefs.reduced);atmosphere.update(r.time,prefs.reduced);playerLight.position.copy(camera.position);joe.update(r,prefs.reduced);joeCastShadow.update(r,prefs.reduced);const waterStates=WATERS.map(w=>waterState(w,r.time,r.bypass,r.bypassAt));drainWater.update(r,waterStates,false,joe.stats());wetGround.update(r,waterStates,false);humidity.update(r,prefs.reduced);strikeDebris.update(r,prefs.reduced);
-  for(const v of waterObjects){const state=waterState(v.w,r.time,r.bypass,r.bypassAt),active=state.danger?0:state.phase==='warning'?1:2;for(const lights of v.signals)lights.forEach((light,i)=>light.material=materials[i%3===active?['redSignal','amberSignal','greenSignal'][i%3]:'offSignal']);}
+  signalBank.update(waterObjects.map(v=>{const state=waterState(v.w,r.time,r.bypass,r.bypassAt);return state.danger?0:state.phase==='warning'?1:2;}));
   for(const valve of pipeValves){const age=r.time-r.bypassAt-valve.source.age,progress=r.bypass?Math.min(1,Math.max(0,(age+.35)/.35)):0;valve.spindle.rotation.y=progress*Math.PI/2;valve.status.material=materials[progress>=1?(valve.source.id==='return'?'redSignal':'greenSignal'):'amberSignal'];}
-  hatch.rotation.y=r.joe.phase==='absent'?0:r.joe.phase==='enter'?Math.min(1,r.joe.age/ARRIVAL.doorSeconds)*-1.6:-1.6;pumpControl.update(r);noteRoot.visible=!r.evidence;keeperGate.update(r.gate);keeperRelease.update(r);
+  hatch.rotation.y=arrivalDoorAngle(r.joe.phase,r.joe.age,ARRIVAL.doorSeconds,prefs.reduced);pumpControl.update(r);noteRoot.visible=!r.evidence;keeperGate.update(r.gate);keeperRelease.update(r);
   renderStarted=performance.now();renderer.autoClear=false;renderer.clear();
   drawCalls=0;triangles=0;
   renderer.clearDepth();
@@ -435,6 +443,8 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   try{renderer.render(scene,camera);}finally{fogMaterials.restore();joe.root.visible=actorVisible;}
   renderer.autoClear=true;
   drawCalls+=renderer.info.render.calls;triangles+=renderer.info.render.triangles;prevTime=r.time;frames++;
+  // Bloom, grade, vignette and grain over the finished frame; adds no scene draws.
+  polish.apply(r);
   if(software){measureFrame=!manual&&r.mode==='playing';fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
   return true;
  }
@@ -452,7 +462,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   batchCulling?.restore();
   scene.updateMatrixWorld(true);
   const meshes=[...structureMeshes];
-  for(const [name,group]of [['release',keeperRelease.root],['pump',pump],['gate',gate],['arrival',hatch],['record',noteRoot],['entry',entryGate],['joe',joe.root],...signGroups.map(group=>['sign',group]),...pipeValves.map(v=>['valve',v.root]),...waterObjects.map(v=>[v.w.id,v.group])])group.traverse(o=>{if(o.isMesh){if(!o.name)o.name=name;meshes.push(o);}});
+  for(const [name,group]of [['release',keeperRelease.root],['pump',pump],['gate',gate],['arrival',hatch],['record',noteRoot],['entry',entryGate],['joe',joe.root],...signGroups.map(group=>['sign',group]),...pipeValves.map(v=>['valve',v.root]),...waterObjects.map(v=>[v.w.id,v.group]),['signal',signalBank.root]])group.traverse(o=>{if(o.isMesh){if(!o.name)o.name=name;meshes.push(o);}});
   const inspect=createCameraClearanceAudit(meshes),probe=camera.clone();
   return poses.map(p=>{probe.position.set(p.x,p.height,-p.y);probe.rotation.set(p.pitch||0,-(p.yaw||0),0,'YXZ');probe.fov=p.fov??camera.fov;probe.aspect=p.aspect??camera.aspect;probe.updateProjectionMatrix();return {pose:p,hits:inspect(probe)};});
  }
@@ -476,6 +486,13 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
   batchCulling?.restore();scene.updateMatrixWorld(true);const ray=new THREE.Raycaster(),up=new THREE.Vector3(0,1,0);
   return points.map(p=>{ray.set(new THREE.Vector3(p.x,p.height??1.65,-p.y),up);ray.far=9;const hit=ray.intersectObjects(structureMeshes,false)[0];return {point:p,hit:hit?{height:hit.point.y,name:hit.object.name,opaque:!hit.object.material.transparent&&hit.object.material.opacity===1}:null};});
  }
- return {draw,inspectCastShadow:()=>joeCastShadow.inspect(),drainJoeFootsteps:()=>joe.drainFootsteps(),inspectGateTravel,resize,poll,whenPresented,presentationDelay,inspectClearance,inspectCameraClearance,inspectJoeGeometry,inspectJoeFooting:()=>{const points=joe.inspectMeshPoints().filter(p=>p.kind==='body');return {minHeight:Math.min(...points.map(p=>p.height)),belowFloor:points.filter(p=>p.height<-.002).length};},inspectView,inspectOverhead,stats:()=>{const lighting=practicalLighting.stats();return {preparation,camera:{fov:camera.fov,height:camera.position.y,pitch:camera.rotation.x,roll:camera.rotation.z,far:camera.far},actorCulled,frames,gpu,software,captureBuffer,resolutionScale,budget:budget.stats(),pendingFrame:!!fence,completionSamples:completionTimes.length,completionAverage:completionTimes.length?completionTimes.reduce((a,b)=>a+b,0)/completionTimes.length:0,completionP95:[...completionTimes].sort((a,b)=>a-b)[Math.floor(completionTimes.length*.95)]||0,draws:drawCalls,triangles,backdrop:{kind:'opaque-underground',outdoorTrees:false},flood:flood.stats(),ghost:{...ghost.stats(),...haunting.stats()},textures:renderer.info.memory.textures,programs:renderer.info.programs.length,resolution:[canvas.width,canvas.height],lights:lighting.lights,practicalLighting:lighting,fillLighting:fillLights.stats(),tonalGrade:tonalGrade.stats(),fogMaterials:fogMaterials.stats(),signArt:signArt.stats(),contactShade:contactShade.stats(),humidity:humidity.stats(),atmosphere:atmosphere.stats,craftedSurfaces:crafted.stats(),machinerySurfaces:machinerySurfaces.stats(),water:drainWater.stats(),strikeDebris:strikeDebris.stats(),joeCastShadow:joeCastShadow.stats(),wetGround:wetGround.stats(),districtDetails,structureDetails,serviceSupports:services.stats(),pipeNetwork,pipeFinish:pipeFinish.stats(),hardwareFinish:hardwareFinish.stats(),timberFinish:timberFinish.stats(),dampFinish:dampFinish.stats(),pump:{...pumpControl.stats(),valves:pipeValves.map(v=>({id:v.source.id,angle:v.spindle.rotation.y}))},release:keeperRelease.stats(),actor:joe.stats(),layout:{tiles:layout.tiles.length,walls:layout.walls.length,minOverhead:2.2}};},dispose(){actorSubmission?.dispose();if(fence){gl.deleteSync(fence);fence=null;}fogMaterials.dispose();tonalGrade.dispose();practicalLighting.dispose();practicalShadows.dispose();signArt.dispose();contactShade.dispose();humidity.dispose();atmosphere.dispose();signalGlass.dispose();groundFinish.dispose();wetGround.dispose();crafted.dispose();machinerySurfaces.dispose();pipeFinish.dispose();districtDetails.dispose();districtDetails.galleryPlaster.dispose();districtDetails.galleryRender.dispose();districtDetails.keeperTileDamage.dispose();structureDetails.bunkerRetaining.dispose();timberFinish.dispose();dampFinish.dispose();pumpControl.dispose();keeperGate.dispose?.();keeperRelease.dispose();surfaces.dispose();courseSurfaces.dispose();ghost.dispose();flood.dispose();joe.dispose();drainWater.dispose();strikeDebris.dispose();joeCastShadow.dispose();scene.traverse(o=>o.geometry?.dispose());renderer.dispose();}};
+ // Shared graphics quality mapped onto this chapter's knobs. Fully fogged
+ // geometry already draws with a flat material, so a nearer fog wall is cheaper.
+ function setQuality(preset){
+  qualityName=preset.name;qualityResolution=preset.resolution;polish.setQuality(preset);
+  scene.fog.far=43*(.5+.5*preset.viewScale);
+  practicalShadows.setEnabled(preset.shadows);joeCastShadow.setEnabled(preset.shadows);humidity.setEnabled(preset.effects);
+ }
+ return {draw,setQuality,setFeel(value){feel=value||{};},setPhoto(pose){photoPose=pose?{...pose}:null;},setFilmGrain:on=>polish.setFilmGrain(on),cameraPose:()=>({x:camera.position.x,y:-camera.position.z,height:camera.position.y,yaw:-camera.rotation.y,pitch:camera.rotation.x,fov:camera.fov}),inspectCastShadow:()=>joeCastShadow.inspect(),drainJoeFootsteps:()=>joe.drainFootsteps(),inspectGateTravel,resize,poll,whenPresented,presentationDelay,inspectClearance,inspectCameraClearance,inspectJoeGeometry,inspectJoeFooting:()=>{const points=joe.inspectMeshPoints().filter(p=>p.kind==='body');return {minHeight:Math.min(...points.map(p=>p.height)),belowFloor:points.filter(p=>p.height<-.002).length};},inspectView,inspectOverhead,stats:()=>{const lighting=practicalLighting.stats();return {preparation,camera:{fov:camera.fov,height:camera.position.y,pitch:camera.rotation.x,roll:camera.rotation.z,far:camera.far},actorCulled,frames,gpu,software,captureBuffer,resolutionScale,budget:budget.stats(),pendingFrame:!!fence,completionSamples:completionTimes.length,completionAverage:completionTimes.length?completionTimes.reduce((a,b)=>a+b,0)/completionTimes.length:0,completionP95:[...completionTimes].sort((a,b)=>a-b)[Math.floor(completionTimes.length*.95)]||0,draws:drawCalls,triangles,finish:polish.stats(),quality:qualityName,backdrop:{kind:'opaque-underground',outdoorTrees:false},flood:flood.stats(),ghost:{...ghost.stats(),...haunting.stats()},textures:renderer.info.memory.textures,programs:renderer.info.programs.length,resolution:[canvas.width,canvas.height],lights:lighting.lights,practicalLighting:lighting,fillLighting:fillLights.stats(),tonalGrade:tonalGrade.stats(),fogMaterials:fogMaterials.stats(),signArt:signArt.stats(),contactShade:contactShade.stats(),humidity:humidity.stats(),atmosphere:atmosphere.stats,craftedSurfaces:crafted.stats(),machinerySurfaces:machinerySurfaces.stats(),water:drainWater.stats(),strikeDebris:strikeDebris.stats(),signalBank:signalBank.stats(),joeCastShadow:joeCastShadow.stats(),wetGround:wetGround.stats(),districtDetails,structureDetails,serviceSupports:services.stats(),pipeNetwork,pipeFinish:pipeFinish.stats(),hardwareFinish:hardwareFinish.stats(),timberFinish:timberFinish.stats(),dampFinish:dampFinish.stats(),pump:{...pumpControl.stats(),valves:pipeValves.map(v=>({id:v.source.id,angle:v.spindle.rotation.y}))},release:keeperRelease.stats(),actor:joe.stats(),layout:{tiles:layout.tiles.length,walls:layout.walls.length,minOverhead:2.2}};},dispose(){actorSubmission?.dispose();if(fence){gl.deleteSync(fence);fence=null;}fogMaterials.dispose();tonalGrade.dispose();practicalLighting.dispose();practicalShadows.dispose();signArt.dispose();contactShade.dispose();humidity.dispose();atmosphere.dispose();signalGlass.dispose();groundFinish.dispose();wetGround.dispose();crafted.dispose();machinerySurfaces.dispose();pipeFinish.dispose();districtDetails.dispose();districtDetails.galleryPlaster.dispose();districtDetails.galleryRender.dispose();districtDetails.keeperTileDamage.dispose();structureDetails.bunkerRetaining.dispose();timberFinish.dispose();dampFinish.dispose();pumpControl.dispose();keeperGate.dispose?.();keeperRelease.dispose();surfaces.dispose();courseSurfaces.dispose();ghost.dispose();flood.dispose();joe.dispose();drainWater.dispose();strikeDebris.dispose();joeCastShadow.dispose();polish.dispose();signalBank.dispose();scene.traverse(o=>o.geometry?.dispose());renderer.dispose();}};
 }
 

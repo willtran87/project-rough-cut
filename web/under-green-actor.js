@@ -4,6 +4,7 @@ import {featheredContactGeometry,contactShadeMaterial} from './under-green-conta
 import {buildGrassScythe} from './under-green-scythe-scene.js';
 import {SCYTHE_HOLDS,SCYTHE_CONTACT} from './under-green-scythe.js';
 import {createSwingBody} from './under-green-swing-body.js';
+import {createBodyLanguage} from './under-green-body-language.js';
 import {TRIMMER,trimmerPose} from './under-green-trimmer.js';
 import {solveTwoBoneGrip} from './two-bone-ik.js';
 import {createPlantedFootwork,createWalkingSupports} from './under-green-footwork.js';
@@ -72,7 +73,7 @@ export async function createTrimmerJoe(scene,materials){
   const palm=hand.getWorldPosition(new THREE.Vector3()).sub(lower.getWorldPosition(new THREE.Vector3())).normalize();
   return {side:index===0?-1:1,hold,upper,lower,hand,align,palm,rest:hand.getWorldQuaternion(new THREE.Quaternion())};
  });
- const swingBody=createSwingBody();
+ const swingBody=createSwingBody(),bodyLanguage=createBodyLanguage();
  const tool=new THREE.Group();root.add(tool);const body=new THREE.Group();body.position.set(0,-TRIMMER.pivotHeight,TRIMMER.pivotForward);tool.add(body);
  let lastRun=null,lastTime=0,blend=0,idleTime=0;const state={handError:0,handPositions:[],grips:[],footPositions:[],blade:null,pose:'carry'};
  const scythe=buildGrassScythe(body,materials);
@@ -80,7 +81,7 @@ export async function createTrimmerJoe(scene,materials){
 
  return {root,update(r,reduced){
   const j=r.joe,pose=trimmerPose(j);root.visible=j.phase!=='absent'&&(j.phase!=='enter'||j.age>.25);root.position.set(j.x,0,-j.y);root.rotation.y=-j.yaw;
-  if(lastRun!==r){lastRun=r;lastTime=r.time;blend=j.speed>.1?1:0;idleTime=0;footwork.reset();walkingSupports.reset();footEvents.reset();swingBody.reset();}
+  if(lastRun!==r){lastRun=r;lastTime=r.time;blend=j.speed>.1?1:0;idleTime=0;footwork.reset();walkingSupports.reset();footEvents.reset();swingBody.reset();bodyLanguage.reset();}
   const dt=Math.max(0,Math.min(.1,r.time-lastTime));lastTime=r.time;
   // Mixer caches unchanged property values. Restore its last base pose before
   // procedural edits so duplicate renders cannot accumulate head/chest/IK turns.
@@ -128,6 +129,9 @@ export async function createTrimmerJoe(scene,materials){
    state.footContacts[i]={planted:!!foot.planted,settling:!!foot.settling,target:foot.position.toArray()};
   }
   const acting=attackActing(j,pose);state.acting=acting;
+  // Readable intent (search, spot, commit, lose, guard) layered on the acting.
+  const intent=bodyLanguage.update(j,r.time,dt,reduced);state.intent=intent.intent;
+  if(intent.active){chest?.rotateY(intent.chestYaw);chest?.rotateX(-intent.chestPitch);chest?.rotateZ(intent.chestRoll);head?.rotateY(intent.headYaw);head?.rotateX(intent.headPitch);}
   if(chest){chest.rotateY(acting.yaw);chest.rotateX(acting.pitch+swing.pitch);chest.rotateZ(acting.roll+swing.roll);}
   // His eyes stay on what he is cutting while the shoulders and hips turn.
   if(head){head.rotateY(-acting.yaw-swing.turn*.9);head.rotateX(pose.raised*.1-(acting.pitch+swing.pitch)*.6);head.rotateZ(-(acting.roll+swing.roll)*.65);if(j.phase==='search'&&!reduced)head.rotateY(Math.sin(j.age*.8)*.2);}
