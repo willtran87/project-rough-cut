@@ -7,6 +7,7 @@ import {createParallax} from './parallax-scene.js';
 import {finalCutRenderSize} from './final-cut-visual-settings.js';
 import {GROUND_SLABS} from './final-cut-ground-layout.js';
 import * as THREE from './vendor/three/three.module.js';
+import {createScreenFinish,LOOKS} from './screen-finish.js';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import * as Art from './pixel-art.js';
 import {collapsePose} from './final-cut-ending.js';
@@ -70,6 +71,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  if(Art.stats().errors.length)throw Error('Course materials could not load. Reload to retry.');
  const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:true});renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;
  const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info'),gpu=ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'',software=/swiftshader|software|llvmpipe/i.test(gpu);
+ const finish=createScreenFinish(THREE,renderer,{look:LOOKS.finalCut,level:software?'off':'high'});
  const scene=new THREE.Scene();scene.background=new THREE.Color('#18252d');scene.fog=new THREE.Fog('#26383b',42,138);
  const camera=new THREE.PerspectiveCamera(58,16/9,.08,180);camera.rotation.order='YXZ';
  const skyLight=new THREE.HemisphereLight('#b9d6dc','#455738',2);scene.add(skyLight);const moonlight=new THREE.DirectionalLight('#a4c8d4',1.7);moonlight.position.set(-28,28,-72);scene.add(moonlight,moonlight.target);
@@ -400,7 +402,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  onProgress('Preparing moving light and shelter shadows…');
  renderer.setSize(1,1,false);for(const light of headlights.lights)light.shadow.needsUpdate=true;
  renderer.render(scene,camera);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
- return {rigGeometry(){
+ return {finish,rigGeometry(){
   scene.updateMatrixWorld(true);const v=new THREE.Vector3(),matrix=new THREE.Matrix4(),instanceMatrix=new THREE.Matrix4();
   return contactMeshes.map(({id,mesh,parent,instance})=>{mesh.updateMatrix();matrix.multiplyMatrices(parent.matrixWorld,mesh.matrix);if(instance!==null){mesh.getMatrixAt(instance,instanceMatrix);matrix.multiply(instanceMatrix);}const pos=mesh.geometry.attributes.position,points=[];for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(matrix);points.push([v.x,v.y,-v.z]);}return {id,points,triangles:Array.from(mesh.geometry.index.array)};});
  },poll,whenPresented,cue:cameraCues.start,cueActive:cameraCues.active,render(r,prefs={}){
@@ -476,7 +478,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
    if(!light.visible||light.intensity===0||!shadowFrustum.intersectsSphere(shadowBounds)){light.shadow.needsUpdate=false;offscreenShadows.add(light);}
    else if(offscreenShadows.delete(light))light.shadow.needsUpdate=true;
   }
-  renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);backgroundDraws=renderer.info.render.calls;backgroundTriangles=renderer.info.render.triangles;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;frameMs=performance.now()-start;submittedFrames++;
+  renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);backgroundDraws=renderer.info.render.calls;backgroundTriangles=renderer.info.render.triangles;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;finish.apply();frameMs=performance.now()-start;submittedFrames++;
   if(!prefs.manual){fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
   return true;
  },stats:()=>({gpu,software,width,height,renderQuality,presentation:{submittedFrames,skippedFrames,pending:!!fence,offscreenShadows:offscreenShadows.size},backdrop:backdrop.stats(),draws:renderer.info.render.calls+backgroundDraws,backgroundDraws,triangles:renderer.info.render.triangles+backgroundTriangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,frameMs,actorCulling:actorCulling.stats(),headlights:headlights.stats(),maintenanceLight:maintenanceLight.stats(),cabLighting:cabLighting.stats(),refugeLighting:refugeLighting.stats(),courseLighting:{wash:lastRun?courseLightState(lastRun):0,ambient:skyLight.intensity,directional:moonlight.intensity,safety:safetyLight.intensity,refugeLights:refugeLights.length,moonShadow:!software,moonShadowSize:software?0:2048},reveal:lastRun?rigLampState(lastRun):null,ambushReeds:ambushReeds.stats(),landscape:landscape.stats(),verges:verges.stats(),courseContour:courseContour.stats(),estateDetail,refugeInteriors,mountedSigns,grandstand,irrigation:irrigation.stats(),pumpHardware:pumpHardware.stats(),boss:boss.stats(),engine:engine.stats(),tires:tires.stats(),lamps:lamps.stats(),bodywork:bodywork.stats(),machinery:machinery.stats(),hydraulics:hydraulics.stats(),surfaceScales,groundFinish:groundFinish.stats(),masonryBatching,staticBatching,banner:{fold:bannerFold,hemDepth:clothGeometry.attributes.position.getZ(84),hemHeight:clothGeometry.attributes.position.getY(84),pinnedDepth:clothGeometry.attributes.position.getZ(6),pinnedHeight:clothGeometry.attributes.position.getY(6)},rider:true,joe:joeActor.stats(),joeFinish:joeFinish.stats(),collapse:collapsePose(lastRun?.ending.age||0),roughSectors:rough.stats().sectors,mownTufts:rough.stats().mownTufts,standingTufts:rough.stats().standingTufts,rough:rough.stats(),staging:staging.stats(),cameraCue:cameraCues.stats(),brokenProps:breakables.filter(b=>b.debris.visible).length}),dispose(){if(fence){gl.deleteSync(fence);fence=null;}joeActor.dispose();joeFinish.dispose();backdrop.dispose();moonlight.shadow.map?.dispose();moonlight.shadow.mapPass?.dispose();boss.dispose();engine.dispose();tires.dispose();lamps.dispose();ambushReeds.dispose();headlights.dispose();maintenanceLight.dispose();cabLighting.dispose();refugeLighting.dispose();bodywork.dispose();hydraulics.dispose();machinery.dispose();irrigation.dispose();pumpHardware.dispose();landscape.dispose();verges.dispose();courseContour.dispose();groundFinish.dispose();staticMeshes.forEach(m=>m.dispose());renderer.dispose();scene.traverse(o=>o.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());staging.dispose();rough.dispose();clippingMaterial.dispose();clothMaterial.dispose();atlasResources.forEach(r=>r.dispose());}};
