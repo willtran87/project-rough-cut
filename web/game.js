@@ -20,7 +20,7 @@ import {createTouchRunControl} from './touch-run-control.js';
 import {createGamepadSession} from './gamepad-session.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
 import {actionBindings,keyLabel,onFootActionVerb,bindingCodeAllowed as allowedBindingCode} from './control-profiles.js';
-import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261119-brightness';
+import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261119-polish';
 import {descriptiveMessage,levelOneMessage} from './message-presentation.js?v=20261118-quiet-narration';
 import { ghostSchedulingPolicy } from './ghost-scheduling.js';
 import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-regional-sound';
@@ -37,6 +37,10 @@ import { createCourseAnnouncement } from './course-announcement.js';
 import { onFootCameraMotion } from './on-foot-camera-motion.js';
 import { createJoeVoice } from './joe-voice.js';
 import {clamp,lerp,smoothstep,inverseLerp,hash,wrapRadians,worldDistance} from './night-order/math.js?v=20261119-extract';
+import {createNightFeel} from './night-order/feel.js?v=20261119-polish';
+import {createPondChorus} from './night-order/ambience.js?v=20261119-polish';
+import {createNightPhoto} from './night-order/photo.js?v=20261119-polish';
+import {recordRun} from './run-records.js';
 import {SIGNAGE_ATLAS_CELL,SIGNAGE_ATLAS_CELLS,COURSE_ECHO_ART_CELLS,FOOTING_HAZARD_ART_CELLS,FOOTING_HAZARD_ART_CELL_BY_KIND,COURSE_BOUNDARY_KIT_CELLS,COURSE_BOUNDARY_PLACARD_WIDTH,COURSE_BOUNDARY_PLACARD_HEIGHT,EXPANDED_OBSTACLE_CELLS,DEAD_GREEN_SCENERY_CELLS,INTERACTABLE_PROP_CELLS,COURSE_MECHANIC_CELLS,NIGHT_ORDER_OBJECTIVE_CELLS,TURF_EVIDENCE_CELLS,COURSE_CLUTTER_CELLS,COURSE_VERGE_CELLS} from './night-order/atlas-cells.js?v=20261119-extract';
 import {obstacleFootprintAxes,obstacleNormalizedDistance,obstacleClearance,segmentObstacleIntersection} from './night-order/obstacle-geometry.js?v=20261119-extract';
 import {JOE_NAVIGATION_OFFSETS,JOE_NAVIGATION_REVERSE_OFFSET,pushNavigationHeap,popNavigationHeap} from './night-order/navigation-heap.js?v=20261119-extract';
@@ -365,6 +369,10 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
     {id:"clear_navigation",group:"presentation",label:"CLEAR NAVIGATION",key:"clearNavigation",type:"toggle"},
     { id: "brightness", group: "presentation", label: "BRIGHTNESS", key: "brightness", type: "slider", min: 0.8, max: 1.6, step: 0.1 },
+    // Shared with the other chapters (preference-store.js): quality preset, film grain, controller rumble.
+    { id: "graphics_quality", group: "presentation", label: "GRAPHICS QUALITY", key: "graphicsQualityIndex", type: "slider", min: 0, max: 3, step: 1 },
+    { id: "film_grain", group: "presentation", label: "FILM GRAIN", key: "filmGrain", type: "toggle" },
+    { id: "rumble", group: "presentation", label: "CONTROLLER RUMBLE", key: "rumble", type: "slider", min: 0, max: 1, step: 0.25 },
   ];
   // The course map was removed as a player option. Its drawing and route code
   // remain for the listening view; nothing below can open it while this is false.
@@ -5662,6 +5670,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     return actionBindings('onFoot', value, version);
   }
 
+  function pressureDifficulty(pressure) { return pressure < 0.9 ? "relaxed" : pressure > 1.1 ? "hard" : "standard"; }
   function readSavedPreferences() {
     const systemReducedMotion =
       typeof window.matchMedia ===
@@ -5750,6 +5759,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         stickDeadzone: Number.isFinite(parsed.stickDeadzone) ? clamp(parsed.stickDeadzone, 0.1, 0.3) : 0.22,
         uiScale: Number.isFinite(parsed.uiScale) ? clamp(parsed.uiScale, 1, 1.3) : 1,
         brightness: Number.isFinite(parsed.brightness) ? clamp(parsed.brightness, 0.8, 1.6) : 1,
+        rumble: parsed.rumble, filmGrain: parsed.filmGrain, graphicsQualityIndex: Math.max(0, ["auto","low","medium","high"].indexOf(parsed.graphicsQuality)),
         invertLook: typeof parsed.invertLook === "boolean" ? parsed.invertLook : false,
         focusedHud: typeof parsed.focusedHud === "boolean" ? parsed.focusedHud : true,
         clearScenery: typeof parsed.clearScenery === "boolean" ? parsed.clearScenery : true,
@@ -5790,6 +5800,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         stickDeadzone: 0.22,
         uiScale: 1,
         brightness: 1,
+        rumble: 0.5, filmGrain: true, graphicsQualityIndex: 0,
         invertLook: false,
         focusedHud: true,
         clearScenery: true,
@@ -6095,10 +6106,28 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   const savedPreferences = readSavedPreferences();
+  // The shared Difficulty (settable in any chapter) is Joe pressure here:
+  // relaxed 0.8, standard 1, hard 1.2. A stored choice wins over an older
+  // Night Order-only pressure value; with neither stored, nothing changes.
+  {
+    const sharedDifficulty = { relaxed: 0.8, standard: 1, hard: 1.2 }[readRecord(SETTINGS_STORAGE_KEY).difficulty];
+    if (sharedDifficulty !== undefined) savedPreferences.pursuitIntensity = sharedDifficulty;
+    savedPreferences.difficulty = pressureDifficulty(savedPreferences.pursuitIntensity);
+    savedPreferences.graphicsQuality = ["auto","low","medium","high"][savedPreferences.graphicsQualityIndex];
+  }
   const writePreferenceChanges = preferenceWriter(SETTINGS_STORAGE_KEY, savedPreferences);
   window.RCScene3D?.setBrightness?.(savedPreferences.brightness);
   const savedCareer = readSavedCareer();
 
+  // Rumble, heartbeat pulse and near-miss feedback; presentation only.
+  const nightFeel = createNightFeel({ rumbleStrength: () => state.rumble });
+  const pondChorus = createPondChorus();
+  // Photo mode (P or the pause card's button, only while paused): a free camera passed to the scene as a view override.
+  const nightPhoto = createNightPhoto({ canvas, shell: canvas.parentElement, render: () => render(),
+    origin: () => ({ x: state.player.x, y: state.player.y, yaw: lookBackView().angle, pitch: state.player.pitch || 0, fov: spatialPreferences().fov, eye: state.hole.rebuild.eyeHeight || RCQuality.scale.eye }),
+    metres: () => ({ x: RCQuality.scale.x * RCQuality.scale.meters, y: RCQuality.scale.meters }),
+    canOpen: () => state.mode === "paused" && spatialViewEnabled() && !state.hole.rebuild.lab && !document.querySelector("dialog[open]") });
+  document.getElementById("photo-launch")?.addEventListener("click", () => nightPhoto.open());
   const state = {
     mode: "gate",
     time: 0,
@@ -6110,6 +6139,9 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     soundCaptions: savedPreferences.soundCaptions,
     subtitleSize: savedPreferences.subtitleSize,
     brightness: savedPreferences.brightness,
+    rumble: savedPreferences.rumble,
+    filmGrain: savedPreferences.filmGrain,
+    graphicsQualityIndex: savedPreferences.graphicsQualityIndex,
     captionBackground: savedPreferences.captionBackground,
     threatCaptions: savedPreferences.threatCaptions,
     reducedMotion: savedPreferences.reducedMotion,
@@ -6613,6 +6645,10 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       soundCaptions: state.soundCaptions,
           subtitleSize: Number(state.subtitleSize.toFixed(2)),
           brightness: Number(state.brightness.toFixed(2)),
+          rumble: Number(state.rumble.toFixed(2)),
+          filmGrain: state.filmGrain,
+          graphicsQuality: ["auto","low","medium","high"][state.graphicsQualityIndex] || "auto",
+          difficulty: pressureDifficulty(state.pursuitIntensity),
           captionBackground: Number(state.captionBackground.toFixed(2)),
           threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
@@ -11782,7 +11818,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     {name:"AUDIO",ids:["master","ambience","mower","effects","danger","mute"]},
     {name:"CONTROLS",ids:["look_sensitivity","invert_look","stick_deadzone","free_look"]},
     {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","sound_captions","threat_captions","ui_scale","focused_hud","guided_hints","clear_navigation"]},
-    {name:"ATMOSPHERE",ids:["brightness","reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
+    {name:"ATMOSPHERE",ids:["brightness","reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture","graphics_quality","film_grain","rumble"]},
     {name:"CHALLENGE",ids:["pursuit_intensity"]}
   ];
   function settingsCategory(index=state.settingsIndex) {return SETTINGS_CATEGORIES.findIndex(c=>c.ids.includes(SETTINGS_ROWS[index]?.id));}
@@ -11796,6 +11832,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     defaults.routeGuidance = false;
     defaults.clearNavigation = false;
     defaults.brightness = 1;
+    defaults.graphicsQualityIndex = 0; defaults.filmGrain = true; defaults.rumble = 0.5;
     for(const id of SETTINGS_CATEGORIES[settingsCategory()].ids) {const row=SETTINGS_ROWS.find(r=>r.id===id);if(row.type==="slider")applySliderSetting(row,defaults[row.key]);else if(state[row.key]!==defaults[row.key])toggleSetting(row);}
     state.settingsNotice="CATEGORY DEFAULTS RESTORED";
   }
@@ -11810,6 +11847,12 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function settingDisplayValue(setting) {
+    if (setting.id === "graphics_quality") {
+      const quality = window.RCScene3D?.polish?.quality, name = ["auto","low","medium","high"][state.graphicsQualityIndex] || "auto";
+      // Auto only ever steps down; show where it currently sits.
+      return name === "auto" && quality && quality.level !== "high" ? `AUTO (${quality.level.toUpperCase()})` : name.toUpperCase();
+    }
+    if (setting.id === "rumble") return state.rumble > 0 ? `${Math.round(state.rumble * 100)}%` : "OFF";
     if (setting.id === "pursuit_intensity") {
       return state.pursuitIntensity < 0.9
         ? "STEADY"
@@ -22150,6 +22193,8 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       try { localStorage.setItem("rough-cut.back-nine.v1", JSON.stringify({version:1, unlocked:true, checkpoint:0, completed:false})); } catch {}
     }
     state.hole.result = recordVictory(route);
+    // Also file ranked finishes in the campaign-wide records (run-records.js); the result panel keeps its own career table.
+    if (!state.hole.result.unranked && !state.hole.rehearsal) { try { recordRun('night-order', { seconds: state.hole.result.timeSeconds, closeCalls: state.hole.result.closeCalls, route, difficulty: pressureDifficulty(state.pursuitIntensity) }); } catch {} }
     syncLiveProjection(
       state.hole.result,
       false,
@@ -29057,6 +29102,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playHorrorCue(type, side = 0) {
+    nightFeel.event("scare");
     if (type === "peripheral_groundskeeper") {
       playNoiseBurst(
         0.24,
@@ -56869,11 +56915,21 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     }
     return true;
   }
+  // Cosmetic scene events that want a sound (night-order/wildlife.js).
+  function playNightPolishEvents(){
+    for(const e of RCScene3D.polishEvents?.()||[]){
+      if(e.kind!=='bird_flush')continue;
+      const scale=RCQuality.scale,destination=worldSoundDestination({x:e.x/(scale.x*scale.meters),y:-e.z/scale.meters},900);
+      for(let i=0;i<6;i++)playNoiseBurst(.05,.03-i*.003,2600+i*180,'bandpass',0,i*.065,destination);
+      if(state.soundCaptions)pushThreatCaption('BIRDS BREAK FROM A TREE',null,'world',1.8,'atmosphere_flavor');
+    }
+  }
   function drawSpatialFirstHole(resultBeat=false){
     const h=state.hole,calibration=h.rebuild.lab==='calibration',p=spatialPreferences();
     const wobble=spatialCameraWobble(),beat=courseCameraBeatView();
     if(resultBeat&&!beat)return false;
-    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:beat&&(beat.x!==state.player.x||beat.y!==state.player.y)?{...state.player,x:beat.x,y:beat.y}:state.player,yaw:lookBackView().angle+(beat?.yaw||0),pitch:(state.player.pitch||0)+(beat?.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll+(beat?.roll||0),fov:p.fov+(beat?.fov||0),resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight+(beat?.rise||0),bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',photo:nightPhoto.view(),polish:nightFeel.frame({distance:worldDistance(h.joe,state.player),chase:h.joe.mode==='chase',pressure:h.tensionDirector.pressure,activations:h.engagement.closeEscape.activations,reduced:state.reducedMotion,flashes:state.flashes,grain:state.filmGrain,paused:state.mode!=='first_hole',play:!h.tutorialVisible&&!h.rebuild.lab,sprint:spatialWalker.sprinting&&spatialWalker.speed>2}),player:beat&&(beat.x!==state.player.x||beat.y!==state.player.y)?{...state.player,x:beat.x,y:beat.y}:state.player,yaw:lookBackView().angle+(beat?.yaw||0),pitch:(state.player.pitch||0)+(beat?.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll+(beat?.roll||0),fov:p.fov+(beat?.fov||0)+nightFeel.fovKick(),resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight+(beat?.rise||0),bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    playNightPolishEvents();
     if(resultBeat)return true;
     if(RCScene3D.domHud()&&state.mode==="paused")return true;
     if(RCScene3D.domHud()&&state.mode==="first_hole"&&!h.tutorialVisible){
@@ -59308,7 +59364,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     lastBriefingRenderKey='';
     // Retain the paused presentation until its selection, preferences or size change.
     if(state.mode==='paused'&&spatialViewEnabled()&&window.RCScene3D?.domHud()){
-      const key=JSON.stringify([state.pauseIndex,state.inputMethod,state.uiScale,state.freeLook,state.threatCaptions,state.player.x,state.player.y,state.hole.elapsed,state.hole.golfBalls,state.hole.nightOrderActionsCompleted,state.hole.keyCollected,state.hole.drainUnlocked,state.hole.rebuild.lessonComplete,state.hole.mapOpen,state.hole.focus,state.transitionAlpha,window.innerWidth,window.innerHeight]);
+      const key=JSON.stringify([state.pauseIndex,state.inputMethod,state.uiScale,state.freeLook,state.threatCaptions,state.player.x,state.player.y,state.hole.elapsed,state.hole.golfBalls,state.hole.nightOrderActionsCompleted,state.hole.keyCollected,state.hole.drainUnlocked,state.hole.rebuild.lessonComplete,state.hole.mapOpen,state.hole.focus,state.transitionAlpha,window.innerWidth,window.innerHeight,nightPhoto.view(),state.filmGrain,state.graphicsQualityIndex]);
       if(key===render.pausedThemeKey)return;render.pausedThemeKey=key;
     }else render.pausedThemeKey='';
     refreshThreatCaptionBearings();
@@ -61058,6 +61114,11 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     const shelterMix=coverRestMix(state.hole.engagement.experience.coverRest,
       isCourse&&!signalPriority&&!state.hole.hasLineOfSight&&!state.hole.playerAudible&&state.hole.detection<.12&&worldDistance(state.hole.joe,state.player)>78);
     if(atmosphericAudioHole!==state.hole){atmosphericAudio?.reset();atmosphericAudioHole=state.hole;}
+    // Frogs on the pond banks (night-order/ambience.js): ambience category, silent while listening.
+    pondChorus.connect(audioContext,ambienceBusGain);
+    pondChorus.update({player:{x:state.player.x*RCQuality.scale.x*RCQuality.scale.meters,z:-state.player.y*RCQuality.scale.meters,yaw:state.player.yaw||0},
+      active:isCourse&&state.mode==='first_hole'&&!state.hole.tutorialVisible&&!state.hole.mapOpen&&!state.hole.focus&&state.hole.rebuild.lab!=='calibration',
+      disturbed:worldDistance(state.hole.joe,state.player)<70||sprintHeld()&&(state.hole.lastMovementAppliedDistance||0)>0});
     const atmosphere=atmosphericAudio?.update({
       shelter:shelterMix.amount,
       authoredHush:auditResponseHush(state.hole.engagement.experience.auditResponse),
@@ -61467,6 +61528,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     sand = false,
     quiet = 1,
   ) {
+    nightFeel.event(crouched ? "step" : sprinting ? "run" : inRough ? "rough" : "step", crouched ? 0.5 : 1);
     const panicWeight =
       crouched
         ? 1
@@ -61626,12 +61688,14 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playHeartbeat(strength) {
+    nightFeel.heartbeat(strength);
     const volume = 0.026 + strength * 0.045;
     playTransientTone(74, 46, 0.13, volume, "sine", 0, dangerBusGain);
     playTransientTone(66, 42, 0.11, volume * 0.72, "sine", 0.18, dangerBusGain);
   }
 
   function playThreatCue(mode) {
+    if (mode === "chase") nightFeel.event("spotted");
     if (mode === "chase") {
       playTransientTone(118, 39, 0.62, 0.11, "sawtooth", 0, dangerBusGain);
       playNoiseBurst(0.28, 0.065, 920, "bandpass", 0, 0, dangerBusGain);
@@ -61679,6 +61743,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playPickupCue() {
+    nightFeel.event("pickup");
     playTransientTone(392, 784, 0.24, 0.055, "triangle");
     playTransientTone(587, 1174, 0.3, 0.038, "sine", 0.08);
     playNoiseBurst(0.12, 0.018, 2400, "highpass");
@@ -61804,6 +61869,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playCollisionCue(obstacle) {
+    nightFeel.event("bump");
     const pan = clamp(
       (obstacle.x - state.player.x) /
         34,
@@ -62060,6 +62126,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playBallSwingCue(direction) {
+    nightFeel.event("swing");
     playNoiseBurst(
       0.11,
       0.028,
@@ -62094,6 +62161,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     blocked = false,
     worldPoint = null,
   ) {
+    if(!worldPoint)nightFeel.event("strike");
     const destination=worldSoundDestination(worldPoint);if(worldPoint)direction=0;
     const noise=(duration,volume,frequency,type,pan=0)=>playNoiseBurst(duration,volume,frequency,type,pan,0,destination);
     const tone=(frequency,end,duration,volume,type,delay=0)=>playTransientTone(frequency,end,duration,volume,type,delay,destination);
@@ -62245,6 +62313,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
 
   /** Gives each mandatory station a distinct mechanical acoustic signature. */
   function playNightOrderActionCue(action) {
+    nightFeel.event("confirm");
     if (
       !action ||
       action.soundCue === "brass_bell"
@@ -62390,18 +62459,21 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
   }
 
   function playDoorRattle() {
+    nightFeel.event("rattle");
     playTransientTone(112, 78, 0.1, 0.05, "square");
     playTransientTone(96, 70, 0.12, 0.045, "square", 0.13);
     playNoiseBurst(0.24, 0.035, 740, "bandpass");
   }
 
   function playVictoryCue() {
+    nightFeel.event("victory");
     playTransientTone(196, 392, 0.62, 0.055, "sine");
     playTransientTone(247, 494, 0.72, 0.038, "triangle", 0.08);
     playTransientTone(294, 588, 0.84, 0.032, "sine", 0.15);
   }
 
   function playCaptureCue() {
+    nightFeel.event("capture");
     triggerStinger();
     playNoiseBurst(0.5, 0.12, 680, "lowpass", 0, 0, dangerBusGain);
     playTransientTone(54, 28, 0.74, 0.13, "sawtooth", 0, dangerBusGain);
@@ -63033,6 +63105,8 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       ).toFixed(4),
     );
     if (setting.key === "brightness") window.RCScene3D?.setBrightness?.(state.brightness);
+    if (setting.key === "graphicsQualityIndex") window.RCScene3D?.polish?.quality.set(["auto","low","medium","high"][state.graphicsQualityIndex] || "auto", { persist: false });
+    if (setting.key === "rumble" && state.rumble > 0) nightFeel.event("confirm");
     if (audioContext) {
       const gainTargets = {
         volume: { node: masterGain, scale: state.muted ? 0 : 0.55 },
@@ -63713,8 +63787,10 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
 
   window.addEventListener("keydown", (event) => {
     if(state.mode==='opening_story')return;
+    if(nightPhoto.active)return;
+    if(event.code==='KeyP'&&state.mode==='paused'&&!event.repeat&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&nightPhoto.open()){event.preventDefault();return;}
     if(['victory','defeat'].includes(state.mode)&&event.target.closest?.('#course-result summary')&&['Enter','Space'].includes(event.code))return;
-    if (studyDialogOpen() || (event.target.closest?.("#study-launch, #controls-launch, #direct-choices, #route-choices") && ["Enter","Space"].includes(event.code))) return;
+    if (studyDialogOpen() || (event.target.closest?.("#study-launch, #controls-launch, #photo-launch, #direct-choices, #route-choices") && ["Enter","Space"].includes(event.code))) return;
     if(['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu){
       if(state.mode!=='clocked_out'&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){
         state.inputMethod='keyboard';
@@ -74063,7 +74139,9 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       presentationElapsed,
     );
     const simulationStart=performance.now();
-    update((now - lastFrame) / 1000);
+    // A near miss briefly slows the real-time loop only (night-order/feel.js);
+    // advanceTime() and replays step fixed time and never see it.
+    update((now - lastFrame) / 1000 * nightFeel.timeScale());
     window.RCQualityTelemetry={simulationMs:performance.now()-simulationStart};
     lastFrame = now;
     render();

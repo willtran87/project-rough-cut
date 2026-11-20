@@ -24,7 +24,7 @@
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-opening.webp" fetchpriority="high">
   <link rel="preload" as="image" href="./assets/optimized/rough-cut-grass-curtain.webp" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css?v=20261112-course-results">
-  <link rel="stylesheet" href="./quality-ui.css?v=20261115-progression">
+  <link rel="stylesheet" href="./quality-ui.css?v=20261119-polish">
   <link rel="stylesheet" href="./course-settings.css?v=20261112-course-settings">
   <link rel="stylesheet" href="./course-menu.css?v=20261115-progression">
   <link rel="stylesheet" href="./course-menu-materials.css?v=20261115-progression">
@@ -49,6 +49,7 @@
       Rough Cut is preparing the opening incident.
     </p>
     <button id="study-launch" hidden>Field journal &amp; playtest</button>
+    <button id="photo-launch" type="button" hidden>Photo mode (P)</button>
     <div id="course-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
       <div class="course-loading-stage">
         <div class="course-loading-plate">
@@ -66,6 +67,7 @@
         <span class="course-loading-kicker">ROUGH CUT / CHAPTER 01 · NIGHT ORDER</span>
         <p class="course-loading-title"><span class="course-loading-mark" aria-hidden="true">▪▪▪</span> Preparing the golf course…</p>
         <p class="course-loading-hint">Your chapter is preparing. You begin when you are ready.</p>
+        <progress id="course-loading-bar" max="1" value="0" aria-label="Course preparation">0%</progress>
       </div>
     </div>
   </main>
@@ -121,7 +123,7 @@
   <script src="./course-renderer.js?v=20261105-foundation"></script>
   <script src="./quality-core.js?v=20261113-audit-restored"></script>
   <script src="./joe-navigation.js?v=20261113-pursuit"></script>
-  <script src="./quality-ui.js?v=20261115-movement"></script>
+  <script src="./quality-ui.js?v=20261119-polish"></script>
   <script src="./course-settings-ui.js?v=unified-20261115-progression"></script>
   <script src="./course-menu-atmosphere-fallback.js?v=20261114-intro-title-break"></script>
   <script src="./course-menu-atmosphere.js?v=20261114-intro-title-break"></script>
@@ -130,8 +132,8 @@
   <script src="./course-menu-motion.js?v=20261116-living-stills"></script>
   <script src="./spatial-preferences.js"></script>
   <script src="./spatial-controls.js?v=20261106-illustrated-props"></script>
-  <script type="module" src="./scene-3d.js?v=20261119-brightness"></script>
-  <script type="module" src="./game.js?v=20261119-brightness"></script>
+  <script type="module" src="./scene-3d.js?v=20261119-polish"></script>
+  <script type="module" src="./game.js?v=20261119-polish"></script>
   <script type="module" src="./playtest.js?v=20261106-quality-reset"></script>
   <script type="module" src="./rebuild-ui.js?v=20261115-movement"></script>
 <script src="./fps-meter.js?v=20261119-fps"></script></body>
