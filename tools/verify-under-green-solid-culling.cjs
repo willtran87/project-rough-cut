@@ -4,7 +4,7 @@ const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/und
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.addInitScript(()=>localStorage.setItem('rough-cut.spatial.v1',JSON.stringify({resolution:.5,fov:85})));
   await p.route('**/course-batch-culling.js',route=>{
    let s=fs.readFileSync('web/course-batch-culling.js','utf8');assert(s.includes('!occlusion?.hidden(p.bounds)')&&s.includes('occlusion?.update(camera);'));

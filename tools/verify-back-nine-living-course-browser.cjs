@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const out='output/back-nine-living-course/browser';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true})));await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.locator('#primary').click();await p.evaluate(()=>advanceTime(0));
  const render=()=>p.evaluate(async()=>{await __backNine.whenPresented();__backNine.render();await __backNine.whenPresented();});
  const read=()=>p.evaluate(()=>{const s=JSON.parse(render_game_to_text());return {seconds:s.seconds,irrigation:s.graphics.irrigation,ghosts:s.graphics.ghosts,terrain:s.graphics.terrain,features:s.graphics.destructibleFeatures,programs:s.graphics.programs,textures:s.graphics.textures};});

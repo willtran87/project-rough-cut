@@ -18,7 +18,7 @@ const unlock=()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.str
   assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).mode),'back_nine_briefing');assert.match(await p.locator('#guide-controls').innerText(),/RT accelerates/);
   await release();await press(0);assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).mode),'back_nine_driving');await release();await press(9);await release();assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).mode),'back_nine_paused');
   await p.close();
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),t=await context.newPage();t.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),t=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);}t.on('pageerror',e=>errors.push(e.message));
   await t.addInitScript(unlock);await t.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({volume:0,subtitles:false})));
   // Test skipping a failed asset without a stuck loading state.
   await t.route('**/back-nine-opening/01-other-side.webp',r=>r.abort());

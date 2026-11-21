@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/under-green/build';fs.mkdirSync(out,{recursive:true});
+  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/under-green/build';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}fs.mkdirSync(out,{recursive:true});
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   const ready=()=>page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
   const read=()=>page.evaluate(()=>JSON.parse(render_game_to_text()));

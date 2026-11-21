@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const out='output/final-cut/announcement';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],checks=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.route('**/game.js*',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__receiptSource={state,resetFirstHole,render,NIGHT_ORDER_ACTIONS,SHED_EXIT,DRAIN_EXIT,beginEscapeFiling};\n  window.advanceTime = (milliseconds) => {')}));
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),receipt=()=>p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.night-order-receipts.v1')||'null'));
  await p.goto('http://127.0.0.1:4187/');await p.waitForFunction(()=>window.__receiptSource);await p.evaluate(()=>{const t=__receiptSource;t.resetFirstHole();Object.assign(t.state,{mode:'first_hole',manualTime:true,transitionAlpha:0,guidedHints:false,apparitions:false});t.state.hole.tutorialVisible=false;t.state.hole.practiceDrill.active=false;t.render();});await p.waitForFunction(()=>RCScene3D.stats().ready,null,{timeout:120000});

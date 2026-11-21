@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/final-cut/rig-contact';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],poses=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],poses=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
  for(const phase of ['pass','turn'])for(const distance of [0,.17,.61,1.4]){
   const data=await p.evaluate(async({phase,distance})=>{const {createRun}=await import('./final-cut-sim.js'),{rigParts,worldPart}=await import('./final-cut-rig.js');const r=createRun({checkpoint:1,cut:['rough-1-0','rough-1-1','rough-1-2']});r.mode='playing';Object.assign(r.rig,{x:0,y:50,yaw:.73,phase,deployment:phase==='pass'?1:0,steering:phase==='turn'?.6:0,distance,reelAngle:-distance*3});Object.assign(r.player,{x:7,y:56,yaw:Math.atan2(-7,-6),pitch:.1});__finalCut.run=r;__finalCut.draw();const geometry=__finalCut.rigGeometry(),parts=rigParts(r.rig);let excess=0;const extents=[];

@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const out='output/back-nine-experience/runner-gait',software=process.argv.includes('--software');fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__uploads=0;const f=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...a){__uploads++;return f.apply(this,a);};});
   const expose=s=>s.replace('return {scene,camera,update,draw()','return window.__gaitWorld={scene,camera,renderer,runner,update,draw()');
   await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:expose(fs.readFileSync('web/back-nine-scene.js','utf8'))}));

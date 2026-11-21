@@ -6,7 +6,7 @@ const out='output/under-green/runtime-fix/visuals';fs.mkdirSync(out,{recursive:t
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],rows=[];
  try{
   for(const optimized of [false,true]){
-   const p=await browser.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.addInitScript(()=>localStorage.setItem('rough-cut.spatial.v1',JSON.stringify({fov:85,resolution:1})));
    await p.route(sceneModule,route=>route.fulfill({contentType:'application/javascript',body:instrumentScene(fs.readFileSync('web/under-green-scene.js','utf8'))}));
    if(!optimized)await p.route(/\/under-green-wet-ground\.js$/,route=>{const s=fs.readFileSync('web/under-green-wet-ground.js','utf8'),start=s.indexOf('// These authored outlines'),end=s.indexOf('// Faded historical traces');assert(start>=0&&end>start);return route.fulfill({contentType:'application/javascript',body:s.slice(0,start)+'export function shallowWaterHeight(point){return DRAIN_SHALLOW_PATCHES.some(p=>insideWetPolygon(point,p.points))?SHALLOW_WATER_HEIGHT:null;}\n\n'+s.slice(end)});});

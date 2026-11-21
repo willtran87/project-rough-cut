@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{
  const out='output/final-cut/opening';fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],states=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],states=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   const read=()=>page.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>page.evaluate(ms=>advanceTime(ms),ms),shot=async name=>{await tick(0);await page.screenshot({path:`${out}/${name}.png`});const state=await read();states.push({name,state});fs.writeFileSync(`${out}/${name}.json`,JSON.stringify(state,null,2));};
   await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.click('#primary');
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await page.setViewportSize({width,height});await shot(`arrival-${width}`);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}

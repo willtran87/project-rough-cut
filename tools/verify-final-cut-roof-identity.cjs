@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),before=process.argv.includes('--before'),out=`output/final-cut/roof-identity/${before?'before':software?'software':'hardware'}`;
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before)for(const f of ['final-cut-architecture-layout.js','final-cut-estate-detail.js','final-cut-balls.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/roof-identity/source/before-'+f,'utf8')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook',-2,0,0,50,0],['pavilion-front',-8,76,-16,86,-.18],['pavilion-gable',-16,78,-16,86,-.45],['pavilion-side',-7,84,-16,86,-.33],['pavilion-rear',-16,93,-16,86,-.48],['pump-front',10,20,10,38,-.17],['pump-side',23,38,10,38,-.22],['pump-diagonal',0,22,10,38,-.17],['bunker',-8,5,-10,15,-.12]];

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out='output/runner-steering';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__locks=0;HTMLCanvasElement.prototype.requestPointerLock=function(){__locks++;};navigator.getGamepads=()=>[window.__pad||null];});
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.__backNine&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.locator('#primary').click();
  await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js'),{leaveBrokenCart}=await import('./chase-player.js');const r=createRun();r.mode='driving';Object.assign(r.cart,{x:0,y:40});Object.assign(r.joe,{x:0,y:0});leaveBrokenCart(r);r.time=8;r.grace=100;r.messageTime=0;Object.assign(r.foot,{x:0,y:50,yaw:0,viewYaw:0,invulnerable:0});__backNine.run=r;await advanceTime(0);});

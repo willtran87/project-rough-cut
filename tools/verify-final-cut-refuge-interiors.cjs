@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=`output/final-cut/refuge-interiors/${before?'before':software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
-(async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{const p=await b.newPage({viewport:{width:2560,height:1600}});p.setDefaultTimeout(120000);const errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+(async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);const errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before)for(const name of ['scene','course'])await p.route(`**/final-cut-${name}.js`,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`output/final-cut/refuge-interiors/source/final-cut-${name}-before.js`,'utf8')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));

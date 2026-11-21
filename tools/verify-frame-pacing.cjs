@@ -5,7 +5,7 @@ const stats=a=>{a.sort((a,b)=>a-b);return {count:a.length,median:a[Math.floor(a.
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const results=[];
  try{for(const version of ['baseline','current','current','baseline']){
-  const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__starts=[];});
   await p.route('**/back-nine.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(version==='baseline'?out+'/baseline/back-nine.js':'web/back-nine.js','utf8').replace('world.draw();frames++;','window.__starts.push(performance.now());world.draw();frames++;')}));
   await p.route('**/software-frame-budget.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/software-frame-budget.js','utf8').replace('scale:()=>scales[level]','scale:()=>.75')}));

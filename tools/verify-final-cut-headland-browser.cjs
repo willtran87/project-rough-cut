@@ -19,7 +19,7 @@ const audit=String.raw`window.__headlandScene=()=>{
  });return triangles;
 };`;
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');await page.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',audit+'await renderer.compileAsync(scene,camera);')}));
  await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.evaluate(()=>advanceTime(0));await page.click('#primary');
  const result=await page.evaluate(async()=>{

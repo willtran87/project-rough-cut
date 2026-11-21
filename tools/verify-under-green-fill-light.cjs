@@ -5,7 +5,7 @@ const threatsOnly=process.argv.includes('--threats-only');
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],errors=[];
  try{for(const before of threatsOnly?[false]:[true,false]){
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   if(before)await p.route('**/under-green-fill-light.js',route=>{const s=fs.readFileSync('web/under-green-fill-light.js','utf8');return route.fulfill({contentType:'application/javascript',body:s.replace('new THREE.Color(chroma[name])','new THREE.Color(legacy[name])')});});
   if(before)await p.route('**/under-green-tonal-grade.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-tonal-grade.js','utf8').replace('const strength=.42;','const strength=0;')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');

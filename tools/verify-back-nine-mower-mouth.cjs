@@ -3,7 +3,7 @@ const root='output/back-nine-visual-upgrade/mower-mouth',software=process.argv.i
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const results=[];
  for(const baseline of software||afterOnly?[false]:[true,false]){
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__uploads=0;const upload=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...args){__uploads++;return upload.apply(this,args);};});
   await p.route('**/back-nine-scene.js*',r=>{let source=fs.readFileSync((baseline?root+'/baseline-source/':'web/')+'back-nine-scene.js','utf8');source=source.replace('return {scene,camera,update,draw()','return window.__mowerWorld={scene,camera,renderer,mower,headlamp,mowerLight,update,draw()');return r.fulfill({contentType:'application/javascript',body:source});});
   await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));

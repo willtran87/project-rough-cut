@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass45-flood-normals/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[],errors=[];try{
  for(const before of [true,false]){
-  const p=await browser.newPage();p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   for(const name of ['under-green-flood-scene','under-green-scene'])await p.route('**/'+name+'.js',r=>{
    let s=fs.readFileSync(before&&name!=='under-green-scene'?`output/under-green/visual-upgrade-local/pass45-source/${name}-before.js`:`web/${name}.js`,'utf8');
    if(name==='under-green-flood-scene')s=s.replace(' // A single batched',' window.__normalFlood=floodParts.root;\n // A single batched');

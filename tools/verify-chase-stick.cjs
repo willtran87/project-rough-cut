@@ -5,7 +5,7 @@ const {chromium}=require('playwright');
  fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{
    localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');
    if(!localStorage.getItem('stick-test-seeded')){localStorage.setItem('rough-cut.settings.v1',JSON.stringify({stickDeadzone:.3,volume:.37,extension:{keep:true}}));localStorage.setItem('stick-test-seeded','1');}

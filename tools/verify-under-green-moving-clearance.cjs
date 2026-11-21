@@ -16,7 +16,7 @@ const {chromium}=require('playwright');
  const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/under-green/cadence',errors=[],results=[];fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({viewport:{width:1280,height:720}});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:1280,height:720}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:4187/under-green.html?test');await page.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.click('#primary');await page.keyboard.press('Escape');
   for(const route of routes){
    await page.evaluate(async cp=>{const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun(cp||0);__underGreen.clearInput();},route.options.cp);

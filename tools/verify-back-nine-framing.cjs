@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out='output/back-nine-framing';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],requests=[];p.on('pageerror',e=>errors.push(e.message));p.on('request',r=>{if(r.url().includes('/back-nine-opening/'))requests.push(r.url());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],requests=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('request',r=>{if(r.url().includes('/back-nine-opening/'))requests.push(r.url());});
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__pad=null;Object.defineProperty(navigator,'getGamepads',{value:()=>[window.__pad]});});
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.waitForFunction(()=>document.querySelector('#brief-image').naturalWidth===1672);const state=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),before=await state();
  assert(requests.every(url=>url.endsWith('05-seen-you.webp')),'Skip requests only the reused splash');assert.equal(requests.length,1);assert(!await p.locator('.bn-optional').evaluate(e=>e.open));

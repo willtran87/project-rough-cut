@@ -7,7 +7,7 @@ async function quiet(){
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),errors=[],views=[];
  try{
-  const page=await browser.newPage({viewport:{width:960,height:600}});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:960,height:600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/under-green-depth-prepass.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('tools/fixtures/under-green-depth-prepass-candidate.js','utf8')}));
   await page.route('**/under-green-scene.js',r=>{
    let s=fs.readFileSync('web/under-green-scene.js','utf8');

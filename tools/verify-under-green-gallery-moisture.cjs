@@ -6,7 +6,7 @@ const fixtures=[['entry',0,8,0,.1],['canopy',0,12,-.5,.25],['pillar',0,13.5,-.87
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],rows=[],audits=[],errors=[];try{
  for(const before of [true,false]){
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   for(const file of files)await p.route('**/'+file+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(before?`output/under-green/visual-pass72/source/${file}-before.js`:`web/${file}.js`,'utf8')}));
   await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__moisture={renderer,scene,camera,materials,crafted,practicalLighting};'+marker);return r.fulfill({contentType:'application/javascript',body:s});});
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__moisture&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');

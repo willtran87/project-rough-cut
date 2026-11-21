@@ -23,7 +23,7 @@ const hook=`window.__initReedAudit=async()=>{
  },cost:r=>{original.update(r,false);const reports=[];for(const old of [true,false,false,true]){for(let i=0;i<2;i++)draw(old);const times=[];for(let i=0;i<7;i++){const start=performance.now();draw(old);times.push(performance.now()-start);}times.sort((a,b)=>a-b);reports.push({old,median:times[3],max:times[6],calls:renderer.info.render.calls,triangles:renderer.info.render.triangles});}legacy.visible=false;current.visible=true;return reports;},dispose:()=>original.dispose()};
 };`;
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:benchmark?{width:960,height:540}:{width:2560,height:1600}});page.setDefaultTimeout(120000);const errors=[],cases=[];
+ const page=await browser.newPage({viewport:benchmark?{width:960,height:540}:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.setDefaultTimeout(120000);const errors=[],cases=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const source=fs.readFileSync('web/final-cut-scene.js','utf8'),baseline=fs.readFileSync('output/final-cut/reed-culling/source/final-cut-reeds-before.js','utf8');
  assert(source.includes('await renderer.compileAsync(scene,camera);'));

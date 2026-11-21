@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  const out='output/pickup-key-20261113';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];
+  const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{interact:'Enter',sprint:'ShiftRight'}})));
   await page.goto('http://127.0.0.1:4187/final-cut.html?test');

@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],states=[],out='output/final-cut/ending';fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],states=[],out='output/final-cut/ending';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),shot=async name=>{await tick(0);await p.screenshot({path:`${out}/${name}.png`});states.push({name,state:await read()});};
  await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1});r.mode='playing';Object.assign(r.player,{x:21,y:82,yaw:Math.atan2(12.5-21,74-82),pitch:.05});Object.assign(r.rig,{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',deployment:1});__finalCut.run=r;});await tick(100);assert((await read()).won);await shot('traction-loss-2560');

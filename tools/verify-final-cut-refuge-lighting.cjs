@@ -29,7 +29,7 @@ window.__refugeAudit={
 `;
 const base=(process.env.GAME_URL||'http://127.0.0.1:4187').replace(/\/$/,'');
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],samples=[],culling=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],samples=[],culling=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before){for(const f of ['final-cut-scene.js','final-cut-estate-detail.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/refuge-lighting/source/before-'+f,'utf8')}));}
  else {const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));}
  // Chapters are gated by campaign progress: unlock the finale and skip its opening story before the page loads.

@@ -8,7 +8,7 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],views=[];
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:4187/under-green.html?test');
   await page.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
   await page.evaluate(()=>advanceTime(0));await page.click('#primary');

@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
 (async()=>{const out='output/back-nine-experience/utility-choice',b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const pages=[],errors=[],results=[];
  for(const enabled of [false,true]){
-  const p=await b.newPage({viewport:{width:1280,height:720}});pages.push(p);p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
+  const p=await b.newPage({viewport:{width:1280,height:720}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
   await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__perfUtility={scene,camera,renderer,mowerLight,update,draw()')}));
   if(!enabled)await p.route('**/chase-utility-art.js*',r=>r.fulfill({contentType:'application/javascript',body:"export function buildUtilityArt(){return{update(){},stats:()=>({choices:['',''],bells:0}),count:0};}"}));
   await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));

@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out=`output/under-green/visual-upgrade/pass35-selected/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[];
 try{for(const before of [true,false]){
- const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before)for(const name of ['under-green-organic-geometry','under-green-ground-finish'])await p.route('**/'+name+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass35-source/'+name+'-before.js','utf8')}));
  await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');await p.addStyleTag({content:'#district {visibility:hidden}'});
  const fixtures=[['gallery',-1.6,12,-.6,-.5],['gallery-close',-2.15,15.2,-1.1,-.8],['gallery-return',-1.6,23,-2.5,-.4],['bunker',-30.5,62,-1.1,-.5],['pump',-25.4,36,-.9,-.5],['range',22.1,27,1,-.5],['keeper',8.3,14,-1.6,-.5]];

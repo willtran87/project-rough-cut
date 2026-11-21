@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),before=process.argv.includes('--before'),root='output/final-cut/paving-finish',out=`${root}/${before?'before':software?'software':'hardware'}`;
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before)for(const file of ['final-cut-scene.js','final-cut-surfaces.js'])await p.route('**/'+file,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(`${root}/source/before-${file}`,'utf8')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook',-2,0,0,.35],['deck-close',-2,0,.2,.85],['entry-ramp',-2,-7,0,.48],['exit-ramp',-2,6,0,.55],['bunker-floor',-7,15,-Math.PI/2,.65],['pump-floor',12,38,-Math.PI/2,.65],['nursery-path',9,67,-Math.PI/2,.6],['bank-path',-7,73,-Math.PI/2,.65],['pavilion-floor',-14,86,-Math.PI/2,.65],['far-path',-2,0,0,.08]];

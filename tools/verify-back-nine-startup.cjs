@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out='output/back-nine-startup';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
-const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
+const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
 const html=fs.readFileSync('web/back-nine.html','utf8');let legacy=true;
 await p.route('**/back-nine.html*',r=>r.fulfill({contentType:'text/html',body:legacy?html.replace(/<script type="importmap">[\s\S]*?<\/script>/,''):html}));
 await p.route('**/back-nine-opening.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-opening.js','utf8').replace('export function backNineHint','function backNineHint')}));

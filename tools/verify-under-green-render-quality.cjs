@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),out='output/under-green/render-quality';fs.mkdirSync(out,{recursive:true});
  try{
-  const context=await b.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage(),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));
+  const context=await b.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage(),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}p.on('pageerror',e=>errors.push(e.message));
   const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),tick=()=>p.evaluate(()=>advanceTime(0));
   const visit=async url=>{await p.goto('http://127.0.0.1:4187/'+url);await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick();};
   await visit('under-green.html');assert.equal((await read()).graphics.captureBuffer,false);

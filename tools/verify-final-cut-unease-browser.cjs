@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict'),out='output/final-cut/unease';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],poses=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],poses=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.click('#primary');
  const setup=()=>p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1,loadLimit:true});r.mode='playing';r.player.yaw=1.1;Object.assign(r.rig,{x:-30,y:66,phase:'turn',path:[{x:30,y:66}]});__finalCut.run=r;await advanceTime(0);});

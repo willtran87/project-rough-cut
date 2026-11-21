@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const out='output/on-foot-focus';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{
    localStorage.setItem('rough-cut.level-one-opening.v1',JSON.stringify({seen:true,skip:true}));

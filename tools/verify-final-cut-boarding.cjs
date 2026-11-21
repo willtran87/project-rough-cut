@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
  const samples=[];for(const [name,offset]of [['board-before-seat',-.001],['board-seated',.001]]){
   const state=await p.evaluate(async offset=>{const {createRun}=await import('./final-cut-sim.js'),{BOARD_WALK,BOARD_TURN,BOARD_CLIMB}=await import('./final-cut-arrival.js');const r=createRun({arrival:{age:BOARD_WALK+BOARD_TURN+BOARD_CLIMB+offset,reached:true}});r.mode='playing';Object.assign(r.player,{x:24,y:26,yaw:Math.PI/2,pitch:-.07});__finalCut.run=r;await advanceTime(0);return JSON.parse(render_game_to_text());},offset);assert.equal(state.graphics.joe.actors,1);assert(state.graphics.joe.head[1]>2&&state.graphics.joe.head[1]<3.65);samples.push(state.graphics.joe);await p.screenshot({path:`output/final-cut/arrival/${name}.png`});
  }

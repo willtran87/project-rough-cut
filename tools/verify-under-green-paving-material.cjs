@@ -8,7 +8,7 @@ const fixtures=[['approach',0,8,0,.1],['floor',0,8,0,-.45],['pillar',0,13.5,-.3,
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],rows=[],pairs=[],timings=[],masks=[];
 try{
  for(const before of [true,false]){
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.route('**/under-green-ground-finish.js',r=>{let s=fs.readFileSync('web/under-green-ground-finish.js','utf8');s=s.replace('const deposits=depositMap(layout,waters);','const deposits=depositMap(layout,waters);window.__depositMask=deposits.texture;');return r.fulfill({contentType:'application/javascript',body:s});});
   await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync('web/under-green-scene.js','utf8'),marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));return r.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__pavingRenderer=renderer;'+marker)});});
   if(before)await p.route('**/under-green-crafted-surfaces.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-pass107/source/under-green-crafted-surfaces-before.js','utf8')}));

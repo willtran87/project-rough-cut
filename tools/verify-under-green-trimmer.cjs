@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/trimmer';fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/trimmer';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');await p.keyboard.press('Escape');
  const samples=await p.evaluate(async()=>{
   const {createRun}=await import('./under-green-sim.js');const results=[];

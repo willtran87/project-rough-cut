@@ -5,7 +5,7 @@ const software=process.argv.includes('--software'),out=`output/under-green/visua
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],rows=[];
  try{
   for(const before of [true,false]){
-   const page=await browser.newPage({viewport:{width:2560,height:1600}});page.on('pageerror',e=>{errors.push(e.message);console.error(e.stack);});page.on('console',m=>{if(m.type()==='error'){errors.push(m.text());console.error(m.text());}});
+   const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>{errors.push(e.message);console.error(e.stack);});page.on('console',m=>{if(m.type()==='error'){errors.push(m.text());console.error(m.text());}});
    if(before){
     for(const file of ['under-green-atmosphere','under-green-root-compositions','under-green-contact-shade'])await page.route(`**/${file}.js`,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(`output/under-green/visual-upgrade/pass15-source/${file}-before.js`,'utf8')}));
     await page.route('**/under-green-district-enclosure.js',r=>{let s=fs.readFileSync('web/under-green-district-enclosure.js','utf8');const added="g.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count*3).fill(1),3));";assert(s.includes(added));s=s.replace(added,'');return r.fulfill({contentType:'application/javascript',body:s});});

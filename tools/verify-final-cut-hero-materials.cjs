@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||`output/final-cut/visual-hero/${software?'software':'accepted'}`;
 (async()=>{fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');
  const probe=`window.__heroTires=()=>wheels.map((wheel,k)=>{const mesh=wheel.children.find(m=>m.name==='FinaleMoldedTire'),p=mesh.geometry.attributes.position;let maxWidth=0,maxRadius=0;for(let i=0;i<p.count;i++){maxWidth=Math.max(maxWidth,Math.abs(p.getX(i)));maxRadius=Math.max(maxRadius,Math.hypot(p.getY(i),p.getZ(i)));}return {id:RIG_WHEELS[k].id,vertices:p.count,maxWidth,maxRadius,widthLimit:(RIG_WHEELS[k].width+.04)/2,radiusLimit:RIG_WHEELS[k].treadRadius,geometry:mesh.geometry.uuid,material:mesh.material.uuid,registered:contactMeshes.some(c=>c.mesh===mesh&&c.id===RIG_WHEELS[k].id)};});`;
  assert(source.includes('await renderer.compileAsync(scene,camera);'));

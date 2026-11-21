@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const baseline=process.argv.includes('--baseline'),out='output/under-green/water-audio/'+(baseline?'before':'after');
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
+ const p=await b.newPage(),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
  const cases=await p.evaluate(async()=>{
   const {createUnderGreenAudio}=await import('./under-green-audio.js'),{createRun}=await import('./under-green-sim.js'),{WATERS,waterState}=await import('./under-green-course.js'),{audibleSource}=await import('./under-green-senses.js');
   const results=[];

@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const out='output/final-cut/replays';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);
  assert.equal(await p.locator('#replay-options').isVisible(),false);assert.equal((await read()).cutPlan.seed,0);

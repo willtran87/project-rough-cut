@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  const out='output/under-green/checkpoint-one',errors=[],checks=[],views=[];
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   const ready=()=>p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   const memory=()=>p.evaluate(()=>{const r=__underGreen.run;return {checkpoint:r.checkpoint,remembered:r.bunkerRouteObserved,active:r.joe.sawBunkerRoute,mode:r.mode,x:r.joe.x,y:r.joe.y,age:r.joe.age,time:r.time,save:JSON.parse(localStorage.getItem('rough-cut.under-green.v1'))};});

@@ -22,7 +22,7 @@ const hook=`window.__contourAudit=()=>{
 };`;
 const overhead=`window.__courseOverhead=()=>{camera.position.set(0,85,-48);camera.lookAt(0,0,-48);renderer.render(scene,camera);};`;
 (async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
  const source=fs.readFileSync(baseline?'output/final-cut/contours/baseline-scene.js':'web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',(baseline?'':hook)+overhead+'await renderer.compileAsync(scene,camera);')}));
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),shot=async name=>{await tick(0);await p.screenshot({path:out+'/'+name+'.png'});shots.push({name,graphics:(await read()).graphics});};
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.click('#primary');await tick(0);

@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),before=process.argv.includes('--before'),out=`output/final-cut/turf-condition/${before?'before':software?'software':'hardware'}`;
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(before)await p.route('**/final-cut-ground-finish.js',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/turf-condition/source/before-final-cut-ground-finish.js','utf8')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook-standing',-2,0,0,50,.08,false],['overlook-cut',-2,0,0,50,.14,true],['west-turf',-16,33,-16,43,.35,true],['west-close',-16,39,-15,41,.8,true],['middle-turf',-3,34,-3,43,.35,true],['service-edge',-20.5,39,-23,41,.65,true],['pump-apron',17.3,39.3,14.5,39,.65,true],['swale-east',17.5,74,13,74,.55,true],['green',0,82,0,88,.38,true]];

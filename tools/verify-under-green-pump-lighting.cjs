@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/navigation';fs.mkdirSync(out,{recursive:true});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/navigation';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}fs.mkdirSync(out,{recursive:true});
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
  await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const {LEVER}=await import('./under-green-course.js');const r=createRun(1);r.mode='playing';Object.assign(r.player,{x:LEVER.x-1.4,y:LEVER.y,yaw:Math.PI/2});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});

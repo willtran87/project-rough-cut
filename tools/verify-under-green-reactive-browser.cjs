@@ -14,7 +14,7 @@ const {chromium}=require('playwright');
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[],views=[],errors=[];
  try{
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
-   const context=await b.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500}),p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const context=await b.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
    for(const tape of selected){
     // Held rear view cannot silently turn the player's travel heading.

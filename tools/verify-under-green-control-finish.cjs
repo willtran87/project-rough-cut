@@ -6,7 +6,7 @@ fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],errors=[];
  try{
   for(const before of [true,false]){
-   const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    for(const file of ['under-green-scene.js','under-green-machinery-detail.js','under-green-pump-scene.js','under-green-release-scene.js'])await p.route('**/'+file,r=>{
     let body=fs.readFileSync((before?'output/under-green/visual-upgrade/pass20-source/':'web/')+file,'utf8');
     if(!before&&file==='under-green-pump-scene.js')body=body.replace(' let state={};',' window.__controlArt={root,lever,gauges,glassMaterial}; let state={};');

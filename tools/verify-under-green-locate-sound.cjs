@@ -5,7 +5,7 @@ const out='output/under-green/bunker-staging/locate-sound';fs.mkdirSync(out,{rec
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[],errors=[];
  try{
   for(const [width,height,device]of [[2560,1600,'mouse'],[1280,720,'controller'],[844,390,'touch'],[390,844,'touch']]){
-   const p=await browser.newPage({viewport:{width,height},hasTouch:device==='touch',isMobile:device==='touch'});
+   const p=await browser.newPage({viewport:{width,height},hasTouch:device==='touch',isMobile:device==='touch'});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
    p.on('pageerror',e=>errors.push(e.message));
    if(device==='controller')await p.addInitScript(()=>{window.locatePad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[locatePad];});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});

@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
 (async()=>{
  const software=process.argv.includes('--software'),label=software?'software':'hardware',out='output/back-nine-experience/course-ambience',b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.addInitScript(()=>{
    localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');localStorage.setItem('rough-cut.settings.v1','{"soundCaptions":true}');window.__nodeCounts={};window.__uploads=0;
    for(const name of ['createOscillator','createBufferSource','createBuffer','createGain','createBiquadFilter','createStereoPanner']){const f=BaseAudioContext.prototype[name];BaseAudioContext.prototype[name]=function(...args){__nodeCounts[name]=(__nodeCounts[name]||0)+1;return f.apply(this,args);};}

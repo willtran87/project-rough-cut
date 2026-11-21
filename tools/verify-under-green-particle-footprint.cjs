@@ -16,7 +16,7 @@ async function waitForRenderQuiet(){
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],results=[],profiles=[];
  try{
   for(const baseline of [true,false]){
-   const p=await browser.newPage({viewport:{width:844,height:390}});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const p=await browser.newPage({viewport:{width:844,height:390}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.route('**/under-green-water.js',route=>{let s=fs.readFileSync(`${baseline?'output/under-green/visual-upgrade/pass12-source':'web'}/under-green-water.js`,'utf8').replace(/\r\n/g,'\n');assert(s.includes(' return {\n  update('));s=s.replace(' return {\n  update(',' window.__drops=drops; return {\n  update(');return route.fulfill({contentType:'application/javascript',body:s});});
    await p.route('**/under-green-scene.js',route=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');s=s.replace(' return {draw,drainJoeFootsteps:',' window.__footprintScene={scene,renderer,camera,practicalLighting}; return {draw,drainJoeFootsteps:');return route.fulfill({contentType:'application/javascript',body:s});});
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded',timeout:120000});await p.waitForFunction(()=>window.__drops&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.keyboard.press('Escape');

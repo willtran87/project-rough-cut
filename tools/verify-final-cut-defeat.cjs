@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/final-cut/defeat';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];
+ const page=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
  const tick=ms=>page.evaluate(ms=>advanceTime(ms),ms),read=()=>page.evaluate(()=>JSON.parse(render_game_to_text()));

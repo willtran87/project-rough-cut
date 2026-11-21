@@ -23,7 +23,7 @@ const fixtures=[['east-repair',1.5,18.2,Math.PI/2,.05],['entrance-floor',0,8,0,-
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],audits=[],errors=[];try{
 for(const before of [true,false]){
- const p=await b.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/under-green-gallery-render.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-gallery-render.js','utf8')}));
  await p.route('**/under-green-ground-finish.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-ground-finish.js','utf8').replace(' return {texture,wallDeposits,',' window.__galleryDeposits=texture; return {texture,wallDeposits,')}));
  await p.route('**/under-green-scene.js',r=>{const s=fs.readFileSync(before?'output/under-green/visual-pass101/source/under-green-scene-before.js':'output/under-green/visual-pass101/source/under-green-scene-candidate.js','utf8'),marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));return r.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__canopyProbe={scene,renderer,structureMeshes,batchCulling};'+marker)});});

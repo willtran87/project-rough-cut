@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass99/normals/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[],errors=[];try{
  for(const before of [false]){
-  const p=await browser.newPage();p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   for(const name of ['under-green-water','under-green-wet-ground-scene','under-green-scene'])await p.route('**/'+name+'.js',r=>{
    let s=fs.readFileSync(before&&name!=='under-green-scene'?`output/under-green/visual-upgrade-local/pass44-source/${name}-before.js`:`web/${name}.js`,'utf8');
    if(name==='under-green-water')s=s.replace(/ return \{\r?\n  update\(r/,' window.__normalChannels=surfaces; return {\n  update(r');

@@ -4,7 +4,7 @@ const out='output/under-green/visual-upgrade/practicals/live';fs.mkdirSync(out,{
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--ignore-gpu-blocklist']}),errors=[],views=[];
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.goto('http://127.0.0.1:4187/under-green.html?test');await page.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await page.click('#primary');await page.keyboard.press('Escape');
   for(const f of [{name:'gallery',x:0,y:12,yaw:0,elapsed:0},{name:'keeper-flood',x:12,y:23,yaw:Math.PI,elapsed:20}]){
    // Deliberately never call advanceTime: exercise ordinary requestAnimationFrame

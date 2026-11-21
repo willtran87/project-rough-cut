@@ -7,7 +7,7 @@ const instrument=seatAudit+String.raw`
  rider.traverse(o=>{if(!o.isSkinnedMesh||!o.visible)return;o.skeleton.update();const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){v.fromBufferAttribute(a,i);o.applyBoneTransform(i,v);v.applyMatrix4(o.matrixWorld);radius=Math.max(radius,v.distanceTo(center));vertices++;}});
  return {head:head.getWorldQuaternion(new THREE.Quaternion()).toArray(),chest:chest.getWorldQuaternion(new THREE.Quaternion()).toArray(),hands:['HandL','HandR'].map(n=>rider.getObjectByName(n).getWorldQuaternion(new THREE.Quaternion()).toArray()),radius,vertices,bound:actorCulling.stats().radius};};`;
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',instrument+'await renderer.compileAsync(scene,camera);')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
  const data=await p.evaluate(async(software)=>{

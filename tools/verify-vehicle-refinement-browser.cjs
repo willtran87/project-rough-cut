@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
  const software=process.argv.includes('--software'),label=software?'software':'hardware',out='output/vehicle-refinement';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.addInitScript(()=>{window.__allocations=0;const f=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...args){__allocations++;return f.apply(this,args);};});
   await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()', 'window.__cartParts=cart;return window.__damageWorld={scene,camera,renderer,update,draw()')}));

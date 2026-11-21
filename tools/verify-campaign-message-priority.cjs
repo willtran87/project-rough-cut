@@ -5,7 +5,7 @@ const probe=process.argv.includes('--probe');
  const out='output/campaign-message-priority';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.level-one-opening.v1',JSON.stringify({seen:true,skip:true}));localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({seen:true,skip:true}));});
   await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__priorityTest={state,resetFirstHole,drawQualityHud,render};\n  window.advanceTime = (milliseconds) => {')}));
   await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__priorityTest,null,{timeout:90000});await p.locator('canvas').click();await p.keyboard.press('Space');

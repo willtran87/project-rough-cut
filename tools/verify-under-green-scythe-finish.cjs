@@ -6,7 +6,7 @@ fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[];
  try{
   for(const before of [true,false]){
-   const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    if(before)for(const f of ['under-green-actor.js','under-green-scythe-scene.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass21-source/'+f,'utf8')}));
    if(!before)await p.route('**/under-green-actor.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-actor.js','utf8').replace(' const scythe=buildGrassScythe(body,materials);',' const scythe=buildGrassScythe(body,materials); window.__scytheArt={body,root};')}));
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');

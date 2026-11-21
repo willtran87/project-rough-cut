@@ -4,7 +4,7 @@ const out='output/under-green/service-grate';
 (async()=>{
  const browser=await chromium.launch({headless:true});
  try{
-  const p=await browser.newPage();await p.goto('http://127.0.0.1:4187/under-green.html?test');
+  const p=await browser.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}await p.goto('http://127.0.0.1:4187/under-green.html?test');
   const samples=await p.evaluate(async()=>{
    const {createUnderGreenAudio}=await import('./under-green-audio.js'),{createRun}=await import('./under-green-sim.js');
    const Real=window.AudioContext,results=[];

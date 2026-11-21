@@ -4,7 +4,7 @@ const out='output/final-cut/crossings/ui';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const errors=[],samples=[];
  for(const [width,height,touch]of [[2560,1600,false],[1280,720,false],[844,390,true],[390,844,true]]){
-  const context=await browser.newContext({viewport:{width,height},isMobile:touch,hasTouch:touch}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width,height},isMobile:touch,hasTouch:touch}),page=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:4187/final-cut.html?test');await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.evaluate(()=>advanceTime(0));
   await page.locator('#comfort summary').click();await page.locator('[data-campaign=subtitleSize]').fill('1.4');await page.locator('[data-campaign=threatCaptions]').uncheck();await page.locator('[data-campaign=muted]').check();await page.locator('#primary').click();
   for(const warning of ['middle','danger']){
