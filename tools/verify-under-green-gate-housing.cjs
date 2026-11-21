@@ -32,7 +32,7 @@ const baseline=process.argv.includes('--baseline'),out='output/under-green/gate-
   fs.writeFileSync(out+'/travel.json',JSON.stringify(travel,null,2));
   for(const result of travel){
    assert.deepEqual(result.boxHits,[]);
-   assert.equal(result.panelDraws,2);
+   assert.equal(result.panelDraws,3);/* two merged panel materials + the gate sediment overlay */
    assert(Math.abs(result.lift-3.3*(1-result.fraction))<1e-8);
    for(const cable of result.cables){assert(Math.abs(cable.top-6.42)<1e-8);assert(Math.abs(cable.bottom-result.lift-2.8)<1e-8);}
   }
@@ -41,21 +41,21 @@ const baseline=process.argv.includes('--baseline'),out='output/under-green/gate-
   await p.screenshot({path:out+'/approach-2560.png'});
   // Ordinary Use drives actual closure; rear glance is voluntary throughout.
   await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js'),{SLUICE}=await import('./under-green-course.js');const r=createRun(3);r.mode='playing';Object.assign(r.player,{x:SLUICE.x,y:SLUICE.y+1,yaw:Math.PI,pitch:0});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
-  assert(await p.locator('#use').isVisible());await p.keyboard.press('e');await p.keyboard.down('r');
+  assert(await p.locator('#use').isVisible());await p.keyboard.press('e');await p.keyboard.down('q');
   const read=()=>p.evaluate(()=>({mode:__underGreen.run.mode,gate:__underGreen.run.gate,closing:__underGreen.run.closing,finished:__underGreen.run.finished,time:__underGreen.run.time,player:{...__underGreen.run.player},geometry:__underGreen.inspectGateTravel()}));
   for(let i=0;i<4;i++){
    await p.evaluate(()=>advanceTime(350));const state=await read();closure.push(state);assert.deepEqual(state.geometry.hits,[]);assert.deepEqual(state.geometry.boxHits,[]);assert(Math.abs(state.geometry.lift-3.3*(1-state.gate))<1e-8);
    await p.screenshot({path:`${out}/closing-${i}-2560.png`});
    if(i===1){
-    await p.keyboard.up('r');await p.keyboard.press('Escape');const before=await read();assert.equal(before.mode,'paused');
+    await p.keyboard.up('q');await p.keyboard.press('Escape');const before=await read();assert.equal(before.mode,'paused');
     await p.evaluate(()=>advanceTime(1200));assert.deepEqual(await read(),before);
-    await p.click('#primary');await p.keyboard.down('r');
+    await p.click('#primary');await p.keyboard.down('q');
    }
   }
   await p.evaluate(()=>advanceTime(34));assert.equal((await read()).mode,'aftermath');assert((await read()).finished);
-  await p.keyboard.up('r');const prior=(await read()).player;await p.keyboard.down('a');await p.evaluate(()=>advanceTime(200));await p.keyboard.up('a');assert(Math.hypot((await read()).player.x-prior.x,(await read()).player.y-prior.y)>.1);
+  await p.keyboard.up('q');const prior=(await read()).player;await p.keyboard.down('a');await p.evaluate(()=>advanceTime(200));await p.keyboard.up('a');assert(Math.hypot((await read()).player.x-prior.x,(await read()).player.y-prior.y)>.1);
   await p.evaluate(()=>advanceTime(5000));assert.equal((await read()).mode,'complete');
-  await p.reload();await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});assert.equal((await read()).mode,'complete');
+  await p.reload();await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});/* reload starts a fresh attempt; completion credit stays in the save */assert.equal((await read()).mode,'briefing');assert(await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')).completed));
   // Prove the volume audit catches a thin conduit ending in the travel slot,
   // even though the regular panel point samples miss its lateral position.
   const source=fs.readFileSync('web/under-green-gate-scene.js','utf8'),marker='const conduitEnd=GATE.y-GATE_ROOF_SLOT.d/2+.02;';assert(source.includes(marker));

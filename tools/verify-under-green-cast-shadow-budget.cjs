@@ -5,14 +5,14 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],results=[];
  try{
   const p=await browser.newPage({viewport:{width:software?960:2560,height:software?600:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await p.route('**/under-green-scene.js',route=>{let source=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,inspectCastShadow:';assert(source.includes(marker));source=source.replace(marker,' window.__shadowBudget={renderer,scene,joeCastShadow};'+marker);return route.fulfill({contentType:'application/javascript',body:source});});
+  await p.route('**/under-green-scene.js',route=>{let source=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,setQuality,';assert(source.includes(marker));source=source.replace(marker,' window.__shadowBudget={renderer,scene,joeCastShadow,polish};'+marker);return route.fulfill({contentType:'application/javascript',body:source});});
   await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__shadowBudget&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   for(const bay of ['entrance','spillway-landing','bunker-bank']){
    const result=await p.evaluate(async bay=>{
     const {createRun}=await import('./under-green-sim.js'),{settleWeapon}=await import('./under-green-clearance.js');const r=createRun();r.mode='playing';r.time=26;r.elapsed=0;r.messageTime=0;r.view={fov:58,aspect:innerWidth/innerHeight};
     const f={entrance:{j:{x:0,y:8},p:{x:0,y:4,yaw:0}},'spillway-landing':{j:{x:0,y:56.8},p:{x:0,y:53.5,yaw:0}},'bunker-bank':{j:{x:-21.1,y:53.6},p:{x:-20.5,y:50.8,yaw:Math.atan2(-.6,2.8)}}}[bay];
     Object.assign(r.player,f.p,{pitch:-.32,grace:100});Object.assign(r.joe,f.j,{yaw:Math.PI,phase:'walk',age:0,speed:1,walk:.4,paceScale:1});settleWeapon(r,1/60);__underGreen.run=r;__underGreen.clearInput();advanceTime(0);for(let i=0;i<6;i++){r.time+=.05;advanceTime(0);}await __underGreen.whenPresented();
-    const {renderer,joeCastShadow,scene}=__shadowBudget,gl=renderer.getContext(),samples={off:[],on:[]};
+    const {renderer,joeCastShadow,scene,polish}=__shadowBudget;polish.finish.setLevel('off');/* raw frame: no screen finish (981accb) */const gl=renderer.getContext(),samples={off:[],on:[]};
     async function frame(on){joeCastShadow.setEnabled(on);const start=performance.now();advanceTime(0);const f=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();while(gl.clientWaitSync(f,0,0)===gl.TIMEOUT_EXPIRED){if(performance.now()-start>10000)throw Error('GPU timing timeout');await new Promise(resolve=>setTimeout(resolve,2));}gl.deleteSync(f);return performance.now()-start;}
     for(let i=0;i<6;i++){await frame(false);await frame(true);}
     for(let i=0;i<24;i++)for(const on of i%2?[true,false]:[false,true])samples[on?'on':'off'].push(await frame(on));

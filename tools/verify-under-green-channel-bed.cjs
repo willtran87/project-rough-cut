@@ -7,16 +7,18 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[];try{
  const p=await b.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/under-green-water.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-water.js','utf8').replace(/ return \{\r?\n  update\(r/,' window.__bedSurfaces=surfaces; return {\n  update(r')}));
- await p.route('**/under-green-scene.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-scene.js','utf8').replace(' return {draw,inspectCastShadow:',' window.__bedRenderer=renderer; return {draw,inspectCastShadow:')}));
+ await p.route('**/under-green-scene.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-scene.js','utf8').replace(' return {draw,setQuality,',' window.__bedRenderer=renderer; return {draw,setQuality,')}));
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));
  const report=await p.evaluate(async()=>{
   const T=await import('./vendor/three/three.module.js'),renderer=__bedRenderer,old=renderer.getRenderTarget(),auto=renderer.autoClear;
   const target=new T.WebGLRenderTarget(65,65,{colorSpace:T.NoColorSpace,depthBuffer:true}),samples=[];
   const source=__bedSurfaces[0].material,compile=source.onBeforeCompile,key=source.customProgramCacheKey();
   const material=source.clone();material.fog=false;material.toneMapped=false;
-  material.onBeforeCompile=function(shader,r){compile.call(this,shader,r);shader.vertexShader=shader.vertexShader.replace('transformed.y+=','transformed.y+=0.*');shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight=vec3(fract(bedHit.x*.1),fract(-bedHit.z*.1),bedVisibility);\n#include <opaque_fragment>');};
+  material.onBeforeCompile=function(shader,r){compile.call(this,shader,r);shader.vertexShader=shader.vertexShader.replace('transformed.y+=','transformed.y+=0.*').replace('transformed.y-=','transformed.y-=0.*');shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight=vec3(fract(bedHit.x*.1),fract(-bedHit.z*.1),bedVisibility);\n#include <opaque_fragment>');};
   material.customProgramCacheKey=()=>key+'-bed-diagnostic';
   const geometry=new T.PlaneGeometry(4,4);geometry.rotateX(-Math.PI/2);
+  // Open water away from any shore: the shore depression and bank shading (abe1e80/f9d86e3) read these attributes.
+  {const n=geometry.attributes.position.count;geometry.setAttribute('drainShore',new T.BufferAttribute(new Float32Array(n).fill(1),1));geometry.setAttribute('drainShoreDistance',new T.BufferAttribute(new Float32Array(n).fill(10),1));geometry.setAttribute('drainShoreGradient',new T.BufferAttribute(new Float32Array(n*2),2));}
   const mesh=new T.Mesh(geometry,material),scene=new T.Scene(),camera=new T.PerspectiveCamera(55,1,.01,30),pixel=new Uint8Array(4);scene.add(mesh);
   try{renderer.autoClear=true;
    for(const yaw of [0,-Math.PI/2])for(const height of [.025,.105])for(const [run,rise]of [[.5,1.5],[2,1.5],[8,1.5],[2,3]])for(const side of [-1,1]){

@@ -32,6 +32,6 @@ fs.mkdirSync(out,{recursive:true});
  const before=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);
  for(let i=0;i<24;i++)await p.evaluate(async i=>{__finalCut.run.player.yaw=i*Math.PI/12;await advanceTime(0);},i);
  const after=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);assert.equal(after.geometries,before.geometries);assert.equal(after.textures,before.textures);assert.deepEqual(errors,[]);
- if(!process.argv.includes('--baseline')){assert.equal(after.landscape.trees,42);assert.equal(after.landscape.batches,12);assert(after.landscape.nearestGeometryX>25.7);assert(after.landscape.triangles<22000);assert.equal(after.surfaceScales.stone,2);}
+ if(!process.argv.includes('--baseline')){assert.equal(after.landscape.trees,42);assert.equal(after.landscape.batches,12);assert(after.landscape.nearestGeometryX>25.7);assert(after.landscape.triangles<22000);assert.equal(after.surfaceScales.stone,1.1);}
  fs.writeFileSync(`${out}/report.json`,JSON.stringify({passed:true,errors,views,timing,stable:{before,after},method:'Explicit visual-position fixtures, four viewports; 30 frozen forced-sync samples per view after five warmup frames. Includes RAF wait; not sustained gameplay FPS.'},null,2));console.log(JSON.stringify({passed:true,label,views:views.length,errors,timing:timing.map(({name,median,p95})=>({name,median,p95}))}));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

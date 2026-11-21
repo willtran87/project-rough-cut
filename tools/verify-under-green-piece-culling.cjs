@@ -7,18 +7,18 @@ const half=process.argv.includes('--half'),out='output/under-green/piece-culling
   const p=await browser.newPage(),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(resolution=>localStorage.setItem('rough-cut.spatial.v1',JSON.stringify({resolution})),half?.5:1);
   p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await p.route('**/under-green.js',route=>{
+  await p.route('**/under-green.js*',route=>{
    const source=fs.readFileSync('web/under-green.js','utf8'),marker='if(test)window.__underGreen={';assert(source.includes(marker));
    return route.fulfill({contentType:'application/javascript',body:source.replace(marker,'window.__cullPrefs=prefs;'+marker)});
   });
   await p.route('**/under-green-scene.js',route=>{
    let source=fs.readFileSync('web/under-green-scene.js','utf8');
-   const marker=' return {draw,drainJoeFootsteps:',update='batchCulling?.update(camera);';assert(source.includes(marker)&&source.includes(update));
+   const marker=' return {draw,setQuality,',update='batchCulling?.update(camera);';assert(source.includes(marker)&&source.includes(update));
    source=source.replace(marker,' window.__cullAudit={renderer,batchCulling};'+marker)
     .replace(update,'if(window.__fullGeometry)batchCulling?.restore();else '+update);
    return route.fulfill({contentType:'application/javascript',body:source});
   });
-  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__cullAudit&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
+  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__cullAudit&&JSON.parse(render_game_to_text()).ready,null,{timeout:240000}/* software (SwiftShader) load now takes ~2 min here */);
   await p.click('#primary');await p.evaluate(()=>advanceTime(0));
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});

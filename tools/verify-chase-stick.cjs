@@ -31,7 +31,7 @@ const {chromium}=require('playwright');
   assert((await drive(true,0,-1)).position[1]>51);assert((await drive(true,0,1)).position[1]<49);
   // Real settings UI updates the live chase and persists without clobbering unrelated fields.
   await stage(false);await p.keyboard.press('Escape');await p.locator('#chase-comfort > summary').click();
-  const slider=p.locator('[data-campaign="stickDeadzone"]');assert.equal(await slider.inputValue(),'0.3');
+  const {showSettingControl}=require('./lib/legacy-b9-settings.cjs'),slider=await showSettingControl(p,'[data-campaign="stickDeadzone"]');assert.equal(await slider.inputValue(),'0.3');
   await slider.evaluate(e=>{e.value='.1';e.dispatchEvent(new Event('input',{bubbles:true}));});
   assert.equal((await read()).campaign.stickDeadzone,.1);
   for(const[width,height]of [[2560,1600],[1280,720],[844,390]]){await p.setViewportSize({width,height});await slider.scrollIntoViewIfNeeded();const bounds=await slider.evaluate(e=>({left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,bottom:e.getBoundingClientRect().bottom,footer:document.querySelector('#panel-footer').getBoundingClientRect().top}));assert(bounds.left>=0&&bounds.right<=width&&bounds.bottom<=bounds.footer+1,JSON.stringify(bounds));await p.screenshot({path:`${out}/settings-${width}.png`});}

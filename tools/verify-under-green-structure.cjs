@@ -40,7 +40,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
   await p.keyboard.press('Escape');const paused=(await read()).graphics.backdrop.motionTime;
   await p.evaluate(()=>advanceTime(1000));assert.equal((await read()).graphics.backdrop.motionTime,paused);
-  await p.locator('#comfort summary').click();await p.locator('#reduced').check();await p.click('#primary');
+  await p.locator('#comfort>summary').click();await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.locator('#comfort').evaluate(e=>e.open=false);await p.click('#primary');
   const reduced=(await read()).graphics.backdrop.motionTime;await p.evaluate(()=>advanceTime(1000));assert.equal((await read()).graphics.backdrop.motionTime,reduced);
   const resources=await p.evaluate(()=>performance.getEntriesByType('resource').filter(r=>/night-sky|moon-v1|cloud-atlas|far-ridge|distant-treeline/.test(r.name)).map(r=>({url:r.name,bytes:r.encodedBodySize,duration:r.duration})));
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,audit,views,skyPauseAndReducedMotion:true,resources,errors},null,2));

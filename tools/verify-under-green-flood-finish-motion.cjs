@@ -4,7 +4,7 @@ const software=process.argv.includes('--software'),out=`output/under-green/visua
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[];try{
  const p=await b.newPage({viewport:{width:1280,height:720}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await p.route('**/under-green-scene.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-scene.js','utf8').replace(' return {draw,inspectCastShadow:',' window.__floodProbe={scene,renderer}; return {draw,inspectCastShadow:')}));
+ await p.route('**/under-green-scene.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-scene.js','utf8').replace(' return {draw,setQuality,',' window.__floodProbe={scene,renderer}; return {draw,setQuality,')}));
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
  await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js'),r=createRun();r.mode='playing';r.time=26.3;r.elapsed=49;r.joe.phase='absent';Object.assign(r.player,{x:0,y:8,yaw:0,pitch:-.18,grace:100});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();});
  const frames=[],canvas=p.locator('canvas').first();
@@ -12,9 +12,9 @@ fs.mkdirSync(out,{recursive:true});
  assert(frames.slice(1).every((v,i)=>!v.equals(frames[i])),'Flood wave motion froze');
  await p.evaluate(async()=>{__underGreen.run.elapsed=49;advanceTime(0);await __underGreen.whenPresented();});assert(frames[0].equals(await canvas.screenshot()),'Flood phase did not return deterministically');
  await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()));await p.evaluate(()=>advanceTime(1200));assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).graphics.flood.animationTime,frozen.graphics.flood.animationTime);
- await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');
+ await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.locator('#comfort').evaluate(e=>e.open=false);await p.click('#primary');
  await p.evaluate(async()=>{advanceTime(0);await __underGreen.whenPresented();});const still=await canvas.screenshot();
- await p.evaluate(async()=>{__underGreen.run.elapsed=50;advanceTime(0);await __underGreen.whenPresented();});assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).graphics.flood.animationTime,0);assert(still.equals(await canvas.screenshot()),'Reduced motion changed flood pixels within the high plateau');
+ await p.evaluate(async()=>{__underGreen.run.elapsed=50;advanceTime(0);await __underGreen.whenPresented();});/* Water keeps moving under Reduced motion since 3caeb5f */assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).graphics.flood.animationTime,50);assert(!still.equals(await canvas.screenshot()),'Flood froze under Reduced motion');
  const shore=await p.evaluate(async()=>{
   const T=await import('./vendor/three/three.module.js'),{floorLayout}=await import('./under-green-course.js'),{scene,renderer}=__floodProbe,root=scene.getObjectByName('Drain flood'),source=root.children[0].material;
   const m=source.clone(),compile=source.onBeforeCompile,key=source.customProgramCacheKey();m.fog=false;m.toneMapped=false;m.transparent=false;m.opacity=1;

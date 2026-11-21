@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict');
+const fs=require('node:fs'),assert=require('node:assert/strict');const {showSettingControl:show}=require('./lib/legacy-b9-settings.cjs');
 const {chromium}=require('playwright');
 const base='http://127.0.0.1:4187',key='rough-cut.settings.v1',out='output/on-foot-keyboard-scope';
 const baseline=process.argv.includes('--legacy-baseline');
@@ -10,11 +10,11 @@ const baseline=process.argv.includes('--legacy-baseline');
   p.on('pageerror',e=>errors.push(e.message));
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   const visit=async chapter=>{await p.goto(`${base}/${chapter}.html?test`);await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);};
-  const edit=(action,code)=>p.locator(`[data-binding=${action}]`).selectOption(code);
+  const edit=async(action,code)=>(await show(p,`[data-binding=${action}]`)).selectOption(code);
   const saved=()=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
   await visit('under-green');
   await p.evaluate(async key=>{const {CONTROL_PROFILES}=await import('./control-profiles.js');localStorage.setItem(key,JSON.stringify({keyboardBindings:{...CONTROL_PROFILES.onFoot,focus:'KeyQ',look_back:'KeyR',interact:'Enter'},chaseKeyboardBindings:{...CONTROL_PROFILES.chase,brake:'KeyB'},extension:{keep:42}}));},key);
-  await visit('under-green');await p.locator('#comfort summary').click();
+  await visit('under-green');await p.locator('#comfort > summary').click();
   assert.equal(await p.locator('[data-binding=interact]').inputValue(),'KeyE');
   await edit('move_up','KeyI');
   const legacy=await saved();
@@ -38,7 +38,7 @@ const baseline=process.argv.includes('--legacy-baseline');
   await conflict.evaluate(key=>{const s=JSON.parse(localStorage.getItem(key));s.keyboardBindings.chip='KeyT';localStorage.setItem(key,JSON.stringify(s));},key);await conflict.close();
   await edit('focus','KeyT');assert.match(await p.locator('[data-keyboard-status]').innerText(),/assigned elsewhere/);assert.equal((await saved()).keyboardBindings.focus,'KeyR');
   checks.push('Atomic versioned write; honest failure; pending recovery; peer fields and separate chase profile preserved; conflicts rejected');
-  await visit('under-green');await p.locator('#comfort summary').click();assert.equal(await p.locator('[data-binding]').count(),9);assert.equal(await p.locator('[data-binding=interact]').inputValue(),'Enter');
+  await visit('under-green');await p.locator('#comfort > summary').click();assert.equal(await p.locator('[data-binding]').count(),9);assert.equal(await p.locator('[data-binding=interact]').inputValue(),'Enter');
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await p.locator('#keyboard').evaluate(e=>e.scrollIntoView({block:'start'}));await p.screenshot({path:`${out}/editor-${width}.png`});
    const bounds=await p.locator('[data-binding]').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right,width:r.width,height:r.height};}));assert(bounds.every(r=>r.x>=0&&r.right<=width&&r.height>=44));
@@ -57,7 +57,7 @@ const baseline=process.argv.includes('--legacy-baseline');
   await p.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready,null,{timeout:90000});
   assert.match(await p.evaluate(()=>__bindingTest.courseInteractionPromptPresentation().text),/^ENTER/i);
   await p.keyboard.press('e');await tick(17);assert(!(await p.evaluate(()=>__bindingTest.state.hole.nightOrderActionsCompleted.includes(__bindingTest.NIGHT_ORDER_ACTIONS[0].id))));await p.keyboard.press('Enter');await tick(17);assert(await p.evaluate(()=>__bindingTest.state.hole.nightOrderActionsCompleted.includes(__bindingTest.NIGHT_ORDER_ACTIONS[0].id)));checks.push('Level 1 inherits Enter; real bell input and prompt agree');
-  await visit('under-green');await p.locator('#comfort summary').click();await p.locator('[data-keyboard-reset]').click();record=await saved();assert.equal(record.keyboardBindings.interact,'KeyE');assert.equal(record.keyboardBindings.chip,'Space');assert.equal(record.keyboardBindings.controls,'KeyH');assert.equal(record.chaseKeyboardBindings.brake,'KeyB');assert.equal(record.volume,.37);checks.push('Explicit on-foot reset includes hidden ball/guide actions and preserves chase/settings');
+  await visit('under-green');await p.locator('#comfort > summary').click();await p.locator('[data-keyboard-reset]').click();record=await saved();assert.equal(record.keyboardBindings.interact,'KeyE');assert.equal(record.keyboardBindings.chip,'Space');assert.equal(record.keyboardBindings.controls,'KeyH');assert.equal(record.chaseKeyboardBindings.brake,'KeyB');assert.equal(record.volume,.37);checks.push('Explicit on-foot reset includes hidden ball/guide actions and preserves chase/settings');
   await p.evaluate(()=>{window.bindingPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[bindingPad];});await tick(17);
   await p.locator('[data-binding=interact]').focus();await p.evaluate(()=>bindingPad.buttons[15]={pressed:true,value:1});await tick(17);await p.evaluate(()=>bindingPad.buttons[15]={pressed:false,value:0});await tick(17);
   assert.notEqual(await p.locator('[data-binding=interact]').inputValue(),'KeyE');assert.equal(await p.evaluate(()=>__underGreen.run.mode),'briefing');
@@ -65,7 +65,7 @@ const baseline=process.argv.includes('--legacy-baseline');
   await p.evaluate(()=>navigator.getGamepads=()=>[]);await tick(17);await p.locator('#primary').focus();await p.keyboard.press('Enter');await tick(17);assert.equal(await p.evaluate(()=>__underGreen.run.mode),'playing');checks.push('Controller adjusts/selects editor controls without starting play; Enter still activates focused menu button');
   // Touch contexts expose the actual compact UI, not just a resized desktop.
   for(const [width,height]of [[844,390],[390,844]]){
-   const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto(base+'/under-green.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort summary').tap();await t.locator('#keyboard legend').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/touch-editor-${width}.png`});await t.locator('[data-binding=interact]').selectOption('KeyT');assert.match(await t.locator('#control-guide').innerText(),/T uses/);await t.locator('[data-keyboard-reset]').tap();assert.equal(await t.locator('[data-binding=interact]').inputValue(),'KeyE');await tc.close();
+   const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto(base+'/under-green.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort > summary').tap();await t.locator('#keyboard legend').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/touch-editor-${width}.png`});await t.locator('[data-binding=interact]').selectOption('KeyT');assert.match(await t.locator('#control-guide').innerText(),/T uses/);await t.locator('[data-keyboard-reset]').tap();assert.equal(await t.locator('[data-binding=interact]').inputValue(),'KeyE');await tc.close();
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/verified.json',JSON.stringify({passed:true,checks,views,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}

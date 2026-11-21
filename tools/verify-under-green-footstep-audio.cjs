@@ -57,7 +57,7 @@ const {chromium}=require('playwright');
    r.mode='paused';audio.update(r);await new Promise(resolve=>setTimeout(resolve,220));const paused=audio.stats();audio.dispose();return {both,duplicate,paused};
   });
   fs.writeFileSync(out+'/voice-diagnostic.json',JSON.stringify(voices,null,2));
-  assert.equal(voices.both.counts.joeSteps,2);assert(voices.both.footGains.every(g=>g>0));assert.equal(voices.both.voices,16);assert.equal(voices.both.waterVoices,8);
+  assert.equal(voices.both.counts.joeSteps,2);assert(voices.both.footGains.every(g=>g>0));assert.equal(voices.both.voices,22);assert.equal(voices.both.waterVoices,8);
   assert.equal(voices.duplicate.counts.joeSteps,2);assert(voices.paused.footGains.every(g=>g<.001));
   fs.writeFileSync(out+'/samples.json',JSON.stringify(cases,null,2));assert.deepEqual(errors,[]);
   const result={passed:true,totals,pursuitSteps:pursuit.audio.counts.joeSteps,checks:['contact/cue correspondence at60/30/15Hz','duplicate render, idle, pause/resume, mute/unmute and retry silence','ordinary simulation pursuit emits synchronized cues','two simultaneous contacts retain independent envelopes; repeated event delivery is deduplicated; pause cancels both'],errors};fs.writeFileSync(out+'/verified.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

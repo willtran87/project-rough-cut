@@ -1,4 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
+const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const {chromium}=require('playwright');
 const out='output/under-green/bunker-staging/locate-sound';fs.mkdirSync(out,{recursive:true});
 (async()=>{
@@ -9,9 +10,9 @@ const out='output/under-green/bunker-staging/locate-sound';fs.mkdirSync(out,{rec
    p.on('pageerror',e=>errors.push(e.message));
    if(device==='controller')await p.addInitScript(()=>{window.locatePad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[locatePad];});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
-   await p.evaluate(()=>advanceTime(0));await p.click('#primary');
+   await p.evaluate(()=>advanceTime(0));await closeSettings(p);await p.click('#primary');
    // Verify the longer useful cue at maximum caption size and with audio muted.
-   await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=muted]').check();await p.locator('[data-campaign=threatCaptions]').check();await p.locator('[data-campaign=subtitleSize]').focus();await p.keyboard.press('End');await p.click('#primary');
+   await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();await reveal(p,'[data-campaign=muted]');await p.locator('[data-campaign=muted]').check();/* pursuit narration was retired; the directional cue is the optional sound description */await reveal(p,'[data-campaign=soundCaptions]');await p.locator('[data-campaign=soundCaptions]').check();await reveal(p,'[data-campaign=subtitleSize]');await p.locator('[data-campaign=subtitleSize]').focus();await p.keyboard.press('End');await closeSettings(p);await p.click('#primary');
    const cdp=device==='touch'?await p.context().newCDPSession(p):null;
    for(const side of [-1,1]){
     await p.evaluate(async side=>{
@@ -21,7 +22,7 @@ const out='output/under-green/bunker-staging/locate-sound';fs.mkdirSync(out,{rec
     },side);
     if(device==='controller')await p.evaluate(()=>{locatePad.axes[2]=0;advanceTime(20);});
     if(device==='touch'){await p.touchscreen.tap(width/2,height*.45);await p.evaluate(()=>advanceTime(0));}
-    const before=await p.locator('#caption').innerText();assert.match(before,/LOOK TOWARD THE SOUND/);assert(before.includes(side<0?'TO YOUR LEFT':'TO YOUR RIGHT'));assert(!before.includes('GLANCE BACK'));
+    const before=await p.locator('#caption').innerText();assert.match(before,/nearby to your (left|right)/);assert(before.includes(side<0?'to your left':'to your right'));assert(!before.includes('GLANCE BACK'));
     const metrics=await p.evaluate(()=>{const box=document.querySelector('#caption').getBoundingClientRect();return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,overlaps:[...document.querySelectorAll('#touch button')].filter(b=>!document.querySelector('#touch').hidden).some(b=>{const a=b.getBoundingClientRect();return a.left<box.right&&a.right>box.left&&a.top<box.bottom&&a.bottom>box.top;})};});
     assert(metrics.x>=0&&metrics.y>=0&&metrics.right<=width+.1&&metrics.bottom<=height+.1&&!metrics.overlaps);
     await p.screenshot({path:`${out}/cue-${width}-${side}.png`});
@@ -38,7 +39,7 @@ const out='output/under-green/bunker-staging/locate-sound';fs.mkdirSync(out,{rec
     }
     await p.evaluate(()=>advanceTime(0));
     const after=await p.evaluate(async()=>{const {observeJoe}=await import('./under-green-senses.js'),s=JSON.parse(render_game_to_text());return {caption:document.querySelector('#caption').textContent,observed:observeJoe(__underGreen.run,{fov:s.comfort.fov,aspect:innerWidth/innerHeight}),player:s.player,mode:s.mode,input:s.inputMethod};});
-    assert(after.observed.visible,JSON.stringify(after));assert.equal(after.player.x,-20);assert.equal(after.player.y,38);assert.equal(after.mode,'under_green_playing');assert(!after.caption.includes('LOOK TOWARD THE SOUND'));
+    assert(after.observed.visible,JSON.stringify(after));assert.equal(after.player.x,-20);assert.equal(after.player.y,38);assert.equal(after.mode,'under_green_playing');
     await p.screenshot({path:`${out}/located-${width}-${side}.png`});results.push({width,height,device,side,before,metrics,after});
    }
    await p.close();

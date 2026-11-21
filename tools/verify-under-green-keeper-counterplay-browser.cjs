@@ -13,7 +13,7 @@ const {chromium}=require('playwright');
    await p.evaluate(()=>advanceTime(0));await p.click('#primary');
    await p.evaluate(initial=>{__underGreen.run=structuredClone(initial);__underGreen.clearInput();advanceTime(0);},tapes[0].initial);
    await p.locator('#use').click();await p.evaluate(()=>advanceTime(1000/60));
-   const denied=await p.evaluate(()=>({caption:document.getElementById('caption').textContent,action:document.getElementById('use').textContent,closing:__underGreen.run.closing,finished:__underGreen.run.finished}));
+   const denied=await p.evaluate(()=>({/* interaction feedback is no longer drawn in #caption; read the reported text */caption:(()=>{const s=JSON.parse(render_game_to_text());return [s.interactionFeedback?.text,s.message].filter(Boolean).join(' ');})(),action:document.getElementById('use').textContent,closing:__underGreen.run.closing,finished:__underGreen.run.finished}));
    assert(!denied.closing&&!denied.finished);
    if(!baseline){assert.match(denied.caption,/Joe is inside/);assert.match(denied.caption,/spillway/);assert.match(denied.action,/blocked/i);}
    await p.evaluate(()=>__underGreen.whenPresented());await p.screenshot({path:`${out}/${baseline?'baseline-':''}blocked-${width}.png`});views.push({stage:'requested-block',width,height,...denied});
@@ -21,7 +21,7 @@ const {chromium}=require('playwright');
    // Presentation-only expiration fixture; gameplay time, Joe and the player
    // remain at the actual failed-use instant. This checks the fallback detail.
    await p.evaluate(()=>{__underGreen.run.messageTime=0;advanceTime(0);});
-   const detail=await p.locator('#caption').innerText();assert.match(detail,/spillway/);
+   const detail=await p.evaluate(()=>(()=>{const s=JSON.parse(render_game_to_text());return [s.interactionFeedback?.text,s.message].filter(Boolean).join(' ');})());assert.match(detail,/spillway/);
    await p.evaluate(()=>__underGreen.whenPresented());await p.screenshot({path:`${out}/persistent-${width}.png`});views.push({stage:'persistent-detail',width,height,caption:detail});
    for(const tape of tapes){
     await p.evaluate(t=>{__underGreen.run=structuredClone(t.initial);__underGreen.clearInput();window.keeperTape={index:0,inputs:t.inputs};advanceTime(0);},tape);

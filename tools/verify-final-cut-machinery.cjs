@@ -19,7 +19,7 @@ const software=process.argv.includes('--software'),out=`output/final-cut/machine
  assert.notEqual(after.reels[0].angle,before.reels[0].angle);for(const reel of after.reels)assert.equal(reel.bearingAngle,0);
  await p.evaluate(()=>Object.assign(__finalCut.run.rig,{x:30,y:26,yaw:0,phase:'turn',deployment:0,path:[{x:30,y:50}]}));await tick(0);const turn=await read();await tick(250);const turned=await read();assert(turned.rig.distance>turn.rig.distance);assert.deepEqual(turned.graphics.machinery.reels,turn.graphics.machinery.reels);
  checks.push('Actual pass rotates all three cutting rotors while bearings remain fixed; actual moving headland turn leaves cutters braked');
- await fixture({rig:{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',distance:12.34,reelAngle:1.2},player:{x:16,y:81,yaw:Math.atan2(-5,-7),pitch:.12}});
+ await fixture({rig:{x:12.7,y:74,yaw:-Math.PI/2,direction:-1,phase:'pass',distance:12.34,reelAngle:1.2},player:{x:16,y:81,yaw:Math.atan2(-5,-7),pitch:.12}});await p.evaluate(()=>Object.assign(__finalCut.run.basins.swale,{state:'full',level:1,age:0}));
  await tick(100);assert((await read()).won);await tick(3400);await shot('bog-2560');
  const beforeGeometry=await p.evaluate(()=>__finalCut.rigGeometry());const beforeReels=(await read()).graphics.machinery.reels;
  await p.keyboard.press('Escape');await tick(0);const frozen=await p.evaluate(()=>JSON.stringify(__finalCut.rigGeometry()));await tick(2000);assert.equal(await p.evaluate(()=>JSON.stringify(__finalCut.rigGeometry())),frozen);
@@ -27,7 +27,7 @@ const software=process.argv.includes('--software'),out=`output/final-cut/machine
  const afterGeometry=await p.evaluate(()=>__finalCut.rigGeometry());let maxRestore=0;assert.equal(beforeGeometry.length,afterGeometry.length);
  for(let i=0;i<beforeGeometry.length;i++)for(let k=0;k<beforeGeometry[i].points.length;k++)for(let a=0;a<3;a++)maxRestore=Math.max(maxRestore,Math.abs(beforeGeometry[i].points[k][a]-afterGeometry[i].points[k][a]));
  assert(maxRestore<1e-6,`Rendered mechanics shift on reload: ${maxRestore}`);assert.deepEqual((await read()).graphics.machinery.reels,beforeReels);
- await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=reducedMotion]').check();await p.click('#primary');await tick(0);await shot('bog-reduced-2560');
+ await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();await require('./lib/legacy-fc-settings.cjs').showSetting(p,'reducedMotion');await p.locator('[data-campaign=reducedMotion]').check();await require('./lib/legacy-fc-settings.cjs').closeSettings(p);await p.click('#primary');await tick(0);await shot('bog-reduced-2560');
  await tick(5000);const stopped=(await read()).graphics.machinery.reels;await tick(2000);assert.deepEqual((await read()).graphics.machinery.reels,stopped);
  checks.push(`Live physical victory, actual pause/reload and reduced-motion shutdown preserve mechanism poses; maximum rendered vertex reload shift ${maxRestore} m`);
  // Warm all orientations before asserting resource stability in one context.

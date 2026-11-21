@@ -11,7 +11,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
    const positions=width===2560?[['roots',0,14,0,.08],['root-close',1.7,25,1.2,.1],['bunker',-20,70,Math.PI,.08],['pump',-19,38,-1,.05],['range',12,33,Math.PI,.08],['keeper',12,4,Math.PI,.08]]:[['roots',0,14,0,.08],['keeper',12,4,Math.PI,.08]];
    for(const [name,x,y,yaw,pitch]of positions){
     const state=await p.evaluate(async({name,x,y,yaw,pitch})=>{const {createRun}=await import('./under-green-sim.js'),{rangeY}=await import('./under-green-layout.js');const r=createRun();r.mode='playing';r.time=90;r.joe.phase='absent';r.gate=name==='keeper'?1:0;Object.assign(r.player,{x,y:x>6?rangeY(y):y,yaw,pitch});__underGreen.run=r;__underGreen.clearInput();await advanceTime(0);return JSON.parse(render_game_to_text());},{name,x,y,yaw,pitch});
-    assert.equal(state.graphics.craftedSurfaces.materials.length,8);assert.equal(state.graphics.backdrop.outdoorTrees,false);assert(state.graphics.districtDetails.vaults.spans.length===3);assert(state.graphics.districtDetails.lampFinish.finishedLamps>0);
+    assert.equal(state.graphics.craftedSurfaces.materials.length,10);/* + bankSoil, bankSand (bunker bank) */assert.equal(state.graphics.backdrop.outdoorTrees,false);assert(state.graphics.districtDetails.vaults.spans.length===3);assert(state.graphics.districtDetails.lampFinish.finishedLamps>0);
     views.push({name,width,height,graphics:state.graphics});await p.screenshot({path:`${out}/${name}-${width}.png`});
    }
   }

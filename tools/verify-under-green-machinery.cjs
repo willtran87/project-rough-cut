@@ -42,7 +42,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
    await seed('gate');
    for(let i=0;i<=40;i++){
     const state=await p.evaluate(f=>{__underGreen.run.gate=f;advanceTime(0);return __underGreen.inspectGateTravel();},i/40);travel.push(state);
-    assert.deepEqual(state.hits,[],`gate points ${i}`);assert.deepEqual(state.boxHits,[],`gate boxes ${i}`);assert.equal(state.panelDraws,2);assert.equal(state.detail.guideRollerHousings,16);
+    assert.deepEqual(state.hits,[],`gate points ${i}`);assert.deepEqual(state.boxHits,[],`gate boxes ${i}`);assert.equal(state.panelDraws,3);/* two merged panel materials + the gate sediment overlay */assert.equal(state.detail.guideRollerHousings,16);
     for(const cable of state.cables){assert(Math.abs(cable.top-6.42)<1e-8);assert(Math.abs(cable.bottom-state.lift-2.8)<1e-8);}
    }
    const camera=await p.evaluate(async()=>{

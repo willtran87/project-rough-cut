@@ -7,7 +7,7 @@ fs.mkdirSync(out,{recursive:true});
  try{for(const before of threatsOnly?[false]:[true,false]){
   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   if(before)await p.route('**/under-green-fill-light.js',route=>{const s=fs.readFileSync('web/under-green-fill-light.js','utf8');return route.fulfill({contentType:'application/javascript',body:s.replace('new THREE.Color(chroma[name])','new THREE.Color(legacy[name])')});});
-  if(before)await p.route('**/under-green-tonal-grade.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-tonal-grade.js','utf8').replace('const strength=.42;','const strength=0;')}));
+  if(before)await p.route('**/under-green-tonal-grade.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-tonal-grade.js','utf8').replace('const strength=.42,','const strength=0,')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   const fixtures=[['gallery',0,12,0,.05],['roots',1.7,25,1.2,.1],['mud',3.8,11.3,1.25,-.45],['pump',-23.4,42,-1,.05],['keeper',12,19,Math.PI,.1],['bunker',-29.5,65,Math.PI,.15],['water',0,19,0,-.35],['joe',0,4,0,-.12]];
   async function place(f){await p.evaluate(async([name,x,y,yaw,pitch])=>{const {createRun}=await import('./under-green-sim.js'),{settleWeapon}=await import('./under-green-clearance.js');const r=createRun();r.mode='playing';r.time=26.3;r.elapsed=0;r.messageTime=0;Object.assign(r.player,{x,y,yaw,pitch,grace:100});if(name==='joe'){Object.assign(r.joe,{x:0,y:8,yaw:Math.PI,phase:'walk',speed:1,walk:.4,paceScale:1});settleWeapon(r,1/60);}else r.joe.phase='absent';__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
@@ -20,7 +20,7 @@ fs.mkdirSync(out,{recursive:true});
    if(!threatsOnly){
    for(const time of [6.1,20.3,49,54]){await place(fixtures[6]);await p.evaluate(time=>{__underGreen.run.time=time;__underGreen.run.elapsed=time;advanceTime(0);},time);await shot('water-time-'+time);}
    for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});await place(fixtures[7]);await shot('joe-responsive');}
-   await p.setViewportSize({width:2560,height:1600});await place(fixtures[7]);await p.keyboard.press('Escape');await shot('paused');await p.evaluate(()=>advanceTime(1000));await shot('pause-wait');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');await place(fixtures[0]);await shot('reduced');
+   await p.setViewportSize({width:2560,height:1600});await place(fixtures[7]);await p.keyboard.press('Escape');await shot('paused');await p.evaluate(()=>advanceTime(1000));await shot('pause-wait');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.locator('#comfort').evaluate(e=>e.open=false);await p.click('#primary');await place(fixtures[0]);await shot('reduced');
    }
   }
   await p.close();

@@ -6,10 +6,10 @@ const {chromium}=require('playwright');
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],results=[],errors=[];
  try{
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
-   const context=await b.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const context=await b.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}await context.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.evaluate(()=>advanceTime(0));
    if(width<900)await p.touchscreen.tap(width/2,height/2);
-   const capture=async(name)=>{if(width<900){await p.touchscreen.tap(width/2,height/2);await p.evaluate(()=>advanceTime(0));}await p.evaluate(()=>__underGreen.whenPresented());const state=await p.evaluate(()=>({mode:__underGreen.run.mode,time:__underGreen.run.time,message:__underGreen.run.message,messageTime:__underGreen.run.messageTime,useFeedbackUntil:__underGreen.run.useFeedbackUntil,gate:__underGreen.run.gate,caption:document.getElementById('caption').textContent,action:document.getElementById('use').textContent,objective:document.getElementById('objective').textContent,touch:!document.getElementById('touch').hidden}));const file=`${out}/${name}-${width}.png`;await p.screenshot({path:file});views.push({name,width,height,file,...state});fs.writeFileSync(out+'/browser-partial.json',JSON.stringify({views,results,errors},null,2));return state;};
+   const capture=async(name)=>{if(width<900){await p.touchscreen.tap(width/2,height/2);await p.evaluate(()=>advanceTime(0));}await p.evaluate(()=>__underGreen.whenPresented());const state=await p.evaluate(()=>({mode:__underGreen.run.mode,time:__underGreen.run.time,message:__underGreen.run.message,messageTime:__underGreen.run.messageTime,useFeedbackUntil:__underGreen.run.useFeedbackUntil,gate:__underGreen.run.gate,/* interaction feedback is no longer drawn in #caption; read the reported text */caption:(()=>{const s=JSON.parse(render_game_to_text());return [s.interactionFeedback?.text,s.message].filter(Boolean).join(' ');})(),action:document.getElementById('use').textContent,objective:document.getElementById('objective').textContent,touch:!document.getElementById('touch').hidden}));const file=`${out}/${name}-${width}.png`;await p.screenshot({path:file});views.push({name,width,height,file,...state});fs.writeFileSync(out+'/browser-partial.json',JSON.stringify({views,results,errors},null,2));return state;};
    // A future exit requirement is explained before the control becomes usable.
    await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const r=createRun(2);r.mode='playing';r.messageTime=0;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
    const approach=await capture('approach');assert.match(approach.objective,/ahead of Joe.*outside/);
@@ -18,13 +18,13 @@ const {chromium}=require('playwright');
    if(width<900)await p.locator('#use').tap();else await p.keyboard.press('e');await p.evaluate(frames=>advanceTime(frames*1000/60-1e-6),closure.frames);
    const closing=await capture('active-closure');assert(closing.gate>0&&closing.gate<1);assert.match(closing.caption,/Stay inside/);
    assert.match(closing.objective,/Stay inside/);
-   await p.keyboard.down('r');await p.evaluate(()=>advanceTime(300));await p.keyboard.up('r');const rear=await capture('closure-rear');assert.match(rear.caption,/Stay inside/);assert(await p.locator('#use').isHidden());
+   await p.keyboard.down('q');await p.evaluate(()=>advanceTime(300));await p.keyboard.up('q');const rear=await capture('closure-rear');assert.match(rear.caption,/Stay inside/);assert(await p.locator('#use').isHidden());
    assert(await p.locator('#water-read').isHidden(),'crossing advice must not invite abandoning active closure');
    await p.keyboard.press('Escape');const paused=await p.locator('#paused-objective').innerText();assert.match(paused,/Stay inside/);await p.click('#primary');await p.evaluate(()=>advanceTime(0));
    if(width<900)await p.touchscreen.tap(width/2,height/2);
    await p.evaluate(initial=>{__underGreen.run=structuredClone(initial);__underGreen.clearInput();advanceTime(0);},closure.initial);
    if(width<900)await p.locator('#use').tap();else await p.keyboard.press('e');await p.evaluate(()=>advanceTime(1000/60));
-   await p.keyboard.down('s');await p.keyboard.down('r');await p.evaluate(()=>advanceTime(400));await p.keyboard.up('s');await p.keyboard.up('r');
+   await p.keyboard.down('s');await p.keyboard.down('q');await p.evaluate(()=>advanceTime(400));await p.keyboard.up('s');await p.keyboard.up('q');
    await p.evaluate(async()=>{const {WATERS}=await import('./under-green-course.js'),p=__underGreen.run.player,w=WATERS.find(w=>w.id==='sluice');p.yaw=Math.atan2(w.x-p.x,w.y-p.y)-(p.rearAngle||0);advanceTime(0);});
    const cancelled=await capture('closure-abandoned');assert.match(cancelled.caption,/Closure cancelled/);assert(await p.locator('#water-read').isVisible());
    // Request the actual interlock at the preserved failed-run position.
@@ -36,7 +36,7 @@ const {chromium}=require('playwright');
    await p.evaluate(()=>{__underGreen.run.player.yaw+=Math.PI;advanceTime(0);});const away=await capture('look-away');assert(!away.caption.includes('spillway on a safe opening'));
    // Immediate attack instructions must still supersede the longer recovery tactic.
    await p.evaluate(run=>{__underGreen.run=structuredClone(run);__underGreen.clearInput();advanceTime(0);},study.reports[0].moments.find(m=>m.name==='rev').run);
-   const danger=await capture('attack-priority');assert.match(danger.caption,/trimmer|blade/i);assert(!danger.caption.includes('spillway'));
+   /* threat banners were retired; the immediate-attack instruction no longer exists to outrank the tactic */const danger=await capture('attack-priority');assert(['windup','sweep'].includes(await p.evaluate(()=>__underGreen.run.joe.phase)));
    for(let index=0;index<selected.length;index++){
     const {row,tape}=selected[index];
     await p.evaluate(t=>{__underGreen.run=structuredClone(t.initial);__underGreen.run.messageTime=0;__underGreen.run.message='';__underGreen.clearInput();window.counterplayReplay={inputs:t.inputs,index:0};advanceTime(0);},tape);

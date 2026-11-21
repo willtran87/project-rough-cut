@@ -11,7 +11,8 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
  }
  await p.setViewportSize({width:1280,height:720});
  const proof=await p.evaluate(async()=>{
-  const T=await import('./vendor/three/three.module.js'),{createRun}=await import('./back-nine-sim.js'),r=createRun(1);r.mode='driving';r.time=11.2;r.grace=999;Object.assign(r.cart,{x:-13,y:425,yaw:0});Object.assign(r.joe,{x:-25,y:434,yaw:0});const w=__beacon,l=w.mowerLight,gl=w.renderer.getContext();
+  const T=await import('./vendor/three/three.module.js'),{createRun}=await import('./back-nine-sim.js'),r=createRun(1);r.mode='driving';r.time=11.2;r.grace=999;Object.assign(r.cart,{x:-13,y:425,yaw:0});Object.assign(r.joe,{x:-25,y:434,yaw:0});const w=__beacon,l=w.mowerLight,gl=w.renderer.getContext();// The polish screen finish (bloom/grain) spreads lit pixels across the frame; measure lighting without it.
+w.setQuality({finish:'off',viewScale:1,shadows:true,effects:true},{grain:false});
   function draw(){w.update(r,{reducedMotion:false,flash:1});w.draw();gl.finish();}
   function pixel(x,y){const v=new T.Vector3(x,.14,-y).project(w.camera),rgba=new Uint8Array(4);assertBounds(v);gl.readPixels(Math.floor((v.x*.5+.5)*gl.drawingBufferWidth),Math.floor((v.y*.5+.5)*gl.drawingBufferHeight),1,1,gl.RGBA,gl.UNSIGNED_BYTE,rgba);return [...rgba];}
   function assertBounds(v){if(Math.abs(v.x)>=1||Math.abs(v.y)>=1)throw Error('Ground sample outside driving camera');}

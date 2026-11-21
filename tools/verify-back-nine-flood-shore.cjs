@@ -1,10 +1,9 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const before=process.argv.includes('--before'),software=process.argv.includes('--software');
+const software=process.argv.includes('--software');
 const out=process.argv[2]||'output/back-nine-visual-upgrade/flood-shore/current';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__shoreWorld={scene,camera,renderer,update,draw()')}));
- if(before)await p.route('**/back-nine-irrigation-art.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/flood-shore/baseline-source/back-nine-irrigation-art.js','utf8')}));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true})));await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.locator('#primary').click();await p.evaluate(()=>advanceTime(0));
  const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
  const present=()=>p.evaluate(async()=>{await __backNine.whenPresented();__backNine.render();await __backNine.whenPresented();});
@@ -24,7 +23,7 @@ const out=process.argv[2]||'output/back-nine-visual-upgrade/flood-shore/current'
  await stage(0,true,true);await shot('head-normal');const normal=await read();await p.evaluate(()=>advanceTime(500));await shot('head-rotated');assert.notEqual((await read()).graphics.irrigationArt.heads[0].yaw,normal.graphics.irrigationArt.heads[0].yaw);
  await stage(0,true,true,true);await shot('head-boosted');assert.equal((await read()).graphics.irrigationArt.drops,32);checks.push('Three natural wet/dry cycles, normal head rotation and increased pressure presentation');
  await p.keyboard.press('Escape');const paused=await read();await p.evaluate(()=>advanceTime(1000));assert.deepEqual((await read()).graphics.irrigationArt,paused.graphics.irrigationArt);await p.locator('#primary').click();
- await p.evaluate(()=>{const c=document.getElementById('chase-reduced');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));});await present();let s=await read();assert.equal(s.graphics.irrigationArt.drops,0);assert.equal(s.graphics.irrigationArt.ripples,0);assert(s.graphics.irrigationArt.waterVisible[0]);await shot('reduced-motion');checks.push('Actual pause freezes irrigation art; reduced motion keeps visible wet ground without spray/ripples');
+ await p.evaluate(()=>{const c=document.getElementById('chase-reduced');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));});await present();let s=await read();assert.equal(s.graphics.irrigationArt.drops,32);assert(s.graphics.irrigationArt.ripples>0);assert(s.graphics.irrigationArt.waterVisible[0]);await shot('reduced-motion');checks.push('Actual pause freezes irrigation art; reduced motion keeps sprinklers, spray and ripples running (3caeb5f)');
  await p.evaluate(()=>{const c=document.getElementById('chase-reduced');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}));});
  await p.setViewportSize({width:1280,height:720});await shot('head-1280');await p.setViewportSize({width:390,height:844});await shot('head-390');
  if(process.argv.includes('--profile')){
@@ -34,5 +33,5 @@ const out=process.argv[2]||'output/back-nine-visual-upgrade/flood-shore/current'
    times.sort((a,b)=>a-b);return{resolution:[960,540],samples:times.length,median:times[12],p95:times[22],times,graphics:w.stats()};});
   fs.writeFileSync(out+'/budget.json',JSON.stringify(budget,null,2));console.log('budget',JSON.stringify({median:budget.median,p95:budget.p95}));
  }
- s=await read();assert(s.graphics.programs>0&&s.graphics.textures>0);assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,before,software,checks,samples,errors},null,2));console.log(JSON.stringify({passed:true,checks,programs:s.graphics.programs,textures:s.graphics.textures,errors}));
+ s=await read();assert(s.graphics.programs>0&&s.graphics.textures>0);assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,checks,samples,errors},null,2));console.log(JSON.stringify({passed:true,checks,programs:s.graphics.programs,textures:s.graphics.textures,errors}));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

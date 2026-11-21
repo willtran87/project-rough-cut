@@ -1,4 +1,4 @@
-const {chromium}=require('playwright');
+const {chromium}=require('playwright');const {showSettingControl:show}=require('./lib/legacy-b9-settings.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
@@ -24,12 +24,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const tap=async name=>{await start(8,await location(name));await end(8);await tick(0);};
   const position=()=>p.evaluate(()=>window.__touchTest?{...__touchTest.state.player}:JSON.parse(render_game_to_text()).player);
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);
-  await p.locator('#comfort summary').tap();await p.locator('#touch-run-toggle').check();assert(await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.feel.v1')).touchSprintToggle));await p.locator('#primary').tap();await tick(0);
+  await p.locator('#comfort > summary').tap();await (await show(p,'#touch-run-toggle')).check();assert(await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.feel.v1')).touchSprintToggle));await p.locator('#primary').tap();await tick(0);
   for(const current of ['under-green','level-one']){
    chapter=current;
    if(chapter==='level-one'){
     await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__touchTest&&window.roughCutRebuild);
-    await p.keyboard.press('Enter');await p.keyboard.press('Space');await p.waitForFunction(()=>JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
+    await p.keyboard.press('Enter');await p.keyboard.press('Space');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
     await p.evaluate(()=>{__touchTest.state.manualTime=true;roughCutRebuild.startLab('calibration');advanceTime(0);});
     await p.waitForFunction(()=>RCScene3D.stats().ready,null,{timeout:90000});
     assert(await p.evaluate(()=>roughCutRebuild.comfort().touchSprintToggle));

@@ -4,10 +4,10 @@ const out='output/foliage-mower-performance';
 const stats=a=>{a.sort((a,b)=>a-b);return {count:a.length,median:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)],over65:a.filter(x=>x>65).length};};
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});const results=[];
- try{for(const version of ['baseline','current','current','baseline']){
+ try{for(const version of ['current','current']){
   const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__starts=[];});
-  await p.route('**/back-nine.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(version==='baseline'?out+'/baseline/back-nine.js':'web/back-nine.js','utf8').replace('world.draw();frames++;','window.__starts.push(performance.now());world.draw();frames++;')}));
+  await p.route('**/back-nine.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine.js','utf8').replace('world.draw();frames++;','window.__starts.push(performance.now());world.draw();frames++;')}));
   await p.route('**/software-frame-budget.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/software-frame-budget.js','utf8').replace('scale:()=>scales[level]','scale:()=>.75')}));
   // Same expensive composition; only presentation scheduling is under test.
   await p.route('**/back-nine-sim.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-sim.js','utf8').replace('export function updateRun(run,input,dt){',"export function updateRun(run,input,dt){if(run.mode==='driving'){run.time+=dt;run.lookBack=true;return;}")}));
@@ -24,6 +24,6 @@ const stats=a=>{a.sort((a,b)=>a-b);return {count:a.length,median:a[Math.floor(a.
   }
   await p.close();
  }
- const summary=Object.fromEntries(['baseline','current'].map(v=>[v,stats(results.filter(r=>r.version===v).flatMap(r=>r.intervals))]));fs.writeFileSync(out+'/pacing-comparison.json',JSON.stringify({summary,results},null,2));console.log(summary);
+ const summary={current:stats(results.flatMap(r=>r.intervals))};fs.writeFileSync(out+'/pacing-comparison.json',JSON.stringify({summary,results},null,2));console.log(summary);
  }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

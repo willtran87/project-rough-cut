@@ -10,7 +10,7 @@ fs.mkdirSync(out,{recursive:true});
   await page.route('**/under-green-scene.js',route=>{
    let s=fs.readFileSync('web/under-green-scene.js','utf8');
    s=s.replace('function draw(r,prefs,manual=false){','function draw(r,prefs,manual=false){prefs={...prefs,fov:window.__fogFov??prefs.fov};');
-   s=s.replace(' return {draw,drainJoeFootsteps:',' window.__fogAudit={renderer,scene,camera,fogMaterials,structureMeshes}; return {draw,drainJoeFootsteps:');
+   s=s.replace(' return {draw,setQuality,',' window.__fogAudit={renderer,scene,camera,fogMaterials,structureMeshes}; return {draw,setQuality,');
    return route.fulfill({contentType:'application/javascript',body:s});
   });
   await page.goto('http://127.0.0.1:4187/under-green.html?test');await page.waitForFunction(()=>window.__fogAudit&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});

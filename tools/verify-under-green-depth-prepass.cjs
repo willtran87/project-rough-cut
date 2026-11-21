@@ -14,7 +14,7 @@ async function quiet(){
    s="import {createDrainDepthPrepass} from './under-green-depth-prepass.js';\n"+s;
    s=s.replace('const practicalLighting=createDrainPracticalLighting','const depthPrepass=createDrainDepthPrepass(staticLightMeshes.filter(m=>structureMeshes.includes(m))); const practicalLighting=createDrainPracticalLighting');
    s=s.replace('fogMaterials.apply(camera);','depthPrepass.draw(renderer,camera);fogMaterials.apply(camera);');
-   s=s.replace(' return {draw,drainJoeFootsteps:',' window.__depth={renderer,depthPrepass}; return {draw,drainJoeFootsteps:');
+   s=s.replace(' return {draw,setQuality,',' window.__depth={renderer,depthPrepass}; return {draw,setQuality,');
    return r.fulfill({contentType:'application/javascript',body:s});
   });
   await page.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__depth&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await page.click('#primary');await page.keyboard.press('Escape');

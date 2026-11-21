@@ -4,14 +4,16 @@ const out='output/under-green/water-contract';fs.mkdirSync(out,{recursive:true})
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],results=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}await p.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.route('**/under-green-scene.js',route=>{
-   const source=fs.readFileSync('web/under-green-scene.js','utf8'),marker=' return {draw,drainJoeFootsteps:';
+   const source=fs.readFileSync('web/under-green-scene.js','utf8'),marker=' return {draw,setQuality,';
    assert(source.includes(marker));
    return route.fulfill({contentType:'application/javascript',body:source.replace(marker,
-    " window.__actualWaterSignals=()=>waterObjects.map(v=>({id:v.w.id,banks:v.signals.map(lights=>lights.map(light=>['redSignal','amberSignal','greenSignal','offSignal'].find(key=>light.material===materials[key])))}));"+marker)});
+    " window.__actualWaterSignals=()=>waterObjects.map((v,i)=>({id:v.w.id,slot:signalBank.lastActive?.[i],stats:signalBank.stats()}));"+marker)});
   });
+  // Lenses draw merged in one signal bank since 981accb; record the lit slot per crossing.
+  await p.route('**/under-green-signal-bank.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-signal-bank.js','utf8').replace('update(active,force=false){','update(active,force=false){this.lastActive=[...active];')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');
   await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
   await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
@@ -35,7 +37,7 @@ const out='output/under-green/water-contract';fs.mkdirSync(out,{recursive:true})
       hud:{visible:!document.getElementById('water-read').hidden,name:document.getElementById('water-name').textContent,title:document.getElementById('water-phase').textContent,level:document.getElementById('water-meter').value,danger:document.getElementById('water-read').dataset.danger,action:document.getElementById('water-read').dataset.action,runOption:document.getElementById('water-read').dataset.runOption},name:w.name,level:state.level,overflow:document.documentElement.scrollWidth>innerWidth};
     },fixture);
     const active=result.danger?0:result.phase==='warning'?1:2;
-    for(const bank of result.signal.banks)for(let i=0;i<bank.length;i++)assert.equal(bank[i],i%3===active?['redSignal','amberSignal','greenSignal'][active]:'offSignal');
+    assert.equal(result.signal.slot,active);assert(result.signal.stats.litIndices>0&&result.signal.stats.darkIndices>0);
     assert.equal(result.audio.phase,result.phase);assert.equal(result.visual.flowing,result.danger);assert.equal(result.diagnostic.phase,result.phase);assert.equal(result.diagnostic.danger,result.danger);assert(!result.overflow);
     assert(result.hud.visible);assert.equal(result.hud.name,result.name);assert.equal(result.hud.danger,String(result.danger));assert.equal(result.hud.action,result.advice.action);assert(Math.abs(result.hud.level-result.level)<1e-6);if(result.hud.runOption==='true')assert(result.hud.title.startsWith('RUN ('));else assert.equal(result.hud.title,result.advice.title);
     results.push({width,height,...result});

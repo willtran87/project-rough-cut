@@ -10,7 +10,7 @@ const out='output/final-cut/announcement';fs.mkdirSync(out,{recursive:true});
  async function fileStations(){
   for(let index=0;index<3;index++){
    await p.evaluate(index=>{const t=__receiptSource,s=t.state,h=s.hole,a=t.NIGHT_ORDER_ACTIONS[index];s.keys.clear();Object.assign(h,{elapsed:100,controlHintTimer:0,zoneBannerTimer:0,detection:0});Object.assign(h.joe,{x:100,y:30,mode:'patrol',patrolPause:9999});h.quietLog=null;h.rebuild.forcedCrouch=false;Object.assign(s.player,{x:a.x,y:a.y-9,yaw:0,pitch:-.15});},index);await tick(17);
-   await p.keyboard.press(index===1?'1':'e');await tick(index===1?1650:17);
+   await p.keyboard.press('e');for(let t=0;t<15000&&!(await p.evaluate(index=>__receiptSource.state.hole.nightOrderActionsCompleted.includes(__receiptSource.NIGHT_ORDER_ACTIONS[index].id),index));t+=100)await tick(100);
    assert(await p.evaluate(index=>__receiptSource.state.hole.nightOrderActionsCompleted.includes(__receiptSource.NIGHT_ORDER_ACTIONS[index].id),index));
   }
  }

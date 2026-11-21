@@ -4,28 +4,30 @@ const baseline=process.argv.includes('--baseline'),out='output/under-green/signa
 (async()=>{
  fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({hasTouch:true}),errors=[],samples=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}let mounts=null,crossing=null;
+  const page=await browser.newPage({hasTouch:true}),errors=[],samples=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}await page.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});let mounts=null,crossing=null;
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.route('**/under-green-scene.js',route=>{
-   let s=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,drainJoeFootsteps:';assert(s.includes(marker));
+   let s=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,setQuality,';assert(s.includes(marker));
    if(baseline){
     assert(s.includes('// A centered horizontal signal'));
     s=s.replace(/   \/\/ A centered horizontal signal[\s\S]*?   const stop=/,"   const z=end*(w.depth/2+1),signal=new THREE.Group();signal.position.set(2.65,2.75,z);group.add(signal);\n   box('iron',0,0,0,.4,1.02,.22,signal);box('iron',3.08,1.4,z,.08,2.8,.08,group);\n   box('iron',2.9,2.75,z,.5,.08,.08,group);\n   const stop=").replace('light.position.set(-.32+i*.32,0,facing*.14)','light.position.set(0,.3-i*.3,facing*.14)');
    }
-   return route.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__signalScene={scene,camera,waterObjects,materials,THREE};'+marker)});
+   return route.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__signalScene={scene,camera,waterObjects,materials,THREE,signalBank};'+marker)});
   });
   if(baseline)await page.route('**/under-green.css',route=>{const s=fs.readFileSync('web/under-green.css','utf8');assert(s.includes('/* The physical bank signal'));return route.fulfill({contentType:'text/css',body:s.replace(/\/\* The physical bank signal[\s\S]*?\n}\n/,'')});});
-  await page.route('**/under-green.js',route=>{
+  // Lenses draw merged in one signal bank since 981accb; keep each lens's world box for framing/occlusion.
+  await page.route('**/under-green-signal-bank.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-signal-bank.js','utf8').replace('add(water,slot,geometry){lenses.push({water,slot,geometry});}','add(water,slot,geometry){geometry.computeBoundingBox();(this.lensBoxes??=[]).push({water,slot,box:geometry.boundingBox.clone()});lenses.push({water,slot,geometry});}')}));
+  await page.route('**/under-green.js*',route=>{
    const s=fs.readFileSync('web/under-green.js','utf8'),marker='if(test)window.__underGreen={';assert(s.includes(marker));
    return route.fulfill({contentType:'application/javascript',body:s.replace(marker,'window.__signalPrefs=prefs;'+marker)});
   });
   await page.goto('http://127.0.0.1:4187/under-green.html?test');await page.waitForFunction(()=>window.__signalScene&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.click('#primary');await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>JSON.parse(render_game_to_text()).opening.active),false);
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await page.setViewportSize({width,height});
-   await page.touchscreen.tap(width/2,height/2);
+   /* touch input registers only during play (pointerdown checks live()) */await page.evaluate(()=>{__underGreen.run.mode='playing';advanceTime(0);});await page.touchscreen.tap(width/2,height/2);
    const result=await page.evaluate(async({baseline})=>{
     const {WATERS,waterPoint,waterState,solid}=await import('./under-green-course.js'),{createRun}=await import('./under-green-sim.js');
-    const {scene,camera,waterObjects,materials,THREE}=__signalScene,rows=[];
+    const {scene,camera,waterObjects,materials,THREE,signalBank}=__signalScene,rows=[];
     const overlap=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
     for(const w of WATERS)for(const side of [-1,1])for(const approach of [1,2.5,5])for(const fov of [45,58,85])for(const crouched of [false,true])for(const phase of w.id==='bypass'?['low','surge']:w.id==='return'?['low','warning','surge']:['low','warning','surge','receding']){
      const pos=waterPoint(w,0,side*(w.depth/2+approach));if(solid(pos,.3))continue;
@@ -39,17 +41,17 @@ const baseline=process.argv.includes('--baseline'),out='output/under-green/signa
      const blockers=[...document.querySelectorAll('#objective-card,#water-read,.hud-tools button,#caption,#touch button')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>{const b=e.getBoundingClientRect();return {id:e.id||e.dataset.key||e.tagName,left:b.left,right:b.right,top:b.top,bottom:b.bottom};});
      const state=waterState(w,r.time,r.bypass,r.bypassAt);if(state.phase!==phase)throw Error('Wrong phase fixture: '+w.id+' '+phase);
      const active=materials[state.danger?'redSignal':state.phase==='warning'?'amberSignal':'greenSignal'];
-     const ray=new THREE.Raycaster(),lights=waterObjects.find(v=>v.w.id===w.id).signals.flat().filter(v=>v.material===active);
+     const ray=new THREE.Raycaster(),index=waterObjects.findIndex(v=>v.w.id===w.id),lit=signalBank.root.getObjectByName('signal-lenses-lit'),lights=signalBank.lensBoxes.filter(l=>l.water===index&&l.slot===(state.danger?0:state.phase==='warning'?1:2));
      const candidates=lights.map(light=>{
-      light.geometry.computeBoundingBox();const box=light.geometry.boundingBox,points=[];
-      for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new THREE.Vector3(x,y,z).applyMatrix4(light.matrixWorld).project(camera));
-      const center=light.getWorldPosition(new THREE.Vector3()),direction=center.clone().sub(camera.position),distance=direction.length(),projected=center.clone().project(camera);
+      const box=light.box,points=[];
+      for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new THREE.Vector3(x,y,z).project(camera));
+      const center=box.getCenter(new THREE.Vector3()),direction=center.clone().sub(camera.position),distance=direction.length(),projected=center.clone().project(camera);
       const rect={left:(Math.min(...points.map(p=>p.x))+1)*innerWidth/2,right:(Math.max(...points.map(p=>p.x))+1)*innerWidth/2,top:(1-Math.max(...points.map(p=>p.y)))*innerHeight/2,bottom:(1-Math.min(...points.map(p=>p.y)))*innerHeight/2};
       const framed=projected.z>=-1&&projected.z<=1&&rect.left>=0&&rect.right<=innerWidth&&rect.top>=0&&rect.bottom<=innerHeight;
       ray.set(camera.position,direction.normalize());ray.far=distance+.01;
-      const hit=framed?(ray.camera=camera,ray).intersectObjects(scene.children,true).find(h=>{let n=h.object;while(n){if(!n.visible)return false;n=n.parent;}return true;}):null;
+      const hit=framed?(ray.camera=camera,ray).intersectObjects(scene.children,true).find(h=>{/* additive lamp-halo sprites never occlude (and Sprite raycasts report spurious near hits) */if(h.object.isSprite)return false;let n=h.object;while(n){if(!n.visible)return false;n=n.parent;}return true;}):null;
       const occludedBy=blockers.filter(b=>overlap(rect,b)).map(b=>b.id);
-      return {rect,framed,clear:hit?.object===light,occludedBy,distance};
+      return {rect,framed,hitName:hit?.object.name,clear:hit?.object===lit&&box.clone().expandByScalar(.01).containsPoint(hit.point),occludedBy,distance};
      });
      rows.push({id:w.id,side,approach,fov,crouched,phase:state.phase,player:pos,readable:candidates.some(c=>c.framed&&c.clear&&!c.occludedBy.length),candidates,blockers});
     }

@@ -13,7 +13,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
    const {actionBindings}=await import('./control-profiles.js');
    return {partial:actionBindings('onFoot',{interact:'Enter'},0),custom:actionBindings('onFoot',{interact:'Enter',sprint:'ShiftRight'},0),occupied:actionBindings('onFoot',{interact:'Enter',focus:'KeyE'},0),explicit:actionBindings('onFoot',{interact:'Enter'},3)};
   });
-  assert.equal(migration.partial.interact,'KeyE');assert.equal(migration.custom.interact,'KeyE');assert.equal(migration.custom.sprint,'ShiftRight');assert.equal(migration.occupied.focus,'KeyE');assert.equal(migration.occupied.interact,'Enter');assert.equal(migration.explicit.interact,'Enter');
+  assert.equal(migration.partial.interact,'KeyE');assert.equal(migration.custom.interact,'KeyE');assert.equal(migration.custom.sprint,'ShiftRight');assert.equal(migration.occupied.focus,'KeyR');assert.equal(migration.occupied.interact,'KeyE');assert.equal(migration.explicit.interact,'KeyE');/* Enter is retired as an action key (3249a50): a saved Enter returns to E and an action already on E moves to its own default */
   await page.locator('#primary').click();
   await page.evaluate(async()=>{
    const {createRun}=await import('./final-cut-sim.js');

@@ -8,20 +8,21 @@ const {chromium}=require('playwright');
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
   const fixture=JSON.parse(fs.readFileSync('output/under-green/navigation/service-encounter.json','utf8'));
   await p.evaluate(r=>{r.evidence=true;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},fixture);await tick(1500);
-  let s=await read();assert.equal(s.mode,'under_green_caught');assert.equal(s.failure.kind,'sweep');assert.match(await p.locator('#retry-advice').innerText(),/Next try:.*sideways/);assert.match(await p.locator('#retry-progress').innerText(),/checkpoint 2.*bypass stays open.*record is kept/);
-  await p.click('#primary');await tick(0);s=await read();assert.equal(s.mode,'under_green_playing');assert.equal(s.failure,null);assert(s.bypass&&s.evidence);assert.equal(s.waterHits,0);assert(await p.locator('#retry-advice').isHidden());assert(await p.locator('#retry-progress').isHidden());
-  checks.push('Actual browser sweep produces useful advice; ordinary retry preserves durable facts and clears the old failure');
+  let s=await read();assert.equal(s.mode,'under_green_caught');assert.equal(s.failure.kind,'sweep');assert.match(await p.locator('#retry-advice').innerText(),/Next try:.*sideways/);/* Standard keeps no checkpoints (981accb): retry starts fresh and the panel promises nothing kept */assert.doesNotMatch(await p.locator('#retry-progress').innerText(),/stays open|is kept|checkpoint/);assert.equal(await p.locator('#primary').textContent(),'Retry from the start');
+  await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
+  await p.click('#primary');await tick(0);s=await read();assert.equal(s.mode,'under_green_playing');assert.equal(s.failure,null);assert(!s.bypass&&!s.evidence);assert.equal(s.player.y,5);assert.equal(s.waterHits,0);assert(await p.locator('#retry-advice').isHidden());assert(await p.locator('#retry-progress').isHidden());
+  checks.push('Actual browser sweep produces useful advice; ordinary retry starts fresh and clears the old failure');
   const surge=JSON.parse(fs.readFileSync(out+'/caught-after-surge.json','utf8'));
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
-   await p.setViewportSize({width,height});await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},surge);
-   assert.match(await p.locator('#result').innerText(),/surge at east spillway/);assert.match(await p.locator('#retry-advice').innerText(),/full crossing window/);
+   await p.setViewportSize({width,height});await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},surge);await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
+   /* the themed loss screen folds #result into 'Loss details & controls' (game-theme.js) */assert.match(await p.locator('#result').textContent(),/surge at east spillway/);assert.match(await p.locator('#retry-advice').innerText(),/full crossing window/);
    await p.locator('#retry-advice').scrollIntoViewIfNeeded();
    const bounds=await p.locator('#retry-advice').evaluate(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight};});
    assert(bounds.left>=0&&bounds.right<=width&&bounds.top>=0&&bounds.bottom<=height);views.push({width,height,bounds});await p.screenshot({path:`${out}/retry-${width}.png`});
    await p.locator('#primary').scrollIntoViewIfNeeded();assert(await p.locator('#primary').isVisible());
   }
   checks.push('Recorded surge context and retry advice remain readable and retry reachable at four sizes');
-  await p.setViewportSize({width:1280,height:720});await p.click('#primary');await tick(0);await p.keyboard.press('Escape');assert(await p.locator('#retry-advice').isHidden());assert(await p.locator('#retry-progress').isHidden());
+  await p.setViewportSize({width:1280,height:720});await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});await p.click('#primary');await tick(0);await p.keyboard.press('Escape');assert(await p.locator('#retry-advice').isHidden());assert(await p.locator('#retry-progress').isHidden());
   await p.reload();await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});assert.equal((await read()).failure,null);assert(await p.locator('#retry-advice').isHidden());
   checks.push('Pause and reload do not display stale capture coaching');
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,views,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));

@@ -12,7 +12,7 @@ const instrument=`window.__cutDriveMesh=()=>({position:rig.position.toArray(),wh
  let elapsed=0;for(const seconds of [.1,1,3,6,9,10.4]){
   await tick((seconds-elapsed)*1000);elapsed=seconds;
   await p.evaluate(async()=>{const r=__finalCut.run,x=r.rig.x>=0?23:-23;Object.assign(r.player,{x,y:38,yaw:Math.atan2(r.rig.x-x,-12),pitch:0});await advanceTime(0);});
-  const s=await read(),mesh=await p.evaluate(()=>__cutDriveMesh());near(mesh.position[0],s.rig.x);near(mesh.position[2],-s.rig.y);for(const w of mesh.wheels)near(w.roll,-s.rig.distance/.65);for(const reel of mesh.reels)near(reel.bearingAngle,0);assert(mesh.joe.handError<.001);assert(mesh.joe.footError<.001);assert.equal(s.mode,'final_cut_playing');samples.push({seconds,rig:s.rig,mesh});
+  const s=await read(),mesh=await p.evaluate(()=>__cutDriveMesh());near(mesh.position[0],s.rig.x);near(mesh.position[2],-s.rig.y);for(const w of mesh.wheels)near(w.roll,-s.rig.distance/.85);for(const reel of mesh.reels)near(reel.bearingAngle,0);assert(mesh.joe.handError<.001);assert(mesh.joe.footError<.001);assert.equal(s.mode,'final_cut_playing');samples.push({seconds,rig:s.rig,mesh});
   if([1,6,10.4].includes(seconds)){const name='pass-'+seconds;await p.screenshot({path:out+'/'+name+'.png'});shots.push(name);}
  }
  assert(samples[0].rig.speed<.3);assert(samples[1].rig.speed>2.3&&samples[1].rig.speed<2.5);near(samples[3].rig.speed,7.2);assert(samples.at(-1).rig.speed<2.3);

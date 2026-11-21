@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const software=process.argv.includes('--software'),out='output/course-menu/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}
+ const software=process.argv.includes('--software'),out='output/course-menu/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__club={state,render,enterMenu,RUN_VARIANTS,RUN_RULESET,PERFORMANCE_STAMPS};\n  window.advanceTime = (milliseconds) => {')}));
  const draw=()=>p.evaluate(async()=>{__club.render();await RCScene3D.whenPresented();}),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
@@ -10,7 +10,7 @@ const {chromium}=require('playwright');
  const back=async()=>{await p.locator('#course-menu [data-clubhouse-command="return"]').tap();await draw();};
  const shot=async name=>{await draw();await p.screenshot({path:out+'/'+name+'.png'});};
  try{
-  await p.goto('http://127.0.0.1:4187');await p.waitForFunction(()=>window.__club&&window.RCCourseMenu);await p.evaluate(()=>__club.state.manualTime=true);await p.locator('#game').click();await p.keyboard.press('Escape');await draw();assert.equal((await read()).mode,'menu');assert(await p.locator('.course-menu-invitation').isVisible());
+  await p.goto('http://127.0.0.1:4187');await p.waitForFunction(()=>window.__club&&window.RCCourseMenu);await p.evaluate(()=>__club.state.manualTime=true);await p.locator('#game').click();/* the opening incident now plays to the end before the clubhouse menu (Escape no longer skips it) */for(let i=0;i<80&&(await read()).mode==='intro';i++)await tick(500);await draw();assert.equal((await read()).mode,'menu');assert(await p.locator('.course-menu-invitation').isVisible());
   await p.evaluate(()=>{const original=window.render_game_to_text;window.__menuStateReads=0;window.render_game_to_text=(...args)=>{__menuStateReads++;return original(...args);};});await p.waitForTimeout(1100);assert.equal(await p.evaluate(()=>__menuStateReads),0,'Menu navigation must not poll the full debug-state serializer');
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844],[320,568]]){
    await p.setViewportSize({width,height});await p.evaluate(()=>__club.state.uiScale=1.3);await draw();await shot('fresh-'+width);

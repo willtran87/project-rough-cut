@@ -10,7 +10,7 @@ const out='output/under-green/finite-lights';fs.mkdirSync(out,{recursive:true});
   await p.route('**/finite-light-material.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('tools/fixtures/under-green-finite-light-candidate.js','utf8')}));
   await p.route('**/under-green-scene.js',route=>{
    let source=fs.readFileSync('web/under-green-scene.js','utf8');
-   const marker=' return {draw,drainJoeFootsteps:';assert(source.includes(marker));
+   const marker=' return {draw,setQuality,';assert(source.includes(marker));
    source=source.replace(marker,' window.__lightAudit={renderer,scene};'+marker);
    return route.fulfill({contentType:'application/javascript',body:source});
   });

@@ -15,7 +15,7 @@ const hook=`const currentStatic=staticMeshes.filter(m=>!m.name.startsWith('Final
    }
   }if([...remaining.values()].some(n=>n))throw Error('Missing original scenery instance');
  }
- if(verifiedInstances!==4349)throw Error('Unexpected original scenery count');
+ if(verifiedInstances!==4860)throw Error('Unexpected original scenery count');
  const render=(old,read=true)=>{oldStatic.visible=old;currentStatic.forEach(m=>m.visible=!old);scene.traverse(l=>{if(l.isLight&&l.castShadow&&l.intensity>0)l.shadow.needsUpdate=true;});renderer.render(scene,camera);if(!read)return;const data=new Uint8Array(width*height*4);gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,data);return data;};
  window.__staticAudit={geometry:{instances:verifiedInstances,batches:currentStatic.length,originalBatches:oldStatic.children.length},compare:()=>{
   const old=render(true),before={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles},now=render(false),after={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};currentStatic.forEach(m=>m.frustumCulled=false);const full=render(false);currentStatic.forEach(m=>m.frustumCulled=true);

@@ -14,7 +14,7 @@ const {chromium}=require('playwright');
   await page.keyboard.press('ArrowRight');await slide(2);await page.keyboard.press('ArrowLeft');await slide(1);
   for(let i=1;i<=5;i++){
    await slide(i);await page.waitForTimeout(700);const s=await state();
-   assert.equal(s.seconds,0);assert.equal(s.cart.health,100);assert.equal(s.graphics.frames,0);assert(s.openingStory.retainedImages<=2);assert.equal(s.audio.voices,9);
+   assert.equal(s.seconds,0);assert.equal(s.cart.health,100);assert.equal(s.graphics.frames,0);assert(s.openingStory.retainedImages<=2);assert.equal(s.audio.voices,14);
    results.slides.push({chapter:i,story:s.openingStory,audio:s.audio,frames:s.graphics.frames});
    await page.screenshot({path:`${out}/slide-${i}-2560.png`});if(i<5)await page.keyboard.press('ArrowRight');
   }
@@ -33,14 +33,14 @@ const {chromium}=require('playwright');
   assert.equal((await state()).mode,'back_nine_paused');assert.deepEqual((await state()).cart,paused.cart);assert.equal((await state()).seconds,paused.seconds);
   await page.locator('#restart').click();assert.equal((await state()).mode,'back_nine_briefing');assert.equal((await state()).openingStory.active,false);
   await page.locator('#replay-story').click();await slide(1);await page.locator('[data-opening="skip"]').click();assert.equal((await state()).mode,'back_nine_briefing');
-  // A checkpoint resume does not fetch/play an intro, even if its preference is on.
+  // No checkpoints: a stored relay checkpoint from an older save never resumes.
   for(const checkpoint of [1,2]){
    await page.evaluate(cp=>{localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({checkpoint:cp,collected:1}));localStorage.removeItem('rough-cut.back-nine-opening.v1');localStorage.setItem('rough-cut.settings.v1',JSON.stringify({volume:0,reducedMotion:true}));},checkpoint);
-   const count=requests.length;await page.reload();await ready();const s=await state();assert.equal(s.mode,'back_nine_briefing');assert.equal(s.checkpoint,checkpoint);assert(requests.slice(count).every(name=>name==='05-seen-you.webp'),'Checkpoint loads only the reused guide splash, not the opening sequence');
-   const completed=await page.locator('[data-relay][data-complete="true"]').count();assert.equal(completed,checkpoint);results.checkpoints.push({checkpoint,goal:await page.locator('#guide-goal').innerText(),completed});
+   await page.reload();await ready();const s=await state();assert.equal(s.checkpoint,0,'A stored relay checkpoint never resumes: every attempt starts at the shed');assert.equal(s.mode,'back_nine_opening_story','With the story preference cleared the intro plays');await page.locator('[data-opening="skip"]').click();assert.equal((await state()).mode,'back_nine_briefing');
+   const completed=await page.locator('[data-relay][data-complete="true"]').count();assert.equal(completed,0);results.checkpoints.push({checkpoint,goal:await page.locator('#guide-goal').innerText(),completed});
    await page.screenshot({path:`${out}/checkpoint-${checkpoint}.png`});
   }
   await page.locator('#replay-story').click();await slide(1);assert.equal(await page.locator('.opening-image img').evaluate(e=>getComputedStyle(e).animationName),'none');await page.locator('[data-opening="skip"]').click();
-  assert.deepEqual(errors,[]);results.errors=errors;fs.writeFileSync(out+'/report.json',JSON.stringify(results,null,2));console.log('PASS: five scenes, no hidden chase render, guide, controls, pause replay, skip, both checkpoint resumes, reduced motion');
+  assert.deepEqual(errors,[]);results.errors=errors;fs.writeFileSync(out+'/report.json',JSON.stringify(results,null,2));console.log('PASS: five scenes, no hidden chase render, guide, controls, pause replay, skip, stored checkpoints ignored, reduced motion');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

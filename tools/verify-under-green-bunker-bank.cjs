@@ -16,7 +16,7 @@ fs.mkdirSync(out,{recursive:true});
    for(const [name,x,y,yaw,pitch]of poses){
     const result=await p.evaluate(async pose=>{
      const {createRun}=await import('./under-green-sim.js');const r=createRun(1);r.mode='playing';r.time=30;r.messageTime=0;r.joe.phase='absent';Object.assign(r.player,pose);__underGreen.run=r;__underGreen.clearInput();advanceTime(0);
-     return {state:JSON.parse(render_game_to_text()),sight:__underGreen.inspectView([{id:'sand-strata',x:-32.01,y:62,height:2.48},{id:'soil-strata',x:-32.01,y:62,height:2.92},{id:'turf',x:-32.01,y:62,height:3.15}])};
+     /* Sample just proud of the dressed face: bunkerBankProfile swells line -32 by up to 0.118 m, so points at -32.01 sit inside the soil. */return {state:JSON.parse(render_game_to_text()),sight:__underGreen.inspectView([{id:'sand-strata',x:-31.86,y:62,height:2.48},{id:'soil-strata',x:-31.86,y:62,height:2.92},{id:'turf',x:-31.86,y:62,height:3.15}])};
     },{x,y,yaw,pitch});
     views.push({name,width,height,...result});await p.screenshot({path:`${out}/${name}-${width}.png`});
     if(!baseline&&name==='cutaway')assert(result.sight.every(s=>s.clear&&s.inView),'The actual bank layers must be visible');
