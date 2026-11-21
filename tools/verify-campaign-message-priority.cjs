@@ -1,15 +1,15 @@
-const fs=require('node:fs'),assert=require('node:assert/strict');
+const fs=require('node:fs'),assert=require('node:assert/strict');const {showSettingControl:show}=require('./lib/legacy-b9-settings.cjs');
 const {chromium}=require('playwright');
 const probe=process.argv.includes('--probe');
 (async()=>{
  const out='output/campaign-message-priority';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.level-one-opening.v1',JSON.stringify({seen:true,skip:true}));localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({seen:true,skip:true}));});
   await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__priorityTest={state,resetFirstHole,drawQualityHud,render};\n  window.advanceTime = (milliseconds) => {')}));
-  await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__priorityTest,null,{timeout:90000});await p.locator('canvas').click();await p.keyboard.press('Space');
-  await p.waitForFunction(()=>JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
+  await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__priorityTest,null,{timeout:90000});await p.locator('canvas#game').click();await p.keyboard.press('Space');
+  await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
   await p.evaluate(()=>{const t=__priorityTest,s=t.state;t.resetFirstHole();s.mode='first_hole';s.manualTime=true;s.transitionAlpha=0;s.hole.tutorialVisible=false;s.hole.practiceDrill.active=false;s.guidedHints=false;s.soundCaptions=true;s.threatCaptions=true;s.hole.elapsed=100;Object.assign(s.player,{x:40,y:140,yaw:0,pitch:0});Object.assign(s.hole.joe,{x:40,y:150,mode:'chase'});s.hole.detection=1;s.hole.engagement.closeEscape.remaining=.5;s.hole.captions=[{text:'THE ENGINE STUTTERS',direction:'',age:0,duration:4}];s.hole.message='KEY ACQUIRED';s.hole.messageTimer=4;t.render();});
   await p.waitForFunction(()=>{__priorityTest.render();return RCScene3D.stats().ready&&!RCScene3D.isPreparing();},null,{timeout:90000});
   const hud=()=>p.evaluate(()=>{__priorityTest.drawQualityHud();return Object.fromEntries(['goal','context','caption','threat'].map(key=>[key,document.querySelector(`[data-q=${key}]`)?.textContent||'']));});
@@ -39,10 +39,10 @@ const probe=process.argv.includes('--probe');
    const {createRun}=await import('./under-green-sim.js'),{LEVER}=await import('./under-green-course.js');const r=createRun(1);r.mode='playing';r.message='Checkpoint saved';r.messageTime=3;
    Object.assign(r.player,{x:LEVER.x-1.7,y:LEVER.y,yaw:Math.PI/2});Object.assign(r.joe,{x:r.player.x,y:r.player.y-1.5,phase:'windup',yaw:0,attackYaw:0,age:.1});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);
    return {caption:document.getElementById('caption').textContent,kind:document.getElementById('caption').dataset.kind,action:JSON.parse(render_game_to_text()).action};
-  });assert(green.action);assert.equal(green.kind,'danger');assert.match(green.caption,/Move sideways/);
-  checks.push('Under the Green close unseen strike wins over a valid control prompt and checkpoint message');
+  });assert(green.action);assert.equal(green.caption,'','Under the Green reserves the caption slot for opted-in sound descriptions; the world presents the strike');
+  checks.push('Under the Green keeps coaching and checkpoint text out of the sound-description caption during a close strike');
   await p.setViewportSize({width:2560,height:1600});await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
-  await p.locator('#comfort summary').click();await p.locator('[data-campaign=muted]').check();await p.locator('[data-campaign=threatCaptions]').uncheck();await p.locator('[data-campaign=subtitles]').check();await p.click('#primary');
+  await p.locator('#comfort > summary').click();await (await show(p,'[data-campaign=muted]')).check();await (await show(p,'[data-campaign=threatCaptions]')).uncheck();await (await show(p,'[data-campaign=subtitles]')).check();await p.click('#primary');
   const finaleFixture=async()=>p.evaluate(async()=>{
    const {createRun}=await import('./final-cut-sim.js');const r=createRun();r.mode='playing';r.elapsed=10;
    Object.assign(r.player,{x:0,y:26,yaw:Math.PI/2});Object.assign(r.rig,{x:17.39,y:26,yaw:-Math.PI/2,phase:'pass',deployment:1,direction:-1});

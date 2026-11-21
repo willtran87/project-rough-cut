@@ -12,10 +12,11 @@ const {chromium}=require('playwright');
    if(device==='gamepad')await p.addInitScript(()=>{window.directionPad={id:'Directional captions',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[directionPad];});
    const cdp=device==='touch'?await context.newCDPSession(p):null;
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
-   await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');await p.locator('#comfort summary').click();
-   await p.locator('[data-campaign=muted]').check();await p.locator('[data-campaign=subtitles]').uncheck();await p.locator('[data-campaign=threatCaptions]').uncheck();await p.locator('[data-campaign=soundCaptions]').check();
+   await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();
+   const tab=name=>p.locator('#comfort .rc-settings-tabs button',{hasText:name}).click();await tab('Audio');
+   await p.locator('[data-campaign=muted]').check();await tab('Readability');await p.locator('[data-campaign=subtitles]').uncheck();await p.locator('[data-campaign=threatCaptions]').uncheck();await p.locator('[data-campaign=soundCaptions]').check();
    await p.locator('[data-campaign=subtitleSize]').focus();await p.keyboard.press('End');assert.equal(await p.locator('[data-campaign=subtitleSize]').inputValue(),'1.4');
-   await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+   await p.locator('#comfort').evaluate(e=>e.open=false);await p.click('#primary');await p.evaluate(()=>advanceTime(0));
    async function install(run){
     if(device==='gamepad')await p.evaluate(()=>{directionPad.axes[0]=directionPad.axes[1]=0;advanceTime(1000/60);});
     await p.evaluate(r=>{__underGreen.run=structuredClone(r);__underGreen.clearInput();advanceTime(0);},run);
@@ -38,7 +39,7 @@ const {chromium}=require('playwright');
    }
    for(const item of cases){
     await install(item.windup);const cue=await capture(item.name+'-cue');
-    assert(!cue.observed.visible&&cue.observed.imminent);assert(cue.caption.includes(cue.observed.pan<0?'to your left':'to your right'));assert.equal(cue.kind,'danger');assert(cue.campaign.muted&&!cue.campaign.threatCaptions&&!cue.campaign.subtitles);assert.equal(cue.campaign.subtitleSize,1.4);
+    assert(!cue.observed.visible&&cue.observed.imminent);assert(cue.caption.includes(cue.observed.pan<0?'to your left':'to your right'));/* threat banners retired: the cue is the optional sound description */assert.equal(cue.kind,'sound');assert(cue.campaign.muted&&!cue.campaign.threatCaptions&&!cue.campaign.subtitles);assert.equal(cue.campaign.subtitleSize,1.4);
     assert(Math.abs(cue.audio.targets.joePan-cue.observed.pan)<1e-7);
     const expected=structuredClone(item.windup);step(expected,{});for(let frame=0;frame<90;frame++)step(expected,frame<15?{}:{strafe:1});
     await p.evaluate(()=>advanceTime(250-1e-6));
@@ -56,11 +57,11 @@ const {chromium}=require('playwright');
    // Actual held rear view reverses the same audio pan and caption side.
    const fixture=await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const r=createRun(1);r.mode='playing';r.time=0;r.elapsed=20;r.messageTime=0;Object.assign(r.player,{x:0,y:54,yaw:0,pitch:0});Object.assign(r.joe,{x:2,y:54,yaw:-Math.PI/2,phase:'windup',age:.1});return r;});
    await install(fixture);const front=await capture('lateral-right');assert.match(front.caption,/to your right/);
-   await p.keyboard.down('r');await p.evaluate(()=>advanceTime(350));await p.keyboard.up('r');
+   await p.keyboard.down('q');await p.evaluate(()=>advanceTime(350));await p.keyboard.up('q');
    if(device==='touch'){await p.touchscreen.tap(width/2,height/2);await p.evaluate(()=>advanceTime(0));}
    const rear=await capture('rear-left');assert.match(rear.caption,/to your left/);assert(rear.audio.targets.joePan<-.9);
    await install({...fixture,joe:{...fixture.joe,phase:'search'}});
-   const heard=await capture('sound-only');assert.match(heard.caption,/motor rattles nearby to your right/);assert(!/search/i.test(heard.caption));
+   const heard=await capture('sound-only');assert.match(heard.caption,/(swishes|breathing) nearby to your right/);assert(!/search/i.test(heard.caption));
    await context.close();
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,views,results,errors,limits:['Maximum caption size with muted audio and optional pursuit/dialogue captions disabled; source direction matches the actual mixer target.','Actual keyboard, emulated controller and browser touch inputs perform a short evasion from preserved windup states. No claim of a full escape or unfamiliar-player comprehension.']},null,2));

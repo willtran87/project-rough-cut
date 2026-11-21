@@ -19,8 +19,8 @@ const {chromium}=require('playwright');
      for(let y=BOUNDS.minY+1;y<BOUNDS.maxY;y+=2)for(let x=BOUNDS.minX+.5;x<BOUNDS.maxX;x+=1)if(!solid({x,y},.3))points.push({x,y});
      return {supports:g.serviceSupports,points:points.length,hits:__underGreen.inspectClearance(points),mounts:g.serviceSupports.lamps.map(l=>lampMount(l,floorLayout()))};
     });
-    assert.deepEqual(audit.hits,[]);assert(audit.supports.arches===9&&audit.supports.spine===16);assert(audit.supports.lamps.length===13);assert.equal(audit.supports.signs.length,8);
-    assert.equal(audit.supports.lamps.filter(l=>l.mount.kind==='spine').length,3);assert.equal(audit.supports.lamps.filter(l=>l.mount.kind==='cross-feed').length,2);
+    assert.deepEqual(audit.hits,[]);assert(audit.supports.arches===9&&audit.supports.spine===16);assert(audit.supports.lamps.length===14);/* + the bunker-inspection lamp */assert.equal(audit.supports.signs.length,8);
+    /* the y=8 gallery lamp moved off the spine to (-3.9,15.5) as 'gallery-entry' */assert.equal(audit.supports.lamps.filter(l=>l.mount.kind==='spine').length,2);assert.equal(audit.supports.lamps.filter(l=>l.mount.kind==='cross-feed').length,2);
     assert(audit.mounts.some(m=>m.kind==='wall')&&audit.mounts.some(m=>m.kind==='ceiling'));
     views.push({name:'clearance',width,height,audit});
    }

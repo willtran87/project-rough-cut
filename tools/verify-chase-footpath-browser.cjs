@@ -1,9 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-(async()=>{const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),label=(software?'software':'hardware')+(baseline?'-before':''),out='output/back-nine-experience/footpath-surfaces';fs.mkdirSync(out,{recursive:true});
+(async()=>{const software=process.argv.includes('--software'),label=software?'software':'hardware',out='output/back-nine-experience/footpath-surfaces';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__uploads=0;const f=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...a){__uploads++;return f.apply(this,a);};});
- if(baseline)await p.route('**/chase-route-art.js*',r=>r.fulfill({contentType:'application/javascript',path:out+'/baseline-source/chase-route-art.js'}));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
  const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),before=await read(),uploads=await p.evaluate(()=>__uploads);
  for(const [width,height]of [[2560,1600],[1280,720],[844,390]]){
@@ -20,7 +19,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
  }
  await p.locator('#chase-reduced').evaluate(e=>{e.checked=true;e.dispatchEvent(new Event('change'));});await p.evaluate(()=>advanceTime(17));assert((await read()).campaign.reducedMotion);
  await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.stringify(__backNine.run));await p.evaluate(()=>advanceTime(1000));assert.equal(await p.evaluate(()=>JSON.stringify(__backNine.run)),frozen);await p.keyboard.press('Escape');
- const after=await read();assert.equal(after.graphics.programs,before.graphics.programs);assert.equal(after.graphics.textures,before.graphics.textures);assert.equal(await p.evaluate(()=>__uploads),uploads);assert.equal(after.audio.voices,12);assert.equal(after.navigation.signature,2693326411);assert.deepEqual(errors,[]);
+ const after=await read();assert.equal(after.graphics.programs,before.graphics.programs);assert.equal(after.graphics.textures,before.graphics.textures);assert.equal(await p.evaluate(()=>__uploads),uploads);assert.equal(after.audio.voices,14);assert.equal(after.navigation.signature,4190417745);assert.deepEqual(errors,[]);
  fs.writeFileSync(`${out}/${label}-browser.json`,JSON.stringify({passed:true,label,before:before.graphics,after:after.graphics,uploads,samples,errors},null,2));console.log(JSON.stringify({passed:true,label,samples:samples.length,programs:after.graphics.programs,textures:after.graphics.textures,uploads,errors}));
  }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -5,12 +5,12 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[],metrics=[];
  try{
-  for(const before of [true,false]){
+  /* historical before arm (output/.../pass22-source) removed: current code only */for(const before of [false]){
    const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    for(const file of ['under-green-actor.js','under-green-shadow.js','under-green-scene.js'])await p.route('**/'+file,r=>{
-    const source=before&&file!=='under-green-scene.js'?'output/under-green/visual-upgrade/pass22-source/':'web/';let body=fs.readFileSync(source+file,'utf8');
+    const source='web/';let body=fs.readFileSync(source+file,'utf8');
     if(file==='under-green-shadow.js')body=body.replace('root.add(mesh);state.ready=true;','root.add(mesh);window.__ghostVisual={root,mesh,material};state.ready=true;');
-    if(file==='under-green-scene.js')body=body.replace(' return {draw,drainJoeFootsteps:',' window.__ghostScene={renderer,scene,camera}; return {draw,drainJoeFootsteps:');
+    if(file==='under-green-scene.js')body=body.replace(' return {draw,setQuality,',' window.__ghostScene={renderer,scene,camera}; return {draw,setQuality,');
     return r.fulfill({contentType:'application/javascript',body});
    });
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
@@ -34,7 +34,7 @@ fs.mkdirSync(out,{recursive:true});
    });assert(pixels.visible.changed>20,'Ghost has visible pixels at peak');assert(Math.abs(pixels.occludedNDC[0])<.1&&Math.abs(pixels.occludedNDC[1])<.9,'Occluded ghost is centred in the camera');assert.equal(pixels.occluded.changed,0,'No ghost through opaque wall');if(!before){assert.equal(pixels.emissive,0);assert(pixels.depthTest&&!pixels.depthWrite);assert.equal(pixels.textures,0);assert(pixels.materialRange.max>pixels.materialRange.min*2);}metrics.push({before,...pixels});
    if(!before){
     const lifecycle=views.filter(v=>!v.before&&v.name.startsWith('fade-'));assert.equal(lifecycle[0].state.graphics.ghost.alpha,0);assert.equal(lifecycle.at(-1).state.graphics.ghost.visible,false);assert(lifecycle[4].state.graphics.ghost.alpha>.4);assert.notEqual(lifecycle[4].state.graphics.ghost.gait,lifecycle[5].state.graphics.ghost.gait);
-    await seed();await age(3);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost);await p.evaluate(()=>advanceTime(1000));assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost),frozen);await p.locator('#comfort summary').click();await p.locator('#reduced').check();await p.click('#primary');await age(3.5);const reduced=await capture('reduced');assert(reduced.graphics.ghost.visible);assert.notEqual(reduced.graphics.ghost.gait,frozen.gait);
+    await seed();await age(3);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost);await p.evaluate(()=>advanceTime(1000));assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost),frozen);await p.locator('#comfort>summary').click();await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.locator('#comfort').evaluate(e=>e.open=false);await p.click('#primary');await age(3.5);const reduced=await capture('reduced');assert(reduced.graphics.ghost.visible);assert.notEqual(reduced.graphics.ghost.gait,frozen.gait);
     // Turning away changes neither fade age nor world location.
     const stable=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost);await p.evaluate(async()=>{__underGreen.run.player.yaw=Math.PI;advanceTime(0);await __underGreen.whenPresented();});assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.ghost),stable);await capture('away');
     await seed(26.5);await age(3);await capture('closer');

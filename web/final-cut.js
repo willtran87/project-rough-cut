@@ -159,7 +159,7 @@ function paint(){
   if(!complete)resultView='summary';$('panel').classList.toggle('completed',complete);$('panel').classList.toggle('caught',caught);$('panel').dataset.contact=caught?run.failure?.kind||'chassis':'';const outcome=complete?finaleOutcome(run):null,extra=complete&&resultView!=='summary';window.RCGameTheme.closing($('panel'),extra?resultView:'');
   $('panel').classList.toggle('briefing',run.mode==='briefing');$('chapter-splash').hidden=run.mode!=='briefing';$('defeat-backdrop').hidden=!caught;$('loss-quote').hidden=!caught;$('loss-story').hidden=!caught;
   $('photo').hidden=!paused;if(complete&&!extra)showRunSummary();
-  $('story-replay').hidden=caught||complete;text('story-replay',complete?'Replay ending scene':'Replay story');
+  $('story-replay').hidden=caught||extra;text('story-replay',complete?'Replay ending scene':'Replay story');
   if(caught){const lines=defeatQuote(run).lines,quote='“'+lines.join(' ')+'”';text('loss-quote',quote);if(quote!==voicedLoss){voicedLoss=quote;(lossVoice??=createJoeVoice({muted:()=>preferences.muted||document.hidden})).say(lines);}}
   else if(voicedLoss){voicedLoss='';lossVoice?.stop();}text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
   if(caught){clearInput();$('panel').scrollTop=0;if(document.pointerLockElement)document.exitPointerLock();}

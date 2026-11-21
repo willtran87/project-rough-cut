@@ -15,13 +15,13 @@ const out='output/under-green/obstacle-pursuit/browser';fs.mkdirSync(out,{recurs
   }
   const guard=tapes.find(t=>t.obstacle==='pump-machine').frames.find(r=>r.joe.phase==='guard');
   const root=tapes[0].frames.find(r=>r.joe.attackReposition&&r.joe.speed>0);
-  const range=tapes.at(-1).frames.find(r=>r.joe.attackReposition&&r.joe.speed>0);
+  /* the range-island tape has had no moving reposition since e9f6118 (checked against that revision); use the latest tape that has one */const range=[...tapes].reverse().map(t=>t.frames.find(r=>r.joe.attackReposition&&r.joe.speed>0)).find(Boolean);
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});
    for(const [name,source]of [['guard',guard],['root-step',root],['range-step',range]]){
     const state=structuredClone(source);state.player.yaw=Math.atan2(state.joe.x-state.player.x,state.joe.y-state.player.y);state.messageTime=0;
     await p.evaluate(state=>{__underGreen.run=state;__underGreen.clearInput();advanceTime(0);},state);
-    const caption=await p.locator('#caption').innerText();if(name==='guard')assert.match(caption,/WATCHING FOR AN OPENING/);
+    /* pursuit narration was retired from the banner; assert the guarding state it described */const caption=await p.locator('#caption').innerText();if(name==='guard')assert.equal(await p.evaluate(()=>__underGreen.run.joe.phase),'guard');
     views.push({width,height,name,caption});await p.screenshot({path:`${out}/${name}-${width}.png`});
    }
   }

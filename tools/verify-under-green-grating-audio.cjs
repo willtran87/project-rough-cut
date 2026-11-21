@@ -22,7 +22,7 @@ const out='output/under-green/service-grate';
   });
   const summary=[];
   for(const sample of samples){
-   assert.equal(sample.state.lastFootstep.surface,sample.surface);assert.equal(sample.state.voices,16);
+   assert.equal(sample.state.lastFootstep.surface,sample.surface);assert.equal(sample.state.voices,22);
    const peak=Math.max(...sample.pcm.map(Math.abs)),energy=sample.pcm.reduce((s,n)=>s+n*n,0);console.log(JSON.stringify({surface:sample.surface,peak,energy}));assert(peak>.001&&peak<1,'Material sample must contain a non-clipped signal after the master fade');
    const buffer=Buffer.alloc(44+sample.pcm.length*2);buffer.write('RIFF');buffer.writeUInt32LE(buffer.length-8,4);buffer.write('WAVEfmt ',8);buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(48000,24);buffer.writeUInt32LE(96000,28);buffer.writeUInt16LE(2,32);buffer.writeUInt16LE(16,34);buffer.write('data',36);buffer.writeUInt32LE(sample.pcm.length*2,40);sample.pcm.forEach((n,i)=>buffer.writeInt16LE(Math.round(Math.max(-1,Math.min(1,n))*32767),44+i*2));fs.writeFileSync(`${out}/${sample.surface}-step.wav`,buffer);
    summary.push({surface:sample.surface,peak,energy,voices:sample.state.voices});

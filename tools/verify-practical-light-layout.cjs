@@ -7,7 +7,7 @@ const out=process.argv[2],software=process.argv.includes('--software');
  await p.evaluate(async()=>{const{createRun}=await import('./back-nine-sim.js');const r=createRun(0,0,713);r.mode='driving';r.time=20;r.grace=0;r.departure.phase='finished';r.tension.cooldown=r.hunt.cooldown=100;r.story.seen=7;r.story.choiceSeen=0xffff;r.panic.armed=false;Object.assign(r.cart,{x:35,y:10,health:0,failedAt:0});Object.assign(r.joe,{x:35,y:50,speed:0});r.foot={x:0,y:288,yaw:0,viewYaw:0,speed:0,onFoot:true,invulnerable:0};__backNine.run=r;await advanceTime(0);});
  for(const [width,height]of [[1280,720],[390,844]]){
   await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();});
-  const state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.graphics.practicalLights.sources,88);assert.equal(state.graphics.practicalLights.strength,1);
+  const state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.graphics.practicalLights.sources,91);/* +3 garage-interior lamps (back-nine-practical-lights.js) */assert.equal(state.graphics.practicalLights.strength,1);
   await p.screenshot({path:out+'/shelter-'+width+'.png'});samples.push({width,height,state});
  }
  // The legacy checkpoint field counts powered relays. It must not become a

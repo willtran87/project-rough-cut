@@ -15,7 +15,8 @@ export function vehicleTireGeometry(THREE,r){
 }
 export function addWheelCraft({THREE,wheel,side,r,mower,put,box,cylinder}){
  const ring=put(new THREE.TorusGeometry(r*.65,.018,4,16),'iron',side*.15,0,0,1,1,1,0,wheel);ring.rotation.y=Math.PI/2;
- const cap=put(cylinder,'iron',side*.18,0,0,r*.18,.07,r*.18,0,wheel);cap.rotation.z=Math.PI/2;
+ // The mower's rear hub caps sat 1 cm outside its collision hull; keep them inside.
+ const cap=put(cylinder,'iron',side*(mower?.17:.18),0,0,r*.18,.07,r*.18,0,wheel);cap.rotation.z=Math.PI/2;
  for(const face of [-1,1])for(let i=0;i<8;i++){const a=i*Math.PI/4;const slot=box('rubber',face*.157,Math.cos(a)*r*.52,Math.sin(a)*r*.52,.012,r*.13,.035,0,wheel);slot.rotation.x=a;}
  if(mower)for(let i=0;i<16;i++)for(const sign of [-1,1]){
   const a=i*Math.PI/8;const tread=box('rubber',sign*.075,Math.cos(a)*(r+.006),Math.sin(a)*(r+.006),.145,.045,.09,0,wheel);tread.rotation.set(a,sign*.24,0);

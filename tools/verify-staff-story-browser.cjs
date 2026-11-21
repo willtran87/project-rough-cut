@@ -1,4 +1,4 @@
-const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
+const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');const {showSettingControl:show}=require('./lib/legacy-b9-settings.cjs');
 (async()=>{const software=process.argv.includes('--software'),tag=software?'software':'hardware',out='output/back-nine-experience/staff-story';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));
@@ -22,7 +22,7 @@ const start=await read();
  await p.keyboard.up('KeyQ');await p.evaluate(async()=>{for(let i=0;i<54;i++)await advanceTime(1000/60);});s=await read();assert.equal(s.graphics.staffSighting.site,-1);assert.equal(s.graphics.staffSighting.used,1);
  await p.screenshot({path:`${out}/${tag}-empty-2560.png`});
  // The other authored bay is verified independently, in reduced-motion mode.
- await p.keyboard.press('Escape');await p.locator('#chase-comfort > summary').click();await p.locator('#chase-reduced').check();await p.keyboard.press('Escape');
+ await p.keyboard.press('Escape');await p.locator('#chase-comfort > summary').click();await (await show(p,'#chase-reduced')).check();await p.keyboard.press('Escape');
  await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js'),r=createRun();r.mode='driving';r.grace=0;r.time=20;r.departure.phase='finished';Object.assign(r.cart,{x:26,y:166,yaw:-.85,speed:0});Object.assign(r.joe,{x:10,y:60,speed:0});__backNine.run=r;for(let i=0;i<60;i++)await advanceTime(1000/60);});
  s=await read();assert.equal(s.graphics.staffSighting.site,1);await p.keyboard.down('KeyQ');await p.evaluate(async()=>{for(let i=0;i<24;i++)await advanceTime(1000/60);});
  s=await read();assert(s.campaign.reducedMotion);assert(s.graphics.staffSighting.seen>.25);assert(s.graphics.staffSighting.visible);assert.equal(s.messages.banner,'');await p.screenshot({path:`${out}/${tag}-east-comfort-2560.png`});const eastPixels=await visiblePixels();console.log(JSON.stringify({eastPixels}));views.push({name:'east-comfort',state:s,pixels:eastPixels});assert(eastPixels.count>12,JSON.stringify(eastPixels));

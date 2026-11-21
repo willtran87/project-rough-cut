@@ -1,16 +1,17 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
+const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/walking-option';fs.mkdirSync(out,{recursive:true});const rows=[],errors=[];
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
   for(const [width,height,device]of [[2560,1600,'keyboard'],[1280,720,'gamepad'],[844,390,'touch'],[390,844,'touch']]){
-   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
+   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}await context.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});
    p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.addInitScript(()=>localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{crouch:'KeyT',focus:'KeyY'},keyboardBindingsVersion:2})));
    if(device==='gamepad')await p.addInitScript(()=>{window.walkPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[walkPad];});
    const tick=n=>p.evaluate(n=>advanceTime(n*(1000/60)-1e-6),n),cdp=device==='touch'?await context.newCDPSession(p):null;
-   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
+   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await closeSettings(p);await p.click('#primary');
    const contact=async(action,id)=>{const b=await p.locator(`[data-key=${action}]`).boundingBox();assert(b);return {id,x:b.x+b.width/2,y:b.y+b.height/2};};
    async function seed(){return p.evaluate(async()=>{
     const {createRun,MOVEMENT}=await import('./under-green-sim.js'),{WATERS,waterPoint,waterState}=await import('./under-green-course.js'),{crossingAdvice}=await import('./under-green-guidance.js');
@@ -19,7 +20,7 @@ const {chromium}=require('playwright');
     const r=createRun(3);r.mode='playing';r.messageTime=0;r.time=24+(w.lowSeconds??3)+1.5-remaining-w.offset;Object.assign(r.player,start,{yaw:Math.PI});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);return target;
    });}
    for(const toggle of device==='touch'?[false]:[false,true]){
-    await p.keyboard.press('Escape');await p.locator('#comfort summary').evaluate(e=>e.parentElement.open=true);await p.locator('#crouch-toggle').setChecked(toggle);await p.locator('#movement-ramp').setChecked(toggle);await p.click('#primary');await tick(1);
+    await p.keyboard.press('Escape');await p.locator('#comfort>summary').evaluate(e=>e.parentElement.open=true);await reveal(p,'#crouch-toggle');await p.locator('#crouch-toggle').setChecked(toggle);await reveal(p,'#movement-ramp');await p.locator('#movement-ramp').setChecked(toggle);await closeSettings(p);await p.click('#primary');await tick(1);
     if(device==='touch')await p.touchscreen.tap(width/2,height/2);
     if(device==='gamepad'){await p.evaluate(()=>walkPad.axes[0]=.5);await tick(1);await p.evaluate(()=>walkPad.axes[0]=0);await tick(1);}
     for(const stance of ['crouch','focus','both']){
@@ -39,7 +40,7 @@ const {chromium}=require('playwright');
      const rect=await p.locator('#water-read').boundingBox();assert(rect.x>=0&&rect.x+rect.width<=width&&rect.y+rect.height<height/2);
      await p.evaluate(()=>__underGreen.whenPresented());await p.screenshot({path:`${out}/offer-${width}-${stance}-${toggle}.png`});
      if(device==='keyboard'&&!toggle&&stance==='crouch'){
-      await p.keyboard.press('Escape');const before=await p.evaluate(()=>JSON.stringify(__underGreen.run));await tick(60);assert.equal(await p.evaluate(()=>JSON.stringify(__underGreen.run)),before);await p.click('#primary');await seed();await engage();
+      await p.keyboard.press('Escape');const before=await p.evaluate(()=>JSON.stringify(__underGreen.run));await tick(60);assert.equal(await p.evaluate(()=>JSON.stringify(__underGreen.run)),before);await closeSettings(p);await p.click('#primary');await seed();await engage();
      }
      await tick(15);
      if(device==='keyboard'){if(crouch){if(toggle)await p.keyboard.press('t');else await p.keyboard.up('t');}if(focus)await p.keyboard.up('y');await p.keyboard.down('w');}

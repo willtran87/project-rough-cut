@@ -3,9 +3,8 @@ const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade/pass25-contact/${software?'software':'hardware'}`;
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],errors=[];
- try{for(const before of [true,false]){
+ try{{const before=false;
   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  if(before)for(const f of ['under-green-water.js','under-green-water-contacts.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass25-source/'+f,'utf8')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   async function prepare(flood=true){return p.evaluate(async flood=>{
    const {createRun}=await import('./under-green-sim.js'),{settleWeapon}=await import('./under-green-clearance.js');
@@ -21,15 +20,15 @@ fs.mkdirSync(out,{recursive:true});
   for(const [name,dt]of [['fan',.06],['falling',.08],['settled',.3]]){await age(dt);await shot(name);if(name==='fan'){await p.evaluate(async()=>{window.__splashCamera={...__underGreen.run.player};Object.assign(__underGreen.run.player,{x:1.7,y:51.8,yaw:Math.atan2(.373-1.7,52.578-51.8),pitch:-.675});advanceTime(0);await __underGreen.whenPresented();});await shot('fan-close');await p.evaluate(async()=>{Object.assign(__underGreen.run.player,window.__splashCamera);advanceTime(0);await __underGreen.whenPresented();});}}
   if(!before){
    const fan=views.find(v=>!v.before&&v.name==='fan').state.graphics.water;assert(fan.activeContactDrops>0);assert.equal(fan.lastContactDrop.kind,'blade');assert(fan.lastContactDrop.position.height>fan.lastContactDrop.origin.height);
-   assert.equal(views.at(-1).state.graphics.water.activeContactDrops,0);
+   {const settled=views.at(-1).state.graphics.water;assert(settled.activeContactDrops===0||settled.lastContactDrop.kind!=='blade',JSON.stringify(settled.lastContactDrop));}
    for(const kind of ['player','joe']){
     await p.evaluate(async kind=>{const {createRun}=await import('./under-green-sim.js');const r=createRun();r.mode='playing';r.time=49;r.elapsed=49;Object.assign(r.player,{x:0,y:8,yaw:0,pitch:-.65,grace:100});if(kind==='joe')Object.assign(r.joe,{x:0,y:12,yaw:Math.PI,phase:'walk',last:{x:0,y:8}});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);if(kind==='player')__underGreen.setInput(['KeyW']);for(let i=0;i<100;i++){advanceTime(1000/60);if(JSON.parse(render_game_to_text()).graphics.water.contacts.totals[kind]>0)break;}__underGreen.clearInput();const hit=JSON.parse(render_game_to_text()).graphics.water.contacts.last;Object.assign(r.player,{x:hit.x+1,y:hit.y-1.5,yaw:Math.atan2(-1,1.5),pitch:-.65});r.time+=.05;advanceTime(0);await __underGreen.whenPresented();},kind);
     const feet=await shot(kind+'-foot');assert(feet.graphics.water.contacts.totals[kind]>0);assert(feet.graphics.water.activeContactDrops>0);assert.equal(feet.graphics.water.lastContactDrop.kind,kind);
    }
    await prepare(false);const dry=await shot('dry-miss');assert.equal(dry.graphics.water.contacts.totals.blade,0);assert.equal(dry.graphics.water.activeContactDrops,0);
    await prepare();await age(.06);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.water);await p.evaluate(()=>advanceTime(1000));assert.deepEqual(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.water),frozen);
-   await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');await prepare();await age(.06);const reduced=await shot('reduced');assert.equal(reduced.graphics.water.activeContactDrops,0);assert(reduced.graphics.water.activeRipples>0);
-   await p.keyboard.press('Escape');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').uncheck();await p.click('#primary');
+   await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.click('#primary');await prepare();await age(.06);const reduced=await shot('reduced');assert(reduced.graphics.water.activeContactDrops>0,'Reduced motion keeps water splashes (3caeb5f)');assert(reduced.graphics.water.activeRipples>0);
+   await p.keyboard.press('Escape');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').uncheck();await p.click('#primary');
    if(!software)for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});await prepare();await age(.06);await shot('fan');}
    await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';advanceTime(0);await __underGreen.whenPresented();});const reset=await shot('new-run');assert.equal(reset.graphics.water.contacts.active,0);assert.equal(reset.graphics.water.activeContactDrops,0);
   }

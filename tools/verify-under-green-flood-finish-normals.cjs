@@ -1,14 +1,9 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-pass84/normals/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),results=[],errors=[];try{
- for(const before of [true,false]){
+ {const before=false;
   const p=await browser.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  for(const name of ['under-green-flood-scene','under-green-scene'])await p.route('**/'+name+'.js',r=>{
-   let s=fs.readFileSync(before&&name!=='under-green-scene'?`output/under-green/visual-pass84/source/${name}-before.js`:`web/${name}.js`,'utf8');
-   if(name==='under-green-flood-scene')s=s.replace(' // A single batched',' window.__normalFlood=floodParts.root;\n // A single batched');
-   if(name==='under-green-scene')s=s.replace(' return {draw,inspectCastShadow:',' window.__normalRenderer=renderer;window.__normalFlood=scene.getObjectByName("Drain flood"); return {draw,inspectCastShadow:');
-   return r.fulfill({contentType:'application/javascript',body:s});
-  });
+  await require('./lib/legacy-under-green-probe.cjs').exposeScene(p,'__normalProbe','renderer,scene',s=>s.replace(' window.__normalProbe=',' window.__normalRenderer=renderer;window.__normalFlood=scene.getObjectByName("Drain flood"); window.__normalProbe='));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));
   const samples=await p.evaluate(async({before})=>{
    const T=await import('./vendor/three/three.module.js'),renderer=__normalRenderer,oldTarget=renderer.getRenderTarget(),oldAuto=renderer.autoClear,target=new T.WebGLRenderTarget(65,65,{type:T.UnsignedByteType,colorSpace:T.NoColorSpace,depthBuffer:true}),rows=[];

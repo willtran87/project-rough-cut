@@ -10,7 +10,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
   window.__captureEdges=()=>{for(const t of __edgeTargets){const a=t.g.index.array;t.full.set(a);t.start=t.g.drawRange.start;t.size=Math.min(t.g.drawRange.count,a.length-t.start);let at=t.start;for(let i=t.start;i<t.start+t.size;i+=3){if(t.edge[a[i]]&&t.edge[a[i+1]]&&t.edge[a[i+2]])continue;t.without[at++]=a[i];t.without[at++]=a[i+1];t.without[at++]=a[i+2];}t.withoutSize=at-t.start;}};
   window.__selectEdges=added=>{for(const t of __edgeTargets){t.g.index.array.set(added?t.full:t.without);t.g.index.clearUpdateRanges();t.g.index.needsUpdate=true;t.g.setDrawRange(t.start,added?t.size:t.withoutSize);}};
   return __edgeTargets.map(t=>t.count);
- });assert.equal(targets.reduce((a,b)=>a+b,0),start.stats.routeClues.junctionEdges*4);
+ });{const total=targets.reduce((a,b)=>a+b,0);/* Terrain-following route edges no longer all sit on the flat .039 m plane; the A/B uses the edges still on it. */assert(total>0&&total<=start.stats.routeClues.junctionEdges*4&&total%4===0,String(total));}
  const views=[],positions=[['nursery',-8,73,-.31,0],['reservoir',14,144,.42,0],['pump',14,183,-.3,0],['range',0,313,0,1],['dry-range',-14,415,.51,1],['clubhouse',0,607,0,2],['service',-18,745,.39,2],['crossover',-28,468,0,1]];
  for(const [width,height]of [[2560,1600],[1280,720],[844,390]]){
   await p.setViewportSize({width,height});

@@ -11,7 +11,8 @@ const out='output/under-green/approach-strike',initial=JSON.parse(fs.readFileSyn
   const hold=async(page,key,ms)=>{await page.keyboard.down(key);await page.evaluate(ms=>advanceTime(ms),ms);await page.keyboard.up(key);};
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await reset(p);await hold(p,'w',250);
-   assert.match(await p.locator('#caption').innerText(),/raises the trimmer/i);assert.equal(await p.locator('#caption').getAttribute('data-kind'),'danger');
+   // Threat narration banners were removed from this chapter; the windup itself is the cue.
+   assert.equal((await read(p)).joe.phase,'windup');
    await p.screenshot({path:`${out}/windup-${width}.png`});
    if(width===2560)geometry.push(await p.evaluate(()=>__underGreen.inspectJoeGeometry()));
    await hold(p,'d',550);await hold(p,'w',2700);let state=await read(p);assert.equal(state.mode,'under_green_playing');assert(state.player.x>initial.joe.x+2);assert.equal(state.waterHits,0);
@@ -27,7 +28,7 @@ const out='output/under-green/approach-strike',initial=JSON.parse(fs.readFileSyn
   const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(touch);await fx.skipStories(touch);}touch.on('pageerror',e=>errors.push(e.message));await touch.goto('http://127.0.0.1:4187/under-green.html?test');await touch.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await touch.evaluate(()=>advanceTime(0));await touch.locator('#primary').tap();await reset(touch);
   const cdp=await touch.context().newCDPSession(touch);
   const touchHold=async(key,ms)=>{const box=await touch.locator(`[data-key="${key}"]`).boundingBox();assert(box);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]});await touch.evaluate(ms=>advanceTime(ms),ms);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
-  await touchHold('forward',250);assert.match(await touch.locator('#caption').innerText(),/raises the trimmer/i);await touch.screenshot({path:`${out}/windup-touch-390.png`});await touchHold('right',550);await touchHold('forward',2700);state=await read(touch);assert.equal(state.mode,'under_green_playing');assert(state.player.x>initial.joe.x+2);assert.equal(state.inputMethod,'touch');cases.push({action:'touch-sidestep',mode:state.mode});await touch.screenshot({path:`${out}/passed-touch-390.png`});
+  await touchHold('forward',250);assert.equal((await read(touch)).joe.phase,'windup');await touch.screenshot({path:`${out}/windup-touch-390.png`});await touchHold('right',550);await touchHold('forward',2700);state=await read(touch);assert.equal(state.mode,'under_green_playing');assert(state.player.x>initial.joe.x+2);assert.equal(state.inputMethod,'touch');cases.push({action:'touch-sidestep',mode:state.mode});await touch.screenshot({path:`${out}/passed-touch-390.png`});
   fs.writeFileSync(`${out}/browser.json`,JSON.stringify({passed:errors.length===0&&geometry.every(x=>!x.hits.length),cases,geometry,errors,limits:['Controller API and browser touch events are emulated, not physical-device qualification.','A recorded live-route encounter supplies the initial state; responses use ordinary input handlers.']},null,2));
   assert.deepEqual(errors,[]);assert(geometry.every(x=>!x.hits.length));console.log(JSON.stringify({passed:true,cases:cases.length,geometry:geometry.length,errors}));
  }finally{await browser.close();}

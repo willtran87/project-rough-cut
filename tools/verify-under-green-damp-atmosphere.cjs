@@ -7,7 +7,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  for(const version of [0,1,2])assert.deepEqual(actionBindings('onFoot',old,version),fresh);
  assert.deepEqual(actionBindings('onFoot',{...old,interact:'Enter'},1),fresh);
  assert.deepEqual(actionBindings('onFoot',{move_up:'KeyI',sprint:'KeyT'},0),{...fresh,move_up:'KeyI',sprint:'KeyT'});
- const custom={...fresh,look_back:'KeyV',focus:'KeyN',interact:'Enter'};
+ const custom={...fresh,look_back:'KeyV',focus:'KeyN',interact:'KeyT'};/* Enter is reserved since 3249a50; the Enter fallback is asserted above */
  assert.deepEqual(actionBindings('onFoot',custom,3),custom);
  assert.deepEqual(actionBindings('onFoot',custom,2),custom);
  assert.deepEqual(actionBindings('chase'),CONTROL_PROFILES.chase);
@@ -51,10 +51,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   await p.click('#primary');
   await p.keyboard.down('q');await p.evaluate(()=>advanceTime(500));assert(Math.abs(await p.evaluate(()=>__underGreen.run.player.rearAngle))>3);await p.keyboard.up('q');
   await p.evaluate(()=>advanceTime(600));assert(Math.abs(await p.evaluate(()=>__underGreen.run.player.rearAngle))<.001);
-  await p.keyboard.press('Escape');await p.locator('#comfort summary').click();
+  await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();
+  const tab=name=>p.locator('#comfort .rc-settings-tabs button',{hasText:name}).click();await tab('Camera');
   await p.locator('#reduced').check();await p.evaluate(()=>advanceTime(0));
   assert((await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.atmosphere.lightLevels)).every(v=>v===.72));
-  for(const [id,key]of [['interact','KeyE'],['look_back','KeyQ'],['focus','KeyR']])assert.equal(await p.locator(`[data-binding=${id}]`).inputValue(),key);
+  await tab('Controls');for(const [id,key]of [['interact','KeyE'],['look_back','KeyQ'],['focus','KeyR']])assert.equal(await p.locator(`[data-binding=${id}]`).inputValue(),key);
   // Save a movement edit and verify the new version marker preserves the pair.
   await p.locator('[data-binding=move_up]').selectOption('KeyI');
   const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.settings.v1')));

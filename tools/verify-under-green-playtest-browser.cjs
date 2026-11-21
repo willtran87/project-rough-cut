@@ -21,9 +21,9 @@ const {chromium}=require('playwright');
   // Physical windup fixture; outcome and retry still use ordinary input/UI.
   await p.click('#primary');const fixture=JSON.parse(fs.readFileSync('output/under-green/navigation/service-encounter.json','utf8'));
   await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},fixture);await p.keyboard.down('w');await tick(1700);await p.keyboard.up('w');assert.equal(await p.evaluate(()=>__underGreen.run.mode),'caught');
-  const failed=await download('caught');assert.equal(failed.attempts.at(-1).outcome,'caught');assert(failed.attempts.at(-1).failure);assert.equal(failed.attempts.at(-1).outcomes.captures,1);
-  await p.click('#primary');await tick(100);await p.keyboard.press('Escape');await tick(0);const retried=await download('retried');assert.equal(retried.attempts.at(-2).outcome,'caught');assert.equal(retried.attempts.at(-1).startProgress.checkpoint,2);assert(retried.attempts.at(-1).startProgress.bypass);
-  checks.push('Real capture, checkpoint retry and durable bypass facts survive in separate attempt records');
+  await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});const failed=await download('caught');assert.equal(failed.attempts.at(-1).outcome,'caught');assert(failed.attempts.at(-1).failure);assert.equal(failed.attempts.at(-1).outcomes.captures,1);
+  await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});await p.click('#primary');await tick(100);await p.keyboard.press('Escape');await tick(0);const retried=await download('retried');assert.equal(retried.attempts.at(-2).outcome,'caught');/* standard retries start fresh (981accb) */assert.equal(retried.attempts.at(-1).startProgress.checkpoint,0);assert(!retried.attempts.at(-1).startProgress.bypass);
+  checks.push('Real capture and a fresh retry are kept as separate attempt records');
   // Gamepad can reach the recorder, its fields and export without mouse focus.
   await p.locator('#local-playtest summary').focus();await tick(200);
   async function press(index){await p.evaluate(i=>{__pad.buttons[i]={pressed:true,value:1};},index);await tick(32);await p.evaluate(i=>{__pad.buttons[i]={pressed:false,value:0};},index);await tick(32);}
@@ -42,7 +42,7 @@ const {chromium}=require('playwright');
   assert.equal(hit.waterHits,1);assert(partial.partial&&!partial.finished);assert.equal(partial.waterHits,1);assert(hit.events.some(e=>e.type==='water-hit'&&e.id==='spillway'));
   await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js'),{SLUICE}=await import('./under-green-course.js');const r=createRun(3,true);r.mode='playing';Object.assign(r.player,{x:SLUICE.x,y:SLUICE.y+1,yaw:Math.PI});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
   await p.keyboard.press('e');await tick(1500);assert.equal(await p.evaluate(()=>__underGreen.run.mode),'aftermath');await tick(4600);
-  const escaped=await download('escaped'),last=escaped.attempts.at(-1);assert.equal(last.outcome,'escaped');assert(last.outcomes.secured);assert(last.endProgress.evidence&&last.endProgress.bypass);assert(last.events.some(e=>e.type==='secured'));assert(last.events.some(e=>e.type==='complete'));
+  await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});const escaped=await download('escaped'),last=escaped.attempts.at(-1);assert.equal(last.outcome,'escaped');assert(last.outcomes.secured);assert(last.endProgress.evidence&&last.endProgress.bypass);assert(last.events.some(e=>e.type==='secured'));assert(last.events.some(e=>e.type==='complete'));
   checks.push('Actual wet crossing, partial surge recovery and valid gate closure export truthful route, water-hit and escape outcomes');
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await p.locator('#playtest-kind').scrollIntoViewIfNeeded();await p.screenshot({path:`${out}/form-${width}.png`});

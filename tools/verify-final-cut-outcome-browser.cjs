@@ -3,11 +3,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const out='output/final-cut/outcome',url='http://127.0.0.1:4187/final-cut.html?test';
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],layouts=[];
+ const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],layouts=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}
  page.on('pageerror',e=>errors.push(e.message));
  const ready=p=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000}),tick=(ms=0,p=page)=>p.evaluate(ms=>advanceTime(ms),ms),read=(p=page)=>p.evaluate(()=>JSON.parse(render_game_to_text()));
  // Explicit completed-machine fixtures isolate the result UI; E still performs the real road interaction.
- async function finish(fields={},p=page){await p.evaluate(async fields=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:2,won:true,...fields});r.mode='aftermath';Object.assign(r.player,{x:0,y:103,yaw:0});__finalCut.run=r;},fields);await tick(0,p);await p.keyboard.press('e');await tick(17,p);assert.equal((await read(p)).mode,'final_cut_complete');await p.locator('#ending-image').evaluate(img=>img.decode());if(await p.locator('#final-cut-story').evaluate(d=>d.open))await p.locator('[data-story=skip]').click();}
+ async function finish(fields={},p=page){await p.evaluate(async fields=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:2,won:true,...fields});r.mode='aftermath';Object.assign(r.player,{x:0,y:103,yaw:0});__finalCut.run=r;},fields);await tick(0,p);await p.keyboard.press('e');await tick(17,p);assert.equal((await read(p)).mode,'final_cut_complete');await p.locator('#ending-image').evaluate(img=>img.decode());if(await p.locator('#final-cut-story').evaluate(d=>d.open))await p.locator('[data-story=skip]').click();if(await p.locator('#records-file').isVisible())await p.locator('#records-file').click();const report=p.locator('#panel .rc-report:has(#completion-details)');if(await report.count()&&await report.evaluate(d=>!d.open))await report.locator('>summary').click();}
  await page.goto(url);await ready(page);await tick();
  await finish();assert.equal((await read()).outcome.id,'survived');assert.match(await page.locator('#result').innerText(),/withdraws Joe’s course-control access/);assert.equal(await page.locator('#outcome-records li').count(),0);
  await page.screenshot({path:out+'/survived-2560.png'});
@@ -26,7 +26,7 @@ fs.mkdirSync(out,{recursive:true});
   const after=await read();assert.equal(after.runFacts.elapsed,original.runFacts.elapsed);assert.deepEqual(after.ending,original.ending);assert.equal(after.completed,true);layouts.push({width,height,...geometry});
  }
  checks.push('Survival-only, individual crew and drainage/local-record outcomes; all result/credits/optional-notice layouts at four sizes; no simulation advancement or victory loss');
- await page.setViewportSize({width:1280,height:720});await page.locator('#mastery summary').click();assert.equal(await page.locator('#mastery-list li').count(),3);assert(!await page.locator('#mastery-list').innerText().then(s=>s.includes('Earned')));await page.screenshot({path:out+'/mastery-1280.png'});await page.locator('#mastery summary').click();
+ await page.setViewportSize({width:1280,height:720});assert(await page.locator('#mastery').isHidden(),'Achievements stay hidden until one is earned');await page.screenshot({path:out+'/mastery-1280.png'});
  await page.locator('#show-credits').focus();await page.keyboard.press('Enter');assert.equal((await read()).resultView,'credits');await page.keyboard.press('Tab');await page.keyboard.press('Enter');assert.equal((await read()).resultView,'notice');await page.keyboard.press('Escape');assert.equal((await read()).resultView,'summary');
  await page.evaluate(()=>{window.pad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[pad];});await tick(50);
  const button=async n=>{await page.evaluate(n=>{pad.buttons[n].pressed=true;},n);await tick(17);await page.evaluate(n=>{pad.buttons[n].pressed=false;},n);await tick(17);};

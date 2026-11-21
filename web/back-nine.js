@@ -154,7 +154,9 @@ function paintUI(){
  if(briefKey!==briefSignature){briefSignature=briefKey;paintBackNineBrief(run,inputMethod,guideReview,bindings);setText('comfort-controls',backNineHint(inputMethod,!!run.foot,bindings)+'. The camera follows your heading.');}
  setHidden('story',run.mode==='briefing');setHidden('controls',true);
  if(!ready){setHidden('panel',false);return;}const player=chaseActor(run);
- if(uiMode!==run.mode)needsDraw=true;const driving=['driving','sealing','dying'].includes(run.mode),target=run.checkpoint<2?COURSE.checkpoints[run.checkpoint]:COURSE.finish;
+ // Pausing freezes the run: the last gameplay frame already shows it, so the
+ // pause screen does not redraw the world (a late software frame read as motion).
+ if(uiMode!==run.mode&&!(run.mode==='paused'&&['driving','sealing','dying'].includes(uiMode)))needsDraw=true;const driving=['driving','sealing','dying'].includes(run.mode),target=run.checkpoint<2?COURSE.checkpoints[run.checkpoint]:COURSE.finish;
  setClass(document.documentElement,'touch-mode',coarsePointer.matches);
  setHidden('hud',!driving);setHidden('touch',run.mode!=='driving'||!coarsePointer.matches);setHidden('panel',driving);
  setText('objective',backNineInstruction(objective(run),inputMethod,bindings));setText('distance',`${Math.ceil(distance(player,target))} m · ${run.checkpoint}/2 relays online`);setText('speed',run.foot?'ON FOOT':`${speedMph(player.speed)} mph`);setText('surface',{path:'CART PATH',rough:'ROUGH · JOE HAS THE ADVANTAGE',sand:'BUNKER · SLOW GOING',wet:'WET TURF · EASE THE STEERING'}[player.surface]);setText('integrity-label',run.foot?'CART WRECKED':cartCondition(run.cart.health).label);
@@ -171,8 +173,9 @@ function paintUI(){
  $('dread').style.opacity=driving?String(reduced?((t.intensity||0)>.5?.18:0):(t.intensity||0)*.55):'0';
  const joeDistance=distance(player,run.joe);
  const messages=driving?chaseMessages(run,{routeHints:chaseControls.prefs.routeHints,soundCaptions:settings.soundCaptions,coarse:coarsePointer.matches,method:inputMethod,bindings}):{banner:'',sound:'',dialogue:''};
- const reactionBlocked=!!world?.staffSightingActive?.()||!encounterAllows(run,'dialogue')||!!messages.banner||messages.soundUrgent||struck||joeDistance<18||joeDistance>85||run.grace>0||run.story.near>=0||run.joe.ram.phase!=='none'||['windup','surge'].includes(t.phase);
- const spoken=chatter(run,()=>joeReactions.caption(run)||variedJoeCaption(run,messages.dialogue),{blocked:reactionBlocked,enabled:true,canStart:encounterAllows(run,'dialogue-start')&&dialogueApproachClear(run)}),dialogue=settings.subtitles?spoken:'';
+ const hidingSlot=joeReactions.hidingLine(run)&&['cruise','search'].includes(run.encounter?.owner)&&!['opening','gather'].includes(run.pressure?.phase);
+ const reactionBlocked=!!world?.staffSightingActive?.()||!(encounterAllows(run,'dialogue')||hidingSlot)||!!messages.banner||messages.soundUrgent||struck||joeDistance<18||joeDistance>85||run.grace>0||run.story.near>=0||run.joe.ram.phase!=='none'||['windup','surge'].includes(t.phase);
+ const spoken=chatter(run,()=>joeReactions.caption(run)||(encounterAllows(run,'dialogue-start')?variedJoeCaption(run,messages.dialogue):''),{blocked:reactionBlocked,enabled:true,canStart:(encounterAllows(run,'dialogue-start')||hidingSlot)&&dialogueApproachClear(run)}),dialogue=settings.subtitles?spoken:'';
  if(run.mode==='driving'||run.mode==='sealing'){if(spoken!==voicedCaption){voicedCaption=spoken;if(/^JOE:/.test(spoken))joeVoice.say(spoken);else joeVoice.stop();}}
  else if(voicedCaption){voicedCaption='';joeVoice.stop();}
  setText('caption',messages.banner||dialogue);setText('sound-caption',messages.sound);

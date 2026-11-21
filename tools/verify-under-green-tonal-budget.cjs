@@ -6,10 +6,10 @@ fs.mkdirSync(out,{recursive:true});
  try{
   for(const enabled of [false,true]){
    const p=await b.newPage({viewport:{width:software?960:2560,height:software?600:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));pages.push(p);
-   await p.route('**/under-green-scene.js',r=>{const s=fs.readFileSync('web/under-green-scene.js','utf8'),marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));return r.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__tonalProbe={renderer,scene};'+marker)});});
+   await p.route('**/under-green-scene.js',r=>{const s=fs.readFileSync('web/under-green-scene.js','utf8'),marker=' return {draw,setQuality,';assert(s.includes(marker));return r.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__tonalProbe={renderer,scene};'+marker)});});
    // Compare actual shader variants; zero-strength uniforms would still run
    // the same arithmetic and cannot measure the cost of the added grade.
-   if(!enabled)await p.route('**/under-green-tonal-grade.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-tonal-grade.js','utf8').replace('const strength=.42;','const strength=0;')}));
+   if(!enabled)await p.route('**/under-green-tonal-grade.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-tonal-grade.js','utf8').replace('const strength=.42,','const strength=0,')}));
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   }
   for(const [name,x,y,yaw,pitch]of [['gallery',0,12,0,.05],['pump',-23.4,42,-1,.05]]){

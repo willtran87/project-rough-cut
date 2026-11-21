@@ -35,6 +35,8 @@ const {chromium}=require('playwright');
      await p.screenshot({path:file});views.push({name:tape.name,stage:stage.name,width,height,file,...state});
     }
     if(!baseline){
+     // The result panel waits behind the short ending camera move (transition-hold).
+     await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
      const details=p.locator('#local-playtest');
      if(!await details.evaluate(el=>el.open))await details.locator('summary').click();
      await p.locator('#playtest-kind').selectOption('automated');

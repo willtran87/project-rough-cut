@@ -12,7 +12,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
  await view('siren-approach',{gap:24,rear:true});await view('siren-close',{gap:10,rear:true});
  const reduced=await view('siren-reduced',{gap:18,rear:true,reduced:true});assert(reduced.stats.beacon.intensity>0);assert.equal(reduced.stats.beacon.range,40);
  for(const health of [100,70,50,30,15])await view('cart-'+health,{health,close:true,gap:60});
- const hit=await view('damage-feedback',{health:22,hit:true,gap:12});assert.match(hit.caption,/18 HEALTH/);assert.match(hit.label,/CRITICAL/);assert.equal(hit.stats.cartDamage.stage,'critical');assert.equal(hit.stats.cartDamage.wearLayers,4);
+ const hit=await view('damage-feedback',{health:22,hit:true,gap:12});assert(!/HEALTH/.test(hit.caption),'No HP banner: damage reads from the cart wear and the health meter');assert.match(hit.label,/CRITICAL/);assert.equal(hit.stats.cartDamage.stage,'critical');assert.equal(hit.stats.cartDamage.wearLayers,4);
  const allocations=hit.buffers;await view('repair',{health:100,gap:60});assert.equal(views.at(-1).stats.cartDamage.wearLayers,0);
  for(const[width,height]of[[1280,720],[844,390]]){await p.setViewportSize({width,height});await view('compact-'+width,{health:22,hit:true,gap:12});const overlap=await p.evaluate(()=>{const a=document.querySelector('.dashboard').getBoundingClientRect(),b=document.querySelector('#caption').getBoundingClientRect();return b.bottom>a.top&&b.top<a.bottom;});assert(!overlap,'Caption and health HUD overlap');}
  assert.equal(views.at(-1).buffers,allocations,'No new damage buffers during play');assert(views[0].stats.landscape.lanterns<110);assert.deepEqual(errors,[]);

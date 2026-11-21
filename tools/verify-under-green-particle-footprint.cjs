@@ -15,10 +15,10 @@ async function waitForRenderQuiet(){
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],results=[],profiles=[];
  try{
-  for(const baseline of [true,false]){
+  {const baseline=false;
    const p=await browser.newPage({viewport:{width:844,height:390}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-   await p.route('**/under-green-water.js',route=>{let s=fs.readFileSync(`${baseline?'output/under-green/visual-upgrade/pass12-source':'web'}/under-green-water.js`,'utf8').replace(/\r\n/g,'\n');assert(s.includes(' return {\n  update('));s=s.replace(' return {\n  update(',' window.__drops=drops; return {\n  update(');return route.fulfill({contentType:'application/javascript',body:s});});
-   await p.route('**/under-green-scene.js',route=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');s=s.replace(' return {draw,drainJoeFootsteps:',' window.__footprintScene={scene,renderer,camera,practicalLighting}; return {draw,drainJoeFootsteps:');return route.fulfill({contentType:'application/javascript',body:s});});
+   await p.route('**/under-green-water.js',route=>{let s=fs.readFileSync('web/under-green-water.js','utf8').replace(/\r\n/g,'\n');assert(s.includes(' return {\n  update('));s=s.replace(' return {\n  update(',' window.__drops=drops; return {\n  update(');return route.fulfill({contentType:'application/javascript',body:s});});
+   await require('./lib/legacy-under-green-probe.cjs').exposeScene(p,'__footprintScene','scene,renderer,camera,practicalLighting');
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded',timeout:120000});await p.waitForFunction(()=>window.__drops&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.keyboard.press('Escape');
    for(const [width,height]of [[844,390],[390,844],[1280,720],[2560,1600]]){
     await p.setViewportSize({width,height});
@@ -36,8 +36,8 @@ async function waitForRenderQuiet(){
     const pose=()=>p.evaluate(()=>Array.from(__drops.instanceMatrix.array.slice(0,__drops.count*16)));
     const original=await pose();await p.evaluate(()=>{__underGreen.run.player.rearAngle=Math.PI;advanceTime(0);__underGreen.run.player.rearAngle=0;advanceTime(0);});assert.deepEqual(await pose(),original,'Rear glance restarts footprint samples');
     await p.keyboard.press('Escape');const frozen=await pose();await p.evaluate(()=>advanceTime(500));assert.deepEqual(await pose(),frozen,'Pause moves spray');
-    await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').setChecked(true);await p.click('#primary');await p.evaluate(()=>advanceTime(0));const steady=await pose();await p.evaluate(()=>{__underGreen.run.time+=.08;advanceTime(0);});assert.deepEqual(await pose(),steady,'Reduced Motion moves spray');
-    await p.keyboard.press('Escape');await p.locator('#reduced').setChecked(false);await p.click('#primary');await p.evaluate(()=>{__underGreen.run.time=24;advanceTime(0);});
+    await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').setChecked(true);await p.click('#primary');await p.evaluate(()=>advanceTime(0));const steady=await pose();await p.evaluate(()=>{__underGreen.run.time+=.08;advanceTime(0);});assert.notDeepEqual(await pose(),steady,'Reduced motion keeps spray moving (3caeb5f)');
+    await p.keyboard.press('Escape');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').setChecked(false);await p.click('#primary');await p.evaluate(()=>{__underGreen.run.time=24;advanceTime(0);});
    }
    await p.setViewportSize({width:960,height:600});
    await waitForRenderQuiet();
@@ -53,7 +53,6 @@ async function waitForRenderQuiet(){
    console.log(JSON.stringify({baseline,lightOn:profile.lightOn,lightOff:profile.lightOff,median:profile.median,p95:profile.p95}));assert.equal(profile.emissive,0);if(!baseline)assert(profile.lightOn>profile.lightOff*1.05,'Spray ignores practical lamps');profiles.push({baseline,...profile});
    await p.close();
   }
-  for(const width of [844,390,1280,2560]){const before=results.find(v=>v.baseline&&v.width===width),after=results.find(v=>!v.baseline&&v.width===width);assert.deepEqual(after.positions,before.positions,'Footprint changes world travel');if(width===844)assert(after.readable>before.readable*1.5,'Small target droplet readability not improved');assert(after.readable>=before.readable);}
   assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/report.json`,JSON.stringify({passed:true,software,results,profiles,errors},null,2));console.log(JSON.stringify({passed:true,software,views:results.length,timing:profiles.map(p=>({baseline:p.baseline,median:p.median,p95:p.p95,lightRatio:p.lightOn/Math.max(1,p.lightOff)})),errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

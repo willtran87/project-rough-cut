@@ -103,7 +103,10 @@
   const native=panel.querySelector('.rc-brief-native'),notes=panel.querySelector('.rc-brief-notes');
   // The folded guide follows the headline, rather than preceding it.
   if(notes&&native)native.append(notes);
-  panel.querySelector('#review-guide')?.addEventListener('click',()=>queueMicrotask(()=>{notes.open=panel.querySelector('#review-guide').getAttribute('aria-expanded')==='true';if(notes.open)notes.scrollIntoView({block:'nearest'});}));
+  // Follow the button's state, not the click: chapters update aria-expanded on
+  // their next render, after any microtask queued by the click has run.
+  const reviewGuide=panel.querySelector('#review-guide');
+  if(reviewGuide&&notes)new MutationObserver(()=>{const open=reviewGuide.getAttribute('aria-expanded')==='true';if(notes.open!==open){notes.open=open;if(open)notes.scrollIntoView({block:'nearest'});}}).observe(reviewGuide,{attributes:true,attributeFilter:['aria-expanded']});
   for(const nav of panel.querySelectorAll('.chapters'))for(const link of nav.children){
    if(link.textContent.includes('Back Nine'))link.textContent='02 · The Back Nine · Shed route';
    if(link.textContent.includes('Under the Green'))link.textContent='02 · Under the Green · Drain route';

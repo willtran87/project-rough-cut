@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const out='output/under-green/lesson';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}await p.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});
   p.on('pageerror',e=>errors.push(e.message));
   const cdp=await p.context().newCDPSession(p);
   const ready=()=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
@@ -15,10 +15,10 @@ const {chromium}=require('playwright');
   assert.equal(await p.locator('#water-read').getAttribute('data-lesson'),'true');
   await p.keyboard.down('w');await tick(1600);await p.keyboard.up('w');
   let s=await read();assert(s.lessonCrossed);assert.equal(s.waterHits,0);assert.equal(s.checkpoint,0);assert.equal(s.joe.phase,'absent');
-  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));assert(saved.lessonCrossed);assert.equal(saved.checkpoint,0);
+  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));/* no checkpoints: attempt progress is not saved (981accb / restart check) */assert(!saved.lessonCrossed);assert(!('checkpoint' in saved));
   const after=await p.evaluate(()=>{__underGreen.run.player.yaw=Math.PI;advanceTime(0);return structuredClone(__underGreen.run);});
   assert.equal(await p.locator('#water-read').getAttribute('data-lesson'),'false');assert(await p.locator('#water-phase').isVisible());
-  checks.push('Ordinary W movement clears the first crossing without waiting or a water hit; coaching retires and saves before checkpoint 1');
+  checks.push('Ordinary W movement clears the first crossing without waiting or a water hit; coaching retires for this attempt');
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});
    for(const [name,r]of [['before',before],['after',after]]){
@@ -34,16 +34,17 @@ const {chromium}=require('playwright');
    }
   }
   checks.push('Before/after layouts preserve essential phase signals at four sizes, including touch-control composition');
-  await p.setViewportSize({width:1280,height:720});await p.reload();await ready();await tick(0);s=await read();assert(s.lessonCrossed);assert.equal(s.checkpoint,0);assert.equal(s.message,'');
-  await p.click('#primary');await p.keyboard.down('w');await tick(3800);await p.keyboard.up('w');assert.equal(await p.locator('#water-read').getAttribute('data-lesson'),'false');
+  await p.setViewportSize({width:1280,height:720});await p.reload();await ready();await tick(0);s=await read();assert(!s.lessonCrossed);assert.equal(s.checkpoint,0);/* a fresh attempt shows the first-crossing coaching again */assert.match(s.message,/Cross on the chevron/);
+  await p.click('#primary');await p.keyboard.down('w');await tick(3800);await p.keyboard.up('w');assert.equal(await p.locator('#water-read').getAttribute('data-lesson'),'true');
   // Terminal fixtures exercise UI transitions; actual capture geometry has its own regression.
-  await p.evaluate(()=>{Object.assign(__underGreen.run,{mode:'caught',bypass:true,evidence:true});advanceTime(0);});await p.click('#primary');await tick(0);
-  s=await read();assert(s.lessonCrossed&&s.bypass&&s.evidence);assert.equal(s.message,'');
-  await p.keyboard.press('Escape');await p.click('#restart');await tick(0);s=await read();assert(s.lessonCrossed&&s.evidence);assert(!s.bypass);assert.equal(s.message,'');
-  await p.evaluate(()=>{Object.assign(__underGreen.run,{mode:'complete',finished:true,bypass:true});advanceTime(0);});await p.click('#primary');await tick(0);s=await read();assert(s.lessonCrossed);assert(!s.bypass);assert.equal(s.mode,'under_green_playing');
-  checks.push('Reload and retry retain learned crossing; explicit restart and completion replay reset world progress while retaining coaching history');
+  await p.evaluate(()=>{Object.assign(__underGreen.run,{mode:'caught',bypass:true,evidence:true});advanceTime(0);});
+  await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});await p.click('#primary');await tick(0);
+  s=await read();assert(!s.lessonCrossed&&!s.bypass&&!s.evidence);assert.match(s.message,/Cross on the chevron/);
+  await p.keyboard.press('Escape');await p.click('#restart');await tick(0);s=await read();assert(!s.lessonCrossed&&!s.evidence&&!s.bypass);assert.match(s.message,/Cross on the chevron/);
+  /* the completion panel offers only the onward link; replay is a reload (restart check) */await p.evaluate(()=>{Object.assign(__underGreen.run,{mode:'complete',finished:true,bypass:true});advanceTime(0);});assert(await p.locator('#primary').isHidden());
+  checks.push('Reload, retry and restart start fresh with the first-crossing coaching back; completion offers no in-place replay');
   await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const {WATERS}=await import('./under-green-course.js');const w=WATERS.find(w=>w.lesson),r=createRun();r.mode='playing';r.time=(6.4-w.offset+12)%12;r.player.y=w.y-w.depth/2-.6;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
-  await p.keyboard.down('w');for(let i=0;i<30;i++){await tick(1000/60);s=await read();if(s.player.recovery)break;}await p.keyboard.up('w');assert(s.player.recovery);assert.equal(s.waterHits,1);assert(!s.lessonCrossed);assert.equal(s.joe.phase,'absent');assert.match(await p.locator('#caption').innerText(),/Wait for a full crossing window/);assert(!/Joe/.test(await p.locator('#caption').innerText()));
+  await p.keyboard.down('w');for(let i=0;i<30;i++){await tick(1000/60);s=await read();if(s.player.recovery)break;}await p.keyboard.up('w');assert(s.player.recovery);assert.equal(s.waterHits,1);assert(!s.lessonCrossed);assert.equal(s.joe.phase,'absent');/* advice is reported as the run message; the banner no longer narrates */assert.match(s.message,/Reach the striped bank, then try a green opening/);assert(!/Joe/.test(s.message));
   checks.push('Protected missed crossing shows recovery advice without inventing an active Joe or retiring the lesson');
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,views,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}

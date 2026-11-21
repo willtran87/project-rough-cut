@@ -22,7 +22,7 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
   async function show(selector){const name=await p.locator(selector).evaluate(e=>e.closest('[data-theme-category]')?.dataset.themeCategory);if(name)await p.locator('#comfort nav button',{hasText:name}).click();}
   async function set(id,value){await settings();await show('#'+id);const input=p.locator('#'+id);if(typeof value==='boolean')await input.setChecked(value);else await input.fill(String(value));await tick(0);}
   async function reset(){
-   await p.evaluate(async()=>{navigator.getGamepads=()=>[];__underGreen.clearInput();const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';});await tick(0);
+   await p.evaluate(async()=>{navigator.getGamepads=()=>[];__underGreen.clearInput();const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';document.activeElement?.blur?.();document.getElementById('game')?.focus();});await tick(0);/* a settings control left focused swallows movement keys */
   }
   const near=(a,b,tolerance=.00001)=>assert(Math.abs(a-b)<tolerance,`${a} != ${b}`);
   await visit();await settings();await show('#sensitivity');
@@ -75,8 +75,8 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
   await set('movement-ramp',true);await reset();await p.keyboard.down('w');await tick(16);const ramp=(await read()).player;assert(ramp.y>5&&ramp.y<5+3.84*.017);
   await p.keyboard.up('w');await tick(200);near((await read()).player.y,ramp.y);
   await set('movement-ramp',false);await set('camera-bob',.5);await reset();await p.keyboard.down('w');await tick(500);await p.keyboard.up('w');let state=await read();assert(Math.abs(state.graphics.camera.height-state.player.eyeHeight)>.001);
-  await set('reduced',true);await p.click('#primary');await p.keyboard.down('w');await tick(500);await p.keyboard.up('w');state=await read();near(state.graphics.camera.height,state.player.eyeHeight);
-  checks.push('Keyboard and controller crouch/sprint toggles change actual speed; pause clears sprint latch; optional ramp stops immediately; reduced motion suppresses actual camera bob');
+  /* Reduced motion no longer turns the walk bob off; only Movement bob does (3caeb5f). */await set('reduced',true);await p.click('#primary');await p.keyboard.down('w');await tick(500);await p.keyboard.up('w');state=await read();assert(Math.abs(state.graphics.camera.height-state.player.eyeHeight)>.001);await set('camera-bob',0);await reset();await p.keyboard.down('w');await tick(500);await p.keyboard.up('w');state=await read();near(state.graphics.camera.height,state.player.eyeHeight);await set('camera-bob',.5);
+  checks.push('Keyboard and controller crouch/sprint toggles change actual speed; pause clears sprint latch; optional ramp stops immediately; Movement bob (not Reduced motion) controls the actual camera bob');
 
   // Exercise saved values through the Level 1 adapter and back into this chapter.
   await p.goto('http://127.0.0.1:4187/');await p.waitForFunction(()=>window.RCSpatialControls);

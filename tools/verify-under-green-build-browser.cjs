@@ -9,15 +9,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   const read=()=>page.evaluate(()=>JSON.parse(render_game_to_text()));
   const tick=ms=>page.evaluate(ms=>advanceTime(ms),ms);
   await page.goto('http://127.0.0.1:4187/under-green.html?test');await ready();
-  await page.evaluate(()=>{localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{interact:'KeyT',look_back:'KeyY'},volume:.23,reducedMotion:true,extension:'keep'}));localStorage.setItem('rough-cut.under-green-comfort.v1',JSON.stringify({reduced:false}));localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({version:1,checkpoint:2}));});
+  await page.evaluate(()=>{localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{interact:'KeyT',look_back:'KeyY'},volume:.23,reducedMotion:true,extension:'keep'}));localStorage.setItem('rough-cut.under-green-comfort.v1',JSON.stringify({reduced:false,crossingAssist:true}));localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({version:1,checkpoint:2}));});
   await page.reload();await ready();await tick(0);assert((await read()).comfort.reduced);await page.click('#primary');
   async function place(v){await page.evaluate(async v=>{const {createRun}=await import('./under-green-sim.js');const r=createRun(v.cp||1);r.mode='playing';Object.assign(r,v.run);Object.assign(r.player,{yaw:0},v.player);Object.assign(r.joe,v.joe||{phase:'absent'});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},v);}
   const {LEVER,SLUICE}=await page.evaluate(async()=>{const c=await import('./under-green-course.js');return {LEVER:c.LEVER,SLUICE:c.SLUICE};});
   await place({player:{x:LEVER.x-1.7,y:LEVER.y,yaw:Math.PI/2}});assert.match(await page.locator('#use').textContent(),/^T ·/);assert.match(await page.locator('#hint').textContent(),/Y rear/);
   await page.keyboard.press('e');await tick(17);assert(!(await read()).bypass);
-  await page.keyboard.press('t');await tick(17);assert((await read()).bypass);assert.equal((await read()).checkpoint,2);
-  await page.reload();await ready();await tick(0);assert((await read()).bypass);assert.equal((await read()).checkpoint,2);
-  checks.push('Actual remapped T action and Y prompt; pump interaction records checkpoint 2 immediately');
+  await page.keyboard.press('t');await tick(17);assert((await read()).bypass);/* Standard difficulty keeps no checkpoints (981accb): the fixture's checkpoint is unchanged and reload starts fresh. */assert.equal((await read()).checkpoint,1);
+  await page.reload();await ready();await tick(0);assert(!(await read()).bypass);assert.equal((await read()).checkpoint,0);
+  checks.push('Actual remapped T action and Y prompt; pump interaction opens the bypass without awarding a checkpoint');
   await place({run:{time:40,bypass:true,bypassAt:39},player:{x:-20,y:54,yaw:Math.PI}});
   assert.match(await page.locator('#water-phase').textContent(),/1\.0s TO SURGE/);await page.screenshot({path:out+'/truthful-warning-2560.png'});
   await place({run:{time:9},player:{x:0,y:48}});assert.match(await page.locator('#water-phase').textContent(),/^WAIT/);await page.screenshot({path:out+'/approach-advice-2560.png'});
@@ -27,7 +27,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await page.keyboard.press('Escape');await page.locator('#comfort').evaluate(e=>e.open=true);
   assert.equal(await page.locator('#master-volume').inputValue(),'0.23');
   await page.locator('#master-volume').evaluate(e=>{e.value='.31';e.dispatchEvent(new Event('input'));});
-  await page.uncheck('#reduced');
+  await page.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await page.uncheck('#reduced');
   const pref=await page.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.settings.v1')));assert.equal(pref.volume,.31);assert.equal(pref.reducedMotion,false);assert.equal(pref.extension,'keep');assert.equal(pref.keyboardBindings.interact,'KeyT');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.back-nine.v1')).checkpoint),2);
   for(const [width,height]of [[1280,720],[844,390],[390,844]]){await page.setViewportSize({width,height});await place({run:{time:9},player:{x:0,y:58}});await page.screenshot({path:`${out}/advice-${width}.png`});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}

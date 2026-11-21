@@ -95,7 +95,7 @@ const tactics=process.argv.includes('--balls'),crossings=process.argv.includes('
     }await page.setViewportSize({width:2560,height:1600});
    }
    await go(-5,82);await go(-8,85);
-  }else{await go(-8,85);await go(-9.1,85);await use(-9.6,85,'bell');}
+  }else{await go(-6,81.7);await use(-6,80.4,'bell');await go(-8,85);} // the bell moved onto the open bank in a501e79
   await go(-16,86);await face(Math.atan2(24,-12));await shot(`${route}-lure`);
   for(let k=0;k<100&&!(await read()).won;k++)await tick(1500);state=await read();assert(state.won&&state.mode==='final_cut_aftermath');
   // Same input path in the safe coda. Only the assertion changes after victory.
@@ -112,7 +112,7 @@ const tactics=process.argv.includes('--balls'),crossings=process.argv.includes('
  if(replaySeed!==null){assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,runs,openingWaits,shots,errors},null,2));console.log(JSON.stringify({passed:true,checks,runs,openingWaits,shots:shots.length,errors}));return;}
  // Separate explicit fixtures inspect the existing single actor during its
  // relocation and climb, including the frame before/after reparenting.
- const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));await p.goto(base);await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));await p.goto(base);await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
  const poses=await p.evaluate(async()=>{const {BOARD_WALK,BOARD_TURN,BOARD_CLIMB,BOARD_READY}=await import('./final-cut-arrival.js'),start=BOARD_WALK+BOARD_TURN;return [['bay',0],['walk',BOARD_WALK/2],['board-low',start+BOARD_CLIMB*.3],['board-high',start+BOARD_CLIMB*.7],['seated',BOARD_READY]];});
  const samples=[];for(const [name,age]of poses){
   const state=await p.evaluate(async age=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({arrival:{age,reached:true}});r.mode='playing';Object.assign(r.player,{x:24,y:18,yaw:Math.atan2(r.arrival.joe.x-24,r.arrival.joe.y-18),pitch:-.05});__finalCut.run=r;await advanceTime(0);return JSON.parse(render_game_to_text());},age);assert.equal(state.graphics.joe.actors,1);assert.equal(state.graphics.joe.parent,name==='seated'?'rig':'world');assert(state.graphics.joe.handError<.05);samples.push({name,age,joe:state.graphics.joe});await p.screenshot({path:`${out}/joe-${name}.png`});shots.push('joe-'+name);

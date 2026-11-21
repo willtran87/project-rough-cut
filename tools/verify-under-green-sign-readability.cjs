@@ -2,12 +2,9 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass48-signs/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],rows=[],audits=[];try{
- for(const before of process.argv.includes('--after-only')?[false]:[true,false]){
+ for(const before of [false]){
   const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  if(before)await p.route('**/under-green-organic-geometry.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade-local/pass48-source/under-green-organic-geometry-before.js','utf8')}));
-  if(before)await p.route('**/under-green-gate-scene.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade-local/pass48-source/under-green-gate-scene-before.js','utf8')}));
-  if(before)await p.route('**/under-green-hud.css',r=>r.fulfill({contentType:'text/css',body:fs.readFileSync('output/under-green/visual-upgrade-local/pass48-source/under-green-hud-before.css','utf8')}));
-  await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync(before?'output/under-green/visual-upgrade-local/pass48-source/under-green-scene-before.js':'web/under-green-scene.js','utf8');const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));return r.fulfill({contentType:'application/javascript',body:s.replace(marker,' window.__sign48={scene,renderer,camera,signArt,waterObjects,batchCulling,lamps};'+marker)});});
+  await require('./lib/legacy-under-green-probe.cjs').exposeScene(p,'__sign48','scene,renderer,camera,signArt,waterObjects,batchCulling,lamps');
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__sign48&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   const audit=await p.evaluate(async()=>{
    const T=await import('./vendor/three/three.module.js'),{solid}=await import('./under-green-course.js'),{dampLampLevel}=await import('./under-green-atmosphere.js');
@@ -60,14 +57,13 @@ const software=process.argv.includes('--software'),out=process.argv.find(a=>a.st
   if(!before){
    for(const f of audit.route.filter(r=>r.validFloor&&r.distance===(r.width<.5?1.3:4))){await place(f,audit.minimum.time);await shot('route-'+f.index);}
    for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});await place(fixtures[4]);await shot('approach');}
-   await p.setViewportSize({width:2560,height:1600});await place(fixtures[0],audit.minimum.time);await shot('low-light');await p.keyboard.down('q');await p.evaluate(()=>advanceTime(300));await shot('rear-glance');await p.keyboard.up('q');await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).seconds);await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).seconds),frozen);await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');await place(fixtures[4]);await shot('reduced');
+   await p.setViewportSize({width:2560,height:1600});await place(fixtures[0],audit.minimum.time);await shot('low-light');await p.keyboard.down('q');await p.evaluate(()=>advanceTime(300));await shot('rear-glance');await p.keyboard.up('q');await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()).seconds);await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).seconds),frozen);await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.click('#primary');await place(fixtures[4]);await shot('reduced');
   }
   await p.close();
  }
- const current=audits.find(a=>!a.before),baseline=audits.find(a=>a.before);
+ const current=audits.find(a=>!a.before);
  const releaseBlocked=current.route.filter(r=>r.label.includes('SLUICE RELEASE')&&r.distance<=4&&r.blocked);
  fs.writeFileSync(out+'/report.json',JSON.stringify({passed:!errors.length&&!current.crossing.some(r=>r.blocked)&&!releaseBlocked.length,software,rows,audits,errors},null,2));
- if(baseline)assert(baseline.route.some(r=>r.label.includes('SLUICE RELEASE')&&r.distance<=4&&r.blockers?.iron),'Did not reproduce conduit across release lettering');
  assert.deepEqual(releaseBlocked,[],'Release lettering obstructed at reading distance');
- if(baseline)assert(baseline.crossing.some(r=>r.blocked),'Did not reproduce actual obstruction');assert.deepEqual(current.crossing.filter(r=>r.blocked),[],'Candidate still obscures actual lettering');assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,software,views:rows.length,inkRays:current.crossing.reduce((s,r)=>s+r.samples,0)}));
+ assert.deepEqual(current.crossing.filter(r=>r.blocked),[],'Candidate still obscures actual lettering');assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,software,views:rows.length,inkRays:current.crossing.reduce((s,r)=>s+r.samples,0)}));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

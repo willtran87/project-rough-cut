@@ -13,7 +13,7 @@ const {chromium}=require('playwright');
   await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__focusTest={state};\n  window.advanceTime = (milliseconds) => {')}));
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
   await p.goto('http://127.0.0.1:4187/index.html');await p.waitForFunction(()=>window.__focusTest&&window.roughCutRebuild,null,{timeout:90000});
-  await p.keyboard.press('Enter');await p.keyboard.press('Space');await p.waitForFunction(()=>JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
+  await p.keyboard.press('Enter');await p.keyboard.press('Space');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).assets.course.ready,null,{timeout:90000});
   await p.evaluate(()=>{__focusTest.state.manualTime=true;roughCutRebuild.startLab('calibration');__focusTest.state.hole.rebuild.lab=null;advanceTime(0);});
   await p.waitForFunction(()=>RCScene3D.stats().ready,null,{timeout:90000});
   const l1before=await p.evaluate(()=>({...__focusTest.state.player}));

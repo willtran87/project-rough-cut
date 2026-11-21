@@ -50,12 +50,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   await p.keyboard.down('c');await p.evaluate(()=>advanceTime(250));assert((await read()).player.eyeHeight<1.3);await capture('crouch',1280,720);await p.keyboard.up('c');
   await p.keyboard.down('q');await p.evaluate(()=>advanceTime(250));assert((await read()).player.rearAmount>.8);await capture('rear',1280,720);await p.keyboard.up('q');
   await p.keyboard.press('Escape');const before=await read();await p.evaluate(()=>advanceTime(1000));assert.equal((await read()).elapsed,before.elapsed);assert.deepEqual((await read()).graphics.atmosphere.lightLevels,before.graphics.atmosphere.lightLevels);
-  await p.locator('#comfort').evaluate(e=>{e.open=true;});
+  // Settings are tabbed and cover the pause actions while open (game-theme.js).
+  const settings=async(name,open=true)=>{await p.locator('#comfort').evaluate((e,open)=>{e.open=open;},open);if(open)await p.locator('#comfort .rc-settings-tabs button',{hasText:name}).click();};
   for(const [key,fov]of [['Home',45],['End',85]]){
-   await p.locator('#field-of-view').focus();await p.keyboard.press(key);await p.click('#primary');await fixture(positions[0]);
+   await settings('Controls');await p.locator('#field-of-view').focus();await p.keyboard.press(key);await settings('',false);await p.click('#primary');await fixture(positions[0]);
    assert.equal((await read()).graphics.camera.fov,fov);await capture('fov-'+fov,1280,720);await p.keyboard.press('Escape');
   }
-  await p.locator('#reduced').setChecked(true);await p.click('#primary');await fixture(positions[0]);const steady=await read();await p.evaluate(()=>advanceTime(700));
+  await settings('Camera');await p.locator('#reduced').setChecked(true);await settings('',false);await p.click('#primary');await fixture(positions[0]);const steady=await read();await p.evaluate(()=>advanceTime(700));
   assert(steady.comfort.reduced);assert.deepEqual((await read()).graphics.atmosphere.lightLevels,steady.graphics.atmosphere.lightLevels);assert(steady.graphics.atmosphere.lightLevels.every(x=>x===.72));
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,views,overhead,errors},null,2));console.log(JSON.stringify({passed:true,views:views.length,roofSamples:overhead.roof.length,resolution:views[0].state.graphics.resolution,draws:views.slice(0,12).map(v=>[v.name,v.state.graphics.draws,v.state.graphics.triangles]),errors}));
  }finally{await browser.close();}

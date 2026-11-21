@@ -23,7 +23,9 @@ const {chromium}=require('playwright');
      advanceTime(0);const a=JSON.parse(render_game_to_text()).graphics.actor;
      const feet=a.footPositions.map(([x,height,z])=>({x:j.x+Math.cos(j.yaw)*x-Math.sin(j.yaw)*z,y:j.y-Math.sin(j.yaw)*x-Math.cos(j.yaw)*z,height}));
      advanceTime(0);const duplicate=JSON.parse(render_game_to_text()).graphics.actor;
-     const footing=frame%6===0?__underGreen.inspectJoeFooting():null;rows.push({kind:kind+'-'+fps,frame,time,footing,feet,footError:a.footError,contacts:a.footContacts,handError:a.handError,difference:Object.fromEntries(Object.keys(a).filter(k=>JSON.stringify(a[k])!==JSON.stringify(duplicate[k])).map(k=>[k,{before:a[k],after:duplicate[k]}])),duplicate:JSON.stringify(a)===JSON.stringify(duplicate)});
+     // Matrix recomposition may differ in the last float bits (~1e-16 m); a real pose change is far larger.
+     const same=(x,y)=>typeof x==='number'&&typeof y==='number'?Math.abs(x-y)<=1e-9:x&&y&&typeof x==='object'&&typeof y==='object'?Object.keys(x).length===Object.keys(y).length&&Object.keys(x).every(k=>same(x[k],y[k])):x===y;
+     const footing=frame%6===0?__underGreen.inspectJoeFooting():null;rows.push({kind:kind+'-'+fps,frame,time,footing,feet,footError:a.footError,contacts:a.footContacts,handError:a.handError,difference:Object.fromEntries(Object.keys(a).filter(k=>!same(a[k],duplicate[k])).map(k=>[k,{before:a[k],after:duplicate[k]}])),duplicate:same(a,duplicate)});
     }
    }return rows;
   });

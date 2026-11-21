@@ -4,7 +4,7 @@ import {joeCouldBeSeen} from './under-green-unseen.js';
 // Authored open floor receivers, clear of the root pillar, consoles, channels
 // and buttresses. Their edges fade inside the enclosing masonry footprint.
 export const JOE_SHADOW_BAYS=Object.freeze([
- {id:'entrance',lamp:{x:-2.6,y:8},receiver:{minX:-4.55,maxX:4.55,minY:1.1,maxY:13.4},centre:{x:0,y:8},extent:{x:2,y:3.2}},
+ {id:'entrance',lamp:{x:-3.9,y:15.5},receiver:{minX:-4.55,maxX:4.55,minY:1.1,maxY:13.4},centre:{x:0,y:8},extent:{x:2,y:3.2}},
  {id:'spillway-landing',lamp:{x:2.6,y:56},receiver:{minX:-4.55,maxX:4.55,minY:53.35,maxY:59.65},centre:{x:0,y:56.8},extent:{x:2,y:2.5}},
  {id:'bunker-bank',lamp:{x:-22.6,y:54},receiver:{minX:-23.55,maxX:-15.45,minY:50.85,maxY:55.05},centre:{x:-21.1,y:53.6},extent:{x:1.4,y:1.2}},
 ]);

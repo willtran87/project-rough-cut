@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const out='output/under-green/pump-staging',errors=[],checks=[];fs.mkdirSync(out,{recursive:true});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}await p.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});p.on('pageerror',e=>errors.push(e.message));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
   async function fixture(){return p.evaluate(async()=>{
@@ -32,9 +32,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   checks.push('Marked operator position has unobstructed rendered-geometry sightlines to the onward and return outlets, with distinct freely chosen views at four sizes');
   checks.push('Real Use changes physical water, live gauges, rotating handle and latch; free camera remains unchanged throughout activation');
   await fixture();await p.keyboard.press('e');await tick(200);const mid=await read();await p.keyboard.press('Escape');await tick(2000);assert.deepEqual((await read()).graphics.pump,mid.graphics.pump);await p.click('#primary');await tick(2000);
-  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));assert(saved.bypass);await p.reload();await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);
-  const restored=await read();assert(restored.bypass&&restored.graphics.pump.latched);assert.equal(restored.audio.counts.pipeKnocks,0);assert.equal(restored.graphics.pump.gauges.find(g=>g.id==='return').level,1);
-  checks.push('Pause freezes the mechanism; reload preserves the operated state without replaying the pressure sequence');
+  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));/* no checkpoints: the pump is not saved and reload starts fresh (981accb / restart check) */assert(!saved.bypass);await p.reload();await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);
+  const restored=await read();assert(!restored.bypass&&!restored.graphics.pump.latched);assert.equal(restored.audio.counts.pipeKnocks,0);assert.equal(restored.graphics.pump.gauges.find(g=>g.id==='return').level,.02);
+  checks.push('Pause freezes the mechanism; reload starts fresh with the pump unoperated and no pressure sequence');
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,views,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

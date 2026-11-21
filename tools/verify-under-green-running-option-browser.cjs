@@ -1,15 +1,16 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
+const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/running-option';fs.mkdirSync(out,{recursive:true});const results=[],errors=[];
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
   for(const [width,height,device]of [[2560,1600,'keyboard'],[1280,720,'gamepad'],[844,390,'touch'],[390,844,'touch']]){
-   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}p.on('pageerror',e=>errors.push(e.message));
+   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}await context.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});p.on('pageerror',e=>errors.push(e.message));
    await p.addInitScript(()=>{localStorage.setItem('rough-cut.settings.v1',JSON.stringify({keyboardBindings:{sprint:'KeyT'},keyboardBindingsVersion:2}));});
    if(device==='gamepad')await p.addInitScript(()=>{window.runPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[runPad];});
    const tick=frames=>p.evaluate(n=>advanceTime(n*(1000/60)-1e-6),frames),cdp=device==='touch'?await context.newCDPSession(p):null;
-   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.locator('#primary').click();await tick(1);
+   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await closeSettings(p);await p.locator('#primary').click();await tick(1);
    async function seed(){
     return p.evaluate(async()=>{
      const {createRun,MOVEMENT}=await import('./under-green-sim.js'),{WATERS,waterState,waterPoint}=await import('./under-green-course.js'),{crossingAdvice}=await import('./under-green-guidance.js');
@@ -19,7 +20,7 @@ const {chromium}=require('playwright');
     });
    }
    for(const toggle of [false,true]){
-    await p.keyboard.press('Escape');await p.locator('#comfort summary').evaluate(e=>{e.parentElement.open=true;});await p.locator(device==='touch'?'#touch-run-toggle':'#sprint-toggle').setChecked(toggle);await p.locator('#movement-ramp').setChecked(toggle);await p.locator('#primary').click();await tick(1);
+    await p.keyboard.press('Escape');await p.locator('#comfort>summary').evaluate(e=>{e.parentElement.open=true;});await reveal(p,device==='touch'?'#touch-run-toggle':'#sprint-toggle');await p.locator(device==='touch'?'#touch-run-toggle':'#sprint-toggle').setChecked(toggle);await reveal(p,'#movement-ramp');await p.locator('#movement-ramp').setChecked(toggle);await closeSettings(p);await p.locator('#primary').click();await tick(1);
     // The UI follows the last device actually used. Establish that device with
     // a real input after the keyboard-operated settings boundary, then seed.
     if(device==='gamepad'){await p.evaluate(()=>runPad.axes[0]=.5);await tick(1);await p.evaluate(()=>runPad.axes[0]=0);await tick(1);}
@@ -29,8 +30,8 @@ const {chromium}=require('playwright');
     const row=await p.locator('#water-read').boundingBox();assert(row.x>=0&&row.y>=0&&row.x+row.width<=width&&row.y+row.height<=height);
     await p.evaluate(()=>__underGreen.whenPresented());await p.screenshot({path:`${out}/option-${device}-${width}-${toggle?'toggle':'hold'}.png`});
     if(device==='keyboard'&&!toggle){
-     await p.keyboard.press('Escape');const before=await p.evaluate(()=>JSON.stringify(__underGreen.run));await tick(60);assert.equal(await p.evaluate(()=>JSON.stringify(__underGreen.run)),before);await p.locator('#primary').click();
-     for(const key of ['c','q']){await seed();await p.keyboard.down(key);await tick(1);assert.equal(await p.locator('#water-read').getAttribute('data-run-option'),'false');await p.keyboard.up(key);}
+     await p.keyboard.press('Escape');const before=await p.evaluate(()=>JSON.stringify(__underGreen.run));await tick(60);assert.equal(await p.evaluate(()=>JSON.stringify(__underGreen.run)),before);await closeSettings(p);await p.locator('#primary').click();
+     for(const key of ['c','r'])/* R is Listen since the focus/rear swap */{await seed();await p.keyboard.down(key);await tick(1);assert.equal(await p.locator('#water-read').getAttribute('data-run-option'),'false');await p.keyboard.up(key);}
      await seed();await tick(90);assert.equal(await p.locator('#water-read').getAttribute('data-run-option'),'false');await seed();
     }
     await tick(15); // Use the same reaction delay as the simulation proof.

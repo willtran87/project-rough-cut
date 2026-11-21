@@ -1,4 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
+const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const {chromium}=require('playwright');
 const out='output/under-green/service-grate',routes=JSON.parse(fs.readFileSync(`${out}/routes.json`));
 (async()=>{
@@ -6,8 +7,8 @@ const out='output/under-green/service-grate',routes=JSON.parse(fs.readFileSync(`
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],results=viewsOnly?JSON.parse(fs.readFileSync(`${out}/browser.json`)).results:[],views=[];
  try{
   const p=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
-  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
-  await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=soundCaptions]').check();await p.click('#primary');
+  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await closeSettings(p);await p.click('#primary');
+  await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();await reveal(p,'[data-campaign=soundCaptions]');await p.locator('[data-campaign=soundCaptions]').check();await closeSettings(p);await p.click('#primary');
   for(const route of viewsOnly?[]:routes){
    await p.evaluate(state=>{__underGreen.run=structuredClone(state);__underGreen.clearInput();advanceTime(0);},route.frames[0]);
    const rows=[];
@@ -17,13 +18,13 @@ const out='output/under-green/service-grate',routes=JSON.parse(fs.readFileSync(`
     },route.frames.slice(index,index+60));rows.push(...chunk);fs.writeFileSync(`${out}/browser-partial.json`,JSON.stringify({route:route.name,frames:rows.length,last:rows.at(-1),errors},null,2));
    }
    const cues=rows.filter(r=>/Boots ring/.test(r.caption)),metal=rows.filter((r,i)=>r.foot?.surface==='metal'&&(i===0||r.foot.serial!==rows[i-1].foot?.serial));
-   assert(cues.length>0,`${route.name}: no natural-route cue`);assert(metal.length>0);assert(rows.every(r=>r.voices===16));
+   assert(cues.length>0,`${route.name}: no natural-route cue`);assert(metal.length>0);assert(rows.every(r=>r.voices===22));
    assert(rows.every(r=>!r.geometry?.hits.length));results.push({name:route.name,metal,cues,rows});
   }
   const cueTime=results[0].cues[0].time,frameIndex=routes[0].frames.findIndex(r=>r.time>=cueTime),nearby=routes[0].frames.slice(Math.max(0,frameIndex-25),frameIndex+1);
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await p.evaluate(state=>{__underGreen.run=structuredClone(state);advanceTime(0);},nearby[0]);
-   await p.keyboard.press('Escape');if(!await p.locator('#comfort').evaluate(e=>e.open))await p.locator('#comfort summary').click();await p.locator('[data-campaign=muted]').check();await p.locator('[data-campaign=soundCaptions]').check();await p.locator('[data-campaign=subtitleSize]').focus();await p.keyboard.press('End');await p.click('#primary');
+   await p.keyboard.press('Escape');if(!await p.locator('#comfort').evaluate(e=>e.open))await p.locator('#comfort>summary').click();await reveal(p,'[data-campaign=muted]');await p.locator('[data-campaign=muted]').check();await reveal(p,'[data-campaign=soundCaptions]');await p.locator('[data-campaign=soundCaptions]').check();await reveal(p,'[data-campaign=subtitleSize]');await p.locator('[data-campaign=subtitleSize]').focus();await p.keyboard.press('End');await closeSettings(p);await p.click('#primary');
    await p.evaluate(frames=>{for(const state of frames){Object.assign(__underGreen.run,state);advanceTime(0);}},nearby);
    if(width<900){await p.touchscreen.tap(width*.5,height*.4);await p.evaluate(()=>advanceTime(0));}
    const view=await p.evaluate(()=>{const s=JSON.parse(render_game_to_text()),c=document.querySelector('#caption'),b=c.getBoundingClientRect();return {caption:c.textContent,muted:s.campaign.muted,touch:!document.querySelector('#touch').hidden,overlaps:[...document.querySelectorAll('#touch button')].filter(e=>!document.querySelector('#touch').hidden).some(e=>{const a=e.getBoundingClientRect();return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}),box:{left:b.left,right:b.right,top:b.top,bottom:b.bottom}};});

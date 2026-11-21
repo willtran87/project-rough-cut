@@ -1,9 +1,10 @@
 const {chromium}=require('playwright');
+const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/under-green/presentation';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}fs.mkdirSync(out,{recursive:true});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],out='output/under-green/presentation';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}await p.addInitScript(()=>{/* the crossing read-out is opt-in (Crossing assist) since e9f6118 */const k='rough-cut.under-green-comfort.v1';let v={};try{v=JSON.parse(localStorage.getItem(k))||{};}catch{}if(!('crossingAssist' in v)){v.crossingAssist=true;localStorage.setItem(k,JSON.stringify(v));}});fs.mkdirSync(out,{recursive:true});
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
+ await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await closeSettings(p);await p.click('#primary');
  const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
  async function place({x=0,y=57,yaw=0,time=3,cp=1,joe={phase:'absent'}}={}){await p.evaluate(async v=>{const {createRun}=await import('./under-green-sim.js');const r=createRun(v.cp);r.mode='playing';r.time=v.time;r.elapsed=25;r.messageTime=0;Object.assign(r.player,{x:v.x,y:v.y,yaw:v.yaw});Object.assign(r.joe,v.joe);__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},{x,y,yaw,time,cp,joe});}
  const shot=async name=>p.screenshot({path:`${out}/${name}.png`});
@@ -36,10 +37,10 @@ const assert=require('node:assert/strict'),fs=require('fs');
   await p.setViewportSize({width,height});await place({x:0,y:54,yaw:Math.PI,time:0,joe:{x:0,y:56,phase:'windup',age:.1}});
   assert.equal(await p.locator('#caption').textContent(),'');await shot(`sound-led-${width}`);
  }
- await p.keyboard.press('Escape');await p.locator('#comfort summary').click();await p.locator('[data-campaign=soundCaptions]').check();await p.click('#primary');
+ await p.keyboard.press('Escape');await p.locator('#comfort>summary').click();await reveal(p,'[data-campaign=soundCaptions]');await p.locator('[data-campaign=soundCaptions]').check();await closeSettings(p);await p.click('#primary');
  await place({x:0,y:54,yaw:Math.PI,time:0,joe:{x:0,y:56,phase:'windup',age:.1}});
- assert.match(await p.locator('#caption').textContent(),/Hedge-trimmer engine revs/);assert.doesNotMatch(await p.locator('#caption').textContent(),/Move sideways/);await shot('sound-descriptions-opt-in-390');
- await p.keyboard.press('Escape');await p.locator('[data-campaign=soundCaptions]').uncheck();await p.click('#primary');
+ /* Joe's weapon is a scythe; its sound description replaced the trimmer's */assert.match(await p.locator('#caption').textContent(),/Scythe swishes/);assert.doesNotMatch(await p.locator('#caption').textContent(),/Move sideways/);await shot('sound-descriptions-opt-in-390');
+ await p.keyboard.press('Escape');await reveal(p,'[data-campaign=soundCaptions]');await p.locator('[data-campaign=soundCaptions]').uncheck();await closeSettings(p);await p.click('#primary');
  await p.setViewportSize({width:1280,height:720});
  checks.push('Sound descriptions remain opt-in, including urgent offscreen revs; default banner stays quiet at desktop and phone sizes');
  await p.evaluate(async()=>{const {NOTE}=await import('./under-green-layout.js');Object.assign(__underGreen.run.player,{x:NOTE.x,y:NOTE.y-1,yaw:0});Object.assign(__underGreen.run.joe,{phase:'search',x:-5.35,y:45.1});__underGreen.run.messageTime=0;advanceTime(0);});
@@ -47,13 +48,13 @@ const assert=require('node:assert/strict'),fs=require('fs');
  await p.keyboard.press('Escape');assert(await p.locator('#journal').isVisible());assert(await p.locator('#paused-objective').isVisible());
  await p.evaluate(()=>{__underGreen.run.mode='complete';__underGreen.run.finished=true;advanceTime(0);});assert.match(await p.locator('#result').textContent(),/saturated turf/);assert.doesNotMatch(await p.locator('#result').textContent(),/planned chapter/);
  await p.evaluate(()=>{__underGreen.run.mode='paused';advanceTime(0);});
- if(!await p.locator('#comfort').evaluate(e=>e.open))await p.locator('#comfort summary').click();await p.locator('#reduced').check();await p.click('#primary');
+ if(!await p.locator('#comfort').evaluate(e=>e.open))await p.locator('#comfort>summary').click();await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await reveal(p,'#reduced');await p.locator('#reduced').check();await p.locator('#comfort').evaluate(e=>e.open=false);await closeSettings(p);await p.click('#primary');
  for(const [time,danger]of [[3,true],[3.2,true],[9,false]]){
-  await place({time});const state=await read();assert.equal(state.graphics.water.animationTime,0);
+  await place({time});const state=await read();/* water keeps moving under Reduced motion since 3caeb5f */assert.equal(state.graphics.water.animationTime,time);
   assert.equal(state.graphics.water.jetsPerChannel.find(w=>w.id==='spillway').flowing,danger);
   assert.equal(await p.locator('#water-read').getAttribute('data-danger'),String(danger));
  }
- await shot('reduced-low-1280');checks.push('Reduced motion freezes water animation while actual pressure transitions still update jets and the hazard signal');
+ await shot('reduced-low-1280');checks.push('Under Reduced motion water keeps animating and actual pressure transitions still update jets and the hazard signal');
  checks.push('Record is reachable in its recess, retained in the journal and acknowledged in the chapter result');
  assert.deepEqual(errors,[]);fs.writeFileSync(out+'/browser.json',JSON.stringify({passed:true,checks,phases,errors},null,2));console.log(JSON.stringify({passed:true,checks,draws:phases.slice(0,4).map(v=>({phase:v.phase,draws:v.graphics.draws,drops:v.graphics.water.activeDrops})),errors}));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

@@ -9,6 +9,8 @@ const {chromium} = require('playwright');
   const errors = [], views = [], checks = [];
   try {
     const p = await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
+    // The crossing read-out is opt-in (Crossing assist) since e9f6118.
+    await p.addInitScript(()=>localStorage.setItem('rough-cut.under-green-comfort.v1',JSON.stringify({crossingAssist:true})));
     p.on('pageerror', e => errors.push(e.message));
     await p.goto('http://127.0.0.1:4187/under-green.html?test');
     await p.waitForFunction(() => window.__underGreen && JSON.parse(render_game_to_text()).ready, null, {timeout:90000});

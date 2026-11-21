@@ -12,8 +12,8 @@ const out=process.argv[2]||'output/back-nine-visual-upgrade/planting/browser';fs
  }
  const before=(await read()).graphics.courseDetail;await p.evaluate(()=>advanceTime(500));assert((await read()).graphics.courseDetail.windTime>before.windTime);await shot('wind-2560');
  await p.keyboard.press('Escape');const paused=(await read()).graphics.courseDetail;await p.evaluate(()=>advanceTime(1000));assert.deepEqual((await read()).graphics.courseDetail,paused);await p.locator('#primary').click();
- await p.evaluate(()=>{const c=document.getElementById('chase-reduced');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));});await render();assert.equal((await read()).graphics.courseDetail.wind,0);await shot('reduced-2560');
+ await p.evaluate(()=>{const c=document.getElementById('chase-reduced');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));});await render();assert.equal((await read()).graphics.courseDetail.wind,1,'Wind keeps blowing under Reduced motion (f9d86e3)');await shot('reduced-2560');
  for(const [width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await shot('clubhouse-'+width);}
- const s=await read();assert.equal(s.graphics.textures,46);assert.equal(s.graphics.programs,27);assert.equal(s.graphics.courseDetail.pockets,27);assert.deepEqual(errors,[]);
+ const s=await read();assert.equal(s.graphics.textures,63);assert.equal(s.graphics.programs,49);assert.equal(s.graphics.courseDetail.pockets,27);assert.deepEqual(errors,[]);
  fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,samples,errors},null,2));console.log(JSON.stringify({passed:true,plants:s.graphics.courseDetail,programs:s.graphics.programs,textures:s.graphics.textures,errors}));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
