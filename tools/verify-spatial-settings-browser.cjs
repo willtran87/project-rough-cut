@@ -22,7 +22,7 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
   async function show(selector){const name=await p.locator(selector).evaluate(e=>e.closest('[data-theme-category]')?.dataset.themeCategory);if(name)await p.locator('#comfort nav button',{hasText:name}).click();}
   async function set(id,value){await settings();await show('#'+id);const input=p.locator('#'+id);if(typeof value==='boolean')await input.setChecked(value);else await input.fill(String(value));await tick(0);}
   async function reset(){
-   await p.evaluate(async()=>{navigator.getGamepads=()=>[];__underGreen.clearInput();const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';});await tick(0);
+   await p.evaluate(async()=>{navigator.getGamepads=()=>[];__underGreen.clearInput();const {createRun}=await import('./under-green-sim.js');__underGreen.run=createRun();__underGreen.run.mode='playing';document.activeElement?.blur?.();document.getElementById('game')?.focus();});await tick(0);/* a settings control left focused swallows movement keys */
   }
   const near=(a,b,tolerance=.00001)=>assert(Math.abs(a-b)<tolerance,`${a} != ${b}`);
   await visit();await settings();await show('#sensitivity');
