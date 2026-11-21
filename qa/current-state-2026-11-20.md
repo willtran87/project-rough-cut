@@ -1,6 +1,6 @@
 # Current state — November 20, 2026
 
-What the polish pass added on top of the [November 19 report](current-state-2026-11-19.md), how each part was checked, and what is still unconfirmed. This work is on the branch `feat/polish-pass` and is **not yet published**.
+What the polish pass added on top of the [November 19 report](current-state-2026-11-19.md), how each part was checked, and what is still unconfirmed. This work was developed on the branch `feat/polish-pass` and published with it.
 
 ## What changed
 
