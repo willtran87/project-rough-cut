@@ -34,7 +34,15 @@ export function createChaseBeaconShadows(scene){
   // cover. Keep simple authored solids; dense rounded crowns use an interior
   // octahedron, never an oversized box that shadows an open passage.
   let copy;
-  if(g.attributes.position.count>96){
+  // Grown windbreaks (back-nine-windbreak-growth.js) put their opaque core
+  // first; their shoots and leaf cards never occlude. Keep only that core,
+  // with the attribute set shared by the other cover pieces.
+  const hedge=g.userData?.windbreak;
+  if(hedge&&g.index){
+   copy=new THREE.BufferGeometry();const n=hedge.coreVertices;
+   for(const [name,size]of [['position',3],['normal',3],['uv',2]]){const a=g.getAttribute(name);copy.setAttribute(name,new THREE.BufferAttribute(a?a.array.slice(0,n*size):new Float32Array(n*size),size));}
+   copy.setIndex(new THREE.BufferAttribute(g.index.array.slice(0,hedge.coreIndices),1));
+  }else if(g.attributes.position.count>96){
    // Sculpted windbreak cores remain opaque cover even when their long
    // edge has extra segments. Keep their real silhouette and open ends.
    if(g.type==='BoxGeometry')copy=g.clone();

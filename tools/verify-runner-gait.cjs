@@ -61,7 +61,7 @@ const {chromium}=require('playwright');
     w.runner.update(null,0,false,null,r.time);let minFloor=Infinity,maxReach=0,maxFacing=0,vertices=0,immutable=true;
     for(let n=0;n<180;n++){
      const input={throttle:kind==='reverse-turn'?-1:kind==='stop-restart'&&n>45&&n<95?0:1,steer:kind==='reverse-turn'?.35:0,rear:kind==='look-back'&&n<90};
-     updateRun(r,input,1/60);const snapshot=JSON.stringify(r);w.runner.update(r.foot,1/60,false,null,r.time);immutable&&=snapshot===JSON.stringify(r);w.runner.root.updateMatrixWorld(true);
+     updateRun(r,input,1/60);const snapshot=JSON.stringify(r);w.runner.update(r.foot,1/60,false,null,r.time);/* the scene lifts the runner root to the terrain after update (back-nine-scene.js); mirror it, as off-path ground is no longer flat */w.runner.root.position.y+=terrainHeight(w.runner.root.position.x,-w.runner.root.position.z);immutable&&=snapshot===JSON.stringify(r);w.runner.root.updateMatrixWorld(true);
      const pose=w.runner.stats();maxFacing=Math.max(maxFacing,Math.abs(Math.atan2(Math.sin(pose.facing-r.foot.moveYaw),Math.cos(pose.facing-r.foot.moveYaw))));
      let i=0;w.runner.root.traverse(o=>{if(o.name==='boot'){
       const f=pose.footing[i++],expected=w.runner.root.localToWorld(new T.Vector3(f.x,f.y,f.z));maxReach=Math.max(maxReach,o.getWorldPosition(v).distanceTo(expected));

@@ -154,7 +154,9 @@ function paintUI(){
  if(briefKey!==briefSignature){briefSignature=briefKey;paintBackNineBrief(run,inputMethod,guideReview,bindings);setText('comfort-controls',backNineHint(inputMethod,!!run.foot,bindings)+'. The camera follows your heading.');}
  setHidden('story',run.mode==='briefing');setHidden('controls',true);
  if(!ready){setHidden('panel',false);return;}const player=chaseActor(run);
- if(uiMode!==run.mode)needsDraw=true;const driving=['driving','sealing','dying'].includes(run.mode),target=run.checkpoint<2?COURSE.checkpoints[run.checkpoint]:COURSE.finish;
+ // Pausing freezes the run: the last gameplay frame already shows it, so the
+ // pause screen does not redraw the world (a late software frame read as motion).
+ if(uiMode!==run.mode&&!(run.mode==='paused'&&['driving','sealing','dying'].includes(uiMode)))needsDraw=true;const driving=['driving','sealing','dying'].includes(run.mode),target=run.checkpoint<2?COURSE.checkpoints[run.checkpoint]:COURSE.finish;
  setClass(document.documentElement,'touch-mode',coarsePointer.matches);
  setHidden('hud',!driving);setHidden('touch',run.mode!=='driving'||!coarsePointer.matches);setHidden('panel',driving);
  setText('objective',backNineInstruction(objective(run),inputMethod,bindings));setText('distance',`${Math.ceil(distance(player,target))} m · ${run.checkpoint}/2 relays online`);setText('speed',run.foot?'ON FOOT':`${speedMph(player.speed)} mph`);setText('surface',{path:'CART PATH',rough:'ROUGH · JOE HAS THE ADVANTAGE',sand:'BUNKER · SLOW GOING',wet:'WET TURF · EASE THE STEERING'}[player.surface]);setText('integrity-label',run.foot?'CART WRECKED':cartCondition(run.cart.health).label);

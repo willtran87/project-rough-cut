@@ -25,6 +25,9 @@
  #water-read strong{font-size:13px;margin:0 0 4px}
  #water-read progress{height:4px;display:block;margin:0}
  body.crossing #objective-card strong,body.crossing #record-status{display:none}
+ /* The walking offer already names Listen; a second listening line would
+    push the objective card down into the compact water row. */
+ body.crossing.walking-option #focus-state{display:none}
 }
 
 /* Controller focus remains visible after programmatic DOM navigation. */

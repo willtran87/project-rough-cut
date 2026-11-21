@@ -90,7 +90,7 @@ function feelEvent(e){
 }
 if(saved?.completed===true&&!RCProgression.state().completed['under-green'])RCProgression.complete('under-green');
 if(new URLSearchParams(location.search).has('telemetry'))run.telemetry=createLocalTelemetry();
-const playtest=new URLSearchParams(location.search).has('playtest')?mountUnderGreenPlaytest(document.querySelector('#panel .panel-body'),()=>({viewport:{width:innerWidth,height:innerHeight},inputMethod,settings:{muted:prefs.muted,reducedMotion:prefs.reduced,fov:prefs.fov,resolution:prefs.resolution,threatCaptions:shared.threatCaptions,soundCaptions:shared.soundCaptions},bindings:{...bindings}})):null;
+const playtest=new URLSearchParams(location.search).has('playtest')?mountUnderGreenPlaytest(document.querySelector('#panel .rc-brief-scroll')||document.querySelector('#panel .panel-body'),()=>({viewport:{width:innerWidth,height:innerHeight},inputMethod,settings:{muted:prefs.muted,reducedMotion:prefs.reduced,fov:prefs.fov,resolution:prefs.resolution,threatCaptions:shared.threatCaptions,soundCaptions:shared.soundCaptions},bindings:{...bindings}})):null;
 function persist(){
  if(run.mode==='complete')RCProgression.complete('under-green');
  const record=snapshot(run),previous=readSave(stored(SAVE_KEY));
