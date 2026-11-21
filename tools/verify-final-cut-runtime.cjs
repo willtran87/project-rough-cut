@@ -11,7 +11,7 @@ const loopHook=`window.__loopProbe=()=>{
  }finally{({world,run,manual,last,nextGameplayFrame,update,draw}=saved);window.requestAnimationFrame=saved.raf;}return reports;
 };`;
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],comparisons=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],comparisons=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{localStorage.removeItem('rough-cut.final-cut.v1');localStorage.setItem('rough-cut.final-cut-story.v1',JSON.stringify({skipIntro:true}));});
  await page.route('**/final-cut-scene.js*',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('web/final-cut-scene.js','utf8').replace('await renderer.compileAsync(scene,camera);',sceneHook+'await renderer.compileAsync(scene,camera);')}));
  await page.route('**/final-cut.js?*',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('web/final-cut.js','utf8')+'\n'+loopHook}));

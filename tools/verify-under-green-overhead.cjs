@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const baseline=process.argv.includes('--baseline'),out='output/under-green/overhead/'+(baseline?'before':'after');
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  if(baseline){
   let source=fs.readFileSync('web/under-green-scene.js','utf8');
   const roof="for(const t of roofPanels(layout.tiles))box('ceiling',t.x,4.25,-t.y,t.w,.2,t.d);",details='structureDetails.courseOverhead=buildCourseOverhead({box,put,cyl,ball});';

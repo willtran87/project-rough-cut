@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  const errors=[],views=[],results=[];
  try{
   for(const [width,height] of [[2560,1600],[1280,720],[844,390],[390,844]]){
-   const context=await browser.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500});
+   const context=await browser.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await page.goto('http://127.0.0.1:4187/under-green.html?test');
    await page.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});

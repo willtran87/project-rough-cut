@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  const out='output/chase-render-followup';fs.mkdirSync(out,{recursive:true});const results=[];
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{for(const baseline of [true,false]){
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
   await p.route(/\/back-nine\.js(?:\?.*)?$/,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync((baseline?out+'/baseline-source':'web')+'/back-nine.js','utf8')+'\nwindow.__paintHUD=paintUI;window.__budget=budget;'}));

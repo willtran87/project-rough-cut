@@ -6,7 +6,7 @@ const baseline=process.argv.includes('--legacy-baseline');
  fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage(),errors=[],checks=[],views=[];
+  const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage(),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
   p.on('pageerror',e=>errors.push(e.message));
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   const visit=async chapter=>{await p.goto(`${base}/${chapter}.html?test`);await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);};
@@ -65,7 +65,7 @@ const baseline=process.argv.includes('--legacy-baseline');
   await p.evaluate(()=>navigator.getGamepads=()=>[]);await tick(17);await p.locator('#primary').focus();await p.keyboard.press('Enter');await tick(17);assert.equal(await p.evaluate(()=>__underGreen.run.mode),'playing');checks.push('Controller adjusts/selects editor controls without starting play; Enter still activates focused menu button');
   // Touch contexts expose the actual compact UI, not just a resized desktop.
   for(const [width,height]of [[844,390],[390,844]]){
-   const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();t.on('pageerror',e=>errors.push(e.message));await t.goto(base+'/under-green.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort summary').tap();await t.locator('#keyboard legend').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/touch-editor-${width}.png`});await t.locator('[data-binding=interact]').selectOption('KeyT');assert.match(await t.locator('#control-guide').innerText(),/T uses/);await t.locator('[data-keyboard-reset]').tap();assert.equal(await t.locator('[data-binding=interact]').inputValue(),'KeyE');await tc.close();
+   const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto(base+'/under-green.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort summary').tap();await t.locator('#keyboard legend').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/touch-editor-${width}.png`});await t.locator('[data-binding=interact]').selectOption('KeyT');assert.match(await t.locator('#control-guide').innerText(),/T uses/);await t.locator('[data-keyboard-reset]').tap();assert.equal(await t.locator('[data-binding=interact]').inputValue(),'KeyE');await tc.close();
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/verified.json',JSON.stringify({passed:true,checks,views,errors},null,2));console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}

@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const out='output/quiet-messages';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');
  await p.waitForFunction(()=>window.__backNine&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
@@ -50,7 +50,7 @@ const {chromium}=require('playwright');
  await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js');const r=createRun(2);r.mode='caught';Object.assign(r.cart,{x:-23,y:770});__backNine.run=r;__backNine.render();});assert.notEqual(await p.locator('#defeat-line').textContent(),quotes.at(-1));
  await p.close();
 
- const l=await browser.newPage({viewport:{width:2560,height:1600}});l.on('pageerror',e=>errors.push(e.message));
+ const l=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(l);await fx.skipStories(l);}l.on('pageerror',e=>errors.push(e.message));
  await l.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__quiet={state,resetFirstHole,render,setHoleMessage,holeMessageForPresentation,pushThreatCaption,visibleThreatCaptions,triggerJoeBark,selectJoeCaptureDialogue,savePreferences,selectSettingsCategory,drawQualityHud};\n  window.advanceTime = (milliseconds) => {')}));
  await l.goto('http://127.0.0.1:4187');await l.waitForFunction(()=>window.__quiet,null,{timeout:120000});await l.locator('canvas').click();await l.keyboard.press('Space');
  const levelOne=await l.evaluate(()=>{

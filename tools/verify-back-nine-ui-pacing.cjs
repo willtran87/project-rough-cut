@@ -5,7 +5,7 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:index<0?undefined:process.argv[index+1],args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];
+  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/back-nine.js*',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine.js','utf8')
    .replace('function paintUI(){','function paintUI(){window.__paintCount=(window.__paintCount||0)+1;')

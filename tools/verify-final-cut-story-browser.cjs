@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const software=process.argv.includes('--software'),out='output/final-cut/story/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));
  const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),waitArt=()=>p.waitForFunction(()=>JSON.parse(render_game_to_text()).story.ready),shot=name=>p.screenshot({path:out+'/'+name+'.png',animations:'disabled'});
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.locator('#splash-image').evaluate(i=>i.decode());await shot('splash-2560');
  await p.click('#primary');await waitArt();assert((await read()).story.active);const frozen=(await read()).seconds;await tick(4000);assert.equal((await read()).seconds,frozen);await shot('intro-1');

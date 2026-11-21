@@ -6,7 +6,7 @@ const software=process.argv.includes('--software'),out='output/under-green/softw
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']}),pages=[],errors=[],rows=[];
  try{
   for(const optimized of [false,true]){
-   const p=await browser.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.addInitScript(()=>localStorage.setItem('rough-cut.spatial.v1',JSON.stringify({fov:85,resolution:1})));
    await p.route(sceneModule,route=>route.fulfill({contentType:'application/javascript',body:instrumentScene(fs.readFileSync((optimized?'web/':'output/under-green/software-stall/source/')+'under-green-scene.js','utf8'))}));
    if(!optimized)for(const name of ['under-green-practical-lighting.js'])await p.route(new RegExp('/'+name.replaceAll('.','\\.')+'$'),route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/software-stall/source/'+name,'utf8')}));

@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 (async()=>{
  const b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']}),out='output/under-green/frame-lifecycle';fs.mkdirSync(out,{recursive:true});
  try{
-  const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],checks=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.route('**/under-green.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green.js','utf8').replace('if(test)window.__underGreen={','if(true)window.__underGreen={')}));
   await p.addInitScript(()=>{
    window.__gpuDelay=0;window.__fences={live:0,max:0,submitted:0};const started=new Map(),proto=WebGL2RenderingContext.prototype;

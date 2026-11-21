@@ -6,7 +6,7 @@ const fixtures=[['gallery',0,8,0,.1],['crossing',0,19,0,-.05],['pump',-25.7,40,M
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],rows=[];
 try{
  for(const enabled of [false,true]){
-  const p=await b.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',e=>{if(e.type()==='error')errors.push(e.text());});
+  const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',e=>{if(e.type()==='error')errors.push(e.text());});
   await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync(enabled?'web/under-green-scene.js':'output/under-green/visual-pass88/source/under-green-scene-before.js','utf8');const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__shadowProbe={renderer,scene,camera,practicalLighting,practicalShadows,lamps};'+marker);return r.fulfill({contentType:'application/javascript',body:s});});
   await p.route('**/under-green-practical-lighting.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(enabled?'web/under-green-practical-lighting.js':'output/under-green/visual-pass88/source/under-green-practical-lighting-before.js','utf8')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__shadowProbe&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');

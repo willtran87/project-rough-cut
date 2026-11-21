@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=`output/under-green/visual-pass70/states-${software?'software':'hardware'}`;
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']});const errors=[],rows=[];try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
  async function place(elapsed,x=1.5,y=9.8,yaw=.65,pitch=-.6){await p.evaluate(async args=>{const {createRun}=await import('./under-green-sim.js');const r=createRun();r.mode='playing';r.time=26.3;r.elapsed=args.elapsed;r.joe.phase='absent';Object.assign(r.player,{x:args.x,y:args.y,yaw:args.yaw,pitch:args.pitch,grace:100});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},{elapsed,x,y,yaw,pitch});}
  for(const [name,elapsed]of [['dry',0],['rising',42],['high',49],['falling',60],['receded',68]]){

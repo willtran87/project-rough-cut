@@ -21,7 +21,7 @@ const instrument=`window.__bodyworkAudit=()=>{
   }return result;
  };`;
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));
  await p.route('**/final-cut-scene.js',route=>route.fulfill({status:200,contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',instrument+'\nawait renderer.compileAsync(scene,camera);')}));

@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const out='output/touch-run',errors=[],checks=[];fs.mkdirSync(out,{recursive:true});
  try{
-  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true}),p=await context.newPage();
+  const context=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.route('**/game.js*',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__touchTest={state,render,TOUCH_CONTROLS,clearTouchInputs};\n  window.advanceTime = (milliseconds) => {')}));
   const cdp=await context.newCDPSession(p),contacts=new Map();

@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
   const out='output/under-green/camera',errors=[],poses=[];fs.mkdirSync(out,{recursive:true});
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
   await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js'),{ARRIVAL}=await import('./under-green-encounters.js');const r=createRun();r.mode='playing';r.player.y=ARRIVAL.triggerY+.1;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
   for(let i=0;i<32;i++){

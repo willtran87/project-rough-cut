@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/clearance';fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],out='output/under-green/clearance';{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}fs.mkdirSync(out,{recursive:true});p.on('pageerror',e=>errors.push(e.message));
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
  const results=[],lever=await p.evaluate(async()=>{const {LEVER}=await import('./under-green-course.js');return LEVER;});
  for(const [name,x,y,yaw,phase,age,gate=0]of [['console-west',lever.x-1.3,lever.y,Math.PI/2,'walk',0],['console-east',lever.x+1.3,lever.y,-Math.PI/2,'walk',0],['console-north',lever.x,lever.y+1.2,Math.PI,'walk',0],['wall-carry',2,50,Math.PI/2,'walk',0],['wall-preparation',2,50,Math.PI/2,'windup',.5],['corner',9,71,Math.PI/2,'search',1],['bunker-bank',-29,62,Math.PI,'walk',.3],['pump',-18,45,Math.PI/2,'walk',.3],['gate',12,7.1,Math.PI,'walk',.2],['gate-half',12,7.1,Math.PI,'walk',.2,.5],['gate-low',12,7.1,Math.PI,'walk',.2,.8],['gate-closed',12,7.1,Math.PI,'walk',.2,1]]){

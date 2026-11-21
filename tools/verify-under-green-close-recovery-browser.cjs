@@ -7,7 +7,7 @@ const {chromium}=require('playwright');
  const views=[],results=[],errors=[];let pauseVerified=false;
  try{
   for(const [width,height,device]of [[2560,1600,'keyboard'],[1280,720,'gamepad'],[844,390,'touch'],[390,844,'touch']]){
-   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500});
+   const context=await browser.newContext({viewport:{width,height},hasTouch:device==='touch',isMobile:width<500});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
    const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    if(device==='gamepad')await p.addInitScript(()=>{window.recoveryPad={id:'Close recovery test',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[recoveryPad];});
    const cdp=device==='touch'?await context.newCDPSession(p):null;

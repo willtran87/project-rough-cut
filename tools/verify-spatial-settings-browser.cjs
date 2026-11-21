@@ -5,7 +5,7 @@ const out='output/under-green/spatial-settings';fs.mkdirSync(out,{recursive:true
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],checks=[],views=[];
  try{
-  const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage();
+  const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
   p.on('pageerror',e=>errors.push(e.message));
   // Chapters are gated by campaign progress: unlock this chapter and skip its opening story before each page loads.
   await p.addInitScript(()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.under-green-opening.v1',JSON.stringify({skip:true}));});

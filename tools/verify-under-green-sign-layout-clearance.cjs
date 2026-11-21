@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const out='output/under-green/visual-upgrade-local/pass48-layout-clearance';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[];try{
- const p=await b.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));
+ const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));
  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
  const geometry=await p.evaluate(async()=>{
   const {createRun}=await import('./under-green-sim.js'),{SLUICE,solid}=await import('./under-green-course.js'),r=createRun();r.mode='playing';r.joe.phase='absent';r.bypass=true;r.bypassAt=20;r.time=26.3;r.lessonCrossed=true;__underGreen.run=r;__underGreen.clearInput();

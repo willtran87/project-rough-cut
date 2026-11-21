@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const out=process.argv[2]||'output/back-nine-visual-upgrade/storm/native',baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software');fs.mkdirSync(out,{recursive:true});fs.rmSync(out+'/report.json',{force:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  for(const file of ['parallax-scene.js','back-nine-scene.js'])await p.route('**/'+file+'*',route=>{
   let source=fs.readFileSync((baseline?'output/back-nine-visual-upgrade/storm/baseline-source/':'web/')+file,'utf8');
   if(file==='parallax-scene.js')source=source.replace('return { scene, camera, update, stats,','return window.__stormBackdrop={ scene, camera, update, stats,');

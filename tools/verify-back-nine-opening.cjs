@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const software=process.argv.includes('--software'),out='output/back-nine-opening/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});const errors=[],results={software,slides:[],layouts:[],checkpoints:[]};
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}}),requests=[];
+  const page=await browser.newPage({viewport:{width:2560,height:1600}}),requests=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);}
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('request',r=>{if(r.url().includes('/back-nine-opening/'))requests.push(r.url().split('/').pop());});
   const state=()=>page.evaluate(()=>JSON.parse(render_game_to_text()));
   const slide=n=>page.waitForFunction(n=>{if(!window.render_game_to_text)return false;const s=JSON.parse(render_game_to_text()).openingStory;return s.active&&s.ready&&s.slide===n;},n,{timeout:20000});

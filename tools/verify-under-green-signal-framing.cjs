@@ -4,7 +4,7 @@ const baseline=process.argv.includes('--baseline'),out='output/under-green/signa
 (async()=>{
  fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const page=await browser.newPage({hasTouch:true}),errors=[],samples=[],views=[];let mounts=null,crossing=null;
+  const page=await browser.newPage({hasTouch:true}),errors=[],samples=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}let mounts=null,crossing=null;
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.route('**/under-green-scene.js',route=>{
    let s=fs.readFileSync('web/under-green-scene.js','utf8');const marker=' return {draw,drainJoeFootsteps:';assert(s.includes(marker));

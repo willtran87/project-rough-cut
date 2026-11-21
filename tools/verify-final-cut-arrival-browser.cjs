@@ -10,7 +10,7 @@ const tactics=process.argv.includes('--balls'),crossings=process.argv.includes('
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const errors=[],checks=[],runs=[],shots=[],openingWaits=[],ballEvidence=[];
  for(const route of routeOnly?[routeOnly]:replaySeed!==null?['direct']:['direct','garage','drain']){
-  const context=await browser.newContext({viewport:{width:2560,height:1600}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const context=await browser.newContext({viewport:{width:2560,height:1600}}),page=await context.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   if(replaySeed!==null)await page.addInitScript(()=>localStorage.setItem('rough-cut.final-cut.v1',JSON.stringify({version:1,checkpoint:2,won:true,completed:true})));
   await page.goto(base+(route==='direct'?'':'&from='+route));await page.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await page.evaluate(()=>advanceTime(0));
   if(replaySeed!==null){await page.locator('#replay-options summary').click();await page.locator('#replay-plan').selectOption(String(replaySeed));}

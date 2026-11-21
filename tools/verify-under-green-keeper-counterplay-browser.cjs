@@ -7,7 +7,7 @@ const {chromium}=require('playwright');
  const views=[],errors=[],replays=[];
  try{
   for(const [width,height]of baseline?[[2560,1600]]:[[2560,1600],[1280,720],[844,390],[390,844]]){
-   const context=await browser.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500});
+   const context=await browser.newContext({viewport:{width,height},hasTouch:width<900,isMobile:width<500});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}
    const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});
    await p.evaluate(()=>advanceTime(0));await p.click('#primary');

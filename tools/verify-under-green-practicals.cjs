@@ -7,7 +7,7 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[];
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   if(fixedLoop)await page.route('**/under-green-practical-lighting.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass8-source/practical-before-uniform-loop.js','utf8')}));
   await page.route('**/under-green-scene.js',route=>{
    let s=fs.readFileSync(legacy?'output/under-green/visual-upgrade/pass7-source/under-green-scene.js':'web/under-green-scene.js','utf8');

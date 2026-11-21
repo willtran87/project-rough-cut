@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 (async()=>{
  const out='output/under-green/playtest';fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await b.newPage({viewport:{width:2560,height:1600},acceptDownloads:true}),errors=[],checks=[],views=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await b.newPage({viewport:{width:2560,height:1600},acceptDownloads:true}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{window.__pad={id:'Playtest menu check',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[__pad];});
   const ready=()=>p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000}),tick=ms=>p.evaluate(ms=>advanceTime(ms),ms);
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await ready();await tick(0);await p.click('#primary');await tick(100);assert.equal(await p.locator('#local-playtest').count(),0);assert.equal(await p.evaluate(()=>__underGreen.run.telemetry??null),null);

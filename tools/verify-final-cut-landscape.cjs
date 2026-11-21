@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const label=process.argv[2]||'current',out=`output/final-cut/landscape/${label}`;
 fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:process.argv.includes('--software')?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  if(process.argv.includes('--baseline'))await p.route('**/final-cut-scene.js',async route=>{
   let source=fs.readFileSync('web/final-cut-scene.js','utf8');
   source=source.replace('const surfaceScales=finishCourseSurfaces(materials);','const surfaceScales={};');

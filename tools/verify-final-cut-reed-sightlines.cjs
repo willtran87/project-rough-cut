@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict'),{createHash}=require('node:crypto');
 const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/final-cut/visual-reeds/sightlines';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],cases=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],cases=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',route=>route.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);','window.__reedSight={hide:v=>{rig.visible=!v;scene.traverse(o=>{if(o.isLight&&o.castShadow)o.shadow.needsUpdate=true;});}};await renderer.compileAsync(scene,camera);')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__reedSight&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});
  for(const entry of ['west','east','north','south'])for(const near of [false,true])for(const offset of [-1,0,1])for(const crouch of [false,true]){

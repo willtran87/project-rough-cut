@@ -16,7 +16,7 @@ const instrument=`scene.updateMatrixWorld(true);const auditedSurfaces=walkingSur
  return {bones,supports,feet:feet.map(f=>({count:f.length,min:[0,1,2].map(k=>Math.min(...f.map(v=>v[k]))),max:[0,1,2].map(k=>Math.max(...f.map(v=>v[k])))})),contacts:boxes.filter(b=>b.hits).map(({id,hits,meshes})=>({id,hits,meshes}))};
  };`;
 (async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  const source=fs.readFileSync('web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',route=>route.fulfill({status:200,contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',instrument+'\nawait renderer.compileAsync(scene,camera);')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));
  const schedule=await p.evaluate(async()=>(await import('./final-cut-transfer.js')).TRANSFER_SCHEDULE);

@@ -5,7 +5,7 @@ fs.mkdirSync(out,{recursive:true});
 const fixtures=[['gallery-entry',0,8,0,.1],['gallery-reverse',0,15,Math.PI,.1],['crossing',0,19,0,-.05],['junction',0,33,0,.1],['deep-gallery',0,53,0,.1],['north-turn',0,72,0,.1],['bunker',-29.5,65,Math.PI,.15],['pump',-23.4,42,-1,.05],['pump-return',-15,46,Math.PI/2,.05],['range',12,35,Math.PI,.05],['keeper',12,19,Math.PI,.1],['keeper-desk',12,13.5,-2.4,.05]];
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[],audits=[];
 try{for(const before of [true,false]){
- const p=await b.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  for(const part of ['scene','keeper-workspace','atmosphere','humidity','cast-shadow-scene','practical-lighting'])await p.route(`**/under-green-${part}.js`,route=>{
   const file=before?`${base}/pass50-source/under-green-${part}-before.js`:`web/under-green-${part}.js`;let s=fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n');
   if(part==='scene'){const marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__direction={scene,renderer,camera,lamps};'+marker);}

@@ -4,7 +4,7 @@ const software=process.argv.includes('--software'),quick=process.argv.includes('
 const fixtures=[['gallery',0,8,0,.1],['crossing',0,19,0,-.05],['pump',-25.7,40,Math.PI/2,-.27],['range',12,35,Math.PI,.05],['keeper',12,13.5,-2.4,.05],['release',14.65,15.9,Math.PI,-.48],['bunker',-29.5,65,Math.PI,.15]];
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],rows=[];try{
  for(const before of [true,false]){
-  const p=await b.newPage({viewport:{width:2560,height:1600}});pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await b.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}pages.push(p);p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   for(const name of ['under-green-scene','under-green-practical-lighting'])await p.route('**/'+name+'.js',route=>{
    let s=fs.readFileSync(before?`output/under-green/visual-pass85/source/${name}-before.js`:`web/${name}.js`,'utf8');
    if(name==='under-green-scene'){

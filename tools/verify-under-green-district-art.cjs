@@ -5,7 +5,7 @@ const baseline=process.argv.includes('--baseline');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const out='output/under-green/district-art/'+(baseline?'before':'after'),views=[],errors=[];fs.mkdirSync(out,{recursive:true});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
   // Suppress only the district name in these QA captures: scenery should carry identity.
   await p.addStyleTag({content:'#district {visibility:hidden}'});

@@ -6,7 +6,7 @@ fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],checks=[],errors=[];
  try{
   for(const before of [true,false]){
-   const p=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true});
+   const p=await browser.newPage({viewport:{width:2560,height:1600},hasTouch:true});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
    p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await p.addInitScript(()=>{window.hudPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[hudPad];});
    if(before)for(const file of ['under-green.html','under-green.js'])await p.route('**/'+file+'*',r=>r.fulfill({contentType:file.endsWith('html')?'text/html':'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass18-source/'+file,'utf8')}));

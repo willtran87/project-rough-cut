@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{const out='output/back-nine-experience/bone-palette',b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
- const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:1280,height:720}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__buffers=0;const f=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...a){__buffers++;return f.apply(this,a);};});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-experience/bone-palette/rejected-source/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__beaconPerfPerf={scene,camera,renderer,update,draw()')}));
  const modules=['back-nine-scene','chase-staff-art'];for(const m of modules)await p.route('**/__beaconPerf-old-'+m+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(`${out}/baseline-source/${m}.js`,'utf8').replace(/'\.\/([^']+)\.js'/g,(match,name)=>modules.includes(name)?`'./__beaconPerf-old-${name}.js'`:match)}));

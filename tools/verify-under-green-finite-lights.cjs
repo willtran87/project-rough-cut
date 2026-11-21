@@ -5,7 +5,7 @@ const out='output/under-green/finite-lights';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));
   await p.route('**/finite-light-material.js',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('tools/fixtures/under-green-finite-light-candidate.js','utf8')}));
   await p.route('**/under-green-scene.js',route=>{

@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const out='output/under-green/lesson';fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
+  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));
   const cdp=await p.context().newCDPSession(p);
   const ready=()=>p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});

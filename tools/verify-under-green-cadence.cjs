@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  fs.mkdirSync(out,{recursive:true});
  try{
-  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];
+  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}
   page.on('pageerror',e=>errors.push(e.message));
   // Immediate pre-cadence snapshot, not the older pre-footwork reconstruction.
   if(baseline)for(const file of ['under-green-actor.js','under-green-footwork.js'])

@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{const out='output/foliage-mower-performance',b=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__gpu={active:new Set(),max:0,observe:false};const proto=WebGL2RenderingContext.prototype,fence=proto.fenceSync,del=proto.deleteSync;proto.fenceSync=function(...a){const f=fence.apply(this,a);if(__gpu.observe){__gpu.active.add(f);__gpu.max=Math.max(__gpu.max,__gpu.active.size);}return f;};proto.deleteSync=function(f){__gpu.active.delete(f);return del.call(this,f);};});
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');
  await p.evaluate(async()=>{const {createRun}=await import('./back-nine-sim.js');const r=createRun(1);r.mode='driving';r.grace=0;Object.assign(r.cart,{x:-29,y:443,yaw:0,speed:8,invulnerable:999});Object.assign(r.joe,{x:-29,y:423,speed:15});__backNine.run=r;__gpu.observe=true;});

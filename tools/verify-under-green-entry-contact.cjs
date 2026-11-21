@@ -4,7 +4,7 @@ const software=process.argv.includes('--software'),out=process.argv.find(a=>a.st
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[];
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.route('**/under-green-scene.js',route=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');s=s.replace(' return {draw,inspectCastShadow:',' window.__contactAudit={scene,renderer,contactShade,structureMeshes,joe}; return {draw,inspectCastShadow:');return route.fulfill({contentType:'application/javascript',body:s});});
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__contactAudit&&window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.keyboard.press('Escape');
   const fixtures=[{name:'gallery',x:0,y:12,yaw:0},{name:'entrance-root',x:3.4,y:10.6,yaw:Math.PI/2},{name:'crossing-root',x:-1.2,y:27.2,yaw:-Math.PI/2},{name:'pump-feet',x:-23,y:43,yaw:-Math.PI/2,pitch:-.2},{name:'keeper',x:12,y:23,yaw:Math.PI},{name:'high-flood',x:0,y:12,yaw:0,pitch:-.35,elapsed:49},{name:'joe-feet',x:0,y:51,yaw:0,pitch:-.3,joe:true}];

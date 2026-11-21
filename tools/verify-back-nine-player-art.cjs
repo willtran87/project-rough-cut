@@ -3,7 +3,7 @@ const facePass=process.argv.includes('--face'),root='output/back-nine-visual-upg
 (async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const results=[];
  for(const baseline of (software||process.argv.includes('--after-only')?[false]:[true,false])){
-  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
+  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
   for(const name of ['back-nine-scene.js','chase-runner.js','runner-materials.js'])await p.route('**/'+name+'*',r=>{let source=fs.readFileSync((baseline?root+'/baseline-source/':'web/')+name,'utf8');if(name==='back-nine-scene.js')source=source.replace('return {scene,camera,update,draw()','return window.__playerWorld={scene,camera,renderer,runner,headlamp,mowerLight,update,draw()');return r.fulfill({contentType:'application/javascript',body:source});});

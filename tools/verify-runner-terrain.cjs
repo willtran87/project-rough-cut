@@ -3,7 +3,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
  const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),hz=Number(process.argv.find(a=>a.startsWith('--hz='))?.slice(5)||30),tag=(software?'software':'hardware')+(baseline?'-baseline':'')+(hz===30?'':`-${hz}hz`),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/back-nine-experience/runner-terrain';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__uploads=0;const original=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...args){__uploads++;return original.apply(this,args);};});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__terrainWorld={scene,camera,renderer,runner,update,draw()')}));
  if(baseline)for(const name of ['runner-gait','chase-runner'])await p.route(`**/${name}.js*`,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(`${out}/baseline-source/${name}.js`,'utf8')}));

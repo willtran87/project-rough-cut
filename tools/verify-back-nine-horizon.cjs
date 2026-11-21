@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const out=process.argv[2],before=process.argv.includes('--before'),software=process.argv.includes('--software'),contractsOnly=process.argv.includes('--contracts');if(!out)throw Error('Output directory required');
 const views=[['nursery',20,65,.12,true],['pump',0,220,0,false],['range',0,420,0,false],['range-east',20,505,Math.PI/2,true],['range-west',-20,505,-Math.PI/2,true],['clubhouse',21,712,.1,true],['return',0,430,Math.PI,true],['garage',-33.76177,769.442,.05788,true]];
 (async()=>{fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];
+ const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/parallax-scene.js*',r=>{
   const baseline=before||r.request().url().includes('qa-horizon-baseline');let body=fs.readFileSync((baseline?'output/back-nine-visual-upgrade/horizon/baseline-source/':'web/')+'parallax-scene.js','utf8');

@@ -3,7 +3,7 @@ const root='output/back-nine-visual-upgrade/'+(process.argv.includes('--face')?'
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{
  const results=[];
  for(const baseline of [true,false]){
-  const p=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
   for(const name of ['back-nine-scene.js','chase-runner.js','runner-materials.js'])await p.route('**/'+name+'*',r=>{let source=fs.readFileSync((baseline?root+'/baseline-source/':'web/')+name,'utf8');if(name==='back-nine-scene.js')source=source.replace('return {scene,camera,update,draw()','return window.__budgetWorld={scene,camera,renderer,runner,update,draw()');return r.fulfill({contentType:'application/javascript',body:source});});
   await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));

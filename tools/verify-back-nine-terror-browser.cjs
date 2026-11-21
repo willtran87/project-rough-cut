@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const outIndex=process.argv.indexOf('--output-dir'),out=outIndex>=0?process.argv[outIndex+1]:'output/back-nine-terror-2026-11-13/browser';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],samples={};page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],samples={};{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true}));if(!sessionStorage.getItem('legacy-seeded')){localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({checkpoint:2,collected:3,utilityChoices:['bell','repair'],variationSeed:12345}));sessionStorage.setItem('legacy-seeded','1');}});
  const read=()=>page.evaluate(()=>{const s=JSON.parse(render_game_to_text());return {mode:s.mode,joe:s.joe,checkpoint:s.checkpoint,cart:s.cart,player:s.player,utility:s.utility,service:s.service,story:s.story,graphics:s.graphics,seconds:s.seconds,wreck:s.wreck,destruction:s.destruction,messages:s.messages};});
  const present=()=>page.evaluate(async()=>{await __backNine.whenPresented();__backNine.render();await __backNine.whenPresented();});

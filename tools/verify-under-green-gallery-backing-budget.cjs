@@ -5,7 +5,7 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),pages=[],errors=[],results=[];
  try{
   for(const enabled of [false,true]){
-   const p=await b.newPage({viewport:{width:software?960:2560,height:software?600:1600}});p.on('pageerror',e=>errors.push(e.stack));pages.push(p);
+   const p=await b.newPage({viewport:{width:software?960:2560,height:software?600:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));pages.push(p);
    for(const name of ['under-green-ground-finish','under-green-gallery-render'])await p.route('**/'+name+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/'+name+'.js','utf8')}));
    await p.route('**/under-green-scene.js',r=>{let s=fs.readFileSync(enabled?'output/under-green/visual-pass101/source/under-green-scene-candidate.js':'output/under-green/visual-pass101/source/under-green-scene-before.js','utf8'),marker=' return {draw,inspectCastShadow:';assert(s.includes(marker));s=s.replace(marker,' window.__tonalProbe={renderer,scene};'+marker);return r.fulfill({contentType:'application/javascript',body:s});});
    await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
