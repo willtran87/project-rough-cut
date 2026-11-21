@@ -11,10 +11,11 @@ const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/und
    s=s.replace('!occlusion?.hidden(p.bounds)','!(window.__disableSolid?false:occlusion?.hidden(p.bounds))').replace('occlusion?.update(camera);','if(!window.__disableSolid)occlusion?.update(camera);');
    return route.fulfill({contentType:'application/javascript',body:s});
   });
-  await p.route('**/under-green.js',route=>{const s=fs.readFileSync('web/under-green.js','utf8'),m='if(test)window.__underGreen={';assert(s.includes(m));return route.fulfill({contentType:'application/javascript',body:s.replace(m,'window.__solidPrefs=prefs;'+m)});});
-  await p.route('**/under-green-scene.js',route=>{const s=fs.readFileSync('web/under-green-scene.js','utf8'),m=' return {draw,drainJoeFootsteps:';assert(s.includes(m));return route.fulfill({contentType:'application/javascript',body:s.replace(m,'window.__solidAudit={renderer,batchCulling,solidOcclusion};'+m)});});
-  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__solidAudit&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
-  const fixtures=JSON.parse(fs.readFileSync('output/under-green/route-view-costs/fixtures.json','utf8')).fixtures;
+  await p.route(/\/under-green\.js(\?|$)/,route=>{const s=fs.readFileSync('web/under-green.js','utf8'),m='if(test)window.__underGreen={';assert(s.includes(m));return route.fulfill({contentType:'application/javascript',body:s.replace(m,'window.__solidPrefs=prefs;'+m)});});
+  await require('./lib/legacy-under-green-probe.cjs').exposeScene(p,'__solidAudit','renderer,batchCulling,solidOcclusion');
+  await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__solidAudit&&JSON.parse(render_game_to_text()).ready,null,{timeout:360000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
+  // Route views come from today's ordinary-input pilot (same sampling as profile-under-green-route-views.cjs), not a saved fixtures file.
+  const {traverse}=await import('./probe-under-green-folded.mjs'),fixtures=[];for(const [scenario,options]of [{dodge:true},{wet:true,dodge:true},{sprint:true,dodge:true},{cp:3,dodge:true}].entries()){let next=0;const result=traverse({...options,inspect:r=>{if(r.elapsed<next)return;next+=2;const state=structuredClone(r);delete state.telemetry;fixtures.push({scenario,state});}});assert.equal(result.mode,'complete');}
   async function compare(f,options={}){
    const row=await p.evaluate(({fixture,options})=>{
     const {scenario,state}=fixture;Object.assign(__solidPrefs,{fov:85,resolution:.5,...options});if(options.pitch!==undefined)state.player.pitch=options.pitch;if(options.eyeHeight!==undefined)state.player.eyeHeight=options.eyeHeight;

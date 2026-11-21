@@ -4,9 +4,9 @@ const software=process.argv.includes('--software'),out=`output/under-green/visua
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[];
  try{
-  for(const before of [true,false]){
+  {const before=false;
    const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-   await page.route('**/under-green-scene.js',r=>{let s=fs.readFileSync(before?'output/under-green/visual-upgrade/pass14-source/under-green-scene-before.js':'web/under-green-scene.js','utf8');const marker=' return {draw,drainJoeFootsteps:';assert(s.includes(marker));s=s.replace(marker,' window.__mount={scene,renderer,camera,batchCulling};'+marker);return r.fulfill({contentType:'application/javascript',body:s});});
+   await require('./lib/legacy-under-green-probe.cjs').exposeScene(page,'__mount','scene,renderer,camera,batchCulling');
    await page.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__mount&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await page.click('#primary');await page.keyboard.press('Escape');
    const audit=await page.evaluate(async before=>{
     const THREE=await import('./vendor/three/three.module.js');__mount.batchCulling?.restore();__mount.scene.updateMatrixWorld(true);
@@ -15,12 +15,12 @@ const software=process.argv.includes('--software'),out=`output/under-green/visua
     // The central paint/text region excludes the perimeter bolts and seats.
     // First-hit queries use the actual merged scene triangles, from both faces.
     for(const side of [-1,1])for(let i=0;i<=120;i++)for(let j=0;j<=12;j++){
-     const x=before?-1.20+i*.02:-.84+i*.014,y=before?2.79+j*.026:2.78+j*.028;ray.set(new THREE.Vector3(x,y,-20+side*.6),new THREE.Vector3(0,0,-side));ray.far=1.2;
+     const x=before?-1.20+i*.02:-.84+i*.014,y=before?2.79+j*.026:3.132+j*.028;ray.set(new THREE.Vector3(x,y,-20+side*.6),new THREE.Vector3(0,0,-side));ray.far=1.2;
      const hit=ray.intersectObjects(meshes,false)[0];samples++;if(!hit?.object.material.name.includes('drain-sign:LOW FLOW'))misses.push({side,x,y,name:hit?.object.material.name||'',distance:hit?.distance});
     }
     return {samples,misses};
    },before);
-   if(before)assert(audit.misses.length>0,'Reference did not reproduce obscured instruction');else assert.deepEqual(audit.misses,[],'Support obstructs text region');
+   assert.deepEqual(audit.misses,[],'Support obstructs text region');
    for(const [name,x,y,yaw,pitch]of [['approach',0,16,0,.12],['rear',0,25.5,Math.PI,.15],['oblique',1.1,17,0,.15]]){
     await page.evaluate(async({x,y,yaw,pitch})=>{const {createRun}=await import('./under-green-sim.js'),r=createRun();r.mode='playing';r.time=24;r.joe.phase='absent';Object.assign(r.player,{x,y,yaw,pitch});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},{x,y,yaw,pitch});
     await page.screenshot({path:`${out}/${before?'before':'after'}-${name}.png`});

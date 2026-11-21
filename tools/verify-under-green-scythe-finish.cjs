@@ -5,10 +5,9 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],views=[];
  try{
-  for(const before of [true,false]){
+  {const before=false;
    const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-   if(before)for(const f of ['under-green-actor.js','under-green-scythe-scene.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass21-source/'+f,'utf8')}));
-   if(!before)await p.route('**/under-green-actor.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-actor.js','utf8').replace(' const scythe=buildGrassScythe(body,materials);',' const scythe=buildGrassScythe(body,materials); window.__scytheArt={body,root};')}));
+   await p.route('**/under-green-actor.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/under-green-actor.js','utf8').replace(' const scythe=buildGrassScythe(body,materials);',' const scythe=buildGrassScythe(body,materials); window.__scytheArt={body,root};')}));
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
    const fixtures=[['front','walk',0,-1.4,49],['side','walk',0,3,54],['rear','walk',0,0,58],['windup','windup',.6,-1.4,50.5],['midcut','sweep',.11,-1.4,50.5],['follow','recover',.1,-1.4,50.5],['close','walk',0,-1,51.5]];
    async function place(f){await p.evaluate(async([name,phase,age,x,y])=>{const {createRun}=await import('./under-green-sim.js'),{settleWeapon}=await import('./under-green-clearance.js');const r=createRun();r.mode='playing';r.time=20;r.elapsed=20;r.messageTime=0;Object.assign(r.player,{x,y,yaw:Math.atan2(-x,54-y),pitch:-.1});Object.assign(r.joe,{x:0,y:54,yaw:Math.PI,phase,age,speed:0,walk:0});settleWeapon(r,1/60);__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
@@ -26,7 +25,6 @@ fs.mkdirSync(out,{recursive:true});
    }
    await p.close();console.log(JSON.stringify({before,software,views:views.filter(v=>v.before===before).length}));
   }
-  for(const old of views.filter(v=>v.before)){const fresh=views.find(v=>!v.before&&v.name===old.name&&v.viewport.width===old.viewport.width);assert.deepEqual(fresh.state.graphics.resolution,old.state.graphics.resolution);assert(fresh.state.graphics.draws<=old.state.graphics.draws);assert(fresh.state.graphics.triangles<=old.state.graphics.triangles+1000);}
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,errors},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

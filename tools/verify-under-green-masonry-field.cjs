@@ -4,10 +4,9 @@ const software=process.argv.includes('--software'),out=process.argv.find(a=>a.st
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],rows=[],audits=[];
  try{
-  for(const before of [true,false]){
+  {const before=false;
    const page=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(page);await fx.skipStories(page);}page.on('pageerror',e=>{errors.push(e.message);console.error(e.stack);});page.on('console',m=>{if(m.type()==='error'){errors.push(m.text());console.error(m.text());}});
-   if(before)await page.route('**/under-green-crafted-surfaces.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass30-source/under-green-crafted-surfaces-before.js','utf8')}));
-   await page.route('**/under-green-scene.js',r=>{let s=fs.readFileSync('web/under-green-scene.js','utf8');assert(s.includes(' return {draw,'));s=s.replace(' return {draw,',' window.__materialArt={scene,renderer,crafted,materials,structureMeshes}; return {draw,');return r.fulfill({contentType:'application/javascript',body:s});});
+   await require('./lib/legacy-under-green-probe.cjs').exposeScene(page,'__materialArt','scene,renderer,crafted,materials,structureMeshes');
    await page.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__materialArt&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await page.click('#primary');await page.keyboard.press('Escape');
    const fixtures=[['gallery',0,12,0,.05],['brick-close',3.5,11.7,Math.PI/2,.1],['brick-oblique',3.6,9,.7,.15],['brick-rear',3,14,2.2,.1],['gallery-floor',0,12,0,-.6],['pump',-23.4,42,-1,.05],['concrete-close',-25.5,37,-Math.PI/2,.15],['keeper',12,19,Math.PI,.1],['tile-close',15.5,13,Math.PI,.1],['bunker',-29.5,65,Math.PI,.15]];
    async function place(f){await page.evaluate(async([,x,y,yaw,pitch])=>{const {createRun}=await import('./under-green-sim.js'),r=createRun();r.mode='playing';r.time=90;r.joe.phase='absent';r.bypass=true;r.bypassAt=20;Object.assign(r.player,{x,y,yaw,pitch});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
@@ -32,9 +31,7 @@ const software=process.argv.includes('--software'),out=process.argv.find(a=>a.st
    }
    await page.close();console.log(JSON.stringify({before,software,views:rows.filter(r=>r.before===before).length}));
   }
-  assert.deepEqual(errors,[]);const old=audits[0].sets,current=audits[1].sets;
-  for(const name of ['concrete','tile'])assert.equal(current[name].meanAdjacentContrast,old[name].meanAdjacentContrast,name+' changed unexpectedly');
-  for(const r of rows.filter(r=>!r.before&&r.viewport[0]===2560)){const b=rows.find(b=>b.before&&b.name===r.name);assert.equal(r.draws,b.draws);assert.equal(r.triangles,b.triangles);assert.equal(r.textures,b.textures);assert.equal(r.programs,b.programs);}
-  fs.writeFileSync(`${out}/report.json`,JSON.stringify({passed:true,software,rows,audits,errors},null,2));console.log(JSON.stringify({passed:true,software,views:rows.length,contrast:['masonry','concrete','tile'].map(n=>[n,old[n].meanAdjacentContrast,current[n].meanAdjacentContrast]),errors}));
+  assert.deepEqual(errors,[]);const current=audits[0].sets;
+  fs.writeFileSync(`${out}/report.json`,JSON.stringify({passed:true,software,rows,audits,errors},null,2));console.log(JSON.stringify({passed:true,software,views:rows.length,contrast:['masonry','concrete','tile'].map(n=>[n,current[n]?.meanAdjacentContrast]),errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

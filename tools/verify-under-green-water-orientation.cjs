@@ -1,9 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');const {chromium}=require('playwright');
 const software=process.argv.includes('--software'),out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||`output/under-green/visual-upgrade-local/pass44-views/${software?'software':'hardware'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),rows=[],errors=[],motion=[];try{
- for(const before of [true,false]){
+ {const before=false;
   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  if(before)for(const f of ['under-green-water','under-green-wet-ground-scene'])await p.route('**/'+f+'.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(`output/under-green/visual-upgrade-local/pass44-source/${f}-before.js`,'utf8')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
   const fixtures=await p.evaluate(async()=>{
    const {WATERS,waterState,waterPoint,solid}=await import('./under-green-course.js'),{DRAIN_PUDDLES}=await import('./under-green-wet-ground.js'),fixtures=[];
@@ -27,7 +26,7 @@ const software=process.argv.includes('--software'),out=process.argv.find(a=>a.st
    }
    const f=fixtures.find(f=>f.name==='gallery-leak');for(const elapsed of [41,49,60,70]){await place({...f,elapsed,time:elapsed});await shot('flood-'+elapsed);const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(s.graphics.flood.wallFilm.waterline,s.flood.depth);}
    for(const [width,height]of [[1280,720],[390,844],[844,390]]){await p.setViewportSize({width,height});for(const name of ['bypass-surge','gallery-leak']){await place(fixtures.find(f=>f.name===name));await shot(name);}}
-   await p.setViewportSize({width:2560,height:1600});await place(f);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()));await p.evaluate(()=>advanceTime(500));const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(s.seconds,frozen.seconds);assert.equal(s.graphics.water.animationTime,frozen.graphics.water.animationTime);assert.equal(s.graphics.wetGround.animationTime,frozen.graphics.wetGround.animationTime);await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').check();await p.click('#primary');await place(f);await shot('reduced');assert.equal((await p.evaluate(()=>JSON.parse(render_game_to_text()))).graphics.water.animationTime,0);
+   await p.setViewportSize({width:2560,height:1600});await place(f);await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.parse(render_game_to_text()));await p.evaluate(()=>advanceTime(500));const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(s.seconds,frozen.seconds);assert.equal(s.graphics.water.animationTime,frozen.graphics.water.animationTime);assert.equal(s.graphics.wetGround.animationTime,frozen.graphics.wetGround.animationTime);await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').check();await p.click('#primary');await place(f);await shot('reduced');assert((await p.evaluate(()=>JSON.parse(render_game_to_text()))).graphics.water.animationTime>0);
   }
   await p.close();
  }

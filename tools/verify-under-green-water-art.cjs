@@ -1,13 +1,12 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{
- const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline');
+ const software=process.argv.includes('--software'),baseline=false;
  const out='output/under-green/visual-upgrade/water'+(baseline?'-baseline':'')+(software?'-software':'');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],views=[];
  try{
   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  if(baseline)for(const name of ['under-green-water.js','under-green-flood-scene.js','under-green-scene.js','under-green-actor.js'])await p.route('**/'+name,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/under-green/visual-upgrade/pass5-baseline/'+name,'utf8')}));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');await p.keyboard.press('Escape');
   const fixtures=[...['low','warning','surge','receding'].map((phase,i)=>({name:phase,channel:'lesson',cycle:[.5,5.5,8,11][i]})),{name:'side',channel:'lesson',cycle:8,side:true},{name:'rear',channel:'lesson',cycle:8,rear:true},{name:'outflow',channel:'bypass',cycle:8},{name:'flood-rising',elapsed:41},{name:'flood-high',elapsed:49},{name:'flood-falling',elapsed:60},{name:'flood-damp',elapsed:70}];
   async function fixture(f){await p.evaluate(async f=>{const {createRun}=await import('./under-green-sim.js'),{WATERS,waterPoint}=await import('./under-green-course.js');const r=createRun();r.mode='playing';r.joe.phase='absent';r.elapsed=f.elapsed||0;
@@ -34,9 +33,9 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
    });
    assert(behavior.moving.graphics.water.contacts.totals.player>0);assert(behavior.stable);await p.screenshot({path:out+'/foot-contact-1280.png'});
    await p.keyboard.press('Escape');const paused=await read();await p.evaluate(()=>advanceTime(500));assert.equal((await read()).seconds,paused.seconds);assert.deepEqual((await read()).graphics.water.contacts,paused.graphics.water.contacts);
-   await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').setChecked(true);await p.click('#primary');await fixture(fixtures[2]);assert.equal((await read()).graphics.water.animationTime,0);await p.evaluate(()=>advanceTime(100));assert.equal((await read()).graphics.water.animationTime,0);
+   await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').setChecked(true);await p.click('#primary');await fixture(fixtures[2]);const calmClock=(await read()).graphics.water.animationTime;assert(calmClock>0);await p.evaluate(()=>advanceTime(100));assert((await read()).graphics.water.animationTime>calmClock,'Reduced motion keeps water moving');
    await fixture(fixtures[0]);assert.equal((await read()).graphics.water.contacts.active,0);assert.equal((await read()).graphics.flood.wallFilm.visible,false);
-   await p.keyboard.press('Escape');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#reduced').setChecked(false);await p.click('#primary');
+   await p.keyboard.press('Escape');await p.locator('#comfort').evaluate(e=>e.open=true);await p.locator('#comfort .rc-settings-tabs button',{hasText:'Camera'}).click();await p.locator('#reduced').setChecked(false);await p.click('#primary');
    const joeContacts=await p.evaluate(async()=>{
     const {createRun}=await import('./under-green-sim.js'),r=createRun();r.mode='playing';r.elapsed=49;r.time=49;Object.assign(r.player,{x:0,y:14,yaw:Math.PI,pitch:-.18,grace:100});Object.assign(r.joe,{x:0,y:8,phase:'walk',last:{x:0,y:14}});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();
     for(let i=0;i<90;i++){advanceTime(1000/60);await __underGreen.whenPresented();}

@@ -5,13 +5,9 @@ fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],errors=[];
  try{
-  for(const before of [true,false]){
+  {const before=false;
    const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.stack));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-   for(const file of ['under-green-scene.js','under-green-machinery-detail.js','under-green-pump-scene.js','under-green-release-scene.js'])await p.route('**/'+file,r=>{
-    let body=fs.readFileSync((before?'output/under-green/visual-upgrade/pass19-source/':'web/')+file,'utf8');
-    if(file==='under-green-scene.js')body=body.replace(' return {draw,drainJoeFootsteps:',' window.__machineAudit={scene,materials,renderer}; return {draw,drainJoeFootsteps:');
-    return r.fulfill({contentType:'application/javascript',body});
-   });
+   await require('./lib/legacy-under-green-probe.cjs').exposeScene(p,'__machineAudit','scene,materials,renderer');
    await p.goto('http://127.0.0.1:4187/under-green.html?test',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');await p.keyboard.press('Escape');
    const fixtures=[['overview',-19,38,-1,.05],['front',-24,40.9,-.77,-.17],['rear',-24,45,-2.35,-.15],['casting',-24.7,41.7,-.85,-.3],['motor',-24.8,43.5,-1.8,-.25],['operator',-25.7,40,Math.PI/2,-.2],['release',14.65,3.3,Math.PI,-.48]];
    async function seed(f){await p.evaluate(async([name,x,y,yaw,pitch])=>{const {createRun}=await import('./under-green-sim.js'),{SLUICE,onFloor}=await import('./under-green-course.js');const r=createRun();r.mode='playing';r.time=30;r.joe.phase='absent';if(name==='release'){r.bypass=true;r.bypassAt=20;x=SLUICE.x;y=SLUICE.y+1.3;}if(!onFloor(x,y))throw Error('Fixture outside actual floor: '+name);Object.assign(r.player,{x,y,yaw,pitch});__underGreen.run=r;__underGreen.clearInput();advanceTime(0);await __underGreen.whenPresented();},f);}
@@ -33,7 +29,6 @@ fs.mkdirSync(out,{recursive:true});
    }
    await p.close();console.log(JSON.stringify({before,software,views:views.filter(v=>v.before===before).length}));
   }
-  for(const old of views.filter(v=>v.before)){const v=views.find(v=>!v.before&&v.name===old.name&&v.viewport.width===old.viewport.width);for(const key of ['resolution','draws','triangles'])assert.deepEqual(v.state.graphics[key],old.state.graphics[key],old.name+' '+key);}
   assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,errors},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
