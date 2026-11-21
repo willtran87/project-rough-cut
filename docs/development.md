@@ -1,6 +1,6 @@
 # Development and verification
 
-Checked against the local source on November 15, 2026. All commands below run from the repository root unless explicitly stated otherwise.
+Checked against the local source on November 19, 2026. All commands below run from the repository root unless explicitly stated otherwise.
 
 ## Local runtime and dependencies
 
@@ -14,13 +14,13 @@ Open [the local menu](http://127.0.0.1:4187/). Reuse an existing server only if 
 
 Node.js runs `.mjs` simulation/contract checks and `.cjs` browser tools. This documentation audit used Node v20.20.2 and Python 3.11.4; these are observed versions, not declared minimum support versions.
 
-Many browser tools import Playwright from `C:/Users/Will/.codex/skills/develop-web-game/node_modules/playwright`. Some also set temporary/evidence paths under `F:/CodexArtifacts/`. They are currently workstation-specific. On another machine, inspect the selected script's imports, paths and browser flags and provide equivalent Playwright/browser dependencies before running it. The Windows D3D11 flags are not a portable browser-test setup. Installing a package in the repository alone does not resolve an absolute import.
+Tool dependencies (Playwright and sharp) are pinned in `tools/package.json`. Install them once with `cd tools && npm install`, then run tools from the repository root as shown below. Evidence goes to the folder named by `ROUGH_CUT_ARTIFACTS`, else `F:/CodexArtifacts/project-rough-cut` if it exists, else `output/artifacts` (see `tools/lib/artifacts.cjs`). Checks that open a later chapter directly use `tools/lib/campaign-fixture.cjs` to unlock chapters and skip stories. The Windows D3D11 browser flags some tools pass are not portable; inspect a tool's flags before running it elsewhere.
 
 ## Source ownership
 
 | Area | Main files |
 | --- | --- |
-| Night Order | `web/index.html`, `web/game.js`, `web/scene-3d.js`, `web/course-*.js` |
+| Night Order | `web/index.html`, `web/game.js`, `web/night-order/` (pure helpers and atlas tables moved out of `game.js`), `web/scene-3d.js`, `web/course-*.js` |
 | Chapter browsing | `web/chapter-links.js`, `web/course-menu-ui.js` |
 | Back Nine | `web/back-nine.html`, `web/back-nine.js`, `web/chase-*.js` |
 | Under the Green | `web/under-green.html`, `web/under-green.js`, `web/under-green-sim.js`, `web/under-green-scene.js` |
@@ -48,10 +48,11 @@ Simulation suites (no browser server required):
 ```powershell
 node tools/verify-back-nine.mjs
 node tools/verify-under-green.mjs
+node tools/verify-final-cut-hollows.mjs
 node tools/verify-final-cut.mjs
 ```
 
-These exercise rules and scripted routes, not human input or perceived difficulty. They were catalogued but not rerun during this documentation-only audit.
+These exercise rules and scripted routes, not human input or perceived difficulty. `verify-final-cut-hollows.mjs` covers the Final Cut's flood-and-bait rules. The PR workflow (`.github/workflows/checks.yml`) runs 14 suites on every pull request. The few checks that still fail, and why, are listed in the [current state report](../qa/current-state-2026-11-19.md#checks).
 
 Representative browser checks, after starting the server and satisfying the dependencies above:
 
@@ -76,7 +77,7 @@ Source art lives in `assets/` and `art-source/`; deployed runtime assets live in
 
 ### Joe's recorded voice
 
-Joe's spoken lines are generated from the text the game already shows. `web/joe-voice.js` looks a clip up by the line's text, so a line with no clip is silent and captions cannot drift from audio. The Final Cut's five in-round lines and PA announcements keep their own builders (`tools/build-final-cut-joe.ps1`, `tools/build-final-cut-pa.ps1`).
+Joe's spoken lines are generated from the text the game already shows. `web/joe-voice.js` looks a clip up by the line's text, so a line with no clip is silent and captions cannot drift from audio. The Final Cut's scripted in-round lines live in `assets/audio/final-cut-joe/script.json`; PA announcements keep their own builder (`tools/build-final-cut-pa.ps1`).
 
 ```powershell
 node tools/build-joe-voice.mjs           # build clips for lines that have none
@@ -84,18 +85,30 @@ node tools/build-joe-voice.mjs --check   # fail if any line has no clip
 node tools/build-joe-voice.mjs --prune   # also delete clips whose line was removed
 ```
 
-The build needs Windows (System.Speech, "Microsoft David Desktop") and `ffmpeg` on PATH. It reads `web/joe-dialogue.js`, `web/back-nine-dialogue.js`, `web/defeat-dialogue.js` and the base lines in `web/game.js`, and writes `web/assets/audio/joe-voice/<id>.ogg` plus `index.txt`. Rerun it after adding or editing a line.
+The build needs Windows (System.Speech, "Microsoft David Desktop") and `ffmpeg` on PATH. It reads `web/joe-dialogue.js`, `web/back-nine-dialogue.js`, `web/defeat-dialogue.js` and the base and dread lines in `web/game.js`, and writes `web/assets/audio/joe-voice/<id>.ogg` plus `index.txt`. Rerun it after adding or editing a line.
+
+Many lines are instead whispered takes from ElevenLabs (built-in voice "Daniel", slowed and pitched down). The `--elevenlabs` mode revoices whole groups of lines within a credit budget and records what is done in `assets/audio/joe-voice/elevenlabs.txt`; `--final-cut` voices the Final Cut's scripted lines and rewrites `web/final-cut-dialogue-lines.js` with their lengths.
+
+```powershell
+$env:ELEVENLABS_API_KEY = "..."
+node tools/build-joe-voice.mjs --elevenlabs --budget 9500              # next groups that fit
+node tools/build-joe-voice.mjs --elevenlabs --groups dread --budget 200
+node tools/build-joe-voice.mjs --elevenlabs --final-cut                # lines with no clip; --all redoes them
+```
+
+These clips come from ElevenLabs' free plan, which requires crediting ElevenLabs when published and does not include a commercial licence.
 
 - `python tools/optimize-runtime-art.py` prepares optimized runtime artwork; inspect its Pillow dependency and input/output mapping before rebuilding.
-- `node tools/bake-course-navigation.mjs` rebuilds baked course navigation after relevant course/clearance edits.
-- `python tools/build-joe-rider.py` rebuilds the Back Nine rider from its source assets; see the [Joe model guide](../assets/enemies/joe-hd/model/README.md) for the underlying model workflow.
+- `node tools/bake-course-navigation.mjs` rebuilds baked course navigation after relevant course/clearance edits. Its fingerprint includes function source text, so a stale bake is silently ignored and Back Nine recomputes navigation at load; `navigationStats().baked` in `web/back-nine-course.js` tells you which.
+- `node tools/bake-course-contours.cjs` (with the local server running) rebuilds `web/assets/baked/course-contours.bin.gz`, Back Nine's precomputed terrain. Run `node tools/verify-course-contours.cjs` after editing `web/course-terrain.js` or the course layout, and rebake or bump `CONTOUR_BAKE_VERSION` if it fails: a stale bake whose inputs still match would serve outdated geometry.
+- `python tools/build-joe-rider.py` rebuilds the rider model shared by the Back Nine, Under the Green and the Final Cut (Under the Green adjusts Joe's arms and stance at runtime in `web/under-green-actor.js`); see the [Joe model guide](../assets/enemies/joe-hd/model/README.md) for the underlying model workflow.
 - Under the Green has dedicated [encounter](../design/under-green-encounter-authoring.md) and [water](../design/under-green-water-authoring.md) authoring contracts.
 
 ## Publishing
 
 The checked-in [Pages workflow](../.github/workflows/deploy-pages.yml) runs on a push to `main` affecting `web/**` or the workflow, and supports manual dispatch. It checks out source, runs `node tools/verify-release.mjs`, uploads `web/` as the Pages artifact and deploys it. There is no separate build command in this workflow.
 
-The old `gh-pages` branch was archived and removed in the [September 27 release](../qa/release-2026-09-27.md). Local source changes are not automatically the published build. The static verifier must pass before deployment. Documentation changes alone do not certify or initiate a release.
+The old `gh-pages` branch was archived and removed in the [September 27 release](../qa/release-2026-09-27.md). Every merge to `main` that touches `web/` redeploys the site; local uncommitted changes are not the published build. The static verifier must pass before deployment. Documentation changes alone do not certify or initiate a release.
 
 For an explicitly requested deployed-site comparison, the verifier also supports:
 
@@ -103,4 +116,4 @@ For an explicitly requested deployed-site comparison, the verifier also supports
 node tools/verify-release.mjs --url https://willtran87.github.io/project-rough-cut/
 ```
 
-That command performs network checks and compares against the local candidate. It was not run during this documentation audit.
+That command performs network checks and compares against the local candidate.

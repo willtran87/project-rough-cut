@@ -24,6 +24,7 @@ const COURSE_ASSETS=[
  './assets/optimized/rough-cut-hedge-hide-v2.webp',
  './assets/optimized/rough-cut-distant-treeline-v1.webp',
  './assets/baked/course-pines.bin.gz',
+ './assets/baked/course-contours.bin.gz',
  './assets/optimized/rough-cut-moon-v1.webp',
  './assets/optimized/rough-cut-far-ridge-v1.webp',
  './assets/optimized/rough-cut-night-sky-v2.webp',

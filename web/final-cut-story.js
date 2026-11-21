@@ -16,7 +16,7 @@ export const FINAL_CUT_STORIES={
 
 // Illustrations stay in DOM, outside the WebGL scene. At most the current and
 // next frame are decoded. Advancement is deliberate; narration never times out.
-export function createFinalCutStory({root,reduced,onOpen,onClose,onGesture,fullscreen}){
+export function createFinalCutStory({root,reduced,onOpen,onClose,onGesture,fullscreen,useKey=()=>'KeyE'}){
  const key='rough-cut.final-cut-story.v1',read=()=>{try{return JSON.parse(localStorage.getItem(key))||{};}catch{return {};}};
  const dialog=document.createElement('dialog');dialog.id='final-cut-story';dialog.tabIndex=-1;dialog.setAttribute('aria-labelledby','fc-story-title');
  dialog.innerHTML=`<div class="fc-story-layout"><header><span>ROUGH CUT <i>/</i> <b data-story-kind></b></span><button data-story="skip">Skip story</button></header><figure><div class="fc-story-image"></div><p class="fc-story-loading" role="status">Loading illustration…</p><button class="fc-story-retry" hidden>Retry illustration</button></figure><section class="fc-story-caption" aria-live="polite" aria-atomic="true"><small data-story-kicker></small><h2 id="fc-story-title"></h2><div class="fc-story-copy"><p></p><p></p></div></section><footer><label class="fc-story-preference"><input type="checkbox"> Skip story on future rounds</label><span class="fc-story-ending-note">The road escape is saved.</span><nav aria-label="Cutscene controls"><button data-story="back">Back</button><span class="fc-story-count"></span><button data-story="next">Next →</button></nav></footer></div>`;
@@ -39,7 +39,7 @@ export function createFinalCutStory({root,reduced,onOpen,onClose,onGesture,fulls
  for(const b of dialog.querySelectorAll('[data-story]'))b.onclick=()=>action(b.dataset.story);
  retry.onclick=()=>{images.delete(index);show(index);};check.onchange=()=>{try{localStorage.setItem(key,JSON.stringify({...read(),skipIntro:check.checked}));}catch{}};
  dialog.addEventListener('cancel',e=>{e.preventDefault();action('skip');});
- dialog.addEventListener('keydown',e=>{e.stopPropagation();if(e.repeat&&['KeyE','Enter','Space','ArrowLeft','ArrowRight','Escape'].includes(e.code)){e.preventDefault();return;}if(e.code==='ArrowRight'){e.preventDefault();action('next');}else if(e.code==='ArrowLeft'){e.preventDefault();action('back');}else if(e.code==='Escape'){e.preventDefault();action('skip');}else if(e.code==='KeyF'){e.preventDefault();fullscreen();}else if(e.code==='KeyE'&&!e.repeat&&!e.target.closest('input')||['Enter','Space'].includes(e.code)&&!e.target.closest('button,input')){e.preventDefault();action('next');}});
+ dialog.addEventListener('keydown',e=>{e.stopPropagation();if(e.repeat&&[useKey(),'Enter','Space','ArrowLeft','ArrowRight','Escape'].includes(e.code)){e.preventDefault();return;}if(e.code==='ArrowRight'){e.preventDefault();action('next');}else if(e.code==='ArrowLeft'){e.preventDefault();action('back');}else if(e.code==='Escape'){e.preventDefault();action('skip');}else if(e.code==='KeyF'){e.preventDefault();fullscreen();}else if(e.code===useKey()&&!e.repeat&&!e.target.closest('input')||['Enter','Space'].includes(e.code)&&!e.target.closest('button,input')){e.preventDefault();action('next');}});
  const pausePresentation=()=>{dialog.dataset.paused=String(document.hidden||!document.hasFocus());};
  document.addEventListener('visibilitychange',pausePresentation);
  window.addEventListener('blur',()=>{dialog.dataset.paused='true';});

@@ -7,6 +7,7 @@ import {createParallax} from './parallax-scene.js';
 import {finalCutRenderSize} from './final-cut-visual-settings.js';
 import {GROUND_SLABS} from './final-cut-ground-layout.js';
 import * as THREE from './vendor/three/three.module.js';
+import {createScreenFinish,LOOKS} from './screen-finish.js?v=20261119-polish';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import * as Art from './pixel-art.js';
 import {collapsePose} from './final-cut-ending.js';
@@ -60,16 +61,21 @@ import {buildFinalCutRefugeInteriors} from './final-cut-refuge-interiors.js';
 import {createRefugeLighting} from './final-cut-refuge-lighting.js';
 import {createFinalCutAtmosphere,FLOOD_MASTS,OVERLOOK_SIGN,BUNTING_POLES,REFUGE_WASHES} from './final-cut-atmosphere.js';
 import {createFinalCutCameraCues} from './final-cut-camera-cues.js';
+import {createFinalCutEffects} from './final-cut-effects.js?v=20261119-polish';
+import {FINAL_CUT_LOOK} from './final-cut-polish.js?v=20261119-polish';
+import {ambushTell} from './final-cut-ambush.js';
 
 export async function createFinalCutScene(canvas,onProgress=()=>{}){
- onProgress('Preparing the championship grounds…');
+ onProgress('Preparing the championship grounds…',.02);
  // Start the rider model and his finish maps now so their download and decode
  // overlap the atlas loads and static scene construction below.
+ let loadedAtlases=0;
  const riderAsset=new GLTFLoader().loadAsync('./assets/models/joe-riding-pixel.glb');riderAsset.catch(()=>{});preloadFinalCutJoeFinish();
- await Promise.all(['rough-cut-architecture-surfaces-v1','rough-cut-needle-sprays-v1','rough-cut-verge-atlas-v1','final-cut-reed-clumps-v1','final-cut-rough-clumps-v1','final-cut-stone-materials-v1','final-cut-ground-materials-v1','final-cut-industrial-materials-v1','rough-cut-night-sky-v2','rough-cut-moon-v1','rough-cut-cloud-atlas-v2','rough-cut-far-ridge-v1','rough-cut-distant-treeline-v1','rough-cut-distant-clubhouse-v1'].map(Art.source));
+ await Promise.all(['rough-cut-architecture-surfaces-v1','rough-cut-needle-sprays-v1','rough-cut-verge-atlas-v1','final-cut-reed-clumps-v1','final-cut-rough-clumps-v1','final-cut-stone-materials-v1','final-cut-ground-materials-v1','final-cut-industrial-materials-v1','rough-cut-night-sky-v2','rough-cut-moon-v1','rough-cut-cloud-atlas-v2','rough-cut-far-ridge-v1','rough-cut-distant-treeline-v1','rough-cut-distant-clubhouse-v1'].map((name,i,all)=>Art.source(name).then(v=>{onProgress('Preparing the championship grounds…',.04+.3*(++loadedAtlases/all.length));return v;})));
  if(Art.stats().errors.length)throw Error('Course materials could not load. Reload to retry.');
  const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:true});renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;
  const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info'),gpu=ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'',software=/swiftshader|software|llvmpipe/i.test(gpu);
+ const finish=createScreenFinish(THREE,renderer,{look:{...LOOKS.finalCut,...FINAL_CUT_LOOK},level:software?'off':'high'});
  const scene=new THREE.Scene();scene.background=new THREE.Color('#18252d');scene.fog=new THREE.Fog('#26383b',42,138);
  const camera=new THREE.PerspectiveCamera(58,16/9,.08,180);camera.rotation.order='YXZ';
  const skyLight=new THREE.HemisphereLight('#b9d6dc','#455738',2);scene.add(skyLight);const moonlight=new THREE.DirectionalLight('#a4c8d4',1.7);moonlight.position.set(-28,28,-72);scene.add(moonlight,moonlight.target);
@@ -259,6 +265,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   const label=sign('PRACTICE BALLS',b.x+.2,.88,-b.y+.2,1,.22);label.rotation.y=Math.PI/4;cyl('metal',b.x+.14,.65,-b.y+.14,.025,.5);
  }
  cyl('metal',BELL.x,1,-BELL.y,.06,2);const bell=new THREE.Group();bell.position.set(BELL.x,1.9,-BELL.y);scene.add(bell);mesh('brass',new THREE.ConeGeometry(.3,.45,12,1,true),0,0,0,1,1,1,bell,Math.PI,0,0);sign('GROUNDS BELL',BELL.x,2.26,-BELL.y+.085,1.2,.26);box('metal',BELL.x,2.17,-BELL.y+.025,.12,.08,.12);cyl('metal',BELL.x,2.14,-BELL.y,.035,.28);
+ onProgress('Planting the rough and the verges…',.42);
  const rough=createFinalCutRough(scene);
  const breakables=BREAKABLES.map(b=>{
   const root=new THREE.Group(),intact=new THREE.Group(),debris=new THREE.Group();root.position.set(b.x,0,-b.y);root.add(intact,debris);scene.add(root);debris.visible=false;
@@ -322,7 +329,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
    staticBatching.batches++;staticBatching.instances+=items.length;
   }
  }
- onProgress('Preparing Joe and the tournament rig…');
+ onProgress('Preparing Joe and the tournament rig…',.58);
  const rig=new THREE.Group();scene.add(rig);const body=new THREE.Group();rig.add(body);
  const contactMeshes=[],audit=(id,m,instance=null)=>{contactMeshes.push({id,mesh:m,parent:m.parent,instance});return m;};
  const engine=createFinalCutEngine(body,audit),bodywork=createFinalCutBodywork(body,audit),lamps=createFinalCutLamps(materials,audit);
@@ -348,6 +355,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  const hydraulics=createFinalCutHydraulics(body,materials,audit);
  const boss=createFinalCutBoss(body,wings,wheels);
  const headlights=createFinalCutHeadlights(renderer,body,{software});
+ onProgress('Preparing Joe and the tournament rig…',.68);
  const gltf=await riderAsset,rider=gltf.scene;
  rider.traverse(o=>{if(o.name==='MowerRigidBody'||o.name.startsWith('Wheel'))o.visible=false;if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});
  const joeFinish=await finishFinalCutJoe(rider);joeFinish.prepare(renderer);
@@ -373,7 +381,20 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  // breaking fragments remain individually animated.
  const parents=[];scene.traverse(o=>{if(o.children.length)parents.push(o);});
  for(const parent of parents){const batches=new Map();for(const m of [...parent.children]){if(!m.isMesh||m.isInstancedMesh||m.isSkinnedMesh||m.userData.dynamic||![unit,cylinder].includes(m.geometry)||Array.isArray(m.material))continue;const key=m.geometry.uuid+':'+m.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key).push(m);}for(const parts of batches.values()){if(parts.length<2)continue;const batched=new THREE.InstancedMesh(parts[0].geometry,parts[0].material,parts.length);parts.forEach((m,i)=>{m.updateMatrix();batched.setMatrixAt(i,m.matrix);parent.remove(m);});batched.computeBoundingSphere();parent.add(batched);}}
- let renderQuality=finalCutRenderSize(1,1,{software}),backgroundDraws=0,backgroundTriangles=0;
+ // Moths, mist, glints, contact particles and the chipping club: two draws.
+ const effects=createFinalCutEffects(scene,camera,{lite:software});
+ // Presentation springs and the active quality preset. View state only.
+ const settle={run:null,time:0,lever:0,leverSpeed:0},quality={shadows:true,effects:true,viewScale:1,resolution:1,finish:software?'off':'high'},photoEuler=new THREE.Euler(0,0,0,'YXZ'),bankNow=[1,1,1,1],moonAt={x:NaN,z:NaN,frame:0,redraws:0};
+ const overshoot=g=>{const u=clamp(g,0,1)-1;return 1+2.2*u*u*u+1.2*u*u;};
+ function setQuality(preset){
+  Object.assign(quality,{shadows:!!preset.shadows,effects:!!preset.effects,viewScale:clamp(preset.viewScale||1,.5,1),resolution:clamp(preset.resolution||1,.5,1),finish:software?'off':preset.finish});
+  finish.setLevel(quality.finish);effects.setEnabled(quality.effects);
+  // Shadows keep their slot in every shader (no recompile): they are faded
+  // out and no longer redrawn.
+  for(const light of [moonlight,...headlights.lights])light.shadow.intensity=quality.shadows?1:0;
+  scene.fog.far=42+96*quality.viewScale;camera.far=Math.max(110,180*quality.viewScale);
+ }
+ let renderQuality=finalCutRenderSize(1,1,{software}),backgroundDraws=0,backgroundTriangles=0,sceneDraws=0,sceneTriangles=0,grainOn=true;
  let width=0,height=0,lastRun=null,frameMs=0,lastBoard='';
  let fence=null,submittedFrames=0,skippedFrames=0;
  function poll(){
@@ -395,21 +416,23 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  // reserved for hardware. Neither tier changes the threat or sight rules.
  for(const root of [...(software?[]:[rig]),accessGate,exitGate])root.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&o.visible&&!o.material.isShaderMaterial&&![materials.lamp,materials.headLamp,materials.wingLamp].includes(o.material))o.castShadow=true;});
  await Promise.resolve();
+ onProgress('Preparing lamps, water and shadows…',.8);
  await renderer.compileAsync(backdrop.scene,backdrop.camera);
  await renderer.compileAsync(scene,camera);
- onProgress('Preparing moving light and shelter shadows…');
+ onProgress('Preparing moving light and shelter shadows…',.94);
  renderer.setSize(1,1,false);for(const light of headlights.lights)light.shadow.needsUpdate=true;
  renderer.render(scene,camera);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
- return {rigGeometry(){
+ onProgress('Preparing moving light and shelter shadows…',1);
+ return {finish,setQuality,effects,inspect:()=>({scene,camera,renderer,moonlight,headlights}),rigGeometry(){
   scene.updateMatrixWorld(true);const v=new THREE.Vector3(),matrix=new THREE.Matrix4(),instanceMatrix=new THREE.Matrix4();
   return contactMeshes.map(({id,mesh,parent,instance})=>{mesh.updateMatrix();matrix.multiplyMatrices(parent.matrixWorld,mesh.matrix);if(instance!==null){mesh.getMatrixAt(instance,instanceMatrix);matrix.multiply(instanceMatrix);}const pos=mesh.geometry.attributes.position,points=[];for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(matrix);points.push([v.x,v.y,-v.z]);}return {id,points,triangles:Array.from(mesh.geometry.index.array)};});
  },poll,whenPresented,cue:cameraCues.start,cueActive:cameraCues.active,render(r,prefs={}){
   if(poll()&&!prefs.manual){skippedFrames++;return false;}
   const start=performance.now(),w=canvas.clientWidth,h=canvas.clientHeight;
-  renderQuality=finalCutRenderSize(w,h,{tier:prefs.visualTier,resolution:prefs.resolution,software});
+  renderQuality=finalCutRenderSize(w,h,{tier:prefs.visualTier,resolution:(Number.isFinite(prefs.resolution)?prefs.resolution:1)*quality.resolution,software});const fx=prefs.polish||{},feel=!prefs.reduced&&prefs.feel!==false;
   const boardText=championshipBoard(r);if(boardText!==lastBoard){lastBoard=boardText;normalBoard.userData.write(boardText);receiptBoard.userData.write(boardText);}
   if(width!==renderQuality.width||height!==renderQuality.height){width=renderQuality.width;height=renderQuality.height;renderer.setSize(width,height,false);camera.aspect=w/h;}
-  camera.clearViewOffset();camera.fov=prefs.fov||58;camera.updateProjectionMatrix();walker.x=r.player.x;walker.y=r.player.y;walker.speed=r.player.speed||0;walker.walk=r.player.walk||0;walker.sprinting=!r.player.crouch&&!r.player.focus&&walker.speed>MOVEMENT.walk*1.1;pursuer.x=r.rig.x;pursuer.y=r.rig.y;
+  camera.clearViewOffset();camera.fov=(prefs.fov||58)+(feel?fx.fov||0:0);camera.updateProjectionMatrix();walker.x=r.player.x;walker.y=r.player.y;walker.speed=r.player.speed||0;walker.walk=r.player.walk||0;walker.sprinting=!r.player.crouch&&!r.player.focus&&walker.speed>MOVEMENT.walk*1.1;pursuer.x=r.rig.x;pursuer.y=r.rig.y;
   const bob=onFootCameraMotion(walker,pursuer,r.mode==='playing'?prefs.cameraBob||0:0,prefs.reduced);
   camera.position.set(r.player.x,groundHeight(r.player)+easedEyeHeight(r,prefs.reduced)+bob.height,-r.player.y);camera.rotation.set(-r.player.pitch+bob.pitch,-r.player.yaw-r.player.rearAngle,bob.roll,'YXZ');
   if(r.mode==='caught'&&r.failure?.rig){
@@ -420,16 +443,32 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   // Staged entry, capture and victory moves are view-only and never run in
   // reduced motion or under the deterministic test clock.
   if(cameraCues.apply(camera,r,prefs))camera.updateProjectionMatrix();
+  // Impact shake: a few centimetres and a fraction of a degree, view only.
+  if(feel&&fx.shake>0&&r.mode!=='caught'){const k=fx.shake;camera.position.x+=fx.shakeX*k*.035;camera.position.y+=fx.shakeY*k*.03;camera.rotation.z+=fx.shakeX*k*.012;camera.rotation.x+=fx.shakeY*k*.009;}
+  // Photo mode: a free camera near the paused viewpoint.
+  if(prefs.photo){const ph=prefs.photo;photoEuler.set(clamp(camera.rotation.x+ph.pitch,-1.45,1.45),camera.rotation.y+ph.yaw,0);camera.quaternion.setFromEuler(photoEuler);camera.position.x+=ph.x;camera.position.z+=ph.z;camera.position.y=Math.max(.35,camera.position.y+ph.y);camera.fov=clamp(ph.fov,18,85);camera.clearViewOffset();camera.updateProjectionMatrix();}
   const j=r.rig;rig.position.set(j.x,0,-j.y);rig.rotation.y=-j.yaw;
   const wash=courseLightState(r);
-  camera.updateMatrixWorld();backdrop.update(camera,r.time,prefs.reduced,r.mode==='paused');
+  camera.updateMatrixWorld();
+  {const finaleNow=cameraCues.finale(),tell=feel?ambushTell(r):null;
+   // A failing bank: the floodlights nearest his reeds stutter before a charge.
+   let failing=-1;if(tell){let best=1e9;FLOOD_MASTS.forEach((m,i)=>{const d=(m.x-tell.x)**2+(m.y-tell.y)**2;if(d<best){best=d;failing=i;}});}
+   for(let i=0;i<4;i++)bankNow[i]=finaleNow.banks[i]*(i===failing?(Math.sin(r.time*47)+Math.sin(r.time*31+1.3)>.35?.3:.92):1);
+   const near=fx.action&&!prefs.photo?{x:fx.action.x,z:-fx.action.y,h:groundHeight(fx.action)+(fx.action.h?Math.min(1.25,fx.action.h*.7):1.05)}:null;
+   const lean=effects.update(r,{reduced:prefs.reduced,wash:wash*finaleNow.dim,bankLevels:bankNow,fog:scene.fog,action:near,birds:fx.birds,feel});
+   if(feel&&!prefs.photo&&r.mode!=='caught'&&(lean.pitch||lean.height)){camera.rotation.x+=lean.pitch;camera.position.y+=lean.height;camera.updateMatrixWorld();}}backdrop.update(camera,r.time,prefs.reduced,r.mode==='paused');
   // The closing scene only ever scales these existing lights and colours.
   const finale=cameraCues.finale();
   skyLight.intensity=.12+.98*wash*finale.dim+.75*finale.dawn;skyLight.color.copy(nightSky).lerp(dawnSky,finale.dawn);moonlight.intensity=(.04+1.66*wash*finale.dim)*(1-backdrop.moonCoverage()*.3);
-  const snap=48/2048,mx=Math.round(r.player.x/snap)*snap,mz=Math.round(-r.player.y/snap)*snap;moonlight.target.position.set(mx,0,mz);moonlight.position.set(mx-28,28,mz-72);
-  if(!software)moonlight.shadow.needsUpdate=true;
+  // The moon map recentres in 1.5 m steps (64 whole texels, so it never
+  // shimmers). It is redrawn every frame while anything that moves on its own
+  // is inside it (the rig, Joe aboard or on foot, a sliding gate) and whenever
+  // it recentres; with only swaying plants in it, every fourth frame.
+  const snap=48/2048*64,mx=Math.round(r.player.x/snap)*snap,mz=Math.round(-r.player.y/snap)*snap,moonMoved=mx!==moonAt.x||mz!==moonAt.z,inMoon=o=>!!o&&Math.abs(o.x-mx)<34&&Math.abs(-o.y-mz)<34,gateMoving=r.arrival.gate>0&&r.arrival.gate<1||r.won&&r.ending.gate>0&&r.ending.gate<1,rigInMoon=inMoon(r.rig)||inMoon(r.arrival.joe)||r.won&&inMoon(r.ending.joe)||gateMoving;
+  if(moonMoved){moonAt.x=mx;moonAt.z=mz;moonlight.target.position.set(mx,0,mz);moonlight.position.set(mx-28,28,mz-72);}
+  if(!software&&quality.shadows&&(prefs.manual||moonMoved||rigInMoon||lastRun!==r||moonAt.frame++%4===0)){moonlight.shadow.needsUpdate=true;moonAt.redraws++;}
   scene.fog.color.copy(nightFog).lerp(litFog,wash*finale.dim).lerp(dawnFog,finale.dawn*.5);
-  floodBanks.forEach((name,i)=>materials[name].color.copy(lampDark).lerp(lampWarm,wash*finale.banks[i]));
+  floodBanks.forEach((name,i)=>materials[name].color.copy(lampDark).lerp(lampWarm,wash*bankNow[i]));
   const atmosphere=uneaseFrame(r,prefs.reduced),clothPoints=clothGeometry.attributes.position;bannerFold=atmosphere.fold;
   for(let i=0;i<clothPoints.count;i++){
    const x=clothRest[i*3],y=clothRest[i*3+1],drop=(banner.clothHeight/2-y)/banner.clothHeight;
@@ -447,7 +486,7 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   for(const {wing,reel,side}of wings){wing.rotation.z=side*(1-j.deployment)*1.15+(r.won?side*collapse.wing*(side<0?1:.35):0);reel.rotation.x=mechanics.reel;}
   hydraulics.update(-wings[0].wing.rotation.z,wings[1].wing.rotation.z);
   boss.update(r);engine.update(r);
-  wheels.forEach((w,k)=>w.rotation.set(mechanics.wheels[k],-rigWheelAngle(j,{side:w.position.x,forward:-w.position.z}),0,'YXZ'));tires.update(r);headlights.update(r);
+  wheels.forEach((w,k)=>w.rotation.set(mechanics.wheels[k],-rigWheelAngle(j,{side:w.position.x,forward:-w.position.z}),0,'YXZ'));tires.update(r);headlights.update(r);if(!quality.shadows)for(const light of headlights.lights)light.shadow.needsUpdate=false;
   const acting=cabPerformance(r,prefs.reduced);steering.rotation.set(CAB.wheel.tilt,0,acting.wheel);cutControl.rotation.x=acting.lever;
   joeActor.update(r,prefs.reduced);joeFinish.update(r);maintenanceLight.update(r);cabLighting.update(r);refugeLighting.update(r,camera);
   actorCulling.update();
@@ -455,12 +494,14 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
   pumpHardware.update(r);
   ambushReeds.update(r,prefs.reduced);verges.update(r,prefs.reduced);
   const drift=cameraCues.seconds();rough.update(r,prefs.reduced,drift);lastRun=r;
-  staging.update(r,camera,{reduced:prefs.reduced,courseWash:wash,lampBeam:lampState.beam,engine:lampState.marker,drift,bankLevels:finale.banks,firstLight:finale.dawn});
+  staging.update(r,camera,{reduced:prefs.reduced,courseWash:wash,lampBeam:lampState.beam,engine:lampState.marker,drift,bankLevels:bankNow,firstLight:finale.dawn});
   for(const b of breakables){const broken=r.broken.includes(b.data.id);b.intact.visible=!broken;b.debris.visible=broken;if(broken){const age=prefs.reduced?1:r.breakTimes[b.data.id]===undefined?1:clamp((r.time-r.breakTimes[b.data.id])/.55,0,1);b.pieces.forEach((m,i)=>{m.position.set(Math.sin(i*7)*b.data.w*.5*age,.06+(1-age)*b.data.h*.6+Math.sin(age*Math.PI)*.45,Math.cos(i*5)*b.data.d*.7*age);m.rotation.set(.1*age,i*1.7*age,Math.sin(i)*.2*age);});}}
   clippings.visible=!prefs.reduced&&j.phase==='pass'&&j.speed>0;
   if(clippings.visible){let count=0;for(let i=0;i<72;i++){const t=(r.time*2+i*.173)%1,across=Math.sin(i*13)*5.2,along=1.3-t*2.6,sn=Math.sin(j.yaw),cs=Math.cos(j.yaw),y=j.y+cs*along-sn*across,x=j.x+sn*along+cs*across,from={x:j.x+sn*1.3+cs*across,y:j.y+cs*1.3-sn*across};const active=SECTORS.some(s=>inside(from,s));dummy.position.set(x,.16+Math.sin(t*Math.PI)*(1+(i%4)*.15),-y);dummy.rotation.set(t*5,i*1.3,t*3);dummy.scale.setScalar(active?.16:0);dummy.updateMatrix();clippings.setMatrixAt(i,dummy.matrix);if(active)count++;}clippings.visible=count>0;clippings.instanceMatrix.needsUpdate=true;}
-  accessGate.position.x=ACCESS_GATE.x-4*r.arrival.gate;for(const lamp of accessLamps)lamp.material=materials[r.arrival.open?'mint':'amber'];
-  lever.rotation.z=r.pump?-1.25:0;exitGate.rotation.y=r.won?-(1-r.ending.gate)*Math.PI/2:0;record.visible=!r.loadLimit;bell.rotation.z=Math.sin(r.time*16)*.25*(r.bellCooldown/3);
+  accessGate.position.x=ACCESS_GATE.x-4*(prefs.reduced?r.arrival.gate:overshoot(r.arrival.gate));for(const lamp of accessLamps)lamp.material=materials[r.arrival.open?'mint':'amber'];
+  // The bypass lever is thrown, overshoots and settles; a restored run starts settled.
+  {const target=r.pump?-1.25:0,dt=settle.run===r?clamp(r.time-settle.time,0,.05):0;if(settle.run!==r||prefs.reduced){settle.run=r;settle.lever=target;settle.leverSpeed=0;}else for(let k=0,n=Math.ceil(dt/.004)||0;k<n;k++){const h=dt/n;settle.leverSpeed+=((target-settle.lever)*210-settle.leverSpeed*13)*h;settle.lever+=settle.leverSpeed*h;}settle.time=r.time;lever.rotation.z=settle.lever;}
+  exitGate.rotation.y=r.won?-(prefs.reduced?1-r.ending.gate:1-overshoot(r.ending.gate))*Math.PI/2:0;record.visible=!r.loadLimit;bell.rotation.z=Math.sin(r.time*16)*.25*(r.bellCooldown/3);
   normalBoard.visible=!r.won;endBoard.visible=r.won;
   let ringCount=0;ballMeshes.count=r.balls.length;ballMeshes.visible=!!r.balls.length;
   for(let i=0;i<r.balls.length;i++){const b=r.balls[i],p=b.landed?b:flightPoint(b.plan,b.age/b.plan.duration);dummy.position.set(p.x,p.z,-p.y);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.055);dummy.updateMatrix();ballMeshes.setMatrixAt(i,dummy.matrix);
@@ -476,9 +517,11 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
    if(!light.visible||light.intensity===0||!shadowFrustum.intersectsSphere(shadowBounds)){light.shadow.needsUpdate=false;offscreenShadows.add(light);}
    else if(offscreenShadows.delete(light))light.shadow.needsUpdate=true;
   }
-  renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);backgroundDraws=renderer.info.render.calls;backgroundTriangles=renderer.info.render.triangles;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;frameMs=performance.now()-start;submittedFrames++;
+  renderer.autoClear=false;renderer.clear();renderer.render(backdrop.scene,backdrop.camera);backgroundDraws=renderer.info.render.calls;backgroundTriangles=renderer.info.render.triangles;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;sceneDraws=renderer.info.render.calls;sceneTriangles=renderer.info.render.triangles;
+  finish.setReduced(!!prefs.reduced);if(grainOn!==(prefs.filmGrain!==false)){grainOn=prefs.filmGrain!==false;finish.setLook({grain:grainOn?FINAL_CUT_LOOK.grain:0});}
+  finish.setTension(fx.tension||0);finish.setPulse(fx.pulse||0);finish.setFlash(fx.flash||0,fx.flashColor);finish.apply(r.time);frameMs=performance.now()-start;submittedFrames++;
   if(!prefs.manual){fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();}
   return true;
- },stats:()=>({gpu,software,width,height,renderQuality,presentation:{submittedFrames,skippedFrames,pending:!!fence,offscreenShadows:offscreenShadows.size},backdrop:backdrop.stats(),draws:renderer.info.render.calls+backgroundDraws,backgroundDraws,triangles:renderer.info.render.triangles+backgroundTriangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,frameMs,actorCulling:actorCulling.stats(),headlights:headlights.stats(),maintenanceLight:maintenanceLight.stats(),cabLighting:cabLighting.stats(),refugeLighting:refugeLighting.stats(),courseLighting:{wash:lastRun?courseLightState(lastRun):0,ambient:skyLight.intensity,directional:moonlight.intensity,safety:safetyLight.intensity,refugeLights:refugeLights.length,moonShadow:!software,moonShadowSize:software?0:2048},reveal:lastRun?rigLampState(lastRun):null,ambushReeds:ambushReeds.stats(),landscape:landscape.stats(),verges:verges.stats(),courseContour:courseContour.stats(),estateDetail,refugeInteriors,mountedSigns,grandstand,irrigation:irrigation.stats(),pumpHardware:pumpHardware.stats(),boss:boss.stats(),engine:engine.stats(),tires:tires.stats(),lamps:lamps.stats(),bodywork:bodywork.stats(),machinery:machinery.stats(),hydraulics:hydraulics.stats(),surfaceScales,groundFinish:groundFinish.stats(),masonryBatching,staticBatching,banner:{fold:bannerFold,hemDepth:clothGeometry.attributes.position.getZ(84),hemHeight:clothGeometry.attributes.position.getY(84),pinnedDepth:clothGeometry.attributes.position.getZ(6),pinnedHeight:clothGeometry.attributes.position.getY(6)},rider:true,joe:joeActor.stats(),joeFinish:joeFinish.stats(),collapse:collapsePose(lastRun?.ending.age||0),roughSectors:rough.stats().sectors,mownTufts:rough.stats().mownTufts,standingTufts:rough.stats().standingTufts,rough:rough.stats(),staging:staging.stats(),cameraCue:cameraCues.stats(),brokenProps:breakables.filter(b=>b.debris.visible).length}),dispose(){if(fence){gl.deleteSync(fence);fence=null;}joeActor.dispose();joeFinish.dispose();backdrop.dispose();moonlight.shadow.map?.dispose();moonlight.shadow.mapPass?.dispose();boss.dispose();engine.dispose();tires.dispose();lamps.dispose();ambushReeds.dispose();headlights.dispose();maintenanceLight.dispose();cabLighting.dispose();refugeLighting.dispose();bodywork.dispose();hydraulics.dispose();machinery.dispose();irrigation.dispose();pumpHardware.dispose();landscape.dispose();verges.dispose();courseContour.dispose();groundFinish.dispose();staticMeshes.forEach(m=>m.dispose());renderer.dispose();scene.traverse(o=>o.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());staging.dispose();rough.dispose();clippingMaterial.dispose();clothMaterial.dispose();atlasResources.forEach(r=>r.dispose());}};
+ },stats:()=>({gpu,software,width,height,renderQuality,presentation:{submittedFrames,skippedFrames,pending:!!fence,offscreenShadows:offscreenShadows.size},backdrop:backdrop.stats(),draws:sceneDraws+backgroundDraws,backgroundDraws,triangles:sceneTriangles+backgroundTriangles,quality:{...quality},finish:{level:finish.level,applied:finish.applied},effects:effects.stats(),geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,frameMs,actorCulling:actorCulling.stats(),headlights:headlights.stats(),maintenanceLight:maintenanceLight.stats(),cabLighting:cabLighting.stats(),refugeLighting:refugeLighting.stats(),courseLighting:{wash:lastRun?courseLightState(lastRun):0,ambient:skyLight.intensity,directional:moonlight.intensity,safety:safetyLight.intensity,refugeLights:refugeLights.length,moonShadow:!software,moonShadowSize:software?0:2048,moonRedraws:moonAt.redraws},reveal:lastRun?rigLampState(lastRun):null,ambushReeds:ambushReeds.stats(),landscape:landscape.stats(),verges:verges.stats(),courseContour:courseContour.stats(),estateDetail,refugeInteriors,mountedSigns,grandstand,irrigation:irrigation.stats(),pumpHardware:pumpHardware.stats(),boss:boss.stats(),engine:engine.stats(),tires:tires.stats(),lamps:lamps.stats(),bodywork:bodywork.stats(),machinery:machinery.stats(),hydraulics:hydraulics.stats(),surfaceScales,groundFinish:groundFinish.stats(),masonryBatching,staticBatching,banner:{fold:bannerFold,hemDepth:clothGeometry.attributes.position.getZ(84),hemHeight:clothGeometry.attributes.position.getY(84),pinnedDepth:clothGeometry.attributes.position.getZ(6),pinnedHeight:clothGeometry.attributes.position.getY(6)},rider:true,joe:joeActor.stats(),joeFinish:joeFinish.stats(),collapse:collapsePose(lastRun?.ending.age||0),roughSectors:rough.stats().sectors,mownTufts:rough.stats().mownTufts,standingTufts:rough.stats().standingTufts,rough:rough.stats(),staging:staging.stats(),cameraCue:cameraCues.stats(),brokenProps:breakables.filter(b=>b.debris.visible).length}),dispose(){if(fence){gl.deleteSync(fence);fence=null;}joeActor.dispose();joeFinish.dispose();backdrop.dispose();moonlight.shadow.map?.dispose();moonlight.shadow.mapPass?.dispose();boss.dispose();engine.dispose();tires.dispose();lamps.dispose();ambushReeds.dispose();headlights.dispose();maintenanceLight.dispose();cabLighting.dispose();refugeLighting.dispose();bodywork.dispose();hydraulics.dispose();machinery.dispose();irrigation.dispose();pumpHardware.dispose();landscape.dispose();verges.dispose();courseContour.dispose();groundFinish.dispose();staticMeshes.forEach(m=>m.dispose());renderer.dispose();scene.traverse(o=>o.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());staging.dispose();effects.dispose();finish.dispose?.();rough.dispose();clippingMaterial.dispose();clothMaterial.dispose();atlasResources.forEach(r=>r.dispose());}};
 }
 

@@ -1,22 +1,32 @@
-import {patchRecord,CAMPAIGN_KEY} from './preference-store.js';
+import {patchRecord,CAMPAIGN_KEY,CHOICES} from './preference-store.js';
 
 // DOM adapter for campaign settings. Chapter-specific controls remain owned by
 // their chapter; Level 1's canvas settings use the same preference store.
-const sliders={volume:[0,1],musicVolume:[0,1],ambienceVolume:[0,1],mowerVolume:[0,1],effectsVolume:[0,1],dangerVolume:[0,1],subtitleSize:[.8,1.4],captionBackground:[0,1],stickDeadzone:[.1,.3]};
-const toggles=new Set(['muted','reducedMotion','subtitles','soundCaptions','threatCaptions']);
+const sliders={volume:[0,1],musicVolume:[0,1],ambienceVolume:[0,1],mowerVolume:[0,1],effectsVolume:[0,1],dangerVolume:[0,1],subtitleSize:[.8,1.4],captionBackground:[0,1],stickDeadzone:[.1,.3],brightness:[.8,1.6],rumble:[0,1]};
+const toggles=new Set(['muted','reducedMotion','subtitles','soundCaptions','threatCaptions','filmGrain']);
+// Player brightness lifts only the 3D view (#game), never HUD, captions or
+// menus. At 100% no filter is set, so the authored image is untouched.
+export function applyBrightness(value,canvas=document.getElementById('game')){
+ const level=Number.isFinite(value)?Math.max(.8,Math.min(1.6,value)):1;
+ if(canvas)canvas.style.filter=level===1?'':`brightness(${level})`;
+ return level;
+}
 export function bindCampaignSettings(root,preferences,onChange=()=>{}){
  const controls=[...root.querySelectorAll('[data-campaign]')];
  // Failed writes still apply for this session. Retain only those user edits so
  // a later successful save retries them without overwriting other tabs' fields.
  const pending={};
  function sync(){
+  preferences.brightness=applyBrightness(preferences.brightness);
   for(const el of controls){const value=preferences[el.dataset.campaign];if(el.type==='checkbox')el.checked=!!value;else el.value=value;}
+  for(const out of root.querySelectorAll('[data-campaign-value]'))out.textContent=`${Math.round(preferences[out.dataset.campaignValue]*100)}%`;
   document.documentElement.style.setProperty('--caption-scale',preferences.subtitleSize);
   document.documentElement.style.setProperty('--caption-opacity',preferences.captionBackground);
  }
  function set(key,value){
   if(toggles.has(key)){if(typeof value!=='boolean')return false;}
   else if(sliders[key]){if(!Number.isFinite(value))return false;const [min,max]=sliders[key];value=Math.max(min,Math.min(max,value));}
+  else if(CHOICES[key]){if(!CHOICES[key].includes(value))return false;}
   else return false;
   preferences[key]=value;
   pending[key]=value;
@@ -26,6 +36,6 @@ export function bindCampaignSettings(root,preferences,onChange=()=>{}){
   if(status)status.textContent=saved?'':'Settings apply for this session. Browser storage is unavailable.';
   sync();onChange(key,value);return saved;
  }
- for(const el of controls)el.addEventListener(el.type==='checkbox'?'change':'input',()=>set(el.dataset.campaign,el.type==='checkbox'?el.checked:Number(el.value)));
+ for(const el of controls)el.addEventListener(el.type==='checkbox'||el.tagName==='SELECT'?'change':'input',()=>set(el.dataset.campaign,el.type==='checkbox'?el.checked:CHOICES[el.dataset.campaign]?el.value:Number(el.value)));
  sync();return {set,sync};
 }

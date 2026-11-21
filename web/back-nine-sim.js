@@ -126,6 +126,9 @@ export function updateRun(run,input,dt){
  while(j.route.length>1&&distance(j,j.route[0])<(run.foot?.9:3)&&mowerLineClear(j,j.route[1]))j.route.shift();
  const target=j.route[0];if(target){const before={x:j.x,y:j.y,yaw:j.yaw},turn=angleDelta(Math.atan2(target.x-j.x,target.y-j.y),j.yaw),surface=surfaceAt(j,run),base=(run.foot?{path:22,rough:21.5,wet:18.5,sand:9.2}:{path:39,rough:35,wet:32,sand:12.2})[surface];
   let goal=base*(Math.abs(turn)>.8?.35:Math.abs(turn)>.4?.65:1)*(j.mode==='patrol'?.9:1)*pursuitMultiplier(run,surface,turn,separation);
+  // Relaxed / Hard: one explicit multiplier on Joe's travel speed. Standard
+  // runs carry no difficulty record and take this branch never.
+  if(run.difficulty)goal*=run.difficulty.joe;
   const catchup=pursuitCatchup(run,visible,separation);
   goal*=1+catchup*.18;goal=commitmentSpeed(run,goal);
   if(!run.foot)goal=cornerSpeed(j,goal);

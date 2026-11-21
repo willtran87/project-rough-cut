@@ -131,7 +131,7 @@
 #course-pause footer{padding:10px 24px 16px;border-top:1px solid #485b43;flex-shrink:0;}
 #course-pause footer>p{font-size:.7em;color:#b9c5ae;}
 .course-pause-extras{display:flex;flex-wrap:wrap;gap:8px;}
-#course-pause #controls-launch,#course-pause #study-launch{position:static;min-height:44px;font:inherit;font-size:.8em;margin:0;padding:8px 12px;flex:1;}
+#course-pause #controls-launch,#course-pause #study-launch,#course-pause #photo-launch{position:static;min-height:44px;font:inherit;font-size:.8em;margin:0;padding:8px 12px;flex:1;}
 @media(max-width:600px){#course-pause{padding:2%;font-size:calc(14px * var(--q-user-scale,1));}#course-pause header{padding:12px 16px 8px;}.course-pause-body{grid-template-columns:1fr;padding:14px 16px;gap:14px;}#course-pause footer{padding:8px 16px;}#course-pause footer>p{display:none;}}
 @media(max-height:500px){#course-pause header{padding:6px 16px;}#course-pause header h1{font-size:1.3em;}#course-pause header small,#course-pause header p{display:none;}.course-pause-body{padding:10px 16px;gap:16px;}#course-pause footer{padding:6px 16px;}#course-pause footer>p{display:none;}}
 @media(max-width:600px){#course-pause nav{order:-1;}}
@@ -159,3 +159,15 @@
 @media(max-width:600px){#course-map{inset:1%;}#course-map header{padding:8px;gap:6px;}#course-map header small{display:none;}#course-map button{font-size:calc(14px * var(--q-user-scale,1));padding:8px;}#course-map .course-map-scroll{grid-template-columns:1fr;gap:12px;padding:8px;}#course-map .course-map-status{font-size:calc(12px * var(--q-user-scale,1));}#course-map .course-map-scroll canvas{width:100%;max-width:468px;}}
 
 #course-result[data-outcome="victory"] nav{grid-template-columns:repeat(2,minmax(0,1fr));}
+
+/* Photo mode (web/photo-mode.js): only the picture and the photo bar remain. */
+#photo-launch{background:#152b31;color:#f1e4c9;border:1px solid #aeb8a3;border-radius:0;cursor:pointer;}
+#photo-launch[hidden]{display:none;}
+html[data-photo-mode="true"] #game-shell>:not(canvas):not(.photo-bar){visibility:hidden!important;}
+html[data-photo-mode="true"] #game{cursor:grab;}
+/* Loading screen: real preparation progress reported by scene-3d.js build(). */
+#course-loading-bar{display:block;width:100%;height:6px;margin-top:14px;border:0;border-radius:0;background:#1c3325;color:#d8bd82;appearance:none;-webkit-appearance:none;overflow:hidden;}
+#course-loading-bar::-webkit-progress-bar{background:#1c3325;}
+#course-loading-bar::-webkit-progress-value{background:linear-gradient(90deg,#8e7a4c,#d8bd82);transition:width .25s ease-out;}
+#course-loading-bar::-moz-progress-bar{background:#d8bd82;}
+@media (prefers-reduced-motion:reduce){#course-loading-bar::-webkit-progress-value{transition:none;}}

@@ -7,3 +7,5 @@
 .campaign-settings p{grid-column:1/-1;margin:4px 0;font-size:12px;line-height:1.5}
 [data-settings-status]:empty{display:none}
 @media(max-width:650px){.campaign-settings{grid-template-columns:1fr}}
+.campaign-settings label:has(output) input[type=range]{margin-left:auto}
+.campaign-settings label>output{flex:0 0 4.5ch;text-align:right;font-variant-numeric:tabular-nums}

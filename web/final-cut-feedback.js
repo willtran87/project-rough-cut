@@ -16,7 +16,16 @@ export function closePassFeedback(run){
  const distance=rigSurfaceDistance(run.player,run.rig);if(distance>=5)return null;
  const force=1-distance/5;return {kind:'close-pass',duration:110,strongMagnitude:.2*force,weakMagnitude:.38*force,distance};
 }
-const impacts={'manifold-rupture':{duration:220,strongMagnitude:.3,weakMagnitude:.12},'rig-shutdown':{duration:160,strongMagnitude:.12,weakMagnitude:.2}};
+// Held in a hollow the wheels churn: a low, uneven hum while he is close.
+export function miredFeedback(run){
+ if(run.mode!=='playing'||run.rig.phase!=='mired')return null;
+ const distance=Math.hypot(run.rig.x-run.player.x,run.rig.y-run.player.y);if(distance>=18)return null;
+ const force=(1-distance/18)*Math.max(.3,1-run.rig.age/7);return {kind:'mired-churn',duration:110,strongMagnitude:.22*force,weakMagnitude:.1*force,distance};
+}
+const impacts={'manifold-rupture':{duration:220,strongMagnitude:.3,weakMagnitude:.12},'rig-shutdown':{duration:160,strongMagnitude:.12,weakMagnitude:.2},
+ mired:{duration:260,strongMagnitude:.5,weakMagnitude:.3},'tear-free':{duration:200,strongMagnitude:.4,weakMagnitude:.3},slip:{duration:140,strongMagnitude:.15,weakMagnitude:.3},victory:{duration:420,strongMagnitude:.7,weakMagnitude:.5},
+ 'break-prop':{duration:150,strongMagnitude:.3,weakMagnitude:.35},'blocked-pass':{duration:160,strongMagnitude:.35,weakMagnitude:.2},blackout:{duration:150,strongMagnitude:.3,weakMagnitude:0},
+ valve:{duration:90,strongMagnitude:.05,weakMagnitude:.25},pump:{duration:130,strongMagnitude:.2,weakMagnitude:.2},bell:{duration:80,strongMagnitude:0,weakMagnitude:.2},chip:{duration:60,strongMagnitude:0,weakMagnitude:.3},'ball-land':{duration:50,strongMagnitude:0,weakMagnitude:.18}};
 
 // Bounded, supplementary dual-rumble effects. No queued timer, no mobile
 // vibration, and no promise failure can interrupt movement or retry playback.
@@ -36,7 +45,7 @@ export function createFinalCutFeedback(clock=()=>performance.now()){
   }
   const now=clock();if(now>=until)playing=false;
   if(!enabled||!supported||!['playing','aftermath'].includes(run.mode)||!(strength>0)){stop();return;}
-  const effect=impact||closePassFeedback(run);if(!effect||!impact&&now<next)return;
+  const effect=impact||closePassFeedback(run)||miredFeedback(run);if(!effect||!impact&&now<next)return;
   const scale=clamp(strength,0,1)*(effect.scale??1),params={duration:effect.duration,startDelay:0,strongMagnitude:effect.strongMagnitude*scale,weakMagnitude:effect.weakMagnitude*scale};
   const target=actuator;stats.played++;stats.last={kind:effect.kind,...params};playing=true;until=now+effect.duration;next=now+(impact?effect.duration:100);
   try{Promise.resolve(target.playEffect('dual-rumble',params)).catch(()=>{failed.add(target);stats.failures++;if(actuator===target)stop();});}catch{failed.add(target);stats.failures++;stop();}

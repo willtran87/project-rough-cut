@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three/three.module.js';
 import {BASINS,VALVES,BREAKER,BASIN_TIMING as T} from './final-cut-basin-layout.js';
+import {tuning} from './final-cut-difficulty.js';
 
 // Presentation of the four floodable hollows: damp ground, a rising film of
 // water, the irrigation jets that feed it, and a beacon on each valve post
@@ -37,7 +38,7 @@ export function createFinalCutBasinArt(scene,{materials,software=false}){
    const {basin,valve}=part,s=r.basins[basin.id],level=Math.max(0,Math.min(1,s.level)),active=s.state==='filling'||s.state==='full';
    const locked=!r.pump||(basin.final&&r.stage<2&&s.state==='dry');
    // A full basin pulses in its last seconds so the drain is not a surprise.
-   const hold=basin.final?T.swaleHold:T.hold,ending=s.state==='full'&&hold-s.age<4,pulse=s.state==='filling'||ending?(reduced?1:.55+.45*Math.abs(Math.sin(r.time*(ending?7:3.2)))):1;
+   const hold=(basin.final?T.swaleHold:T.hold)*tuning(r).hold,ending=s.state==='full'&&hold-s.age<4,pulse=s.state==='filling'||ending?(reduced?1:.55+.45*Math.abs(Math.sin(r.time*(ending?7:3.2)))):1;
    tint.set(BEACON[locked?'locked':s.state]).multiplyScalar(pulse);part.beacon.material.color.copy(tint);
    part.wheel.rotation.y=active?level*7:s.state==='draining'?level*7:0;
    if(part.water){

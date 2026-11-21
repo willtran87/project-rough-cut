@@ -6,11 +6,15 @@ export function readRecord(key,fallback={}){
 }
 export function writeRecord(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{return false;}}
 export function patchRecord(key,changes){return writeRecord(key,{...readRecord(key),...changes});}
-const ranges={musicVolume:[0,1,.7],volume:[0,1,.72],ambienceVolume:[0,1,.9],mowerVolume:[0,1,1],effectsVolume:[0,1,1],dangerVolume:[0,1,.9],subtitleSize:[.8,1.4,1],captionBackground:[0,1,.78],stickDeadzone:[.1,.3,.22]};
+const ranges={musicVolume:[0,1,.7],volume:[0,1,.72],ambienceVolume:[0,1,.9],mowerVolume:[0,1,1],effectsVolume:[0,1,1],dangerVolume:[0,1,.9],subtitleSize:[.8,1.4,1],captionBackground:[0,1,.78],stickDeadzone:[.1,.3,.22],brightness:[.8,1.6,1],rumble:[0,1,.5]};
+// Choice settings; the first entry is the default. graphicsQuality is read by
+// graphics-quality.js; difficulty by each chapter's own tuning.
+export const CHOICES={graphicsQuality:['auto','low','medium','high'],difficulty:['standard','relaxed','hard']};
 export function campaignPreferences(systemReduced=false){
  const value=readRecord(CAMPAIGN_KEY),result={...value};
  for(const [key,[lo,hi,fallback]]of Object.entries(ranges))result[key]=Number.isFinite(value[key])?Math.max(lo,Math.min(hi,value[key])):fallback;
- for(const [key,fallback]of Object.entries({muted:false,subtitles:true,soundCaptions:false,threatCaptions:true,reducedMotion:systemReduced,invertLook:false}))result[key]=typeof value[key]==='boolean'?value[key]:fallback;
+ for(const [key,fallback]of Object.entries({muted:false,subtitles:true,soundCaptions:false,threatCaptions:true,reducedMotion:systemReduced,invertLook:false,filmGrain:true}))result[key]=typeof value[key]==='boolean'?value[key]:fallback;
+ for(const [key,choices]of Object.entries(CHOICES))result[key]=choices.includes(value[key])?value[key]:choices[0];
  return result;
 }
 // A settings screen writes only values the player changed since its last save.

@@ -101,6 +101,12 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
  current=null;
  for(const d of destructibles){
   d.bounds=[];for(const chunk of d.chunks){batchVehicleParts(chunk);const bounds=new THREE.Box3();chunk.traverse(m=>{if(m.isMesh){m.geometry.computeBoundingBox();bounds.union(m.geometry.boundingBox);}});d.bounds.push(bounds);}
+  // Until it is struck, a fixture's three chunks share one pose, so the same
+  // triangles are drawn from one group merged by material: about half the
+  // draws. The chunks take over, unchanged, the moment it breaks.
+  const f=d.feature;d.intact=new THREE.Group();d.intact.position.set(f.x,0,-f.y);scene.add(d.intact);
+  for(const chunk of d.chunks)for(const m of chunk.children)if(m.isMesh)d.intact.add(new THREE.Mesh(m.geometry,m.material));
+  batchVehicleParts(d.intact);
  }unit.dispose();
  // One deliberate damaged patch foreshadows Joe; the rest of the estate is kept.
  for(const d of COURSE.decisions.filter(d=>d.id==='service-approach')){const x=d.wide.x+5,z=-d.entry.y+4;
@@ -108,7 +114,7 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
   box('wood',x,.09,z-2,.1,.1,2.1,.55);box('rust',x+.3,.13,z-1.1,.16,.05,.09);
  }
  tire.dispose();log.dispose();pipe.dispose();rim.dispose();
- let broken=0;const corner=new THREE.Vector3();
+ let broken=0,warmed=false;const corner=new THREE.Vector3();
  return {count:COURSE.features.length,update(run,reduced=false){
   broken=0;
   for(const d of destructibles){
@@ -118,6 +124,9 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
    const age=active?(reduced?.85:Math.min(.85,Math.max(0,run.time-s.brokenAt))):-1;
    const poseKey=[f.x,f.y,active,age,s?.dx,s?.dy,s?.power,reduced].join(':');
    if(d.poseKey===poseKey)continue;d.poseKey=poseKey;
+   // Both forms stay visible through loading so every buffer is uploaded.
+   if(warmed){d.intact.visible=!active;for(const g of chunks)g.visible=active;}
+   if(!active)d.intact.position.set(f.x,terrainHeight(f.x,f.y),-f.y);
    chunks.forEach((g,i)=>{
     if(!active){g.position.set(f.x,terrainHeight(f.x,f.y),-f.y);g.scale.set(1,1,1);g.rotation.set(0,0,0);return;}
     const p=featureBreakPose(f,i,Math.max(0,run.time-s.brokenAt),s,reduced);
@@ -131,5 +140,6 @@ export function buildCourseFeatures({THREE,COURSE,box:staticBox,put:staticPut,cy
     g.position.y=(Number.isFinite(support)?support:terrainHeight(f.x,f.y))+.025+p.bounce;
    });
   }
- },stats:()=>({total:destructibles.length,broken,plantedStrips,foliageClumps,maintenanceBays})};
+ },finishWarm(){warmed=true;for(const d of destructibles)d.poseKey=null;},
+  stats:()=>({total:destructibles.length,broken,plantedStrips,foliageClumps,maintenanceBays,intactDraws:destructibles.reduce((n,d)=>n+d.intact.children.length,0),chunkDraws:destructibles.reduce((n,d)=>n+d.chunks.reduce((k,g)=>k+g.children.length,0),0)})};
 }

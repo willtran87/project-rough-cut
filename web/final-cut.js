@@ -12,7 +12,7 @@ import {CUE_MS} from './final-cut-camera-cues.js';
 import {createFinalCutAudio} from './final-cut-audio.js';
 import {campaignPreferences,readRecord,writeRecord,preferenceWriter} from './preference-store.js';
 import {createFinalCutFeedback,feedbackPreferences,FEEDBACK_KEY} from './final-cut-feedback.js';
-import {bindCampaignSettings} from './campaign-settings-ui.js';
+import {bindCampaignSettings} from './campaign-settings-ui.js?v=20261119-polish';
 import {actionBindings,keyLabel,movementKeyLabel,onFootActionVerb} from './control-profiles.js';
 import {bindKeyboardSettings} from './keyboard-binding-settings.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
@@ -21,7 +21,15 @@ import {createTouchRunControl} from './touch-run-control.js';
 import {finalCutMessages} from './final-cut-messages.js';
 import {freshAim} from './final-cut-balls.js';
 import {cutPlan} from './final-cut-schedule.js';
-import {createFinalCutStory} from './final-cut-story.js?v=20261114-launch-theme';
+import {createFinalCutStory} from './final-cut-story.js?v=20261119-use-binding';
+import {createGraphicsQuality} from './graphics-quality.js?v=20261119-polish';
+import {createRumble} from './pad-rumble.js?v=20261119-polish';
+import {recordRun,summaryRows,renderSummary,chapterRecord,formatSeconds} from './run-records.js?v=20261119-polish';
+import {createPhotoMode} from './photo-mode.js?v=20261119-polish';
+import {createFinalCutPolish,DISCOVERIES,CHAPTER} from './final-cut-polish.js?v=20261119-polish';
+import {createFinalCutAmbience} from './final-cut-ambience.js?v=20261119-polish';
+import {applyDifficulty} from './final-cut-difficulty.js';
+import {scoreFrame} from './final-cut-drama.js';
 const $=id=>document.getElementById(id),canvas=$('game'),query=new URLSearchParams(location.search),keys=new Set(),touch=new Set();
 const preferences=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce)').matches),spatialStore=RCSpatialPreferences.create();let spatial=spatialStore.get();
 const feel=RCFoundation.readComfort(),touchRun=createTouchRunControl();let toggleCrouch=false,toggleSprint=false,dirty=true;
@@ -38,6 +46,14 @@ let resultView='summary',story=null,winStoryRunId=null;
 let shot=null,edgeLevel=0;
 let run=createRun(initial,entry.route),world=null,ready=false,manual=false,last=performance.now(),savedSerial=-1,device=matchMedia('(pointer:coarse)').matches?'touch':'keyboard',usePressed=false,chipPressed=false,chipReleased=false,chipOwner=null,lookX=0,lookY=0,drag=null,padButtons=[],panelMode='';
 const feedbackPrefs=feedbackPreferences(readRecord(FEEDBACK_KEY)),saveFeedback=preferenceWriter(FEEDBACK_KEY,feedbackPrefs),feedback=createFinalCutFeedback();let activePad=null;
+// Polish layer: screen tension, heartbeat, extra sound, quality, records, photo mode.
+// Under the deterministic test clock the motion additions stay off unless ?feel is given.
+const ambience=createFinalCutAmbience(),polish=createFinalCutPolish({ambience}),feelOn=()=>!manual||query.has('feel'),rumbleStrength=()=>clamp(feedbackPrefs.vibration*(preferences.rumble??.5)*2,0,1),padRumble=createRumble({strength:rumbleStrength});
+const quality=createGraphicsQuality({onChange:preset=>{world?.setQuality(preset);dirty=true;}});
+let runResult=null,photoView=null,photo=null,lastPresent=0;
+const ROUTE_NAMES={garage:'Service walk',drain:'Keeper’s sluice',direct:'Front approach'};
+function finishRun(){const stats={seconds:run.elapsed,closeCalls:polish.closeCalls(run),route:ROUTE_NAMES[run.route]||run.route,difficulty:run.difficulty||'standard',extras:{'Times caught':run.captures,'Round played':cutPlan(run).name}};runResult={id:run.runId,stats,result:recordRun(CHAPTER,stats)};}
+function showRunSummary(){const box=$('run-summary');if(runResult?.id===run.runId)renderSummary(box,summaryRows(runResult.stats,runResult.result,{total:DISCOVERIES.length,found:polish.found()}));else{const record=chapterRecord(CHAPTER);renderSummary(box,[...(record.best?[['Best time',formatSeconds(record.best.seconds)]]:[]),['Finishes',String(record.runs||0)],['Discoveries',`${polish.found()} of ${DISCOVERIES.length}`]]);}}
 const audio=createFinalCutAudio(()=>({...preferences,footsteps:feedbackPrefs.footsteps}),run),mouse=createMouseLook(),live=()=>!story?.active&&['playing','aftermath'].includes(run.mode);
 const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
 function clearInput(){feedback.update(run,null,false,0);keys.clear();touch.clear();touchRun.reset();toggleCrouch=toggleSprint=false;usePressed=chipPressed=chipReleased=false;chipOwner=null;run.ballAim=freshAim();lookX=lookY=0;drag=null;mouse.reset();dirty=true;}
@@ -48,12 +64,12 @@ const staged=()=>!preferences.reducedMotion&&!manual&&!!world;
 function cue(name){$('curtain').dataset.cue='';if(!staged())return false;world.cue(name);$('curtain').style.setProperty('--cue',CUE_MS[name]+'ms');void $('curtain').offsetWidth;$('curtain').dataset.cue=name;return true;}
 function stage(mode){if(cue(mode))shot={mode,until:performance.now()+CUE_MS[mode]};}
 function endShot(){if(!shot)return;shot.until=0;dirty=true;paint();}
-function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();const resumed=run.mode==='paused';if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}run.mode=run.won?'aftermath':'playing';if(!resumed&&run.mode==='playing')cue('start');clearInput();canvas.focus();paint();persist();}
+function enterRound(){if(run.mode==='complete'){location.assign('./index.html');return;}audio.start();ambience.attach(audio.graph());const resumed=run.mode==='paused';if(run.mode==='caught'){const attempt=run.attempt+1;run=createRun(snapshot(run));run.attempt=attempt;savedSerial=-1;}applyDifficulty(run,preferences.difficulty);run.mode=run.won?'aftermath':'playing';if(!resumed&&run.mode==='playing')cue('start');clearInput();canvas.focus();paint();persist();}
 function primary(){if(!ready||story?.active)return;if(shot){endShot();return;}enterRound();}
-function pause(){if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();persist();if(document.pointerLockElement)document.exitPointerLock();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}paint();audio.update(run);}
+function pause(){if(photo?.active)photo.exit();if(live()){run.resumeMode=run.mode;run.mode='paused';clearInput();persist();if(document.pointerLockElement)document.exitPointerLock();}else if(run.mode==='paused'){run.mode=run.resumeMode||'playing';canvas.focus();}paint();audio.update(run);}
 function showResultView(view){if(run.mode!=='complete')return;resultView=view;panelMode='';clearInput();paint();$('panel').scrollTop=0;$(view==='credits'?'credits-back':view==='notice'?'notice-back':'show-credits').focus({preventScroll:true});}
 const menu=createDOMGamepadMenu({root:$('panel'),onStart:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();},onBack:()=>{if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else if(run.mode==='paused')pause();},onDisconnect:()=>{if(device==='gamepad'&&live())pause();}});
-story=createFinalCutStory({root:$('shell'),reduced:()=>preferences.reducedMotion,onGesture:()=>audio.start(),fullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},onOpen:()=>{clearInput();if(document.pointerLockElement)document.exitPointerLock();},onClose:()=>{clearInput();dirty=true;paint();$('primary').focus({preventScroll:true});}});
+story=createFinalCutStory({useKey:()=>bindings.interact,root:$('shell'),reduced:()=>preferences.reducedMotion,onGesture:()=>audio.start(),fullscreen:()=>{if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});},onOpen:()=>{clearInput();if(document.pointerLockElement)document.exitPointerLock();},onClose:()=>{clearInput();dirty=true;paint();$('primary').focus({preventScroll:true});}});
 if(run.completed)winStoryRunId=run.runId;
 $('splash-image').src='./assets/menu/final-cut-scene.webp';$('defeat-image').src='./assets/optimized/final-cut-loss-v2.webp';$('defeat-image').alt='From your fallen viewpoint, Joe grins above the tournament mower as its cutting reels close in under the championship lights.';$('defeat-image').decode().catch(()=>{});
 const recordChoice=document.createElement('div');recordChoice.id='record-choice';recordChoice.hidden=true;
@@ -64,7 +80,7 @@ $('records-file').onclick=()=>chooseRecords('filed');$('records-keep').onclick=(
 $('story-replay').onclick=()=>story.open(run.completed?'win':'intro');
 $('show-credits').onclick=()=>showResultView('credits');$('credits-back').onclick=()=>showResultView('summary');$('show-notice').onclick=()=>showResultView('notice');$('notice-back').onclick=$('notice-skip').onclick=()=>showResultView('summary');
 $('primary').onclick=primary;$('pause').onclick=pause;$('restart').onclick=()=>{run=createRun({route:run.route,stationReceipt:run.stationReceipt,...evidenceFields(run),priorEvidence:run.priorEvidence,seed:run.seed});savedSerial=-1;primary();};$('use').onclick=()=>usePressed=true;
-const campaignUI=bindCampaignSettings($('comfort'),preferences,()=>{dirty=true;audio.update(run);});$('sound').onclick=()=>campaignUI.set('muted',!preferences.muted);
+const campaignUI=bindCampaignSettings($('comfort'),preferences,(key,value)=>{dirty=true;if(key==='graphicsQuality')quality.set(value,{persist:false});if(key==='difficulty'&&!run.completed&&applyDifficulty(run,value)){run.saveSerial++;persist();}audio.update(run);});$('sound').onclick=()=>campaignUI.set('muted',!preferences.muted);
 const keyboard=bindKeyboardSettings($('keyboard'),{profile:'onFoot',stored:bindings,storageField:'keyboardBindings',labels:{move_up:'Forward',move_down:'Backward',move_left:'Left',move_right:'Right',sprint:'Run',crouch:'Crouch',focus:'Listen',look_back:'Rear glance',interact:'Use',chip:'Chip ball',controls:'Pause / controls'},onChange:b=>{Object.assign(bindings,b);clearInput();paint();}});
 let selectedVisualTier=visualTier(readRecord(VISUAL_KEY).tier);
 $('visual-tier').value=selectedVisualTier;
@@ -78,6 +94,7 @@ document.addEventListener('keydown',e=>{
  if(e.target.matches('input,select,summary')&&e.code!=='Escape')return;
  if(shot){e.preventDefault();if(!e.repeat)endShot();return;}
  if(e.code==='Escape'){e.preventDefault();if(run.mode==='complete'&&resultView!=='summary')showResultView('summary');else pause();return;}
+ if(e.code==='KeyP'&&run.mode==='paused'&&!e.repeat&&ready){e.preventDefault();photo?.toggle();return;}
  if(e.code==='KeyF'){e.preventDefault();if(document.fullscreenElement)document.exitFullscreen();else $('shell').requestFullscreen().catch(()=>{});return;}
  if(!live()){if((e.code===bindings.interact&&!e.repeat||e.code==='Enter'&&!e.target.matches('button,a'))&&resultView==='summary'){e.preventDefault();primary();}return;}
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();
@@ -131,7 +148,9 @@ function paint(){
  $('ball-status').hidden=!active||run.won||messages.urgent;const target=aim.plan?.target;
  text('ball-status',aim.active?`${aim.plan?.blocked?'BLOCKED · Adjust aim':`${Math.round(aim.power*100)}% · ${Math.round(Math.hypot(target.x-run.player.x,target.y-run.player.y))} m · Release ${chipKey} to chip`} · ${useKey} cancels`:run.ballCount?`${run.ballCount}/3 balls · Hold ${chipKey} to aim`:'0/3 balls · Recover one or use a practice basket');$('ball-status').dataset.blocked=String(!!aim.plan?.blocked);
  $('reticle').hidden=aim.active;
- text('threat',!messages.urgent&&(run.player.focus||preferences.threatCaptions&&threatEssential(run))?threat(run):'');text('caption',messages.caption);$('caption').dataset.kind=messages.kind;text('dialogue',messages.dialogue);
+ text('threat',!messages.urgent&&(run.player.focus||preferences.threatCaptions&&threatEssential(run))?threat(run):'');{const extra=!messages.caption&&preferences.soundCaptions&&active?polish.caption():'';text('caption',messages.caption||extra);$('caption').dataset.kind=extra?'event':messages.kind;}
+ {const ring=$('charge');ring.hidden=!active||!aim.active;if(!ring.hidden){ring.style.setProperty('--p',String(Math.round((aim.power||0)*100)/100));ring.dataset.blocked=String(!!aim.plan?.blocked);}}
+ text('dialogue',messages.dialogue);
  $('use').hidden=!action;text('use',`${device==='gamepad'?'A':device==='touch'?'USE':label('interact')} · ${action?.label||''}`);
  text('hint',device==='gamepad'?'Left stick move · RT run · R3 rear · A use':device==='touch'?'Pad move · Drag look · Rear glance · Use':`${movementKeyLabel(bindings)} move · ${label('sprint')} run · ${label('look_back')} rear · ${label('interact')} use`);$('hint').hidden=messages.urgent||run.elapsed>18;
  text('sound',preferences.muted?'Sound off':'Sound on');$('journal').hidden=!(run.loadLimit||run.groundskeeper)||run.mode==='complete';
@@ -139,6 +158,7 @@ function paint(){
  if(panelMode!==run.mode){dirty=true;panelMode=run.mode;const caught=run.mode==='caught',complete=run.mode==='complete',paused=run.mode==='paused';
   if(!complete)resultView='summary';$('panel').classList.toggle('completed',complete);$('panel').classList.toggle('caught',caught);$('panel').dataset.contact=caught?run.failure?.kind||'chassis':'';const outcome=complete?finaleOutcome(run):null,extra=complete&&resultView!=='summary';window.RCGameTheme.closing($('panel'),extra?resultView:'');
   $('panel').classList.toggle('briefing',run.mode==='briefing');$('chapter-splash').hidden=run.mode!=='briefing';$('defeat-backdrop').hidden=!caught;$('loss-quote').hidden=!caught;$('loss-story').hidden=!caught;
+  $('photo').hidden=!paused;if(complete&&!extra)showRunSummary();
   $('story-replay').hidden=caught||complete;text('story-replay',complete?'Replay ending scene':'Replay story');
   if(caught){const lines=defeatQuote(run).lines,quote='“'+lines.join(' ')+'”';text('loss-quote',quote);if(quote!==voicedLoss){voicedLoss=quote;(lossVoice??=createJoeVoice({muted:()=>preferences.muted||document.hidden})).say(lines);}}
   else if(voicedLoss){voicedLoss='';lossVoice?.stop();}text('loss-story','Joe’s smile returns before the engine settles. To him, this is still a routine review.');
@@ -165,11 +185,15 @@ function paint(){
   if(complete&&ready&&winStoryRunId!==run.runId){winStoryRunId=run.runId;queueMicrotask(()=>{if(run.mode==='complete'&&!story.active)story.open('win');});}
  }
 }
-function update(dt){const controls=input(dt),before=run.mode,stageBefore=run.stage,wonBefore=run.won;controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.mode!==before&&(run.mode==='caught'||run.mode==='complete'))stage(run.mode);
+function update(dt,wall=dt){const controls=input(dt),before=run.mode,stageBefore=run.stage,wonBefore=run.won;controls.viewHalfFov=Math.atan(Math.tan(spatial.fov*Math.PI/360)*canvas.clientWidth/Math.max(1,canvas.clientHeight));controls.reducedMotion=preferences.reducedMotion;if(!story.active)step(run,controls,dt);if(run.mode!==before&&run.mode==='complete')finishRun();if(run.mode!==before&&(run.mode==='caught'||run.mode==='complete'))stage(run.mode);
  // Hold the eye on the machine each time the ground takes it, if it can be seen.
  if(lineClear(run.player,run.rig)){if(!wonBefore&&run.won)cue('bogged');else if(run.stage>stageBefore&&run.rig.phase==='mired')cue('mired');}
- if(run.saveSerial!==savedSerial)persist();audio.update(run);feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,feedbackPrefs.vibration);paint();}
-function draw(){return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,cameraBob:feel.cameraBob,manual});}
+ if(run.saveSerial!==savedSerial)persist();audio.update(run);
+ polish.update(run,wall,{live:!story.active,reduced:preferences.reducedMotion,feel:feelOn()});ambience.update(run,{tension:polish.tension,frequency:scoreFrame(run).frequency,reduced:preferences.reducedMotion});
+ feedback.update(run,activePad,!story.active&&device==='gamepad'&&!document.hidden,rumbleStrength());paint();
+ // After paint: a capture clears input (and the close-pass effect) first.
+ if(run.mode!==before&&run.mode==='caught'&&device==='gamepad'&&!document.hidden)padRumble.pulse(activePad,{duration:320,strong:.8,weak:.5,kind:'capture'});}
+function draw(now=false){const action=live()&&run.mode==='playing'&&!story?.active?nearbyAction(run):null;return world?.render(run,{...spatial,visualTier:selectedVisualTier,reduced:preferences.reducedMotion,cameraBob:feel.cameraBob,manual:manual||now,feel:feelOn(),filmGrain:preferences.filmGrain,photo:photoView,polish:{...polish.frame(preferences.reducedMotion,feelOn()),action:action&&action.id!=='recover-ball'?action:null}});}
 import {createMenuFrameGate} from './menu-frame-gate.js';
 const menuFrameDue=createMenuFrameGate();
 let nextGameplayFrame=0;
@@ -180,16 +204,23 @@ function frame(now){
    const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
    // Schedule at 60 Hz even on high-refresh displays; never catch up by
    // submitting a burst of expensive scenes after a delayed frame.
-   if(active){const interval=1000/60;nextGameplayFrame=now+interval-Math.max(0,(now-nextGameplayFrame)%interval);update(dt);}
+   if(active){const interval=1000/60;nextGameplayFrame=now+interval-Math.max(0,(now-nextGameplayFrame)%interval);update(dt*polish.timeScale,dt);}
    else{nextGameplayFrame=now;const previous=device;input(.05);if(previous!==device||shot)dirty=true;if(dirty&&!story.active)paint();}
-   if(!story.active&&(live()||dirty)&&draw()!==false)dirty=false;
+   // Presented frames feed the automatic quality step-down; menus and pauses do not.
+   if(!story.active&&(live()||dirty)&&draw()!==false){dirty=false;if(active&&lastPresent)quality.frame(now-lastPresent);lastPresent=active?now:0;}
   }
   if(!active){last=now;nextGameplayFrame=now;world.poll();}
  }
  requestAnimationFrame(frame);
 }
 new ResizeObserver(()=>{dirty=true;if(manual)draw();}).observe(canvas);
-window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,shot:shot?.mode||null,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
+window.render_game_to_text=()=>JSON.stringify({...diagnostics(run),ready,story:story.snapshot(),inputMethod:device,bindings,resultView,shot:shot?.mode||null,outcome:run.completed?finaleOutcome(run):null,mastery:earnedMastery(run),graphics:world?.stats(),audio:audio.stats(),feedback:feedback.stats(),polish:{...polish.stats(),ambience:ambience.stats(),quality:{choice:quality.choice,level:quality.level,autoSteps:quality.autoSteps},difficulty:run.difficulty||'standard',photo:!!photoView,photosSaved:photo?.saved||0,rumble:{...padRumble.stats},closeCalls:polish.closeCalls(run)},preferences:{reduced:preferences.reducedMotion,muted:preferences.muted,...feedbackPrefs}});
 window.advanceTime=async ms=>{manual=true;await world?.whenPresented();const n=Math.ceil(Math.max(0,ms)/(1000/60));for(let k=0;k<n;k++)update(Math.min(1/60,ms/1000-k/60));paint();draw();await new Promise(resolve=>requestAnimationFrame(resolve));};
-if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,stage,preferences,spatialStore};
-paint();if(run.mode==='briefing'&&run.checkpoint===0&&!story.shouldSkip()){story.open('intro');}world=await createFinalCutScene(canvas,message=>text('loading',message));ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);
+if(query.has('test'))window.__finalCut={get run(){return run;},set run(v){story.close('fixture-reset',false);run=v;savedSerial=-1;clearInput();panelMode='';},rigGeometry:()=>world?.rigGeometry(),draw,stage,preferences,spatialStore,polish,quality,ambience,get photo(){return photo;},get world(){return world;}};
+paint();if(run.mode==='briefing'&&run.checkpoint===0&&!story.shouldSkip()){story.open('intro');}world=await createFinalCutScene(canvas,(message,fraction)=>{text('loading',message);if(Number.isFinite(fraction)){$('load-bar').style.setProperty('--p',String(fraction));$('load-bar').setAttribute('aria-valuenow',String(Math.round(fraction*100)));}});world.setQuality(quality.preset);$('load-bar').hidden=true;
+photo=createPhotoMode({canvas,shell:$('shell'),name:'rough-cut-final-cut',renderNow:()=>draw(true),
+ onEnter:()=>{photoView={yaw:0,pitch:0,x:0,y:0,z:0,fov:spatial.fov};dirty=true;},onExit:()=>{photoView=null;dirty=true;paint();$('primary').focus({preventScroll:true});},
+ onLook:(dx,dy)=>{photoView.yaw-=dx*.004;photoView.pitch=clamp(photoView.pitch-dy*.004,-1.2,1.2);dirty=true;},onZoom:step=>{photoView.fov=clamp(photoView.fov+step*4,18,85);dirty=true;},
+ onMove:(x,y,dt)=>{const heading=-(run.player.yaw+run.player.rearAngle)+photoView.yaw,s=Math.sin(heading),c=Math.cos(heading),nx=photoView.x+(c*x-s*y)*4*dt,nz=photoView.z+(-s*x-c*y)*4*dt,far=Math.hypot(nx,nz),k=far>8?8/far:1;photoView.x=nx*k;photoView.z=nz*k;dirty=true;}});
+$('photo').onclick=()=>{if(run.mode==='paused')photo.enter();};
+ready=true;$('primary').disabled=false;text('loading',run.checkpoint?'Ready. Your checkpoint is kept.':'Ready. The overlook is safe.');panelMode='';paint();draw();requestAnimationFrame(frame);

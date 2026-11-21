@@ -23,6 +23,7 @@ import {BASINS,BASIN_TIMING,BREAKER} from './final-cut-basin-layout.js';
 import {createBasins,basinSnapshot,stageOf,flowing,swaleArmed,valveState,openValve,advanceBasins,holdRemaining,basinUnder,basinById,valveActions,createBlackout,throwBreaker,breakerReady,blackedOut} from './final-cut-basins.js';
 import {ROAD_EXIT,EXIT_END,upgradeEndingMotion,createEnding,advanceEnding,restoreEnding,endingSnapshot,wreckFromSave,collapsePose} from './final-cut-ending.js';
 export {MOVEMENT} from './final-cut-course.js';
+import {difficultyOf,tuning} from './final-cut-difficulty.js';
 export function createRun(saved={},route='direct'){
  const cp=clamp(saved.checkpoint|0,0,2),won=saved.won===true||cp===2;
  const actualRoute=['garage','drain','direct'].includes(saved.route)?saved.route:route,arrival=createArrival(saved.arrival,actualRoute,cp>0||saved.openingSeen===true,cp>0||(!saved.arrival&&saved.openingSeen===true)),spawn=cp?CHECKPOINTS[cp]:arrivalSpawn(arrival,actualRoute);
@@ -40,10 +41,12 @@ export function createRun(saved={},route='direct'){
  r.ending=createEnding();
  if(r.won){const wreck=wreckFromSave(saved.ending);r.rig={...r.rig,...wreck,phase:'disabled',deployment:1};r.water=1;r.stage=2;restoreEnding(r,saved.ending||{age:EXIT_END});r.rig.phase=r.ending.age<7?'bogged':'disabled';r.rig.age=r.ending.age;r.mode=r.completed?'complete':'briefing';}
  r.engine=createEngineMotion(saved.engine,r);
+ // Only a non-standard run carries the field, so standard saves are unchanged.
+ if(difficultyOf(saved.difficulty)!=='standard')r.difficulty=difficultyOf(saved.difficulty);
  return r;
 }
 export function readSave(raw){try{const s=JSON.parse(raw);if(!s||s.version!==1||!Number.isInteger(s.checkpoint)||s.checkpoint<0||s.checkpoint>2)return null;return snapshot(createRun({...s,arrival:upgradeArrivalMotion(s.arrival),ending:upgradeEndingMotion(s.ending),runFacts:s.runFacts||{eligible:false}}));}catch{return null;}}
-export function snapshot(r){return {version:1,engine:{...r.engine},checkpoint:r.checkpoint,route:r.route,arrival:arrivalSnapshot(r),crossings:{...r.crossings},drama:dramaSnapshot(r),stationReceipt:r.stationReceipt?{...r.stationReceipt,stations:[...r.stationReceipt.stations]}:null,announcement:announcementSnapshot(r),unease:uneaseSnapshot(r),pump:r.pump,basins:basinSnapshot(r),recordChoice:r.recordChoice,won:r.won,completed:r.completed,ending:endingSnapshot(r),cut:[...r.cut],cutAreas:(r.cutAreas||[]).map(a=>({...a})),broken:[...(r.broken||[])],openingSeen:r.openingSeen,...evidenceFields(r),...ballSnapshot(r),priorEvidence:r.priorEvidence,runFacts:runFacts(r),seed:r.seed,schedule:scheduleSnapshot(r)};}
+export function snapshot(r){return {version:1,engine:{...r.engine},checkpoint:r.checkpoint,route:r.route,arrival:arrivalSnapshot(r),crossings:{...r.crossings},drama:dramaSnapshot(r),stationReceipt:r.stationReceipt?{...r.stationReceipt,stations:[...r.stationReceipt.stations]}:null,announcement:announcementSnapshot(r),unease:uneaseSnapshot(r),pump:r.pump,basins:basinSnapshot(r),recordChoice:r.recordChoice,won:r.won,completed:r.completed,ending:endingSnapshot(r),cut:[...r.cut],cutAreas:(r.cutAreas||[]).map(a=>({...a})),broken:[...(r.broken||[])],openingSeen:r.openingSeen,...evidenceFields(r),...ballSnapshot(r),priorEvidence:r.priorEvidence,runFacts:runFacts(r),seed:r.seed,schedule:scheduleSnapshot(r),...(r.difficulty&&r.difficulty!=='standard'?{difficulty:r.difficulty}:{})};}
 function event(r,type,data={}){r.events.push({type,time:r.time,...data});if(r.events.length>24)r.events.shift();}
 // `descriptive` lines only narrate what the player can already see or hear;
 // they show only with the optional Sound descriptions preference.
@@ -149,12 +152,12 @@ function updateRig(r,dt){
  }
  if(j.phase==='announce'){
   if(!deploy(j,clamp(j.deployment+dt*(j.attack?1/attackWarning(r):.4),0,1))){blockedRig(r);return;}
-  if(j.age>=(j.attack?attackWarning(r):4)){j.cutStartX=j.x;phase(r,'pass');j.passSerial++;event(r,'commit',{lane:j.lane,direction:j.direction,entry:j.attack?.entry});}return;
+  if(j.age>=(j.attack?attackWarning(r):4*tuning(r).announce)){j.cutStartX=j.x;phase(r,'pass');j.passSerial++;event(r,'commit',{lane:j.lane,direction:j.direction,entry:j.attack?.entry});}return;
  }
  if(j.phase==='pass'){
   // Half-flooded ground only drags at the wheels. Each time he has been
   // held he drives the next charge harder.
-  const under=basinUnder(r),slipping=!!under&&under.state!=='spent'&&under.level>=BASIN_TIMING.wetAt&&under.level<1,pace=dt*(slipping?.4:1)*(j.attack?1+.12*r.stage:1);
+  const under=basinUnder(r),slipping=!!under&&under.state!=='spent'&&under.level>=BASIN_TIMING.wetAt&&under.level<1,pace=dt*(slipping?.4:1)*(j.attack?(1+.12*r.stage)*tuning(r).charge:1);
   const motion=j.attack?ambushMotion(j,pace):{...cuttingMotion(j.x,j.direction,pace,j.cutStartX),y:j.y},dx=motion.x-j.x,dy=motion.y-j.y;
   if(rigWallHit({...j,x:motion.x,y:motion.y},WALLS)){
    blockedRig(r);return;

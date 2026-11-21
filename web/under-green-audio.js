@@ -1,12 +1,12 @@
 import {floodState} from './under-green-flood.js';
-import {WATERS,waterState} from './under-green-course.js';
+import {WATERS,waterState,inWater,lineClear,gateBlocks} from './under-green-course.js';
 import {audibleSource} from './under-green-senses.js';
 import {footSurface} from './under-green-grating.js';
 import {TRIMMER} from './under-green-trimmer.js';
 
 export function createUnderGreenAudio(preferences=()=>({volume:.72})){
- let ctx,master,buffer,engine,teeth,water,playerStep,joeStep,knock,mechanism,crowd,muted=false,lastRun=null,lastPlayer=-1,lastKnock='',seen=new WeakSet(),heardContacts=new WeakSet(),lastFootstep=null;
- const counts={joeSteps:0,playerSteps:0,door:0,starter:0,pump:0,pipeKnocks:0,gate:0,bladeBlocked:0,applause:0};let targets={};
+ let ctx,master,buffer,engine,teeth,water,playerStep,joeStep,knock,mechanism,crowd,heart,gasp,score,muted=false,lastRun=null,lastPlayer=-1,lastKnock='',seen=new WeakSet(),heardContacts=new WeakSet(),lastFootstep=null;
+ const counts={joeSteps:0,playerSteps:0,door:0,starter:0,pump:0,pipeKnocks:0,gate:0,bladeBlocked:0,applause:0,heartbeats:0,wetSteps:0};let targets={},feel={tension:0};
  const voices=[];let storyIndex=-1;
  function voice(kind,hz=200,offset=0){
   const source=kind==='noise'?ctx.createBufferSource():ctx.createOscillator(),filter=ctx.createBiquadFilter(),level=ctx.createGain(),pan=ctx.createStereoPanner();
@@ -26,6 +26,13 @@ export function createUnderGreenAudio(preferences=()=>({volume:.72})){
   water=WATERS.map((outlet,i)=>({outlet,voice:voice('noise',200,i*.193)}));
   playerStep=voice('noise');joeStep=[voice('noise'),voice('noise')];knock=voice('sine',260);mechanism=voice('noise');crowd=voice('noise');
   playerStep.filter.frequency.value=290;joeStep.forEach(v=>v.filter.frequency.value=180);crowd.filter.type='bandpass';crowd.filter.frequency.value=1500;crowd.filter.Q.value=.7;
+  // The player's own body: a low pulse and breath that rise as Joe closes.
+  heart=voice('sine',52);heart.filter.frequency.value=140;gasp=voice('noise',200,1.37);gasp.filter.type='bandpass';gasp.filter.frequency.value=780;gasp.filter.Q.value=1.1;
+  // Reactive score: a constant drain drone, a beating second voice under
+  // threat, a pulse while he has the player in sight and a high strain for
+  // the cut. Levels follow the Music volume setting.
+  score={drone:voice('sawtooth',55),beat:voice('sawtooth',58.3),pulse:voice('triangle',110),strain:voice('sine',1244.5)};
+  score.drone.filter.frequency.value=150;score.beat.filter.frequency.value=210;score.pulse.filter.frequency.value=420;score.strain.filter.frequency.value=2400;
  }
  function pulse(v,gain,seconds,pan=0,hz){
   const t=ctx.currentTime;v.pan.pan.setValueAtTime(pan,t);if(hz)v.filter.frequency.setValueAtTime(hz,t);
@@ -49,10 +56,11 @@ export function createUnderGreenAudio(preferences=()=>({volume:.72})){
   const breath=.3+.7*Math.max(0,Math.sin(r.time*2.4));
   const engineTarget=live&&engineOn?joe.gain*(rev?.16:.10)*breath*(focus?1.2:1)*ending*(pref.mowerVolume??1):0;
   master.gain.setTargetAtTime(live&&!muted?.5*(pref.volume??.72):0,t,.06);
-  engine.filter.frequency.setTargetAtTime(rev?680:joe.gain<.2?180:360,t,.08);engine.level.gain.setTargetAtTime(engineTarget,t,.06);engine.pan.pan.setTargetAtTime(joe.pan,t,.05);
+  const hidden=engineOn&&!lineClear(p,j,0,gateBlocks(r.gate,1.65));
+  engine.filter.frequency.setTargetAtTime((rev?680:joe.gain<.2?180:360)*(hidden?.5:1),t,.08);engine.level.gain.setTargetAtTime(engineTarget,t,.06);engine.pan.pan.setTargetAtTime(joe.pan,t,.05);
   const cut=Math.sin(Math.PI*Math.min(1,j.age/TRIMMER.sweepSeconds));
   const swish=live&&engineOn?joe.gain*(j.phase==='sweep'?.12+.22*cut:j.phase==='windup'?.035:.004)*(pref.mowerVolume??1)*ending:0;
-  teeth.filter.type='bandpass';teeth.filter.Q.value=.7;teeth.filter.frequency.setTargetAtTime(j.phase==='sweep'?1100+1400*cut:650,t,.025);teeth.level.gain.setTargetAtTime(swish,t,j.phase==='sweep'?.012:.04);teeth.pan.pan.setTargetAtTime(joe.pan,t,.05);
+  teeth.filter.type='bandpass';teeth.filter.Q.value=.7;teeth.filter.frequency.setTargetAtTime((j.phase==='sweep'?1100+1400*cut:650)*(hidden?.55:1),t,.025);teeth.level.gain.setTargetAtTime(swish,t,j.phase==='sweep'?.012:.04);teeth.pan.pan.setTargetAtTime(joe.pan,t,.05);
   let waterTarget=0,waterPan=0,weight=0,warning=null;
   const outlets=[];
   for(const {outlet:w,voice:v} of water){
@@ -75,7 +83,7 @@ export function createUnderGreenAudio(preferences=()=>({volume:.72})){
   const effects=pref.effectsVolume??1;
   if(live&&warning&&warning.id!==lastKnock){lastKnock=warning.id;pulse(knock,.12*warning.gain*(pref.dangerVolume??.9),.12,warning.pan);}
   const foot=Math.floor(p.walk/.72);
-  if(live&&foot!==lastPlayer&&p.speed>.2){counts.playerSteps++;const metal=footSurface(p)==='metal';playerStep.filter.type=metal?'bandpass':'lowpass';playerStep.filter.Q.value=metal?6:1;pulse(playerStep,.1*(focus?.35:1)*effects,metal?.25:.095,0,metal?680:290);}
+  if(live&&foot!==lastPlayer&&p.speed>.2){counts.playerSteps++;const metal=footSurface(p)==='metal',wet=!metal&&((p.floodDepth||0)>.03||WATERS.some(w=>inWater(p,w,0)));if(wet)counts.wetSteps++;playerStep.filter.type=metal||wet?'bandpass':'lowpass';playerStep.filter.Q.value=metal?6:wet?.8:1;pulse(playerStep,(wet?.13:.1)*(focus?.35:1)*effects,metal?.25:wet?.2:.095,0,metal?680:wet?1500:290);}
   lastPlayer=foot;
   for(const event of r.events){
    if(seen.has(event))continue;seen.add(event);if(!live)continue;
@@ -91,8 +99,16 @@ export function createUnderGreenAudio(preferences=()=>({volume:.72})){
   const applauseGain=applause?(.02+.02*Math.max(0,Math.sin(r.time*17))*Math.max(0,Math.sin(r.time*23)))*Math.min(1,(r.aftermathAge-1.3)/.8)*(pref.ambienceVolume??.9):0;
   const flood=floodState(r.elapsed),floodGain=live&&!r.finished?(.035*flood.warning+.065*flood.depth/.38)*(focus?.35:1)*(pref.ambienceVolume??.9):0;
   crowd.filter.frequency.setTargetAtTime(applause?1600:flood.phase==='warning'?95:360,t,.2);crowd.level.gain.setTargetAtTime(applauseGain+floodGain,t,.15);crowd.pan.pan.setTargetAtTime(applause?Math.sin(r.time*.7)*.35:0,t,.2);
-  if(!live)for(const v of [playerStep,...joeStep,knock,mechanism,crowd]){v.level.gain.cancelScheduledValues(t);v.level.gain.setTargetAtTime(0,t,.02);}
-  targets={weapon:'grass-scythe',focus,engine:engineTarget,breathing:engineTarget,bladeSwish:swish,water:waterTarget,outlets,joeDistance:joe.distance,joePan:joe.pan,waterPan:weight?waterPan/weight:0,applause:applauseGain,flood:floodGain,floodPhase:flood.phase,live};
+  // Presentation tension comes from the feel observer; none of it is simulated.
+  const tension=live&&r.mode==='playing'?feel.tension||0:0,music=live?(pref.musicVolume??.7)*ending:0,chase=tension*(j.seen?1:.35);
+  const inhale=.5+.5*Math.sin(r.time*(3.2+3.6*tension));
+  gasp.filter.frequency.setTargetAtTime(620+420*inhale,t,.08);gasp.level.gain.setTargetAtTime(tension>.25?.05*(tension-.25)*inhale*effects*(focus?.5:1):0,t,.07);
+  score.drone.level.gain.setTargetAtTime(music*(r.finished?.012:.03+.02*tension),t,.6);
+  score.beat.level.gain.setTargetAtTime(music*.045*tension,t,.4);score.beat.filter.frequency.setTargetAtTime(170+260*tension,t,.3);
+  score.pulse.level.gain.setTargetAtTime(music*.05*chase*(.35+.65*Math.max(0,Math.sin(r.time*Math.PI*2*(1.6+tension)))**2),t,.03);
+  score.strain.level.gain.setTargetAtTime(music*(rev&&joe.distance<9?.014:0),t,rev?.25:.1);
+  if(!live)for(const v of [playerStep,...joeStep,knock,mechanism,crowd,heart,gasp,...Object.values(score)]){v.level.gain.cancelScheduledValues(t);v.level.gain.setTargetAtTime(0,t,.02);}
+  targets={weapon:'grass-scythe',focus,engine:engineTarget,breathing:engineTarget,bladeSwish:swish,water:waterTarget,outlets,joeDistance:joe.distance,joePan:joe.pan,waterPan:weight?waterPan/weight:0,applause:applauseGain,flood:floodGain,floodPhase:flood.phase,live,tension,score:music*(.03+.02*tension),joeOccluded:hidden};
  }
  function beginRun(r){
   if(lastRun===r)return;lastRun=r;lastPlayer=Math.floor(r.player.walk/.72);lastKnock='';seen=new WeakSet();heardContacts=new WeakSet();lastFootstep=null;
@@ -109,9 +125,16 @@ export function createUnderGreenAudio(preferences=()=>({volume:.72})){
    if(gain<=0)continue;
    const surface=footSurface(event),metal=surface==='metal',voice=joeStep[event.foot];
    voice.filter.type=metal?'bandpass':'lowpass';voice.filter.Q.value=metal?6:1;
-   pulse(voice,gain,metal?.28:.12,source.pan,metal?680:180);counts.joeSteps++;
-   lastFootstep={serial:event.serial,time:event.time,foot:event.foot,phase:event.phase,pan:source.pan,gain,surface};
+   const muffled=!lineClear(p,event,0,gateBlocks(r.gate,1.65));
+   pulse(voice,gain,metal?.28:.12,source.pan,(metal?680:180)*(muffled?.6:1));counts.joeSteps++;
+   lastFootstep={serial:event.serial,time:event.time,foot:event.foot,phase:event.phase,pan:source.pan,gain,surface,muffled};
   }
  }
- return {start,update,footContacts,setStory(index,r){storyIndex=index;update(r);},setMuted(v){muted=v;if(ctx&&v)master.gain.setTargetAtTime(0,ctx.currentTime,.03);},stats:()=>({started:!!ctx,muted,voices:voices.length,waterVoices:water?.length||0,voiceCapacity:8+WATERS.length,footGains:joeStep?.map(v=>v.level.gain.value)||[],pan:engine?.pan.pan.value||0,water:water?.reduce((sum,v)=>sum+v.voice.level.gain.value,0)||0,master:master?.gain.value||0,counts:{...counts},lastFootstep,targets:{...targets}}),dispose(){ctx?.close();}};
+ // Two thumps of the player's pulse; strength 0..1 from the feel observer.
+ function heartbeat(strength=1){
+  if(!ctx||muted||!(strength>0))return;const t=ctx.currentTime,gain=.2*strength*(preferences().dangerVolume??.9),g=heart.level.gain;counts.heartbeats++;
+  g.cancelScheduledValues(t);g.setValueAtTime(Math.max(.0001,gain),t);g.exponentialRampToValueAtTime(.0001,t+.11);
+  g.setValueAtTime(Math.max(.0001,gain*.7),t+.17);g.exponentialRampToValueAtTime(.0001,t+.3);g.setValueAtTime(0,t+.31);
+ }
+ return {start,update,footContacts,heartbeat,setFeel(value){feel=value||{tension:0};},setStory(index,r){storyIndex=index;update(r);},setMuted(v){muted=v;if(ctx&&v)master.gain.setTargetAtTime(0,ctx.currentTime,.03);},stats:()=>({started:!!ctx,muted,voices:voices.length,waterVoices:water?.length||0,voiceCapacity:14+WATERS.length,footGains:joeStep?.map(v=>v.level.gain.value)||[],pan:engine?.pan.pan.value||0,water:water?.reduce((sum,v)=>sum+v.voice.level.gain.value,0)||0,master:master?.gain.value||0,counts:{...counts},lastFootstep,targets:{...targets}}),dispose(){ctx?.close();}};
 }

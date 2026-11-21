@@ -69,6 +69,10 @@ import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-l
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
 import { bitmapDecodeStats } from './bitmap-decoder.js';
 import { createScreenFracture, drawCopyFracture } from './screen-fracture.js';
+import { createNightPicture } from './night-order/picture.js?v=20261119-polish';
+import { createNightWildlife } from './night-order/wildlife.js?v=20261119-polish';
+// Shared quality preset and screen finish; see night-order/picture.js.
+const picture=createNightPicture(THREE);let polishFrame=null,wildlife=null;
 let screenFracture=null;
 let waterSurfaces=[];
 let impactMask=null;
@@ -138,6 +142,10 @@ function whenPresented(){
 function performanceStats(){return {softwareRenderer,completedSceneSamples:gpuFrameSamples.length,averageCompletedSceneMs:stats.gpuFrameAverageMs||0,p95CompletedSceneMs:stats.gpuFrameP95Ms||0,method:'software scene submission through GPU fence completion, including bounded timer polling delay'};}
 let frozenFrame='', renderer, world, camera, failure = null, currentKey = '', currentData, lastTime=0;
 let lastHudKey=null, direct=false, surface=null, sceneTarget=null, compositor=null, screenCamera=null, sceneQuad=null, hudTexture=null, worldDrawn=false, useDomHud=false, overlayQuad=null;
+// Player Brightness (campaign setting) scales only the composited 3D scene pass;
+// the HUD overlay is drawn after it untouched. 1 leaves the image as authored.
+let sceneBrightness=1;
+function setBrightness(value){sceneBrightness=Number.isFinite(value)?Math.max(.8,Math.min(1.6,value)):1;sceneQuad?.material.color.setScalar(sceneBrightness);return sceneBrightness;}
 PixelArt.onReady(()=>{frozenFrame='';});
 let joeIllustration=null, joeView=0;
 const stats = {artStyle:pixelVolume?'pixel-3d':pixelStyle?'original-pixel-art':'smooth',ready:false, renderer:'three-webgl2', revision:THREE.REVISION, scale:SCALE, drawCalls:0, triangles:0, frames:0, error:null};
@@ -552,13 +560,13 @@ function build(data){
   moonShadow=null;nearLamp=null;if(pixelVolume){moonShadow=moon;moon.castShadow=!softwareRenderer;moon.shadow.mapSize.set(2048,2048);Object.assign(moon.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:100});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;world.add(moon.target);}
   lastShadowTime=-Infinity;lastShadowX=lastShadowZ=Infinity;lastShadowMechanisms="";
   if(!data.calibration)pixelEffects=createPixelEffects(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,moon,drain:data.drain?{x:data.drain.x*X_SCALE,z:-data.drain.y*SCALE}:null,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE})),ponds:data.obstacles.filter(o=>o.id.includes('pond')).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE}))});
-  stats.ready=false;stats.preparing=true;currentKey=data.keyId;
+  stats.ready=false;stats.preparing=true;loadProgress(0);currentKey=data.keyId;
   gpuFrameSamples.length=0;stats.gpuFrameAverageMs=stats.gpuFrameP95Ms=stats.gpuFrameSamples=0;presentationMeasuresScene=false;
   const scene=world,start=performance.now(),cancelled=()=>world!==scene;
   (async()=>{
-  await yieldPreparation(cancelled);if(cancelled())return;
+  loadProgress(0.05);await yieldPreparation(cancelled);if(cancelled())return;
   const terrainStart=performance.now();await buildTerrain(data,data.calibration,cancelled);stats.terrainBuildMs=performance.now()-terrainStart;
-  await yieldPreparation(cancelled);if(cancelled())return;
+  loadProgress(0.22);await yieldPreparation(cancelled);if(cancelled())return;
   let constructionSlice=performance.now();
   for(const o of data.obstacles){buildObstacle(o,data.calibration);if(performance.now()-constructionSlice>5){await yieldPreparation(cancelled);if(cancelled())return;constructionSlice=performance.now();}}
 
@@ -609,8 +617,9 @@ function build(data){
   if(!data.calibration)arrivalPhone=createArrivalPhone(world,playerCraft.attachPhoneHand);
   if(!data.calibration){deadGreenScene=createDeadGreenScene(world,{scale:SCALE,xScale:X_SCALE});deadGreenRefuge=createDeadGreenRefuge(world,{scale:SCALE,xScale:X_SCALE,paths:data.paths});}
   if(!data.calibration)teeAnomaly=createTeeAnomaly(world,{scale:SCALE,xScale:X_SCALE});
-    await geometryReady;
+    loadProgress(0.5);await geometryReady;
     if(cancelled())return;batchGlows();sprinklerSpray?.setLamps(glowAnchors,lights);nightAir?.setLamps(glowAnchors);
+    wildlife?.dispose();wildlife=pixelVolume&&!softwareRenderer&&!data.calibration?createNightWildlife(THREE,world,{lamps:glowAnchors,trees:treeSites,ponds:data.obstacles.filter(o=>o.id.includes('pond')).map(o=>({x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE}))}):null;
     stats.constructionMs=performance.now()-start;
     while(joeModel&&!joeModel.stats().ready&&!joeModel.stats().error){if(cancelled())return;await yieldPreparation(cancelled);}
     if(cancelled())return;
@@ -621,7 +630,7 @@ function build(data){
       for(const frame of [0,2,7])PixelArt.texture('joe-mower-animated-v1',[frame*192+48,8,96,184]);
       joeIllustration=PixelArt.card('joe-mower-animated-v1',[48,8,96,184],.96,1.84);joeIllustration.position.y=.92;dynamicRoot.add(joeIllustration);joeView=0;
     }
-    await pixelEffects?.ready;if(cancelled())return;
+    loadProgress(0.6);await pixelEffects?.ready;if(cancelled())return;
     while(PixelArt.stats().pending&&world===scene)await yieldPreparation(cancelled);
     if(world!==scene)return;
     // The floor and static-scene culling both need the complete inventory.
@@ -641,7 +650,7 @@ function build(data){
     }
     pixelWorld?.updateCulling(camera);updateGlows();
     const backdrop=parallax,target=direct?sceneTarget:null;
-    if(backdrop)await prepareRendering(renderer,backdrop.scene,backdrop.camera,backdrop.scene,target,cancelled);
+    loadProgress(0.68);if(backdrop)await prepareRendering(renderer,backdrop.scene,backdrop.camera,backdrop.scene,target,cancelled);
     await prepareRendering(renderer,scene,camera,scene,target,cancelled);
     const lightVariants=pixelWorld?.localLighting?.preparation;
     if(lightVariants){
@@ -650,7 +659,7 @@ function build(data){
     }
     // The scene target and the display framebuffer use different shader
     // variants. Prepare the final scene/HUD compositor before the first view.
-    if(direct)await prepareRendering(renderer,compositor,screenCamera,compositor,null,cancelled);
+    loadProgress(0.88);if(direct)await prepareRendering(renderer,compositor,screenCamera,compositor,null,cancelled);
     if(pixelEffects)await prepareStaticBuffers(renderer,pixelEffects.preparation,camera,scene,target,cancelled);
     await prepareStaticBuffers(renderer,staticRoot,camera,scene,target,cancelled);
     while(joeModel&&!joeModel.stats().ready&&!joeModel.stats().error){if(cancelled())return;await yieldPreparation(cancelled);}
@@ -660,9 +669,9 @@ function build(data){
     const warmStart=performance.now();renderer.setRenderTarget(target);
     if(backdrop)renderer.render(backdrop.scene,backdrop.camera);
     renderer.render(scene,camera);stats.warmupSubmitMs=performance.now()-warmStart;
-    const drainStart=performance.now();await waitForGPU(renderer,cancelled);stats.gpuDrainMs=performance.now()-drainStart;if(cancelled())return;
-    stats.prepareMs=performance.now()-start;stats.preparing=false;stats.ready=true;frozenFrame='';
-  })().catch(e=>{if(world===scene){failure=String(e?.message||e);stats.error=failure;stats.preparing=false;}});
+    loadProgress(0.96);const drainStart=performance.now();await waitForGPU(renderer,cancelled);stats.gpuDrainMs=performance.now()-drainStart;if(cancelled())return;
+    stats.prepareMs=performance.now()-start;stats.preparing=false;loadProgress(1);stats.ready=true;frozenFrame='';
+  })().catch(e=>{if(world===scene){failure=String(e?.message||e);stats.error=failure;stats.preparing=false;loadProgress(1);}});
 }
 function initialize(canvas){
   try{renderer=new THREE.WebGLRenderer({...(canvas?{canvas}:{}),antialias:false,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});renderer.shadowMap.enabled=pixelVolume;renderer.shadowMap.type=THREE.BasicShadowMap;renderer.setSize(canvas?1280:960,canvas?720:540,false);renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;camera=new THREE.PerspectiveCamera(58,16/9,.055,78);document.getElementById('game').style.imageRendering=pixelStyle?'pixelated':'auto';const gl=renderer.getContext(),info=gl.getExtension('WEBGL_debug_renderer_info');stats.gpu=info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);}
@@ -686,12 +695,14 @@ function createSurface(canvas){
     const target=scale===.75?sceneTarget:sceneTarget.clone();target.setSize(1280*scale,720*scale);softwareTargets.set(target.width,target);renderer.initRenderTarget(target);
   }
   compositor=new THREE.Scene();screenCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,2);screenCamera.position.z=1;
-  sceneQuad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({map:sceneTarget.texture,depthTest:false,depthWrite:false}));compositor.add(sceneQuad);
+  sceneQuad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({map:sceneTarget.texture,depthTest:false,depthWrite:false}));compositor.add(sceneQuad);sceneQuad.material.color.setScalar(sceneBrightness);
   screenFracture=createScreenFracture(sceneQuad.material,{software:softwareRenderer});
   hudTexture=new THREE.CanvasTexture(surface);hudTexture.colorSpace=THREE.SRGBColorSpace;hudTexture.generateMipmaps=false;hudTexture.minFilter=THREE.LinearFilter;
   const overlay=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({map:hudTexture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));overlay.renderOrder=1;compositor.add(overlay);overlayQuad=overlay;
   stats.presentation='direct-gpu';return surface;
 }
+// Real loading progress: build() reports each finished stage to the bar on the loading screen.
+function loadProgress(v){stats.preparationProgress=v;const bar=document.getElementById('course-loading-bar');if(bar){bar.value=v;bar.textContent=Math.round(v*100)+'%';}}
 function beginFrame(){skipPresentation=false;worldDrawn=false;useDomHud=false;screenFracture?.clear();pixelEffects?.hide();window.RCQualityUI?.hide();const loading=document.getElementById('course-loading');if(loading)loading.hidden=true;}
 function present(uiKey=null){
   if(!direct)return;
@@ -705,25 +716,33 @@ function present(uiKey=null){
   if(renderer.domElement.width!==outputWidth||renderer.domElement.height!==outputHeight)renderer.setSize(outputWidth,outputHeight,false);
   stats.presentationResolution=[outputWidth,outputHeight];
   const start=performance.now();sceneQuad.visible=worldDrawn;overlayQuad.visible=!useDomHud;if(!useDomHud&&(uiKey===null||uiKey!==lastHudKey))hudTexture.needsUpdate=true;lastHudKey=uiKey;renderer.setRenderTarget(null);renderer.render(compositor,screenCamera);stats.compositeSubmitMs=performance.now()-start;
+  // The finish grades the finished screen, so it runs only when the HUD is DOM
+  // (never over canvas-drawn HUD or menu text) and never on the software path.
+  if(worldDrawn&&useDomHud&&!softwareRenderer&&!stats.preparing){picture.finish(renderer,polishFrame,{gameplay:!!polishFrame&&!polishFrame.paused&&!polishFrame.photo});renderer.setRenderTarget(null);}
+  stats.polish=picture.stats();
   if(softwareRenderer){const gl=renderer.getContext();presentationMeasuresScene=stats.frames!==lastMeasuredFrame&&!stats.preparing;lastMeasuredFrame=stats.frames;presentationFence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();pollPresentation();}
 }
-function render(ctx,data,frame){
+function render(ctx,data,frame){polishFrame=frame;
+  // Photo mode: a free camera replaces the player's view for this frame only.
+  if(frame.photo){const v=frame.photo;frame.player={...frame.player,x:v.x,y:v.y};frame.yaw=v.yaw;frame.pitch=v.pitch;frame.fov=v.fov;frame.eyeHeight=v.eye;frame.bob=frame.roll=0;}
   courseEntryGate?.update(frame);
   if(legacy||failure)return false;if(!renderer)initialize();if(failure)return false;
   if(currentKey!==data.keyId){build(data);lastTime=frame.time;}
   const portrait=direct&&renderer.domElement.parentElement?.dataset.coursePortrait==='true';
   const aspect=portrait?renderer.domElement.clientWidth/renderer.domElement.clientHeight:16/9;
   const display=direct&&!softwareRenderer?{width:renderer.domElement.clientWidth,height:renderer.domElement.clientHeight,pixelRatio:window.devicePixelRatio||1,maxDimension:Math.min(2560,renderer.capabilities.maxTextureSize)}:null;
-  const renderScale=Math.min(frame.resolution||.75,softwareRenderer?softwareBudget.scale():1,stats.quality?.resolutionCap||1),{width,height}=courseRenderSize(aspect,renderScale,display);
+  const renderScale=Math.min(frame.resolution||.75,softwareRenderer?softwareBudget.scale():1,stats.quality?.resolutionCap||1)*picture.preset.resolution,{width,height}=courseRenderSize(aspect,renderScale,display);
   const frozenSignature=[aspect,width,height,data.keyId,frame.time,frame.player.x,frame.player.y,frame.yaw,frame.pitch,frame.fov,frame.resolution,frame.eyeHeight,frame.fx?.flashes,frame.reducedMotion].join(':');
   if(!stats.preparing&&frame.paused&&frozenFrame===frozenSignature){worldDrawn=true;stats.worldSubmitMs=0;stats.copyMs=0;if(!direct){const start=performance.now();ctx.drawImage(renderer.domElement,0,0,1280,720);stats.copyMs=performance.now()-start;}return true;}
   // Simulation and DOM feedback still update on every input frame. Defer costly
   // scene culling, poses and buffer edits until this latest image can be drawn.
+  if(!picture.preset.effects){if(frame.fx)frame.fx.density=Math.min(frame.fx.density??1,.5);frame.particles=[];}
   pixelEffects?.screen(frame);
   if(!stats.preparing&&direct&&softwareRenderer&&presentationBusy()){skipPresentation=true;worldDrawn=true;deferPresentation();return true;}
   const dt=clamp(frame.time-lastTime,0,.1);lastTime=frame.time;
   if(direct){sceneTarget=(!portrait&&softwareTargets.get(width))||customTarget;if(sceneTarget.width!==width||sceneTarget.height!==height)sceneTarget.setSize(width,height);sceneQuad.material.map=sceneTarget.texture;}else if(renderer.domElement.width!==width)renderer.setSize(width,height,false);stats.resolution=[width,height];stats.quality.displayMatched=!!display;stats.quality.maxSceneDimension=display?display.maxDimension:1280;
   const p=point(frame.player),yaw=frame.yaw,eye=frame.eyeHeight??(frame.crouched?1.12:1.65);
+  if(!softwareRenderer){camera.far=picture.far();picture.fog(world.fog);}
   camera.aspect=aspect;camera.fov=frame.fov||58;camera.updateProjectionMatrix();stats.cameraAspect=aspect;camera.position.set(p.x,eye+(frame.bob||0),p.z);
   camera.rotation.set(frame.pitch||0,-yaw,frame.roll||0,'YXZ');camera.updateMatrixWorld();
   if(stats.preparing){const loading=document.getElementById('course-loading');if(loading)loading.hidden=frame.paused;skipPresentation=!frame.paused;if(!skipPresentation){renderer.setRenderTarget(direct?sceneTarget:null);renderer.setClearColor(0x081318);renderer.clear();}worldDrawn=true;return true;}
@@ -736,6 +755,7 @@ function render(ctx,data,frame){
   if(exitMechanisms)exitMechanisms.update(frame);else if(drainGate)drainGate.position.y=exitPose.drainLift;
   for(const l of lights)updateFloodlight(l,frame.lightPower(l.o));
   pixelWorld?.localLighting?.update(coursePointLights);
+  if(moonShadow&&!softwareRenderer&&moonShadow.castShadow!==picture.preset.shadows){moonShadow.castShadow=picture.preset.shadows;renderer.shadowMap.needsUpdate=true;}
   if(renderer.shadowMap.enabled){
     // Repeated renders and paused views reuse the shadow map. Movement refreshes
     // immediately; stationary actor animation needs at most 30 shadow samples/s.
@@ -766,7 +786,7 @@ function render(ctx,data,frame){
   objectiveCues?.update(frame);
   environmentGuidance?.update(frame);
   sprinklerSpray?.update(frame,camera);
-  nightAir?.update(frame,camera,parallax?.moonCoverage()||0);
+  nightAir?.update(frame,camera,parallax?.moonCoverage()||0);wildlife?.update(frame,camera,picture.preset.effects);
   wetGround?.update(frame);
   courseVisualDetail?.update(frame);stats.visualDetail=courseVisualDetail?.stats()||null;
   if(pickups.valve?.pressureNeedle)pickups.valve.pressureNeedle.rotation.z=frame.soakSeconds>0?-.8:1.1;
@@ -815,4 +835,4 @@ function render(ctx,data,frame){
   stats.drawCalls=renderer.info.render.calls+(parallax?stats.backgroundDrawCalls:0);stats.triangles=renderer.info.render.triangles;stats.frames++;return true;
 }
 function project(p,height=0){if(!camera)return null;const q=point(p);q.y=height;q.project(camera);return {x:(q.x+1)*640,y:(1-q.y)*360,visible:q.z>-1&&q.z<1&&Math.abs(q.x)<1&&Math.abs(q.y)<1};}
-window.RCScene3D={ready:true,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,practicals:practicalLighting?{...practicalLighting.stats(),ground:groundLighting?.stats()}:undefined,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),nightAir:nightAir?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};
+window.RCScene3D={ready:true,polish:picture,polishEvents:()=>wildlife?.takeEvents()||[],setBrightness,brightness:()=>sceneBrightness,encounterPhase:()=>pixelEffects?.encounterPhase()||'quiet',ambientAudioState:()=>pixelEffects?.audioState()||null,performanceStats,onFrameAvailable:fn=>{frameAvailable=fn;},whenPresented,isPreparing:()=>stats.preparing,domHud:()=>direct,showDomHud:()=>{useDomHud=true;},render,project,createSurface,beginFrame,present,stats:()=>({...stats,practicals:practicalLighting?{...practicalLighting.stats(),ground:groundLighting?.stats()}:undefined,vegetation:vegetationContact?.stats(),ball:ballPresentation?.stats(),exitMechanisms:exitMechanisms?.stats(),understory:understoryCulling?.stats(),playerCraft:playerCraft?.stats(),objectiveCues:objectiveCues?.stats(),environmentGuidance:environmentGuidance?.stats(),sprinklers:sprinklerSpray?.stats(),nightAir:nightAir?.stats(),wildlife:wildlife?.stats(),wetGround:wetGround?.stats(),stationVisuals:[...stations].map(([id,e])=>({id,kind:e.kind,rotation:e.moving.rotation.z,drawer:e.moving.position.z,height:e.moving.position.y,mechanism:e.mechanismPose||null,receipt:e.mechanism?.receipt?{visible:e.mechanism.receipt.visible,height:e.mechanism.receipt.position.y}:null,ink:e.root.getObjectByName('completed-ink')?.visible,facing:e.root.rotation.y,lamp:e.lamp.material.color.getHex()})),accessVisuals:['key','valve'].map(id=>({id,facing:pickups[id]?.root.rotation.y,lamp:pickups[id]?.lamp.material.color.getHex()})),practiceVisual:pickups.practice?{kind:pickups.practice.kind,tilt:pickups.practice.moving.rotation.x}:null,bitmapDecode:bitmapDecodeStats(),effects:pixelEffects?.stats(),water:waterSurfaces.map(w=>w.stats()),reeds:pixelWorld?.reedStats(),preparation:preparationStats(renderer),joeModel:joeModel?.stats(),pixelArt:PixelArt.stats(),parallax:parallax?.stats(),illustrated:illustrated?.stats(),pixelWorld:pixelWorld?.stats(),noiseHazards:noiseHazardScene?.stats(),localLighting:pixelWorld?.localLighting?.stats(),error:failure}),legacy,reset:()=>{currentKey='';}};

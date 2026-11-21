@@ -20,14 +20,14 @@ import {createTouchRunControl} from './touch-run-control.js';
 import {createGamepadSession} from './gamepad-session.js';
 import {createDOMGamepadMenu} from './dom-gamepad-menu.js';
 import {actionBindings,keyLabel,onFootActionVerb,bindingCodeAllowed as allowedBindingCode} from './control-profiles.js';
-import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261111-quiet-messages';
+import {campaignPreferences,preferenceWriter,readRecord,writeRecord} from './preference-store.js?v=20261119-polish';
 import {descriptiveMessage,levelOneMessage} from './message-presentation.js?v=20261118-quiet-narration';
 import { ghostSchedulingPolicy } from './ghost-scheduling.js';
 import { createAtmosphericAudio } from './atmospheric-audio.js?v=20261112-regional-sound';
 import { createMouseLook } from './mouse-look.js';
 import { advanceCartTimer, courseSoundMix } from './encounter-timing.js';
 import { COURSE_CIRCUITS, CIRCUIT_SECONDS, circuitPower, advanceCircuits, traceUnseenSeconds } from './course-circuits.js';
-import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261117-crossfade';
+import { createOpeningStory, OPENING_SLIDES } from './opening-story.js?v=20261120-keys';
 import { freshCourseArrival, advanceCourseArrival, arrivalPhoneVisible } from './course-arrival.js';
 import { freshFirstImpression, advanceFirstImpression, TEE_ANOMALY } from './course-first-impression.js';
 import {zoneCueAnchor,zoneCueSound} from './zone-cue-scene.js';
@@ -36,6 +36,16 @@ import {OLD_FINISH,freshDeadGreen,advanceDeadGreen} from './dead-green.js';
 import { createCourseAnnouncement } from './course-announcement.js';
 import { onFootCameraMotion } from './on-foot-camera-motion.js';
 import { createJoeVoice } from './joe-voice.js';
+import {clamp,lerp,smoothstep,inverseLerp,hash,wrapRadians,worldDistance} from './night-order/math.js?v=20261119-extract';
+import {createNightFeel} from './night-order/feel.js?v=20261119-polish';
+import {createPondChorus} from './night-order/ambience.js?v=20261119-polish';
+import {createNightPhoto} from './night-order/photo.js?v=20261119-polish';
+import {recordRun} from './run-records.js';
+import {SIGNAGE_ATLAS_CELL,SIGNAGE_ATLAS_CELLS,COURSE_ECHO_ART_CELLS,FOOTING_HAZARD_ART_CELLS,FOOTING_HAZARD_ART_CELL_BY_KIND,COURSE_BOUNDARY_KIT_CELLS,COURSE_BOUNDARY_PLACARD_WIDTH,COURSE_BOUNDARY_PLACARD_HEIGHT,EXPANDED_OBSTACLE_CELLS,DEAD_GREEN_SCENERY_CELLS,INTERACTABLE_PROP_CELLS,COURSE_MECHANIC_CELLS,NIGHT_ORDER_OBJECTIVE_CELLS,TURF_EVIDENCE_CELLS,COURSE_CLUTTER_CELLS,COURSE_VERGE_CELLS} from './night-order/atlas-cells.js?v=20261119-extract';
+import {obstacleFootprintAxes,obstacleNormalizedDistance,obstacleClearance,segmentObstacleIntersection} from './night-order/obstacle-geometry.js?v=20261119-extract';
+import {JOE_NAVIGATION_OFFSETS,JOE_NAVIGATION_REVERSE_OFFSET,pushNavigationHeap,popNavigationHeap} from './night-order/navigation-heap.js?v=20261119-extract';
+import {hudFocusSuppressesThreatCaptions,mostUrgentThreatCaption,threatCaptionTheme} from './night-order/threat-captions.js?v=20261119-extract';
+import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=20261119-extract';
 
 (() => {
   const mouseLook=createMouseLook(),touchRun=createTouchRunControl(),gamepadSession=createGamepadSession(),gamepadDialogs=new Map();
@@ -358,6 +368,11 @@ import { createJoeVoice } from './joe-voice.js';
     { id: "guided_hints", group: "presentation", label: "CONTEXTUAL COACHING", key: "guidedHints", type: "toggle" },
     { id: "free_look", group: "presentation", label: "HORIZONTAL FREE LOOK", key: "freeLook", type: "toggle" },
     {id:"clear_navigation",group:"presentation",label:"CLEAR NAVIGATION",key:"clearNavigation",type:"toggle"},
+    { id: "brightness", group: "presentation", label: "BRIGHTNESS", key: "brightness", type: "slider", min: 0.8, max: 1.6, step: 0.1 },
+    // Shared with the other chapters (preference-store.js): quality preset, film grain, controller rumble.
+    { id: "graphics_quality", group: "presentation", label: "GRAPHICS QUALITY", key: "graphicsQualityIndex", type: "slider", min: 0, max: 3, step: 1 },
+    { id: "film_grain", group: "presentation", label: "FILM GRAIN", key: "filmGrain", type: "toggle" },
+    { id: "rumble", group: "presentation", label: "CONTROLLER RUMBLE", key: "rumble", type: "slider", min: 0, max: 1, step: 0.25 },
   ];
   // The course map was removed as a player option. Its drawing and route code
   // remain for the listening view; nothing below can open it while this is false.
@@ -1435,26 +1450,6 @@ import { createJoeVoice } from './joe-voice.js';
     width: 2172,
     height: 342,
   };
-  const SIGNAGE_ATLAS_CELL = 512;
-  const SIGNAGE_ATLAS_CELLS = [
-    {
-      x: 0,
-      y: 0,
-      width: SIGNAGE_ATLAS_CELL,
-      height: SIGNAGE_ATLAS_CELL,
-    },
-    ...Array.from(
-      { length: 3 },
-      (_, column) => ({
-        x:
-          column *
-          SIGNAGE_ATLAS_CELL,
-        y: SIGNAGE_ATLAS_CELL,
-        width: SIGNAGE_ATLAS_CELL,
-        height: SIGNAGE_ATLAS_CELL,
-      }),
-    ),
-  ];
   const BUNKER_ATLAS_SOURCES = [
     { x: 18, y: 176, width: 395, height: 397 },
     { x: 435, y: 185, width: 488, height: 397 },
@@ -1949,24 +1944,6 @@ import { createJoeVoice } from './joe-voice.js';
       height: 397,
     },
   ];
-  const COURSE_ECHO_ART_CELLS = [
-    {
-      id: "mint_ahead",
-      x: 62,
-      y: 84,
-      width: 372,
-      height: 832,
-      heightMeters: 1.76,
-    },
-    {
-      id: "amber_behind",
-      x: 1094,
-      y: 84,
-      width: 370,
-      height: 832,
-      heightMeters: 1.76,
-    },
-  ];
   const BUNKER_SAND_ZONES = [
     {
       id: "west-tee-bunker",
@@ -2100,35 +2077,6 @@ import { createJoeVoice } from './joe-voice.js';
       noiseFloor: 0.64,
     },
   ];
-  const FOOTING_HAZARD_ART_CELLS = [
-    {
-      id: "thatch",
-      x: 10,
-      y: 270,
-      width: 648,
-      height: 245,
-    },
-    {
-      id: "mud",
-      x: 724,
-      y: 270,
-      width: 645,
-      height: 254,
-    },
-    {
-      id: "roots",
-      x: 1433,
-      y: 263,
-      width: 657,
-      height: 257,
-    },
-  ];
-  const FOOTING_HAZARD_ART_CELL_BY_KIND =
-    new Map(
-      FOOTING_HAZARD_ART_CELLS.map(
-        (cell) => [cell.id, cell],
-      ),
-    );
   const FOOTING_PLAQUE_PRESSURE_APPROACH_DISTANCE =
     48;
   const FOOTING_PLAQUE_PRESSURE_CLOSE_DISTANCE =
@@ -2687,48 +2635,6 @@ import { createJoeVoice } from './joe-voice.js';
     { x: 662, y: 551, width: 453, height: 307, heightMeters: 1.75 },
     { x: 1115, y: 563, width: 476, height: 290, heightMeters: 1.55 },
   ];
-  const COURSE_BOUNDARY_KIT_CELLS = [
-    {
-      id: "reflective_stake",
-      x: 50,
-      y: 50,
-      width: 430,
-      height: 900,
-      heightMeters: 1.12,
-    },
-    {
-      id: "course_limit_placard",
-      x: 750,
-      y: 390,
-      width: 750,
-      height: 580,
-      heightMeters: 1.2,
-    },
-  ];
-  const COURSE_BOUNDARY_PLACARD_WIDTH =
-    180;
-  const COURSE_BOUNDARY_PLACARD_HEIGHT =
-    COURSE_BOUNDARY_PLACARD_WIDTH *
-    COURSE_BOUNDARY_KIT_CELLS[1]
-      .height /
-    COURSE_BOUNDARY_KIT_CELLS[1]
-      .width;
-  const EXPANDED_OBSTACLE_CELLS = [
-    { x: 50, y: 55, width: 520, height: 410, heightMeters: 3.2 },
-    { x: 610, y: 65, width: 480, height: 410, heightMeters: 1.55 },
-    { x: 1110, y: 45, width: 530, height: 420, heightMeters: 1.35 },
-    { x: 50, y: 565, width: 520, height: 325, heightMeters: 1.25 },
-    { x: 620, y: 495, width: 480, height: 380, heightMeters: 3.15 },
-    { x: 1180, y: 465, width: 285, height: 415, heightMeters: 5 },
-  ];
-  const DEAD_GREEN_SCENERY_CELLS = [
-    { x: 45, y: 50, width: 570, height: 410, heightMeters: 1.65 },
-    { x: 650, y: 25, width: 390, height: 450, heightMeters: 2.45 },
-    { x: 1110, y: 90, width: 430, height: 390, heightMeters: 0.95 },
-    { x: 100, y: 485, width: 460, height: 425, heightMeters: 2.6 },
-    { x: 635, y: 520, width: 430, height: 390, heightMeters: 1.65 },
-    { x: 1050, y: 570, width: 520, height: 350, heightMeters: 1 },
-  ];
   const PATH_LANTERN_CELLS = [
     {
       x: 143,
@@ -2761,146 +2667,6 @@ import { createJoeVoice } from './joe-voice.js';
       height: 561,
       heightMeters: 1.08,
       lightY: 0.43,
-    },
-  ];
-  const INTERACTABLE_PROP_CELLS = [
-    {
-      x: 34,
-      y: 107,
-      width: 566,
-      height: 475,
-      heightMeters: 0.38,
-    },
-    {
-      x: 643,
-      y: 33,
-      width: 578,
-      height: 594,
-      heightMeters: 0.72,
-    },
-    {
-      x: 55,
-      y: 641,
-      width: 493,
-      height: 569,
-      heightMeters: 0.82,
-    },
-    {
-      x: 635,
-      y: 627,
-      width: 585,
-      height: 575,
-      heightMeters: 0.3,
-    },
-  ];
-  const COURSE_MECHANIC_CELLS = [
-    {
-      x: 141,
-      y: 31,
-      width: 363,
-      height: 568,
-      heightMeters: 2.4,
-    },
-    {
-      x: 719,
-      y: 20,
-      width: 401,
-      height: 585,
-      heightMeters: 2.15,
-    },
-    {
-      x: 110,
-      y: 642,
-      width: 412,
-      height: 548,
-      heightMeters: 2.05,
-    },
-    {
-      x: 665,
-      y: 644,
-      width: 475,
-      height: 556,
-      heightMeters: 1.55,
-    },
-  ];
-  const NIGHT_ORDER_OBJECTIVE_CELLS = [
-    {
-      id: "audit_bell",
-      x: 62,
-      y: 65,
-      width: 466,
-      height: 752,
-      heightMeters: 2.35,
-    },
-    {
-      id: "field_log",
-      x: 636,
-      y: 101,
-      width: 486,
-      height: 716,
-      heightMeters: 2.25,
-    },
-    {
-      id: "release_review",
-      x: 1227,
-      y: 55,
-      width: 495,
-      height: 762,
-      heightMeters: 2.35,
-    },
-  ];
-  const TURF_EVIDENCE_CELLS = [
-    { x: 7, y: 167, width: 431, height: 249 },
-    { x: 437, y: 185, width: 442, height: 229 },
-    { x: 859, y: 187, width: 442, height: 224 },
-    { x: 1311, y: 164, width: 330, height: 254 },
-    { x: 85, y: 477, width: 269, height: 335 },
-    { x: 500, y: 482, width: 279, height: 334 },
-    { x: 917, y: 476, width: 288, height: 347 },
-    { x: 1293, y: 507, width: 308, height: 287 },
-  ];
-  const COURSE_CLUTTER_CELLS = [
-    {
-      x: 39,
-      y: 96,
-      width: 456,
-      height: 366,
-      heightMeters: 0.72,
-    },
-    {
-      x: 523,
-      y: 119,
-      width: 467,
-      height: 348,
-      heightMeters: 0.58,
-    },
-    {
-      x: 1031,
-      y: 122,
-      width: 484,
-      height: 346,
-      heightMeters: 0.34,
-    },
-    {
-      x: 39,
-      y: 535,
-      width: 455,
-      height: 383,
-      heightMeters: 0.42,
-    },
-    {
-      x: 538,
-      y: 563,
-      width: 451,
-      height: 356,
-      heightMeters: 0.28,
-    },
-    {
-      x: 1029,
-      y: 561,
-      width: 465,
-      height: 357,
-      heightMeters: 0.3,
     },
   ];
   const COURSE_CLUTTER = [
@@ -2996,50 +2762,6 @@ import { createJoeVoice } from './joe-voice.js';
     ...hazard,
     ...NOISE_HAZARD_TYPES[hazard.kind],
   }));
-  const COURSE_VERGE_CELLS = [
-    {
-      x: 0,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.02,
-    },
-    {
-      x: 418,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.34,
-    },
-    {
-      x: 836,
-      y: 0,
-      width: 418,
-      height: 627,
-      heightMeters: 1.08,
-    },
-    {
-      x: 0,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 1.04,
-    },
-    {
-      x: 418,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 0.98,
-    },
-    {
-      x: 836,
-      y: 627,
-      width: 418,
-      height: 627,
-      heightMeters: 1.02,
-    },
-  ];
   const COURSE_VERGE = [
     { id: "tee-ferns-west", type: 2, x: -88, y: 22, scale: 0.94 },
     { id: "tee-fescue-east", type: 0, x: 88, y: 48, scale: 0.92 },
@@ -5948,6 +5670,7 @@ import { createJoeVoice } from './joe-voice.js';
     return actionBindings('onFoot', value, version);
   }
 
+  function pressureDifficulty(pressure) { return pressure < 0.9 ? "relaxed" : pressure > 1.1 ? "hard" : "standard"; }
   function readSavedPreferences() {
     const systemReducedMotion =
       typeof window.matchMedia ===
@@ -6035,6 +5758,8 @@ import { createJoeVoice } from './joe-voice.js';
         lookSensitivity: Number.isFinite(parsed.lookSensitivity) ? clamp(parsed.lookSensitivity, 0.4, 1.8) : 1,
         stickDeadzone: Number.isFinite(parsed.stickDeadzone) ? clamp(parsed.stickDeadzone, 0.1, 0.3) : 0.22,
         uiScale: Number.isFinite(parsed.uiScale) ? clamp(parsed.uiScale, 1, 1.3) : 1,
+        brightness: Number.isFinite(parsed.brightness) ? clamp(parsed.brightness, 0.8, 1.6) : 1,
+        rumble: parsed.rumble, filmGrain: parsed.filmGrain, graphicsQualityIndex: Math.max(0, ["auto","low","medium","high"].indexOf(parsed.graphicsQuality)),
         invertLook: typeof parsed.invertLook === "boolean" ? parsed.invertLook : false,
         focusedHud: typeof parsed.focusedHud === "boolean" ? parsed.focusedHud : true,
         clearScenery: typeof parsed.clearScenery === "boolean" ? parsed.clearScenery : true,
@@ -6074,6 +5799,8 @@ import { createJoeVoice } from './joe-voice.js';
         lookSensitivity: 1,
         stickDeadzone: 0.22,
         uiScale: 1,
+        brightness: 1,
+        rumble: 0.5, filmGrain: true, graphicsQualityIndex: 0,
         invertLook: false,
         focusedHud: true,
         clearScenery: true,
@@ -6379,9 +6106,28 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   const savedPreferences = readSavedPreferences();
+  // The shared Difficulty (settable in any chapter) is Joe pressure here:
+  // relaxed 0.8, standard 1, hard 1.2. A stored choice wins over an older
+  // Night Order-only pressure value; with neither stored, nothing changes.
+  {
+    const sharedDifficulty = { relaxed: 0.8, standard: 1, hard: 1.2 }[readRecord(SETTINGS_STORAGE_KEY).difficulty];
+    if (sharedDifficulty !== undefined) savedPreferences.pursuitIntensity = sharedDifficulty;
+    savedPreferences.difficulty = pressureDifficulty(savedPreferences.pursuitIntensity);
+    savedPreferences.graphicsQuality = ["auto","low","medium","high"][savedPreferences.graphicsQualityIndex];
+  }
   const writePreferenceChanges = preferenceWriter(SETTINGS_STORAGE_KEY, savedPreferences);
+  window.RCScene3D?.setBrightness?.(savedPreferences.brightness);
   const savedCareer = readSavedCareer();
 
+  // Rumble, heartbeat pulse and near-miss feedback; presentation only.
+  const nightFeel = createNightFeel({ rumbleStrength: () => state.rumble });
+  const pondChorus = createPondChorus();
+  // Photo mode (P or the pause card's button, only while paused): a free camera passed to the scene as a view override.
+  const nightPhoto = createNightPhoto({ canvas, shell: canvas.parentElement, render: () => render(),
+    origin: () => ({ x: state.player.x, y: state.player.y, yaw: lookBackView().angle, pitch: state.player.pitch || 0, fov: spatialPreferences().fov, eye: state.hole.rebuild.eyeHeight || RCQuality.scale.eye }),
+    metres: () => ({ x: RCQuality.scale.x * RCQuality.scale.meters, y: RCQuality.scale.meters }),
+    canOpen: () => state.mode === "paused" && spatialViewEnabled() && !state.hole.rebuild.lab && !document.querySelector("dialog[open]") });
+  document.getElementById("photo-launch")?.addEventListener("click", () => nightPhoto.open());
   const state = {
     mode: "gate",
     time: 0,
@@ -6392,6 +6138,10 @@ import { createJoeVoice } from './joe-voice.js';
     subtitles: savedPreferences.subtitles,
     soundCaptions: savedPreferences.soundCaptions,
     subtitleSize: savedPreferences.subtitleSize,
+    brightness: savedPreferences.brightness,
+    rumble: savedPreferences.rumble,
+    filmGrain: savedPreferences.filmGrain,
+    graphicsQualityIndex: savedPreferences.graphicsQualityIndex,
     captionBackground: savedPreferences.captionBackground,
     threatCaptions: savedPreferences.threatCaptions,
     reducedMotion: savedPreferences.reducedMotion,
@@ -6868,6 +6618,7 @@ import { createJoeVoice } from './joe-voice.js';
   let atmosphericMusicHush = 1;
   let openingStorySlide = OPENING_SLIDES[0];
   const openingStory = createOpeningStory({
+    advanceKeys:()=>[state.keyboardBindings?.interact||'KeyE','Enter','Space'],
     reducedMotion:()=>state.reducedMotion,
     captions:()=>state.subtitles,
     onGesture:()=>ensureAudio(),
@@ -6879,19 +6630,6 @@ import { createJoeVoice } from './joe-voice.js';
       else {enterMenu();state.pendingCourseStart=true;state.status='PREPARING COURSE';render();}
     },
   });
-
-  function clamp(value, low, high) {
-    return Math.max(low, Math.min(high, value));
-  }
-
-  function lerp(a, b, amount) {
-    return a + (b - a) * amount;
-  }
-
-  function smoothstep(value) {
-    const t = clamp(value, 0, 1);
-    return t * t * (3 - 2 * t);
-  }
 
   function savePreferences() {
     RCFoundation.saveComfort(state);
@@ -6906,6 +6644,11 @@ import { createJoeVoice } from './joe-voice.js';
           subtitles: state.subtitles,
       soundCaptions: state.soundCaptions,
           subtitleSize: Number(state.subtitleSize.toFixed(2)),
+          brightness: Number(state.brightness.toFixed(2)),
+          rumble: Number(state.rumble.toFixed(2)),
+          filmGrain: state.filmGrain,
+          graphicsQuality: ["auto","low","medium","high"][state.graphicsQualityIndex] || "auto",
+          difficulty: pressureDifficulty(state.pursuitIntensity),
           captionBackground: Number(state.captionBackground.toFixed(2)),
           threatCaptions: state.threatCaptions,
           reducedMotion: state.reducedMotion,
@@ -9451,15 +9194,6 @@ import { createJoeVoice } from './joe-voice.js';
     state.bindingCaptureId = null;
     state.keys.clear();
     playUiTone(190, 0.055, 0.018);
-  }
-
-  function inverseLerp(a, b, value) {
-    return clamp((value - a) / (b - a), 0, 1);
-  }
-
-  function hash(value) {
-    const raw = Math.sin(value * 12.9898) * 43758.5453;
-    return raw - Math.floor(raw);
   }
 
   const mowerWakeStampCache =
@@ -12084,7 +11818,7 @@ import { createJoeVoice } from './joe-voice.js';
     {name:"AUDIO",ids:["master","ambience","mower","effects","danger","mute"]},
     {name:"CONTROLS",ids:["look_sensitivity","invert_look","stick_deadzone","free_look"]},
     {name:"READABILITY",ids:["subtitles","subtitle_size","caption_background","sound_captions","threat_captions","ui_scale","focused_hud","guided_hints","clear_navigation"]},
-    {name:"ATMOSPHERE",ids:["reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture"]},
+    {name:"ATMOSPHERE",ids:["brightness","reduced_motion","effects_density","navigation_contrast","clear_scenery","screen_texture","graphics_quality","film_grain","rumble"]},
     {name:"CHALLENGE",ids:["pursuit_intensity"]}
   ];
   function settingsCategory(index=state.settingsIndex) {return SETTINGS_CATEGORIES.findIndex(c=>c.ids.includes(SETTINGS_ROWS[index]?.id));}
@@ -12097,6 +11831,8 @@ import { createJoeVoice } from './joe-voice.js';
     const defaults={muted:false,volume:.72,ambienceVolume:.9,mowerVolume:1,effectsVolume:1,dangerVolume:.9,subtitles:true,soundCaptions:false,subtitleSize:1,captionBackground:.78,threatCaptions:true,reducedMotion:window.matchMedia("(prefers-reduced-motion: reduce)").matches,effectsDensity:1,highContrastNavigation:false,pursuitIntensity:1,lookSensitivity:1,stickDeadzone:.22,uiScale:1,invertLook:false,focusedHud:true,clearScenery:true,screenTexture:false,guidedHints:true,freeLook:true};
     defaults.routeGuidance = false;
     defaults.clearNavigation = false;
+    defaults.brightness = 1;
+    defaults.graphicsQualityIndex = 0; defaults.filmGrain = true; defaults.rumble = 0.5;
     for(const id of SETTINGS_CATEGORIES[settingsCategory()].ids) {const row=SETTINGS_ROWS.find(r=>r.id===id);if(row.type==="slider")applySliderSetting(row,defaults[row.key]);else if(state[row.key]!==defaults[row.key])toggleSetting(row);}
     state.settingsNotice="CATEGORY DEFAULTS RESTORED";
   }
@@ -12111,6 +11847,12 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function settingDisplayValue(setting) {
+    if (setting.id === "graphics_quality") {
+      const quality = window.RCScene3D?.polish?.quality, name = ["auto","low","medium","high"][state.graphicsQualityIndex] || "auto";
+      // Auto only ever steps down; show where it currently sits.
+      return name === "auto" && quality && quality.level !== "high" ? `AUTO (${quality.level.toUpperCase()})` : name.toUpperCase();
+    }
+    if (setting.id === "rumble") return state.rumble > 0 ? `${Math.round(state.rumble * 100)}%` : "OFF";
     if (setting.id === "pursuit_intensity") {
       return state.pursuitIntensity < 0.9
         ? "STEADY"
@@ -13619,160 +13361,6 @@ import { createJoeVoice } from './joe-voice.js';
       calculateRunResult("shed"),
       false,
     );
-  }
-
-  function worldDistance(a, b) {
-    return Math.hypot((a.x - b.x) * 0.72, a.y - b.y);
-  }
-
-  function obstacleFootprintAxes(
-    obstacle,
-    padding = 0,
-  ) {
-    return {
-      x: Math.max(
-        0.01,
-        (obstacle.radiusX ??
-          obstacle.radius ??
-          0) +
-          padding,
-      ),
-      y: Math.max(
-        0.01,
-        (obstacle.radiusY ??
-          obstacle.radius ??
-          0) +
-          padding,
-      ),
-    };
-  }
-
-  function obstacleNormalizedDistance(
-    point,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    if(obstacle.shape==='box')return Math.max(Math.abs((point.x-obstacle.x)*.72)/axes.x,Math.abs(point.y-obstacle.y)/axes.y);
-    return Math.hypot(
-      (point.x - obstacle.x) *
-        0.72 /
-        axes.x,
-      (point.y - obstacle.y) /
-        axes.y,
-    );
-  }
-
-  function obstacleClearance(
-    point,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    if(obstacle.shape==='box'){
-      const x=Math.abs((point.x-obstacle.x)*.72)-axes.x,y=Math.abs(point.y-obstacle.y)-axes.y;
-      return Math.hypot(Math.max(0,x),Math.max(0,y))+Math.min(0,Math.max(x,y));
-    }
-    const deltaX =
-      (point.x - obstacle.x) *
-      0.72;
-    const deltaY =
-      point.y - obstacle.y;
-    const centerDistance =
-      Math.hypot(deltaX, deltaY);
-    if (centerDistance < 0.0001) {
-      return -Math.min(
-        axes.x,
-        axes.y,
-      );
-    }
-    const normalizedDistance =
-      Math.hypot(
-        deltaX / axes.x,
-        deltaY / axes.y,
-      );
-    const boundaryDistance =
-      centerDistance /
-      Math.max(
-        0.0001,
-        normalizedDistance,
-      );
-    return centerDistance -
-      boundaryDistance;
-  }
-
-  function segmentObstacleIntersection(
-    start,
-    end,
-    obstacle,
-    padding = 0,
-  ) {
-    const axes =
-      obstacleFootprintAxes(
-        obstacle,
-        padding,
-      );
-    const startX =
-      (start.x - obstacle.x) *
-      0.72 /
-      axes.x;
-    const startY =
-      (start.y - obstacle.y) /
-      axes.y;
-    const endX =
-      (end.x - obstacle.x) *
-      0.72 /
-      axes.x;
-    const endY =
-      (end.y - obstacle.y) /
-      axes.y;
-    if(obstacle.shape==='box'){
-      let lo=0,hi=1;for(const [a,b]of [[startX,endX],[startY,endY]]){const d=b-a;if(Math.abs(d)<1e-9){if(Math.abs(a)>1){hi=-1;break;}}else{let t1=(-1-a)/d,t2=(1-a)/d;if(t1>t2)[t1,t2]=[t2,t1];lo=Math.max(lo,t1);hi=Math.min(hi,t2);}}
-      return {amount:clamp((lo+hi)/2,0,1),startDistance:Math.max(Math.abs(startX),Math.abs(startY)),endDistance:Math.max(Math.abs(endX),Math.abs(endY)),closestDistance:lo<=hi?0:1.01};
-    }
-    const segmentX = endX - startX;
-    const segmentY = endY - startY;
-    const segmentLengthSquared =
-      segmentX * segmentX +
-      segmentY * segmentY;
-    const amount =
-      segmentLengthSquared <= 0.0001
-        ? 0
-        : clamp(
-            -(
-              startX * segmentX +
-              startY * segmentY
-            ) /
-              segmentLengthSquared,
-            0,
-            1,
-          );
-    const closestX =
-      startX +
-      segmentX * amount;
-    const closestY =
-      startY +
-      segmentY * amount;
-    return {
-      amount,
-      startDistance:
-        Math.hypot(startX, startY),
-      endDistance:
-        Math.hypot(endX, endY),
-      closestDistance:
-        Math.hypot(
-          closestX,
-          closestY,
-        ),
-    };
   }
 
   function playerIsMoving() {
@@ -20709,32 +20297,6 @@ import { createJoeVoice } from './joe-voice.js';
     return "field";
   }
 
-  function hudFocusSuppressesThreatCaptions(
-    focus,
-  ) {
-    return [
-      "final_filing",
-      "emergency_appeal",
-      "status_request",
-      "golf_aim",
-      "practice_correction",
-      "active_distraction",
-      "risk_premium",
-      "delivery_award",
-      "pursuit",
-      "opening_briefing",
-      "blindside_transfer",
-      "cadence_read",
-      "counter_route",
-      "crosswind",
-      "nerve_hold",
-      "cut_trace",
-      "listening_search",
-      "zone_arrival",
-      "joe_dialogue",
-    ].includes(focus);
-  }
-
   function joeStateBannerVisible() {
     const hole = state.hole;
     return Boolean(
@@ -20961,34 +20523,6 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   /**
-   * Selects one warning without reordering the live caption queue. Newer copy
-   * wins ties, but a danger read cannot be displaced by later ambient flavor.
-   */
-  function mostUrgentThreatCaption(captions) {
-    const categoryPriority = {
-      world: 0,
-      mower: 1,
-      danger: 2,
-    };
-    let selected = null;
-    let selectedPriority = -1;
-    for (
-      let index = captions.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      const caption = captions[index];
-      const priority =
-        categoryPriority[caption.category] ?? 0;
-      if (priority > selectedPriority) {
-        selected = caption;
-        selectedPriority = priority;
-      }
-    }
-    return selected;
-  }
-
-  /**
    * Identifies the short Tension Director warning that already owns the
    * bottom rail while the mower echo supplies its spatial direction.
    */
@@ -21077,37 +20611,6 @@ import { createJoeVoice } from './joe-voice.js';
       gameplayEffect: "none",
       rule:
         "one_tension_director_beat_one_strongest_directional_caption_without_redundant_ambient_omen",
-    };
-  }
-
-  /**
-   * Keeps caption text and framing on the same semantic threat palette.
-   */
-  function threatCaptionTheme(category) {
-    if (category === "danger") {
-      return {
-        textColor: "#f09a69",
-        frameColor:
-          "rgba(240,116,65,0.86)",
-        frameTheme: "danger_orange",
-        minimumFrameOpacity: 0.42,
-      };
-    }
-    if (category === "mower") {
-      return {
-        textColor: "#e6b06d",
-        frameColor:
-          "rgba(214,158,76,0.78)",
-        frameTheme: "mower_amber",
-        minimumFrameOpacity: 0.42,
-      };
-    }
-    return {
-      textColor: "#c9d8bd",
-      frameColor:
-        "rgba(132,154,111,0.72)",
-      frameTheme: "world_sage",
-      minimumFrameOpacity: 0.42,
     };
   }
 
@@ -22690,6 +22193,8 @@ import { createJoeVoice } from './joe-voice.js';
       try { localStorage.setItem("rough-cut.back-nine.v1", JSON.stringify({version:1, unlocked:true, checkpoint:0, completed:false})); } catch {}
     }
     state.hole.result = recordVictory(route);
+    // Also file ranked finishes in the campaign-wide records (run-records.js); the result panel keeps its own career table.
+    if (!state.hole.result.unranked && !state.hole.rehearsal) { try { recordRun('night-order', { seconds: state.hole.result.timeSeconds, closeCalls: state.hole.result.closeCalls, route, difficulty: pressureDifficulty(state.pursuitIntensity) }); } catch {} }
     syncLiveProjection(
       state.hole.result,
       false,
@@ -27102,17 +26607,6 @@ import { createJoeVoice } from './joe-voice.js';
     return true;
   }
 
-  function wrapRadians(angle) {
-    let wrapped = angle;
-    while (wrapped > Math.PI) {
-      wrapped -= Math.PI * 2;
-    }
-    while (wrapped < -Math.PI) {
-      wrapped += Math.PI * 2;
-    }
-    return wrapped;
-  }
-
   const JOE_NAVIGATION_X_COUNT =
     Math.floor(
       224 / JOE_NAVIGATION_GRID,
@@ -27125,18 +26619,6 @@ import { createJoeVoice } from './joe-voice.js';
   const JOE_NAVIGATION_CELL_COUNT =
     JOE_NAVIGATION_X_COUNT *
     JOE_NAVIGATION_Y_COUNT;
-  const JOE_NAVIGATION_OFFSETS = [
-    [-1, -1],
-    [0, -1],
-    [1, -1],
-    [-1, 0],
-    [1, 0],
-    [-1, 1],
-    [0, 1],
-    [1, 1],
-  ];
-  const JOE_NAVIGATION_REVERSE_OFFSET =
-    [7, 6, 5, 4, 3, 2, 1, 0];
   const joeNavigationCellState =
     new Int8Array(
       JOE_NAVIGATION_CELL_COUNT,
@@ -27219,60 +26701,6 @@ import { createJoeVoice } from './joe-voice.js';
     joeNavigationEdgeState[reverseIndex] =
       cacheValue;
     return clear;
-  }
-
-  function pushNavigationHeap(
-    heap,
-    entry,
-  ) {
-    heap.push(entry);
-    let index = heap.length - 1;
-    while (index > 0) {
-      const parentIndex = Math.floor(
-        (index - 1) / 2,
-      );
-      if (
-        heap[parentIndex].estimate <=
-        entry.estimate
-      ) {
-        break;
-      }
-      heap[index] = heap[parentIndex];
-      index = parentIndex;
-    }
-    heap[index] = entry;
-  }
-
-  function popNavigationHeap(heap) {
-    const first = heap[0];
-    const last = heap.pop();
-    if (heap.length === 0) {
-      return first;
-    }
-    let index = 0;
-    while (true) {
-      const left = index * 2 + 1;
-      if (left >= heap.length) {
-        break;
-      }
-      const right = left + 1;
-      const child =
-        right < heap.length &&
-        heap[right].estimate <
-          heap[left].estimate
-          ? right
-          : left;
-      if (
-        heap[child].estimate >=
-        last.estimate
-      ) {
-        break;
-      }
-      heap[index] = heap[child];
-      index = child;
-    }
-    heap[index] = last;
-    return first;
   }
 
   function planJoeRoute(
@@ -29674,6 +29102,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playHorrorCue(type, side = 0) {
+    nightFeel.event("scare");
     if (type === "peripheral_groundskeeper") {
       playNoiseBurst(
         0.24,
@@ -57486,11 +56915,21 @@ import { createJoeVoice } from './joe-voice.js';
     }
     return true;
   }
+  // Cosmetic scene events that want a sound (night-order/wildlife.js).
+  function playNightPolishEvents(){
+    for(const e of RCScene3D.polishEvents?.()||[]){
+      if(e.kind!=='bird_flush')continue;
+      const scale=RCQuality.scale,destination=worldSoundDestination({x:e.x/(scale.x*scale.meters),y:-e.z/scale.meters},900);
+      for(let i=0;i<6;i++)playNoiseBurst(.05,.03-i*.003,2600+i*180,'bandpass',0,i*.065,destination);
+      if(state.soundCaptions)pushThreatCaption('BIRDS BREAK FROM A TREE',null,'world',1.8,'atmosphere_flavor');
+    }
+  }
   function drawSpatialFirstHole(resultBeat=false){
     const h=state.hole,calibration=h.rebuild.lab==='calibration',p=spatialPreferences();
     const wobble=spatialCameraWobble(),beat=courseCameraBeatView();
     if(resultBeat&&!beat)return false;
-    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',player:beat&&(beat.x!==state.player.x||beat.y!==state.player.y)?{...state.player,x:beat.x,y:beat.y}:state.player,yaw:lookBackView().angle+(beat?.yaw||0),pitch:(state.player.pitch||0)+(beat?.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll+(beat?.roll||0),fov:p.fov+(beat?.fov||0),resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight+(beat?.rise||0),bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    if(!RCScene3D.render(ctx,spatialCourseData(),{fx:spatialEffectsFrame(),reducedMotion:state.reducedMotion,paused:state.mode==='paused',photo:nightPhoto.view(),polish:nightFeel.frame({distance:worldDistance(h.joe,state.player),chase:h.joe.mode==='chase',pressure:h.tensionDirector.pressure,activations:h.engagement.closeEscape.activations,reduced:state.reducedMotion,flashes:state.flashes,grain:state.filmGrain,paused:state.mode!=='first_hole',play:!h.tutorialVisible&&!h.rebuild.lab,sprint:spatialWalker.sprinting&&spatialWalker.speed>2}),player:beat&&(beat.x!==state.player.x||beat.y!==state.player.y)?{...state.player,x:beat.x,y:beat.y}:state.player,yaw:lookBackView().angle+(beat?.yaw||0),pitch:(state.player.pitch||0)+(beat?.pitch||0)+wobble.pitch+(state.cameraShake&&!state.reducedMotion&&h.rebuild.impactTimer>0?Math.sin(h.elapsed*55)*h.rebuild.impactTimer*.035:0),roll:wobble.roll+(beat?.roll||0),fov:p.fov+(beat?.fov||0)+nightFeel.fovKick(),resolution:p.resolution,crouched:h.crouched,eyeHeight:h.rebuild.eyeHeight+(beat?.rise||0),bob:wobble.height,joe:h.joe,closeEscape:h.engagement.closeEscape,time:h.elapsed,inspecting:Boolean(h.engagement.inspection)||(h.joe.mode==='search'&&h.joe.brain?.intent==='inspect-evidence')||(h.engagement.experience.firstImpression.workRemaining>0&&h.joe.mode==='patrol'&&!h.hasLineOfSight&&!h.playerAudible&&h.detection<.12),soakSeconds:h.sprinklerSoakTimer,clearNavigation:state.clearNavigation,completed:h.nightOrderActionsCompleted,reviews:h.reviewsCleared,notes:h.engagement.notes,noiseHazards:h.noiseHazards,auditResponse:h.engagement.experience.auditResponse,stationResponses:h.engagement.experience.stationResponses,activation:h.nightOrderActivation,hasKey:h.keyCollected,valveOpen:h.drainUnlocked,markerReached:h.rebuild.markerReached,lightPower:floodlightPowerAt,ball:spatialBallPosition(),ballFlight:h.ballFlight,balls:h.recoverableBalls||[],particles:state.reducedMotion?[]:h.worldParticles,effects:h.worldEffects,steps:h.groundResponses,aim:h.ballAim.active?(h.ballAim.preview?.impact||h.ballAim.target||golfBallAimTarget()):null,exitRoute:h.escapeFiling.route||h.escapeRoute,exitFiling:h.escapeFiling.active,charge:h.ballAim.power,shotPlan:h.ballAim.preview,swing:h.ballFlight?clamp(h.ballFlight.elapsed/.4,0,1):0,rest:h.ballAim.preview?.target,practiceDone:h.practiceDrill.completed,practiceActive:practiceDrillActive(),practiceStage:h.practiceDrill.stage,stationFeedback:h.stationFeedback,stationChoice:h.lastStationChoice,quietProgress:h.quietLog? h.quietLog.progress/h.quietLog.duration:0,exitProgress:h.escapeFiling.sealProgress/h.escapeFiling.sealDuration,exitComplete:h.escapeFiling.completed&&!h.escapeFiling.sealing,sealing:h.escapeFiling.sealing}))return false;
+    playNightPolishEvents();
     if(resultBeat)return true;
     if(RCScene3D.domHud()&&state.mode==="paused")return true;
     if(RCScene3D.domHud()&&state.mode==="first_hole"&&!h.tutorialVisible){
@@ -59677,64 +59116,6 @@ import { createJoeVoice } from './joe-voice.js';
     ctx.restore();
   }
 
-  const DISPLAY_TEXT_REPLACEMENTS = [
-    ["\u00e2\u20ac\u201d", "\u2014"],
-    ["\u00e2\u0080\u0094", "\u2014"],
-    ["\u00e2\u20ac\u201c", "\u2013"],
-    ["\u00e2\u0080\u0093", "\u2013"],
-    ["\u00e2\u20ac\u00a2", "\u2022"],
-    ["\u00e2\u0080\u00a2", "\u2022"],
-    ["\u00e2\u2020\u2019", "\u2192"],
-    ["\u00e2\u0086\u0092", "\u2192"],
-    ["\u00e2\u2020\u0090", "\u2190"],
-    ["\u00e2\u0086\u0090", "\u2190"],
-    ["\u00e2\u2020\u2018", "\u2191"],
-    ["\u00e2\u0086\u0091", "\u2191"],
-    ["\u00e2\u2020\u201c", "\u2193"],
-    ["\u00e2\u0086\u0093", "\u2193"],
-    ["\u00e2\u20ac\u2122", "\u2019"],
-    ["\u00e2\u0080\u0099", "\u2019"],
-    ["\u00e2\u20ac\u00a6", "\u2026"],
-    ["\u00e2\u0080\u00a6", "\u2026"],
-    ["\u00e2\u2014\u20ac", "\u25c0"],
-    ["\u00e2\u0097\u0080", "\u25c0"],
-    ["\u00e2\u2013\u00b6", "\u25b6"],
-    ["\u00e2\u0096\u00b6", "\u25b6"],
-    ["\u00e2\u2014\u02c6", "\u25c8"],
-    ["\u00e2\u0097\u0088", "\u25c8"],
-    ["\u00e2\u2014\u2021", "\u25c7"],
-    ["\u00e2\u0097\u0087", "\u25c7"],
-    ["\u00e2\u0153\u201c", "\u2713"],
-    ["\u00e2\u009c\u0093", "\u2713"],
-    ["\u00e2\u2014\u2039", "\u25cb"],
-    ["\u00e2\u0097\u008b", "\u25cb"],
-    ["\u00e2\u2014\u008f", "\u25cf"],
-    ["\u00e2\u0097\u008f", "\u25cf"],
-    ["\u00e2\u2013\u00a3", "\u25a3"],
-    ["\u00e2\u0096\u00a3", "\u25a3"],
-    ["\u00e2\u2013\u00bc", "\u25bc"],
-    ["\u00e2\u0096\u00bc", "\u25bc"],
-    ["\u00e2\u2013\u00b2", "\u25b2"],
-    ["\u00e2\u0096\u00b2", "\u25b2"],
-    ["\u00e2\u2026\u00a1", "\u2161"],
-    ["\u00e2\u0085\u00a1", "\u2161"],
-    ["\u00e2\u20ac\u0153", "\u201c"],
-    ["\u00e2\u0080\u009c", "\u201c"],
-    ["\u00e2\u20ac\u009d", "\u201d"],
-    ["\u00e2\u0080\u009d", "\u201d"],
-    ["\u00e2\u2021\u00a9", "\u21e9"],
-    ["\u00e2\u0087\u00a9", "\u21e9"],
-    ["\u00e2\u0152\u201a", "\u2302"],
-    ["\u00e2\u008c\u0082", "\u2302"],
-    ["\u00e2\u2030\u00a5", "\u2265"],
-    ["\u00e2\u0089\u00a5", "\u2265"],
-    ["\u00e2\u2030\u00a4", "\u2264"],
-    ["\u00e2\u0089\u00a4", "\u2264"],
-    ["\u00c3\u2014", "\u00d7"],
-    ["\u00c3\u0097", "\u00d7"],
-    ["\u00c2\u00a0", " "],
-  ];
-
   /**
    * Repairs common UTF-8 punctuation interpreted through Windows-1252.
    * Escaped code points keep this repair reliable under either decoding path.
@@ -59983,7 +59364,7 @@ import { createJoeVoice } from './joe-voice.js';
     lastBriefingRenderKey='';
     // Retain the paused presentation until its selection, preferences or size change.
     if(state.mode==='paused'&&spatialViewEnabled()&&window.RCScene3D?.domHud()){
-      const key=JSON.stringify([state.pauseIndex,state.inputMethod,state.uiScale,state.freeLook,state.threatCaptions,state.player.x,state.player.y,state.hole.elapsed,state.hole.golfBalls,state.hole.nightOrderActionsCompleted,state.hole.keyCollected,state.hole.drainUnlocked,state.hole.rebuild.lessonComplete,state.hole.mapOpen,state.hole.focus,state.transitionAlpha,window.innerWidth,window.innerHeight]);
+      const key=JSON.stringify([state.pauseIndex,state.inputMethod,state.uiScale,state.freeLook,state.threatCaptions,state.player.x,state.player.y,state.hole.elapsed,state.hole.golfBalls,state.hole.nightOrderActionsCompleted,state.hole.keyCollected,state.hole.drainUnlocked,state.hole.rebuild.lessonComplete,state.hole.mapOpen,state.hole.focus,state.transitionAlpha,window.innerWidth,window.innerHeight,nightPhoto.view(),state.filmGrain,state.graphicsQualityIndex]);
       if(key===render.pausedThemeKey)return;render.pausedThemeKey=key;
     }else render.pausedThemeKey='';
     refreshThreatCaptionBearings();
@@ -61733,6 +61114,11 @@ import { createJoeVoice } from './joe-voice.js';
     const shelterMix=coverRestMix(state.hole.engagement.experience.coverRest,
       isCourse&&!signalPriority&&!state.hole.hasLineOfSight&&!state.hole.playerAudible&&state.hole.detection<.12&&worldDistance(state.hole.joe,state.player)>78);
     if(atmosphericAudioHole!==state.hole){atmosphericAudio?.reset();atmosphericAudioHole=state.hole;}
+    // Frogs on the pond banks (night-order/ambience.js): ambience category, silent while listening.
+    pondChorus.connect(audioContext,ambienceBusGain);
+    pondChorus.update({player:{x:state.player.x*RCQuality.scale.x*RCQuality.scale.meters,z:-state.player.y*RCQuality.scale.meters,yaw:state.player.yaw||0},
+      active:isCourse&&state.mode==='first_hole'&&!state.hole.tutorialVisible&&!state.hole.mapOpen&&!state.hole.focus&&state.hole.rebuild.lab!=='calibration',
+      disturbed:worldDistance(state.hole.joe,state.player)<70||sprintHeld()&&(state.hole.lastMovementAppliedDistance||0)>0});
     const atmosphere=atmosphericAudio?.update({
       shelter:shelterMix.amount,
       authoredHush:auditResponseHush(state.hole.engagement.experience.auditResponse),
@@ -62142,6 +61528,7 @@ import { createJoeVoice } from './joe-voice.js';
     sand = false,
     quiet = 1,
   ) {
+    nightFeel.event(crouched ? "step" : sprinting ? "run" : inRough ? "rough" : "step", crouched ? 0.5 : 1);
     const panicWeight =
       crouched
         ? 1
@@ -62301,12 +61688,14 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playHeartbeat(strength) {
+    nightFeel.heartbeat(strength);
     const volume = 0.026 + strength * 0.045;
     playTransientTone(74, 46, 0.13, volume, "sine", 0, dangerBusGain);
     playTransientTone(66, 42, 0.11, volume * 0.72, "sine", 0.18, dangerBusGain);
   }
 
   function playThreatCue(mode) {
+    if (mode === "chase") nightFeel.event("spotted");
     if (mode === "chase") {
       playTransientTone(118, 39, 0.62, 0.11, "sawtooth", 0, dangerBusGain);
       playNoiseBurst(0.28, 0.065, 920, "bandpass", 0, 0, dangerBusGain);
@@ -62354,6 +61743,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playPickupCue() {
+    nightFeel.event("pickup");
     playTransientTone(392, 784, 0.24, 0.055, "triangle");
     playTransientTone(587, 1174, 0.3, 0.038, "sine", 0.08);
     playNoiseBurst(0.12, 0.018, 2400, "highpass");
@@ -62479,6 +61869,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playCollisionCue(obstacle) {
+    nightFeel.event("bump");
     const pan = clamp(
       (obstacle.x - state.player.x) /
         34,
@@ -62735,6 +62126,7 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playBallSwingCue(direction) {
+    nightFeel.event("swing");
     playNoiseBurst(
       0.11,
       0.028,
@@ -62769,6 +62161,7 @@ import { createJoeVoice } from './joe-voice.js';
     blocked = false,
     worldPoint = null,
   ) {
+    if(!worldPoint)nightFeel.event("strike");
     const destination=worldSoundDestination(worldPoint);if(worldPoint)direction=0;
     const noise=(duration,volume,frequency,type,pan=0)=>playNoiseBurst(duration,volume,frequency,type,pan,0,destination);
     const tone=(frequency,end,duration,volume,type,delay=0)=>playTransientTone(frequency,end,duration,volume,type,delay,destination);
@@ -62920,6 +62313,7 @@ import { createJoeVoice } from './joe-voice.js';
 
   /** Gives each mandatory station a distinct mechanical acoustic signature. */
   function playNightOrderActionCue(action) {
+    nightFeel.event("confirm");
     if (
       !action ||
       action.soundCue === "brass_bell"
@@ -63065,18 +62459,21 @@ import { createJoeVoice } from './joe-voice.js';
   }
 
   function playDoorRattle() {
+    nightFeel.event("rattle");
     playTransientTone(112, 78, 0.1, 0.05, "square");
     playTransientTone(96, 70, 0.12, 0.045, "square", 0.13);
     playNoiseBurst(0.24, 0.035, 740, "bandpass");
   }
 
   function playVictoryCue() {
+    nightFeel.event("victory");
     playTransientTone(196, 392, 0.62, 0.055, "sine");
     playTransientTone(247, 494, 0.72, 0.038, "triangle", 0.08);
     playTransientTone(294, 588, 0.84, 0.032, "sine", 0.15);
   }
 
   function playCaptureCue() {
+    nightFeel.event("capture");
     triggerStinger();
     playNoiseBurst(0.5, 0.12, 680, "lowpass", 0, 0, dangerBusGain);
     playTransientTone(54, 28, 0.74, 0.13, "sawtooth", 0, dangerBusGain);
@@ -63707,6 +63104,9 @@ import { createJoeVoice } from './joe-voice.js';
         setting.max,
       ).toFixed(4),
     );
+    if (setting.key === "brightness") window.RCScene3D?.setBrightness?.(state.brightness);
+    if (setting.key === "graphicsQualityIndex") window.RCScene3D?.polish?.quality.set(["auto","low","medium","high"][state.graphicsQualityIndex] || "auto", { persist: false });
+    if (setting.key === "rumble" && state.rumble > 0) nightFeel.event("confirm");
     if (audioContext) {
       const gainTargets = {
         volume: { node: masterGain, scale: state.muted ? 0 : 0.55 },
@@ -64058,14 +63458,14 @@ import { createJoeVoice } from './joe-voice.js';
     }
   }
 
+  // Start is the pause button in every chapter (B brakes in The Back Nine), so
+  // during play B only cancels an aimed ball; in menus it still goes back.
   function handleGamepadBack() {
     if (
       state.mode === "first_hole" &&
       state.hole.ballAim.active
     ) {
       cancelGolfBallAim();
-    } else if (state.mode === "first_hole") {
-      enterPause();
     } else if (state.mode === "paused") {
       resumeFirstHole();
     } else if (state.mode === "settings") {
@@ -64387,8 +63787,10 @@ import { createJoeVoice } from './joe-voice.js';
 
   window.addEventListener("keydown", (event) => {
     if(state.mode==='opening_story')return;
+    if(nightPhoto.active)return;
+    if(event.code==='KeyP'&&state.mode==='paused'&&!event.repeat&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&nightPhoto.open()){event.preventDefault();return;}
     if(['victory','defeat'].includes(state.mode)&&event.target.closest?.('#course-result summary')&&['Enter','Space'].includes(event.code))return;
-    if (studyDialogOpen() || (event.target.closest?.("#study-launch, #controls-launch, #direct-choices, #route-choices") && ["Enter","Space"].includes(event.code))) return;
+    if (studyDialogOpen() || (event.target.closest?.("#study-launch, #controls-launch, #photo-launch, #direct-choices, #route-choices") && ["Enter","Space"].includes(event.code))) return;
     if(['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu){
       if(state.mode!=='clocked_out'&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){
         state.inputMethod='keyboard';
@@ -74737,7 +74139,9 @@ import { createJoeVoice } from './joe-voice.js';
       presentationElapsed,
     );
     const simulationStart=performance.now();
-    update((now - lastFrame) / 1000);
+    // A near miss briefly slows the real-time loop only (night-order/feel.js);
+    // advanceTime() and replays step fixed time and never see it.
+    update((now - lastFrame) / 1000 * nightFeel.timeScale());
     window.RCQualityTelemetry={simulationMs:performance.now()-simulationStart};
     lastFrame = now;
     render();

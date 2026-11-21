@@ -5,7 +5,7 @@ import {createGlowSprites,createLampUniforms,writeLampUniforms} from './back-nin
 
 // Night-air presentation for the chase: Joe's visible headlight shaft, chaff
 // and exhaust, lamp and beacon halos, drifting ground fog, tire plumes and
-// wind-blown leaves. Everything is pooled with a fixed capacity and reads the
+// wind-blown leaves, tyre dust on dry ground and moths at the lamps. Everything is pooled with a fixed capacity and reads the
 // simulation without writing to it. No lights are created or toggled here.
 const hash=n=>{const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s);};
 const clamp01=v=>Math.max(0,Math.min(1,v)),smooth=(a,b,x)=>{const t=clamp01((x-a)/(b-a));return t*t*(3-2*t);};
@@ -13,7 +13,7 @@ const wrap=(v,span)=>((v%span)+span)%span;
 const BAND=36,LEAF_X=38,LEAF_Y=46,RAIN_X=24,RAIN_Z=28,RAIN_H=4.6;
 
 export function createBackNineNightFx({scene,camera,software=false,lanterns=[],fixtures=[]}){
- const lamps=createLampUniforms(),sprites=createGlowSprites(scene,lamps,software?216:480);
+ const lamps=createLampUniforms(),sprites=createGlowSprites(scene,lamps,software?216:560);
  let halos=new Float32Array(0),mowerBody=null;
  // A hollow additive cone follows the mower's lamp bar. Its silhouette fades
  // by view angle, so it reads as lit air and never as a solid surface.
@@ -43,8 +43,12 @@ export function createBackNineNightFx({scene,camera,software=false,lanterns=[],f
  const wetTime={value:0};let clock=0,clockScale=1,rain=0,flashPower=0;
  const point=new THREE.Vector3();let owner=null,last=0,exhaustCarry=0,exhaustCursor=0,chaffCarry=0,chaffCursor=0,serial=0;
  let fogPuffs=0,haloCount=0,plume=0,chaffActive=0,exhaustActive=0,beamPower=0,leafStretch=0;
- function update(run,{actor,joe,reducedMotion=false,dip=0,beacon=null,headlights=null,fog=null,timeScale=1,impact=null}){
-  if(owner!==run){owner=run;last=clock=run.time||0;exhaustCarry=chaffCarry=0;for(const p of exhaust)p.age=9;for(const p of chaff)p.age=9;}
+ // Decorative additions share the sprite batch (no extra draws) and switch
+ // off with the quality preset: dry-ground tyre dust and moths at the lamps.
+ const dust=Array.from({length:software?0:22},()=>({age:9,x:0,y:0,h:0,vx:0,vy:0,size:.3,sand:0})),DUST_LIFE=1.1;
+ let dustCarry=0,dustCursor=0,dustActive=0,mothCount=0,dustSpeed=0,landed=null;
+ function update(run,{actor,joe,reducedMotion=false,dip=0,beacon=null,headlights=null,fog=null,timeScale=1,impact=null,effects=true}){
+  if(owner!==run){owner=run;last=clock=run.time||0;exhaustCarry=chaffCarry=dustCarry=0;landed=null;dustSpeed=actor?.speed||0;for(const p of exhaust)p.age=9;for(const p of chaff)p.age=9;for(const p of dust)p.age=9;}
   const now=run.time||0,dt=Math.max(0,Math.min(.1,now-last))*timeScale;last=now;clock+=dt;clockScale=timeScale;wetTime.value=clock;const time=clock;
   const cx=camera.position.x,cy=-camera.position.z,driving=run.mode==='driving';
   if(headlights){writeLampUniforms(lamps,0,headlights.player,85);writeLampUniforms(lamps,1,headlights.mower,125);}
@@ -95,6 +99,23 @@ export function createBackNineNightFx({scene,camera,software=false,lanterns=[],f
    for(let i=0;i<12;i++){const t=(time*2.1+i/12)%1,side=i%2?1:-1,across=side*(.78+t*.75),behind=back*(1+t*(1.3+Math.abs(actor.speed)*.16));
     sprites.push(actor.x+cyw*across-sy*behind,ground+.22+Math.sin(t*Math.PI)*(.55+power*.6),-actor.y+sy*across+cyw*behind,.34+t*(1+power*.6),.2,.27,.29,.55*power*(1-t)*(1-t),1,1.2,0,1.2);plume++;}
   }
+  // Tyre dust: the rear wheels lift turf spray in the rough and sand, and a
+  // hard stop on the path leaves a short grey puff. A landing on foot raises
+  // one burst. Lit by the two headlights, so Joe's lamp shows it from behind.
+  for(const p of dust)p.age+=dt;dustActive=0;
+  if(effects&&dust.length){
+   const v=Math.abs(actor.speed||0),decel=dt>0&&!run.foot?Math.max(0,(Math.abs(dustSpeed)-v)/dt):0;dustSpeed=actor.speed||0;
+   const loose=actor.surface==='sand'?1:actor.surface==='rough'?.6:0,skid=actor.surface==='path'&&decel>5.5&&v>2.5?.8:0,rate=!run.foot&&driving?(v>2.5?loose*Math.min(16,3+v*1.1):0)+skid*14:0;
+   const spawn=(x,y,vx,vy,size,sand)=>{const p=dust[dustCursor++%dust.length];p.age=0;p.x=x;p.y=y;p.h=terrainHeight(x,y)+.12;p.vx=vx;p.vy=vy;p.size=size;p.sand=sand;};
+   if(rate>0){dustCarry+=dt*rate;const sy=Math.sin(actor.yaw),cyw=Math.cos(actor.yaw),back=actor.speed<0?-1:1;
+    while(dustCarry>=1){dustCarry--;const n=serial++,side=n%2?1:-1,x=actor.x+cyw*side*.84-sy*back*.9,y=actor.y-sy*side*.84-cyw*back*.9;
+     spawn(x,y,-sy*back*v*.22+cyw*side*(.3+hash(n)*.5),-cyw*back*v*.22-sy*side*(.3+hash(n)*.5),.26+hash(n+.5)*.2,skid?.5:actor.surface==='sand'?1:0);}
+   }else dustCarry=0;
+   const ejection=run.foot?.ejection;
+   if(ejection&&landed!==ejection&&run.time-ejection.at>=1.02&&run.time-ejection.at<1.4){landed=ejection;const sand=actor.surface==='sand'?1:.4;for(let i=0;i<7;i++){const a=i*.9+hash(serial++)*.6;spawn(actor.x,actor.y,Math.sin(a)*1.3,Math.cos(a)*1.3,.3,sand);}}
+   for(const p of dust){if(p.age>=DUST_LIFE)continue;const t=p.age/DUST_LIFE,fade=(1-t)*(1-t)*smooth(0,.1,t),k=1-Math.exp(-p.age*2.4);
+    sprites.push(p.x+p.vx*k*.42,p.h+t*(.5+p.size),-(p.y+p.vy*k*.42),p.size*(1+t*2.6),.17+.13*p.sand,.2+.06*p.sand,.15+.01*p.sand,.5*fade,1,1.3,.35,1.4);dustActive++;}
+  }
   // Ground fog bands lie across the course at fixed world positions and drift
   // with the gust. Headlights bloom inside them; a near fade clears the lens.
   fogPuffs=0;
@@ -117,6 +138,15 @@ export function createBackNineNightFx({scene,camera,software=false,lanterns=[],f
    sprites.push(x,halos[i+1],z,1.15,1,.69,.36,.3*sag);haloCount++;
   }
   for(const f of fixtures){if(Math.hypot(f.x-cx,f.z+cy)>100)continue;sprites.push(f.x,f.y,f.z,f.size,1,.72,.42,f.alpha*(1-dip*.3));haloCount++;}
+  // Moths: three pale flecks circle each nearby path lantern on restless,
+  // uneven orbits. They scatter outward for a moment as the mower passes.
+  mothCount=0;
+  if(effects&&!software)for(let i=0;i<halos.length&&mothCount<36;i+=3){
+   const x=halos[i],z=halos[i+2],range=Math.hypot(x-cx,z+cy);if(range>34||range<1.2)continue;
+   const near=1-smooth(24,34,range),scare=1+2.2*(1-smooth(4,11,Math.hypot(x-joe.x,z+joe.y)));
+   for(let m=0;m<3;m++){const s=i*1.7+m*4.1,a=reducedMotion?s:time*(3.1+hash(s)*2.4)*(m%2?1:-1)+s,r=(.16+.2*hash(s+.3)+.07*Math.sin(time*(1.3+hash(s+.6))+s))*scare,b=reducedMotion?s:time*(4.3+hash(s+.9)*2)+s;
+    sprites.push(x+Math.cos(a)*r,halos[i+1]+.06+Math.sin(b)*.13*scare,z+Math.sin(a)*r,.04,.95,.86,.62,.7*near);mothCount++;}
+  }
   // Leaves.
   // Leaves ride the actor's ground height: one terrain query for the whole field.
   const speed=run.foot?0:Math.abs(actor.speed),streak=clamp01((speed-5)/9),leafGround=terrainHeight(actor.x,actor.y);leafStretch=streak;
@@ -156,6 +186,6 @@ export function createBackNineNightFx({scene,camera,software=false,lanterns=[],f
   // Called once the course and the mower exist; fixtures are static after it.
   mount(body){mowerBody=body;halos=new Float32Array(lanterns.length*3);lanterns.forEach((p,i)=>{halos[i*3]=p.x;halos[i*3+1]=terrainHeight(p.x,-p.z)+.4;halos[i*3+2]=p.z;});},
   warm(){sprites.warm();beam.visible=true;leaves.visible=true;},
-  stats:()=>({sprites:sprites.stats(),beam:{power:beamPower,length:beamLength,visible:beam.visible},exhaust:{active:exhaustActive,capacity:exhaust.length},chaff:{active:chaffActive,capacity:chaff.length},fogPuffs,halos:haloCount,haloSources:lanterns.length+fixtures.length,tirePlume:plume,leaves:{capacity:leafCapacity,streak:leafStretch},rain:{active:rain,capacity:rainCapacity},clock:{value:clock,scale:clockScale},captureFlash:flashPower,lights:0}),
+  stats:()=>({sprites:sprites.stats(),beam:{power:beamPower,length:beamLength,visible:beam.visible},exhaust:{active:exhaustActive,capacity:exhaust.length},chaff:{active:chaffActive,capacity:chaff.length},fogPuffs,halos:haloCount,haloSources:lanterns.length+fixtures.length,tirePlume:plume,dust:{active:dustActive,capacity:dust.length},moths:mothCount,leaves:{capacity:leafCapacity,streak:leafStretch},rain:{active:rain,capacity:rainCapacity},clock:{value:clock,scale:clockScale},captureFlash:flashPower,lights:0}),
   dispose(){sprites.dispose();scene.remove(beam,leaves);beamGeometry.dispose();beamMaterial.dispose();leaves.dispose();leafGeometry.dispose();leafMaterial.dispose();}};
 }

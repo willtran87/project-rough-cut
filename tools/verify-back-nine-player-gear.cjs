@@ -9,7 +9,7 @@ const cases=[
 const lightsOnly=process.argv.includes('--lights-only');
 const selectedCase=process.argv.find(a=>a.startsWith('--case='))?.slice(7);
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
- const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  for(const file of ['back-nine-scene.js','chase-runner.js','runner-materials.js','runner-gait.js'])await p.route('**/'+file+'*',r=>{
   let source=fs.readFileSync((before?'output/back-nine-visual-upgrade/player-gear/baseline-source/':'web/')+file,'utf8');
   if(file==='back-nine-scene.js')source=source.replace('return {scene,camera,update,draw()','return window.__gearWorld={scene,camera,renderer,runner,headlights,mowerLight,update,draw()');

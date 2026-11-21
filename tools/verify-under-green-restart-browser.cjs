@@ -5,7 +5,7 @@ const out='output/under-green/no-checkpoints';fs.mkdirSync(out,{recursive:true})
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],checks=[],views=[];
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   const ready=async()=>{await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));};
   const read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
@@ -16,7 +16,7 @@ const out='output/under-green/no-checkpoints';fs.mkdirSync(out,{recursive:true})
     localStorage.setItem('rough-cut.under-green.v1',JSON.stringify({version,unlocked:true,checkpoint:3,bypass:true,evidence:true,lessonCrossed:true,bunkerRouteObserved:true,difficulty:'relentless',completed:false}));
     localStorage.setItem('rough-cut.back-nine.v1',JSON.stringify({sentinel:'sibling-progress'}));
    },version);
-   await p.reload();await ready();fresh(await read());assert.equal(await p.locator('#primary').textContent(),'Enter the drain');assert.equal(await p.locator('#pressure').inputValue(),'relentless');
+   await p.reload();await ready();fresh(await read());assert.equal(await p.locator('#primary').textContent(),'Begin chapter');assert.equal(await p.locator('#pressure').inputValue(),'relentless');
    const save=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));assert.equal(save.version,4);assert(!('checkpoint' in save));assert(!save.evidence);
   }
   checks.push('Legacy and current saves cannot restore checkpoints, pump, record or pursuit; pressure preference survives');
@@ -32,6 +32,8 @@ const out='output/under-green/no-checkpoints';fs.mkdirSync(out,{recursive:true})
   for(const [width,height]of [[2560,1600],[1280,720],[390,844]]){
    await p.setViewportSize({width,height});await progressed();assert.equal(await p.locator('#primary').textContent(),'Retry from the start');
    assert.doesNotMatch(await p.locator('#retry-progress').textContent(),/stays open|is kept|checkpoint/);
+   // The retry panel waits behind the short capture camera move; manual time only repaints on request.
+   await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
    await p.screenshot({path:`${out}/caught-${width}.png`});
    await p.click('#primary');await p.evaluate(()=>advanceTime(0));fresh(await read());
    assert.equal(await p.locator('#caption').textContent(),'');assert(await p.locator('#record-status').isHidden());
@@ -45,7 +47,8 @@ const out='output/under-green/no-checkpoints';fs.mkdirSync(out,{recursive:true})
   await progressed('playing');await p.reload();await ready();fresh(await read());
   checks.push('Pause/resume retains the current attempt; manual restart and page reload reset to the entrance');
   await progressed('complete');const completion=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));assert(completion.completed&&completion.evidence);
-  await p.click('#primary');await p.evaluate(()=>advanceTime(0));fresh(await read());await p.reload();await ready();fresh(await read());
+  // The completion panel offers only the onward link (its primary button is hidden), so replay is a reload.
+  assert(await p.locator('#primary').isHidden());await p.reload();await ready();fresh(await read());
   const retained=await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.under-green.v1')));assert(retained.completed&&retained.evidence);
   assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('rough-cut.back-nine.v1')).sentinel),'sibling-progress');
   checks.push('Replay and completed-save reload start fresh while earned completion/evidence credit and sibling saves remain intact');
