@@ -95,7 +95,7 @@ const tactics=process.argv.includes('--balls'),crossings=process.argv.includes('
     }await page.setViewportSize({width:2560,height:1600});
    }
    await go(-5,82);await go(-8,85);
-  }else{await go(-8,85);await go(-9.1,85);await use(-9.6,85,'bell');}
+  }else{await go(-6,81.7);await use(-6,80.4,'bell');await go(-8,85);} // the bell moved onto the open bank in a501e79
   await go(-16,86);await face(Math.atan2(24,-12));await shot(`${route}-lure`);
   for(let k=0;k<100&&!(await read()).won;k++)await tick(1500);state=await read();assert(state.won&&state.mode==='final_cut_aftermath');
   // Same input path in the safe coda. Only the assertion changes after victory.

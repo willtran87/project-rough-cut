@@ -171,8 +171,9 @@ function paintUI(){
  $('dread').style.opacity=driving?String(reduced?((t.intensity||0)>.5?.18:0):(t.intensity||0)*.55):'0';
  const joeDistance=distance(player,run.joe);
  const messages=driving?chaseMessages(run,{routeHints:chaseControls.prefs.routeHints,soundCaptions:settings.soundCaptions,coarse:coarsePointer.matches,method:inputMethod,bindings}):{banner:'',sound:'',dialogue:''};
- const reactionBlocked=!!world?.staffSightingActive?.()||!encounterAllows(run,'dialogue')||!!messages.banner||messages.soundUrgent||struck||joeDistance<18||joeDistance>85||run.grace>0||run.story.near>=0||run.joe.ram.phase!=='none'||['windup','surge'].includes(t.phase);
- const spoken=chatter(run,()=>joeReactions.caption(run)||variedJoeCaption(run,messages.dialogue),{blocked:reactionBlocked,enabled:true,canStart:encounterAllows(run,'dialogue-start')&&dialogueApproachClear(run)}),dialogue=settings.subtitles?spoken:'';
+ const hidingSlot=joeReactions.hidingLine(run)&&['cruise','search'].includes(run.encounter?.owner)&&!['opening','gather'].includes(run.pressure?.phase);
+ const reactionBlocked=!!world?.staffSightingActive?.()||!(encounterAllows(run,'dialogue')||hidingSlot)||!!messages.banner||messages.soundUrgent||struck||joeDistance<18||joeDistance>85||run.grace>0||run.story.near>=0||run.joe.ram.phase!=='none'||['windup','surge'].includes(t.phase);
+ const spoken=chatter(run,()=>joeReactions.caption(run)||(encounterAllows(run,'dialogue-start')?variedJoeCaption(run,messages.dialogue):''),{blocked:reactionBlocked,enabled:true,canStart:(encounterAllows(run,'dialogue-start')||hidingSlot)&&dialogueApproachClear(run)}),dialogue=settings.subtitles?spoken:'';
  if(run.mode==='driving'||run.mode==='sealing'){if(spoken!==voicedCaption){voicedCaption=spoken;if(/^JOE:/.test(spoken))joeVoice.say(spoken);else joeVoice.stop();}}
  else if(voicedCaption){voicedCaption='';joeVoice.stop();}
  setText('caption',messages.banner||dialogue);setText('sound-caption',messages.sound);

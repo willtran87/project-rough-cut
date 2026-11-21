@@ -34,6 +34,9 @@ export function createJoeReactions(pick=joeLine){
   if(kind==='foot')s.active=null;
  }
  return {
+  // The hiding line is written for the moment Joe is searching for a
+  // concealed player, when other new lines are held back.
+  hidingLine(run){const s=state(run);return s.pending?.kind==='hiding'||s.active?.kind==='hiding';},
   observe(run){
    const s=state(run);
    if(run.mode==='paused')return;
