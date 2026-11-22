@@ -1,13 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
-const baseline=process.argv.includes('--baseline'),out=`output/menu-performance/${baseline?'before':'after'}`;fs.mkdirSync(out,{recursive:true});
+const baseline=false,out=`output/menu-performance/${baseline?'before':'after'}`;fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),context=await browser.newContext({viewport:{width:2560,height:1600}}),page=await context.newPage(),errors=[];
  try{
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/game.js*',r=>{let s=fs.readFileSync(baseline?'output/menu-performance/baseline/game.js':'web/game.js','utf8');s=s.replace('  window.advanceTime = (milliseconds) => {','  window.__menuPerf={state,render,enterMenu,art,grassArt,frames:()=>runtimePerformance.renderedFrames};\n  window.advanceTime = (milliseconds) => {');return r.fulfill({contentType:'application/javascript',body:s});});
-  if(baseline)await page.route('**/course-menu-ui.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/menu-performance/baseline/course-menu-ui.js','utf8')}));
+  await page.route('**/game.js*',r=>{let s=fs.readFileSync('web/game.js','utf8');s=s.replace('  window.advanceTime = (milliseconds) => {','  window.__menuPerf={state,render,enterMenu,art,grassArt,frames:()=>runtimePerformance.renderedFrames};\n  window.advanceTime = (milliseconds) => {');return r.fulfill({contentType:'application/javascript',body:s});});
   await page.goto('http://127.0.0.1:4187');await page.waitForFunction(()=>window.__menuPerf,null,{timeout:120000});
   await page.evaluate(()=>{__menuPerf.enterMenu();__menuPerf.render();window.__perfCounts={gpuPresents:0,artCopies:0};const present=RCScene3D.present;RCScene3D.present=(...args)=>{__perfCounts.gpuPresents++;return present(...args);};const art=document.querySelector('.course-menu-art').getContext('2d'),copy=art.drawImage.bind(art);art.drawImage=(...args)=>{__perfCounts.artCopies++;return copy(...args);};});
   await page.waitForFunction(()=>__menuPerf.art.naturalWidth&&__menuPerf.grassArt.naturalWidth);await page.waitForTimeout(2500);

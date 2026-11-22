@@ -79,6 +79,20 @@ export function createScreenFinish(THREE,renderer,{look=LOOKS.nightOrder,level='
   if(all){geometry.dispose();bright.dispose();blur.dispose();final.dispose();}
  }
  function draw(material,to){quad.material=material;renderer.setRenderTarget(to);renderer.render(scene,camera);}
+ // Compile the three passes while the chapter is loading, not on the first
+ // finished gameplay frame. Bloom passes draw into linear targets and the
+ // grade draws to the screen, so each is compiled against the same kind of
+ // target it will use and the cached program is reused.
+ function warm(){
+  const previous=renderer.getRenderTarget(),probe=target(2,2);
+  try{
+   quad.material=bright;renderer.setRenderTarget(probe);renderer.compile(scene,camera);
+   quad.material=blur;renderer.compile(scene,camera);
+   quad.material=final;renderer.setRenderTarget(null);renderer.compile(scene,camera);
+  }catch(error){console.warn('Screen finish warm-up skipped:',error);}
+  finally{renderer.setRenderTarget(previous);probe.dispose();}
+ }
+ warm();
  function blurInto(pair,source){
   blur.uniforms.tMap.value=source;blur.uniforms.step.value.set(1/pair[0].width,0);draw(blur,pair[1]);
   blur.uniforms.tMap.value=pair[1].texture;blur.uniforms.step.value.set(0,1/pair[0].height);draw(blur,pair[0]);

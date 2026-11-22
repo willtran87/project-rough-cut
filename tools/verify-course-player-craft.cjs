@@ -1,8 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/course-player-craft',software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
- if(baseline)for(const name of ['course-player-craft.js','course-arrival-presentation.js'])await p.route('**/'+name+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-hand-finish/baseline-source/'+name,'utf8')}));
+ const out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/course-player-craft',software=process.argv.includes('--software'),baseline=false;fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__pc={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
  await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__pcScene=()=>({playerCraft,renderer,world,camera});'}));

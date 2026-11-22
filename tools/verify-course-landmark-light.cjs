@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const {restoreFullIndexReference}=require('./fixtures/full-index-reference.cjs');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
+ const before=false,software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
  const base='output/level-one-landmark-light',out=`${base}/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
@@ -11,8 +11,6 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__landmarkGame={state,resetFirstHole,render,obstacleAtPosition};\n  window.advanceTime = (milliseconds) => {')}));
  await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('softwareBudget=createSoftwareFrameBudget()','softwareBudget=createSoftwareFrameBudget({scales:[.625]})').replace('understoryCulling?.update(camera);','if(window.__landmarkNoCull)understoryCulling?.restore();else understoryCulling?.update(camera);')+'\nwindow.__landmarkScene=()=>({world,renderer,camera,currentData,sceneTarget});'}));
  await page.route('**/pixel-world-props.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/pixel-world-props.js','utf8').replace('function updateCulling(camera){',`function updateCulling(camera){if(window.__landmarkNoCull){cullValid=false;for(const m of culledMeshes){if(m.userData.fullIndices)(${restoreFullIndexReference.toString()})(m);else m.visible=true;}return;}`)}));
- if(before)await page.route('**/course-visual-detail.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(base+'/baseline-source/course-visual-detail.js','utf8')}));
- if(before)for(const file of ['clubhouse-windows.js','pixel-buildings.js'])await page.route('**/'+file+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(base+'/baseline-source/'+file,'utf8')}));
  const draw=()=>page.evaluate(async()=>{__landmarkGame.render();await RCScene3D.whenPresented();});
  async function shot(name,x,y,yaw,pitch=0){
   const legal=await page.evaluate(v=>{const t=__landmarkGame;if(t.obstacleAtPosition(v.x,v.y,2.4)){search:for(let ring=1;ring<6;ring++)for(let a=0;a<12;a++){const x=v.x+Math.cos(a*Math.PI/6)*ring*6,y=v.y+Math.sin(a*Math.PI/6)*ring*6;if(Math.abs(x)<108&&y>0&&y<710&&!t.obstacleAtPosition(x,y,2.4)){v.x=x;v.y=y;break search;}}}Object.assign(t.state.player,v);return !t.obstacleAtPosition(v.x,v.y,2.4);},{x,y,yaw,pitch});assert(legal,name+' camera must be in playable clearance');await draw();

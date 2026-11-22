@@ -4,7 +4,7 @@
 // analytic in simulation time, so pause freezes them and every frame rate
 // shows the same motion. Cost: at most two draw calls (moths, trail).
 import * as THREE from './vendor/three/three.module.js';
-import {createScreenFinish,LOOKS} from './screen-finish.js?v=20261119-polish';
+import {createScreenFinish,LOOKS} from './screen-finish.js?v=20261122-fixes';
 import {TRIMMER,trimmerSegment} from './under-green-trimmer.js';
 import {dampLampLevel} from './under-green-atmosphere.js';
 

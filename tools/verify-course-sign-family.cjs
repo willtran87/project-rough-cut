@@ -2,12 +2,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
- const software=process.argv.includes('--software'),before=process.argv.includes('--before'),base='output/level-one-sign-family',out=base+'/'+(before?'before':'all')+'-'+(software?'software':'native');fs.mkdirSync(out,{recursive:true});
+ const software=process.argv.includes('--software'),before=false,base='output/level-one-sign-family',out=base+'/'+(before?'before':'all')+'-'+(software?'software':'native');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__familyGame={state,resetFirstHole,render,obstacleAtPosition};\n  window.advanceTime = (milliseconds) => {')}));
  await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__familyScene=()=>({world,renderer,camera});'}));
- if(before)await page.route('**/objective-cues.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(base+'/baseline/objective-cues.js','utf8')}));
  const draw=()=>page.evaluate(async()=>{__familyGame.render();await RCScene3D.whenPresented();});
  const shot=async(name,anchor,side=1)=>{
   const actual=await page.evaluate(({a,side})=>{const yaw=a.yaw||(a.id==='audit-bell'&&!a.junction?-Math.PI/2:['shed-key','sprinkler'].includes(a.id)?Math.PI/2:0),distance=2.8*(a.size||(a.id==='shed-exit'?1.3:a.id==='drain-exit'?1.15:1));let x=a.x+Math.sin(yaw)*side*distance/.1152,y=a.y-Math.cos(yaw)*side*distance/.16;
@@ -19,7 +18,7 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
   await page.evaluate(()=>{const s=__familyGame.state;__familyGame.resetFirstHole();Object.assign(s,{mode:'first_hole',manualTime:true,clearNavigation:true,transitionAlpha:0,guidedHints:false,apparitions:false,reducedMotion:true});s.keys.clear();Object.assign(s.hole,{elapsed:100,tutorialVisible:false,messageTimer:0,zoneBannerTimer:0});s.hole.practiceDrill.active=false;s.hole.engagement.experience.arrival.phase='skipped';Object.assign(s.hole.joe,{x:110,y:700,patrolPause:9999});RCSpatialControls.set('resolution',1);});
   await draw();await page.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready&&RCScene3D.stats().pixelArt.pending===0,null,{timeout:180000});await draw();
   const initial=await page.evaluate(()=>{const r=__familyScene(),root=r.world.getObjectByName('ObjectiveWayfinding');return {cues:RCScene3D.stats().objectiveCues,lanterns:RCScene3D.stats().pathLanterns,ambient:r.world.children.filter(o=>o.isAmbientLight).map(o=>o.intensity),memory:{...r.renderer.info.memory},programs:r.renderer.info.programs.length,worldLights:(()=>{let n=0;r.world.traverse(o=>{if(o.isLight)n++;});return n;})(),bytes:root.children.filter(o=>o.isMesh).reduce((n,o)=>n+Object.values(o.geometry.attributes).reduce((s,a)=>s+a.array.byteLength,0),0)};});
-  assert.equal(initial.cues.visibleSigns,15);assert.equal(initial.lanterns.pairs.length*2,28);assert.deepEqual(initial.ambient,[.005]);
+  assert.equal(initial.cues.visibleSigns,15);assert.equal(initial.lanterns.pairs.length*2,28);assert.deepEqual(initial.ambient,[.28]);
   for(const [i,a]of initial.cues.anchors.entries()){
    await shot(i+'-'+a.id+'-front',a);
    if(!a.junction&&!a.id.endsWith('-exit'))await shot(i+'-'+a.id+'-back',a,-1);

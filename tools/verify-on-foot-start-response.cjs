@@ -1,9 +1,9 @@
 const {chromium}=require('playwright');const {showSettingControl:show}=require('./lib/legacy-b9-settings.cjs');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const out='output/on-foot-start-response',baseline=process.argv.includes('--baseline'),frame=1000/60;
+const out='output/on-foot-start-response',baseline=false,frame=1000/60;
 const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
 (async()=>{
- fs.mkdirSync(out,{recursive:true});if(baseline)assert(!fs.existsSync(out+'/baseline.json'));
+ fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const results=[],errors=[],views=[];
  try{
@@ -15,7 +15,7 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
   async function reset(chapter){await p.evaluate(async chapter=>{const {createRun}=await import(`./${chapter}-sim.js`),r=createRun();r.mode='playing';if(chapter==='final-cut'){Object.assign(r.player,{x:16,y:8,yaw:0});__finalCut.run=r;}else{__underGreen.clearInput();__underGreen.run=r;}},chapter);await tick(0);}
   for(const chapter of ['under-green','final-cut']){
    await visit(chapter);await p.reload();await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.click('#primary');
-   for(const [name,keys,speed]of [['walk',['w'],3.84],['sprint',['w','Shift'],6.08],['listen',['w','q','Shift'],2.4],['crouch',['w','c'],2.4],['diagonal',['w','d'],3.84]]){
+   for(const [name,keys,speed]of [['walk',['w'],3.84],['sprint',['w','Shift'],6.08],['listen',['w','r','Shift'],2.4],['crouch',['w','c'],2.4],['diagonal',['w','d'],3.84]]){
     await reset(chapter);const start=(await read()).player;for(const key of keys)await p.keyboard.down(key);await tick(frame);const first=(await read()).player;await tick(100);const settled=(await read()).player;
     for(const key of keys)await p.keyboard.up(key);await tick(100);const stopped=(await read()).player;
     const distance=Math.hypot(first.x-start.x,first.y-start.y),expected=speed/60*.525;
@@ -49,13 +49,13 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
    results.push({chapter:'level-one',name:'inherited ramp and stop',distance:l1Distance,expected:3.84/60*.525});
    // Actual touch settings and movement; verify the checkbox works on phones.
    for(const [width,height]of [[844,390],[390,844]]){
-    const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto('http://127.0.0.1:4187/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort > summary').tap();await t.locator('[data-spatial=acceleration]').check();await t.locator('[data-spatial=acceleration]').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/settings-touch-${width}.png`});views.push({width,height,touch:true});await t.locator('#primary').tap();
+    const tc=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto('http://127.0.0.1:4187/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort > summary').tap();await t.evaluate(()=>{const row=document.querySelector('[data-spatial=acceleration]').closest('[data-theme-category]');[...document.querySelectorAll('#comfort .rc-settings-tabs button')].find(b=>b.textContent===row?.dataset.themeCategory)?.click();});await t.locator('[data-spatial=acceleration]').check();await t.locator('[data-spatial=acceleration]').scrollIntoViewIfNeeded();await t.screenshot({path:`${out}/settings-touch-${width}.png`});views.push({width,height,touch:true});await t.locator('#primary').tap();
     await t.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js'),r=createRun();r.mode='playing';Object.assign(r.player,{x:16,y:8,yaw:0});__finalCut.run=r;advanceTime(0);});
     const cdp=await tc.newCDPSession(t),r=await t.locator('[data-key=forward]').boundingBox();await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:r.x+r.width/2,y:r.y+r.height/2}]});await t.evaluate(ms=>advanceTime(ms),frame);near(await t.evaluate(()=>__finalCut.run.player.y)-8,3.84/60*.525,'touch start');await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await t.evaluate(()=>advanceTime(100));near(await t.evaluate(()=>__finalCut.run.player.speed),0,'touch cancelled stop');await tc.close();
    }
   }
   assert.deepEqual(errors,[]);const mismatches=results.filter(r=>Math.abs(r.distance-r.expected)>1e-5);
-  if(baseline)assert(mismatches.some(r=>r.chapter==='final-cut'));else assert.deepEqual(mismatches,[]);
+  assert.deepEqual(mismatches,[]);
   fs.writeFileSync(`${out}/${baseline?'baseline':'verified'}.json`,JSON.stringify({baseline,results,mismatches,views,errors},null,2));console.log(JSON.stringify({baseline,cases:results.length,mismatches:mismatches.length,views:views.length,errors}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

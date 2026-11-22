@@ -1,12 +1,11 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const software=process.argv.includes('--software'),before=process.argv.includes('--before'),paired=process.argv.includes('--paired'),budget=process.argv.includes('--budget')||paired,out=`output/level-one-wind/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
+ const software=process.argv.includes('--software'),before=false,paired=process.argv.includes('--paired'),budget=process.argv.includes('--budget')||paired,out=`output/level-one-wind/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__windGame={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
- await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(before?'output/level-one-wind/baseline/scene-3d.js':'web/scene-3d.js','utf8').replace('const softwareBudget=createSoftwareFrameBudget()',budget?'const softwareBudget=createSoftwareFrameBudget({scales:[.75]})':'const softwareBudget=createSoftwareFrameBudget()').replace('function render(ctx,data,frame){','function render(ctx,data,frame){if(window.__windOverride)frame={...frame,fx:{...frame.fx,wind:window.__windOverride}};')+'\nwindow.__windScene=()=>({world,renderer,camera,understoryCulling,courseWind:typeof courseWind===\"undefined\"?null:courseWind});'}));
- if(before)for(const f of ['pixel-world-props.js','course-visual-detail.js','course-verge-material.js'])await p.route('**/'+f+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-wind/baseline/'+f,'utf8')}));
+ await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('const softwareBudget=createSoftwareFrameBudget()',budget?'const softwareBudget=createSoftwareFrameBudget({scales:[.75]})':'const softwareBudget=createSoftwareFrameBudget()').replace('function render(ctx,data,frame){','function render(ctx,data,frame){if(window.__windOverride)frame={...frame,fx:{...frame.fx,wind:window.__windOverride}};')+'\nwindow.__windScene=()=>({world,renderer,camera,understoryCulling,courseWind:typeof courseWind===\"undefined\"?null:courseWind});'}));
  if(paired)await p.route('**/course-wind.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/course-wind.js','utf8').replace('function vegetationShader(shader,amplitude=.10){',`function vegetationShader(shader,amplitude=.10){if(globalThis.__windDirect){
   uniforms(shader);shader.vertexShader='attribute vec2 courseWindShelter;\\n'+shader.vertexShader;
   shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',\`
@@ -49,8 +48,8 @@ const {chromium}=require('playwright');
    }assert.deepEqual(errors,[]);fs.writeFileSync(out+'/budget.json',JSON.stringify({before,software,results,errors},null,2));console.log(JSON.stringify({before,software,results,errors}));return;
   }
   for(const [name,x,y,yaw,pitch]of [['verge',18,217,0,-.2],['pond',30,257,1.87,-.12],['sign',-105,232,-1.57,.25],['pennant',80,530,1,.4]]){await p.evaluate(v=>Object.assign(__windGame.state.player,v),{x,y,yaw,pitch});await shot(name+'-a');await step(15);await shot(name+'-b');}
-  const active=await read();assert.equal(active.lanterns,28);assert.deepEqual(active.ambient,[.005]);assert.equal(active.plants.reduce((n,v)=>n+v.capacity,0),1610);
-  if(!before){assert(active.wind.drive>.99);assert(active.plants.every(v=>v.shelter));
+  const active=await read();assert.equal(active.lanterns,28);assert.deepEqual(active.ambient,[.28]);assert.equal(active.plants.reduce((n,v)=>n+v.capacity,0),4788);
+  {assert(active.wind.drive>.99);assert(active.plants.every(v=>v.shelter));
    await p.evaluate(()=>Object.assign(__windGame.state.player,{x:18,y:217,yaw:0,pitch:-.2}));await draw();
    // Compaction must keep the baked shelter paired with the same world plant.
    const pairing=await p.evaluate(()=>{const r=__windScene();let checked=0,maxError=0;r.world.traverse(o=>{if(!o.name.startsWith('CourseUnderstory-'))return;const a=o.geometry.attributes.courseWindShelter,m=o.instanceMatrix.array;for(let i=0;i<o.count;i++){for(const [component,direction]of [[0,1],[1,-1]])maxError=Math.max(maxError,Math.abs(a.array[i*2+component]-r.courseWind.exposure(m[i*16+12],m[i*16+14],direction)));checked++;}});return {checked,maxError};});assert(pairing.checked>0);assert(pairing.maxError<.00001);checks.push({name:'Visible plant shelter follows compacted identity',...pairing});

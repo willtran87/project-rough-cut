@@ -1,12 +1,11 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const out='output/on-foot-prompt-preferences',baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});
-if(baseline)assert(!fs.existsSync(out+'/baseline.json'),'Preserve the original baseline');
+const out='output/on-foot-prompt-preferences',baseline=false;fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],results=[],views=[];
  try{
-  const p=await browser.newPage({viewport:{width:2560,height:1600}});p.on('pageerror',e=>errors.push(e.message));
+  const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{
    if(localStorage.getItem('prompt-audit-seeded'))return;
    localStorage.setItem('prompt-audit-seeded','yes');
@@ -41,14 +40,13 @@ if(baseline)assert(!fs.existsSync(out+'/baseline.json'),'Preserve the original b
     results.push({chapter,actualRemappedToggle:true,touchRemainsHold:true,touchHint:true});await cdp.detach();
    }
   }
-  if(baseline){fs.writeFileSync(out+'/baseline.json',JSON.stringify({results,errors},null,2));console.log(JSON.stringify({baseline:true,results,errors}));return;}
 
-  await visit('under-green');await p.locator('#comfort summary').click();
-  await p.locator('[data-binding=crouch]').selectOption('KeyX');await tick(0);assert.match(await p.locator('#control-guide').textContent(),/Tap X/);
+  await visit('under-green');await p.locator('#comfort>summary').click();
+  await p.evaluate(()=>{const row=document.querySelector('[data-binding=crouch]').closest('[data-theme-category]');[...document.querySelectorAll('#comfort .rc-settings-tabs button')].find(b=>b.textContent===row?.dataset.themeCategory)?.click();});await p.locator('[data-binding=crouch]').selectOption('KeyX');await tick(0);assert.match(await p.locator('#control-guide').textContent(),/Tap X/);
   await p.locator('#primary').click();await p.keyboard.press('x');await tick(17);
   let state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(state.player.crouched);
   await p.keyboard.press('x');await tick(17);state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(!state.player.crouched);
-  await p.keyboard.press('Escape');await p.locator('#crouch-toggle').uncheck();await p.locator('#sprint-toggle').uncheck();await p.locator('#touch-run-toggle').uncheck();await tick(0);
+  await p.keyboard.press('Escape');await p.evaluate(()=>{document.querySelector('#comfort').open=true;const row=document.querySelector('#crouch-toggle').closest('[data-theme-category]');[...document.querySelectorAll('#comfort .rc-settings-tabs button')].find(b=>b.textContent===row?.dataset.themeCategory)?.click();});await p.locator('#crouch-toggle').uncheck();await p.locator('#sprint-toggle').uncheck();await p.locator('#touch-run-toggle').uncheck();await tick(0);
   let guide=await p.locator('#control-guide').textContent();assert.match(guide,/Hold X/);assert.match(guide,/Hold Z/);assert.match(guide,/Hold Run/);
   await p.locator('#primary').click();await p.keyboard.down('x');await tick(17);assert((await crouched()));await p.keyboard.up('x');await tick(17);assert(!(await crouched()));
   results.push({chapter:'under-green',actualRemappedToggleAndHold:true});
@@ -68,7 +66,7 @@ if(baseline)assert(!fs.existsSync(out+'/baseline.json'),'Preserve the original b
   // Capture the actual settings guides at high resolution and compact sizes.
   for(const chapter of ['under-green','final-cut']){
    await visit(chapter);const detail=p.locator('#control-guide').locator('..');
-   if(await detail.evaluate(el=>el.tagName==='DETAILS'&&!el.open))await detail.locator('summary').click();
+   await detail.evaluate(el=>{for(let d=el.closest('details');d;d=d.parentElement?.closest('details'))d.open=true;const row=el.closest('[data-theme-category]');if(row)[...document.querySelectorAll('.rc-settings-tabs button')].find(b=>b.textContent===row.dataset.themeCategory)?.click();});
    for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
     await p.setViewportSize({width,height});await tick(0);await p.locator('#control-guide').scrollIntoViewIfNeeded();
     const bounds=await p.locator('#control-guide').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));assert(bounds.scroll<=bounds.client+1);

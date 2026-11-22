@@ -7,7 +7,7 @@ import {createParallax} from './parallax-scene.js';
 import {finalCutRenderSize} from './final-cut-visual-settings.js';
 import {GROUND_SLABS} from './final-cut-ground-layout.js';
 import * as THREE from './vendor/three/three.module.js';
-import {createScreenFinish,LOOKS} from './screen-finish.js?v=20261119-polish';
+import {createScreenFinish,LOOKS} from './screen-finish.js?v=20261122-fixes';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import * as Art from './pixel-art.js';
 import {collapsePose} from './final-cut-ending.js';

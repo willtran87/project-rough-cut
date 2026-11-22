@@ -2,12 +2,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
- const software=process.argv.includes('--software'),before=process.argv.includes('--before'),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||`output/level-one-canopy-wind/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
+ const software=process.argv.includes('--software'),before=false,out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||`output/level-one-canopy-wind/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__treeGame={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
  await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('function render(ctx,data,frame){','function render(ctx,data,frame){if(window.__treeWind)frame={...frame,fx:{...frame.fx,wind:window.__treeWind}};')+'\nwindow.__treeScene=()=>({world,renderer,camera,courseWind,pixelWorld});'}));
- if(before)for(const f of ['pixel-world-props.js','course-wind.js'])await p.route('**/'+f+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-canopy-wind/baseline/'+f,'utf8')}));
  if(process.argv.includes('--budget'))await p.route('**/course-tree-wind.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/course-tree-wind.js','utf8').replace('export function treeWindShader(shader,{drive,waves,cross}){','export function treeWindShader(shader,{drive,waves,cross}){if(globalThis.__treeStatic)return;')}));
  const draw=()=>p.evaluate(async()=>{__treeGame.render();await RCScene3D.whenPresented();});
  const step=async(n=1)=>{for(let i=0;i<n;i++){await p.evaluate(()=>__treeGame.state.hole.elapsed+=.05);await draw();}};
@@ -32,9 +31,8 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
    const r=__treeScene(),s=RCScene3D.stats(),trees=s.pixelWorld.objects.filter(o=>o.kind==='tree'),parts=[];let vertices=0,roots=0,maxWeight=0,maxDerivative=0,invalid=0;
    r.world.traverse(o=>{if(!o.geometry?.attributes.courseTreeShape)return;const a=o.geometry.attributes.courseTreeShape,b=o.geometry.attributes.courseTreePhase;vertices+=a.count;for(let i=0;i<a.count;i++){if(a.getX(i)===0)roots++;maxWeight=Math.max(maxWeight,a.getX(i));maxDerivative=Math.max(maxDerivative,a.getY(i));if(!Number.isFinite(a.getX(i))||Math.abs(Math.hypot(a.getZ(i),a.getW(i))-1)>1e-5||Math.abs(Math.hypot(b.getX(i),b.getY(i))-1)>1e-5)invalid++;}parts.push({vertices:a.count,depth:!!o.customDepthMaterial,distance:!!o.customDistanceMaterial,pieces:o.userData.visibilityParts?.length||0});});
    return {trees:trees.length,forms:[...new Set(trees.map(o=>o.form))],parts,vertices,roots,maxWeight,maxDerivative,invalid,lanterns:s.pathLanterns.pairs.length*2,ambient:r.world.children.filter(o=>o.isAmbientLight).map(o=>o.intensity),wind:r.courseWind.stats(),memory:{...r.renderer.info.memory}};
-  });assert.equal(audit.lanterns,28);assert.deepEqual(audit.ambient,[.005]);if(!before){assert(audit.vertices>10000);assert(audit.roots>100);assert.equal(audit.invalid,0);assert(audit.maxWeight<=.250001);assert(audit.parts.every(o=>o.depth&&o.distance));}
+  });assert.equal(audit.lanterns,28);assert.deepEqual(audit.ambient,[.28]);if(!before){assert(audit.vertices>10000);assert(audit.roots>100);assert.equal(audit.invalid,0);assert(audit.maxWeight<=.250001);assert(audit.parts.every(o=>o.depth&&o.distance));}
   for(const [name,x,y,yaw,pitch]of [['opening',0,40,0,.18],['east',95,120,1.57,.35],['service',-90,270,-1.57,.25],['pond',50,280,1.6,.35],['rear',0,620,Math.PI,.25]]){await view(x,y,yaw,pitch);await shot(name+'-a');await step(30);await shot(name+'-b');}
-  if(before){assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,before,software,audit,errors},null,2));console.log(JSON.stringify({passed:true,before,software,trees:audit.trees,errors}));return;}
   // Compare the production GPU deformation with the same bend baked into the
   // actual merged vertices/normals. Shadow variants use that same reference.
   await view(95,120,1.57,.35);

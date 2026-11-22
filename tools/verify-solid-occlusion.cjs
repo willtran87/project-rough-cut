@@ -7,7 +7,7 @@ const {chromium}=require('playwright');
  await p.route('**/pixel-world-props.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/pixel-world-props.js','utf8').replace('if(cullValid&&lastCullProjection.equals(cullProjection))return;','if(false)return;').replace('if(visible&&solidOcclusion.hidden(part.bounds))','if(!window.__allParts&&visible&&solidOcclusion.hidden(part.bounds))')}));
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__visibility={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
  try{
-  await p.goto('http://127.0.0.1:4187');await p.locator('canvas').click();await p.keyboard.press('Space');await p.waitForFunction(()=>window.__visibility&&JSON.parse(render_game_to_text()).assets.course.ready);
+  await p.goto('http://127.0.0.1:4187');await p.locator('#game').click();await p.keyboard.press('Space');await p.waitForFunction(()=>window.__visibility&&JSON.parse(render_game_to_text()).assets.course.ready);
   const boundaryChecks=await p.evaluate(async()=>{
    const T=await import('./vendor/three/three.module.js'),{createSolidOcclusion}=await import('./solid-occlusion.js');
    const box=(a,b)=>new T.Box3(new T.Vector3(...a),new T.Vector3(...b));

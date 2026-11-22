@@ -1,14 +1,14 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const out='output/on-foot-rear-input',baseline=process.argv.includes('--baseline');
+const out='output/on-foot-rear-input',baseline=false;
 const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
 (async()=>{
- fs.mkdirSync(out,{recursive:true});if(baseline)assert(!fs.existsSync(out+'/baseline.json'));
+ fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const results=[],errors=[];
  try{
   for(const chapter of ['under-green','final-cut']){
-   const context=await browser.newContext({viewport:{width:2560,height:1600}}),p=await context.newPage();
+   const context=await browser.newContext({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(context);await fx.skipStories(context);}const p=await context.newPage();
    p.on('pageerror',e=>errors.push(e.message));
    await p.addInitScript(()=>{window.rearPad={connected:true,index:0,id:'Rear QA',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[rearPad];});
    await p.goto(`http://127.0.0.1:4187/${chapter}.html?test`);
@@ -28,8 +28,8 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
    await p.evaluate(()=>rearPad.axes=[0,0,.7,-.7]);await tick(100);const normal=(await read()).player;
    assert(normal.yaw>returned.yaw);assert(chapter==='final-cut'?normal.pitch<returned.pitch:normal.pitch>returned.pitch);
    await reset();await p.locator('#game').click({position:{x:1280,y:800}});await p.waitForFunction(()=>document.pointerLockElement?.id==='game');
-   await p.keyboard.down('r');await p.keyboard.down('w');await p.mouse.move(1420,700,{steps:4});await tick(500);const mouseRear=(await read()).player;
-   await p.keyboard.up('w');await p.keyboard.up('r');await tick(700);const mouseReturned=(await read()).player;
+   await p.keyboard.down('q');await p.keyboard.down('w');await p.mouse.move(1420,700,{steps:4});await tick(500);const mouseRear=(await read()).player;
+   await p.keyboard.up('w');await p.keyboard.up('q');await tick(700);const mouseReturned=(await read()).player;
    results.push({chapter,case:'mouse rear+movement',mouseRear,mouseReturned});
    if(!baseline){near(mouseRear.yaw,0,'mouse rear heading');near(mouseRear.pitch,0,'mouse rear pitch');near(mouseReturned.yaw,0,'mouse returned heading');near(mouseReturned.pitch,0,'mouse queued look');}
    // A mouse event queued before the controller takes over must not steer it.
@@ -40,7 +40,7 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
    await p.evaluate(()=>document.exitPointerLock());await context.close();
 
    // Real concurrent touch contacts, then controller input while the finger remains down.
-   const tc=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true}),t=await tc.newPage();t.on('pageerror',e=>errors.push(e.message));
+   const tc=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}const t=await tc.newPage();t.on('pageerror',e=>errors.push(e.message));
    await t.addInitScript(()=>{window.rearPad={connected:true,index:0,id:'Rear QA',axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[rearPad];});
    await t.goto(`http://127.0.0.1:4187/${chapter}.html?test`);await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#primary').tap();
    await t.evaluate(async chapter=>{const {createRun}=await import(`./${chapter}-sim.js`),r=createRun();r.mode='playing';if(chapter==='final-cut'){Object.assign(r.player,{x:16,y:8,yaw:0,pitch:0});__finalCut.run=r;}else{__underGreen.clearInput();__underGreen.run=r;}advanceTime(17);},chapter);

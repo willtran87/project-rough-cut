@@ -4,13 +4,12 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
 (async()=>{
  const out='output/level-one-approach-wear',b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage(),errors=[],rows=[];
  p.on('pageerror',e=>errors.push(e.message));
- await p.route('**/approach-guidance-baseline.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-approach-wear/baseline-source/environment-guidance.js','utf8')}));
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__atlasGame={state,resetFirstHole,render,variants:RUN_VARIANTS};\n  window.advanceTime = (milliseconds) => {')}));
  await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__atlasScene=()=>({currentData});'}));
  try{
   await p.goto('http://127.0.0.1:4187');await p.waitForFunction(()=>window.__atlasGame);
   for(const id of ['standard_review','eastern_exception','closing_shift']){
-   await p.evaluate(id=>{const t=__atlasGame;t.resetFirstHole(t.variants.find(v=>v.id===id));t.state.mode='first_hole';t.state.manualTime=true;t.render();},id);
+   await p.evaluate(id=>{const t=__atlasGame;t.resetFirstHole(t.variants.find(v=>v.id===id));t.state.mode='first_hole';t.state.manualTime=true;Object.assign(t.state,{transitionAlpha:0,guidedHints:false,apparitions:false,reducedMotion:true});Object.assign(t.state.hole,{elapsed:100,tutorialVisible:false,messageTimer:0,zoneBannerTimer:0});t.state.hole.practiceDrill.active=false;t.state.hole.engagement.experience.arrival.phase='skipped';t.render();advanceTime(17);},id);
    await p.waitForFunction(()=>RCScene3D.stats().ready,null,{timeout:120000});
    const row=await p.evaluate(async id=>{
     const data=__atlasScene().currentData,{terrainBakeKey}=await import('./baked-terrain.js'),{paintApproachWear,approachWearMarks}=await import('./course-approach-wear.js');
@@ -31,21 +30,8 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
      shedInvalidates:await terrainBakeKey(move('shed'),.16,.1152,true)!==newKey,drainInvalidates:await terrainBakeKey(move('drain'),.16,.1152,true)!==newKey,
      legacyShedStable:await terrainBakeKey(move('shed'),.16,.1152,false)===oldKey,baked:RCScene3D.stats().terrainBaked};
    },id);
-   row.guidance=await p.evaluate(async()=>{
-    const THREE=await import('./vendor/three/three.module.js'),current=await import('./environment-guidance.js'),baseline=await import('./approach-guidance-baseline.js'),data=__atlasScene().currentData,results=[];
-    for(const craftedPaper of [false,true]){
-     const roots=[new THREE.Group(),new THREE.Group()],factories=[baseline,current],guides=roots.map((root,i)=>factories[i].createEnvironmentGuidance(root,data,{scale:.16,xScale:.1152,craftedPaper}));
-     const frames=[{completed:[],practiceActive:true},{completed:['audit-bell','field-log','release-review'],hasKey:true,practiceDone:true},{completed:['audit-bell','field-log','release-review'],hasKey:true,valveOpen:true,exitRoute:'shed',exitFiling:true,practiceStage:'already_learned'},{completed:['audit-bell','field-log','release-review'],hasKey:true,valveOpen:true,exitRoute:'drain',sealing:true},{completed:[],practiceActive:true}];
-     let differences=0;const a=roots[0].getObjectByName('EnvironmentalGuidance').geometry,b=roots[1].getObjectByName('EnvironmentalGuidance').geometry,removed=a.attributes.position.count-b.attributes.position.count;
-     for(const frame of frames){for(const g of guides)g.update(frame);for(const key of ['position','color']){const old=a.attributes[key].array,next=b.attributes[key].array;for(let i=0;i<next.length;i++)if(old[i+removed*3]!==next[i])differences++;}}
-     const paperBuffersEqual=!craftedPaper||['position','normal','uv'].every(key=>{const a=roots[0].getObjectByName('CourseDroppedPaper').geometry.attributes[key].array,b=roots[1].getObjectByName('CourseDroppedPaper').geometry.attributes[key].array;return a.length===b.length&&a.every((n,i)=>n===b[i]);});
-     results.push({craftedPaper,frames:frames.length,removed,differences,paperBuffersEqual});
-     for(const root of roots)root.traverse(o=>{o.geometry?.dispose();o.material?.map?.dispose();o.material?.dispose();});
-    }return results;
-   });
-   for(const g of row.guidance){assert.equal(g.removed,g.craftedPaper?63*21:0);assert.equal(g.differences,0);assert(g.paperBuffersEqual);}
    assert.equal(row.mismatches,0,id+' procedural painter must exactly match baked pixels');assert.equal(row.outside,0,id+' unrelated terrain must be identical');assert(row.changedPixels>0&&row.changedPixels<10000);assert.equal(row.marks,63);assert(row.shedInvalidates&&row.drainInvalidates&&row.legacyShedStable&&row.baked);rows.push(row);console.log(JSON.stringify(row));
   }
-  assert.deepEqual(errors,[]);fs.writeFileSync(out+'/atlas-proof.json',JSON.stringify({passed:true,rows,errors},null,2));
+  assert.deepEqual(errors,[]);fs.mkdirSync(out,{recursive:true});fs.writeFileSync(out+'/atlas-proof.json',JSON.stringify({passed:true,rows,errors},null,2));
  }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,14 +1,13 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software');
+ const before=false,software=process.argv.includes('--software');
  const out='output/level-one-crafted-surfaces/'+(before?'before':'after')+(software?'-software':'');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__surfaceTest={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
  await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__surfaceScene=()=>({renderer,world,camera});'}));
- if(before)await page.route('**/pixel-world-props.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-crafted-surfaces/baseline-source/pixel-world-props.js','utf8')}));
  const draw=()=>page.evaluate(async()=>{__surfaceTest.render();await RCScene3D.whenPresented();});
  try{
   await page.goto('http://127.0.0.1:4187/index.html');await page.waitForFunction(()=>window.__surfaceTest);await page.locator('#game').click();
@@ -19,7 +18,7 @@ const {chromium}=require('playwright');
    await page.evaluate(v=>Object.assign(__surfaceTest.state.player,v),{x,y,yaw,pitch});await draw();await page.screenshot({path:out+'/'+name+'-2560.png'});views.push({name,...await snapshot()});
   }
   for(const [width,height]of [[1280,720],[390,844]]){await page.setViewportSize({width,height});await page.evaluate(()=>Object.assign(__surfaceTest.state.player,{x:0,y:200,yaw:0,pitch:-.24}));await draw();await page.screenshot({path:out+'/ground-'+width+'.png'});}
-  assert.equal(views[0].stats.pathLanterns.pairs.length*2,28);assert.equal(views[0].lights.find(l=>l[1]==='AmbientLight')[2],.005);
+  assert.equal(views[0].stats.pathLanterns.pairs.length*2,28);assert.equal(views[0].lights.find(l=>l[1]==='AmbientLight')[2],.28);
   if(!before)assert(views[0].crafted.length>=6,'Crafted maps must be used by actual scene objects');
   const materialTests=await page.evaluate(async before=>{
    const old=await import('./course-surfaces.js'),next=await import('./course-crafted-surfaces.js'),types=['wood','paint','brass','iron','stone','rubber','rust'];

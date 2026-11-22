@@ -11,12 +11,6 @@ if(browserArgument>=0){
 }
 // Decorative overlays must not displace the gameplay canvas in raw captures.
 source=source.replace('document.querySelectorAll("canvas")','document.querySelectorAll("canvas:not(.menu-grass-canvas)")');
-if(process.argv.includes('--flood-shore-baseline'))source=source.replace('  await page.goto(args.url, { waitUntil: "domcontentloaded" });',
- `  await page.route('**/back-nine-irrigation-art.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/flood-shore/baseline-source/back-nine-irrigation-art.js','utf8')}));
-  await page.goto(args.url, { waitUntil: "domcontentloaded" });`);
-if(process.argv.includes('--turf-baseline'))source=source.replace('  await page.goto(args.url, { waitUntil: "domcontentloaded" });',
- `  await page.route('**/back-nine-short-turf-v2.webp',r=>r.fulfill({contentType:'image/webp',body:fs.readFileSync('web/assets/optimized/back-nine-fairway-turf-v1.webp')}));
-  await page.goto(args.url, { waitUntil: "domcontentloaded" });`);
 if(process.argv.includes('--native-renderer'))source=source.replace('"--use-angle=swiftshader"','"--use-angle=d3d11", "--ignore-gpu-blocklist"');
 if(process.argv.includes('--warp'))source=source.replace('"--use-angle=swiftshader"','"--use-angle=d3d11-warp", "--ignore-gpu-blocklist"');
 if(process.argv.includes('--stone-courses')||process.argv.includes('--hedge-growth')||process.argv.includes('--lantern-glass')||process.argv.includes('--dropped-paper')||process.argv.includes('--approach-wear')||process.argv.includes('--landmark-light')){
@@ -99,9 +93,6 @@ if(process.argv.includes('--ghost-surface'))source=source.replace('  let steps =
 if(process.argv.includes('--minor-routes'))source=source.replace('  let steps = null;',
  `  await page.evaluate(async()=>{const{createRun}=await import('./back-nine-sim.js');const r=createRun(0,0,713);r.mode='driving';r.time=20;r.grace=0;r.departure.phase='finished';r.tension.cooldown=r.hunt.cooldown=100;r.panic.armed=false;r.story.seen=7;r.story.choiceSeen=0xffff;Object.assign(r.cart,{x:35,y:10,health:0,failedAt:0});Object.assign(r.joe,{x:0,y:10,speed:0});r.foot={x:-36.5,y:342,yaw:0,viewYaw:0,viewPitch:.32,speed:0,onFoot:true,invulnerable:0};__backNine.run=r;await advanceTime(17);});
   let steps = null;`);
-if(process.argv.includes('--player-art-baseline'))source=source.replace('  await page.goto(args.url, { waitUntil: "domcontentloaded" });',
- `  for(const file of ['back-nine-scene.js','chase-runner.js','runner-materials.js'])await page.route('**/'+file+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/player/baseline-source/'+file,'utf8')}));
-  await page.goto(args.url, { waitUntil: "domcontentloaded" });`);
 if(process.argv.includes('--high-resolution'))source=source.replace('const page = await browser.newPage();','const page = await browser.newPage({viewport:{width:2560,height:1600}});');
 if(process.argv.includes('--portrait-hud'))source=source.replace('const page = await browser.newPage();','const page = await browser.newPage({viewport:{width:390,height:844},hasTouch:true});');
 if(process.argv.includes('--level-one'))source=source.replace('  await page.goto(args.url, { waitUntil: "domcontentloaded" });',

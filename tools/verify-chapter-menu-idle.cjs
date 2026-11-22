@@ -1,14 +1,14 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
-const baseline=process.argv.includes('--baseline'),out=`output/chapter-menu-performance/${baseline?'before':'after'}`;fs.mkdirSync(out,{recursive:true});
+const fx=require('./lib/campaign-fixture.cjs'),out='output/chapter-menu-performance/after';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),reports=[];
  try{for(const chapter of ['back-nine','under-green','final-cut','joey']){
-  const context=await browser.newContext({viewport:{width:2560,height:1600}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width:2560,height:1600}}),page=await context.newPage(),errors=[];await fx.unlockChapters(context);await fx.skipStories(context);page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.__idleCounts={};localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true}));});
   const file=chapter==='joey'?'game.js':chapter+'.js';
-  await page.route('**/'+file+'*',r=>{let s=fs.readFileSync((baseline?'output/chapter-menu-performance/baseline/':'web/')+file,'utf8');
+  await page.route('**/'+file+'*',r=>{let s=fs.readFileSync('web/'+file,'utf8');
    const names=chapter==='back-nine'?['paintUI','simulate','input']:chapter==='under-green'?['paint','update','input','draw']:chapter==='final-cut'?['paint','update','input','draw']:['drawIntro','render'];
    for(const name of names)s=s.replace(new RegExp('(function '+name+'\\([^)]*\\)\\s*\\{)'),`$1 window.__idleCounts.${name}=(window.__idleCounts.${name}||0)+1;`);
    s+=chapter==='joey'?'':`\nwindow.__idleProbe={get ready(){return ready;},mode:()=>run.mode};`;
@@ -20,8 +20,8 @@ const baseline=process.argv.includes('--baseline'),out=`output/chapter-menu-perf
   const sample=async name=>{const metrics=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));const a=await metrics(),counts=await page.evaluate(()=>({...__idleCounts}));await page.waitForTimeout(2000);const b=await metrics(),end=await page.evaluate(()=>({...__idleCounts}));return {name,taskMs:(b.TaskDuration-a.TaskDuration)*1000,counts:Object.fromEntries(Object.keys(end).map(k=>[k,end[k]-(counts[k]||0)]))};};
   const samples=[await sample('focused')];await page.screenshot({path:`${out}/${chapter}-2560.png`});
   await page.evaluate(()=>{Object.defineProperty(document,'hasFocus',{configurable:true,value:()=>false});window.dispatchEvent(new Event('blur'));});samples.push(await sample('unfocused'));await page.evaluate(()=>{delete document.hasFocus;window.dispatchEvent(new Event('focus'));});
-  if(!baseline){if(chapter!=='joey')assert.equal(samples[0].counts.paint||samples[0].counts.paintUI||0,0,JSON.stringify(samples));assert(Object.values(samples[1].counts).every(v=>v===0),JSON.stringify(samples));
-   if(chapter==='joey'){assert(samples[0].counts.drawIntro<=65);await page.evaluate(()=>{__idleProbe.state.time=5.7;advanceTime(0);});await page.screenshot({path:out+'/joey-line.png'});await page.keyboard.press('Escape');await page.waitForFunction(()=>__idleProbe.state.mode==='menu');}
+  {if(chapter!=='joey')assert.equal(samples[0].counts.paint||samples[0].counts.paintUI||0,0,JSON.stringify(samples));assert(Object.values(samples[1].counts).every(v=>v===0),JSON.stringify(samples));
+   if(chapter==='joey'){assert(samples[0].counts.drawIntro<=65);await page.evaluate(()=>{__idleProbe.state.time=5.7;advanceTime(0);});await page.screenshot({path:out+'/joey-line.png'});await page.keyboard.press('Escape');for(let i=0;i<40&&await page.evaluate(()=>__idleProbe.state.mode)==='intro';i++)await page.evaluate(()=>advanceTime(500));await page.waitForFunction(()=>__idleProbe.state.mode==='menu');}
    else{for(const v of [{width:1280,height:720},{width:390,height:844}]){await page.setViewportSize(v);await page.waitForTimeout(200);await page.screenshot({path:`${out}/${chapter}-${v.width}.png`});}await page.locator('#primary').click();await page.waitForTimeout(300);
     if(await page.locator('dialog[open]').count())await page.keyboard.press('Escape');
     await page.waitForFunction(()=>['playing','driving'].includes(__idleProbe.mode()));await page.keyboard.press('Escape');await page.waitForFunction(()=>__idleProbe.mode()==='paused');await page.locator('#primary').click();await page.waitForFunction(()=>['playing','driving'].includes(__idleProbe.mode()));

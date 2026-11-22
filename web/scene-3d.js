@@ -69,7 +69,7 @@ import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-l
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
 import { bitmapDecodeStats } from './bitmap-decoder.js';
 import { createScreenFracture, drawCopyFracture } from './screen-fracture.js';
-import { createNightPicture } from './night-order/picture.js?v=20261119-polish';
+import { createNightPicture } from './night-order/picture.js?v=20261122-fixes';
 import { createNightWildlife } from './night-order/wildlife.js?v=20261119-polish';
 // Shared quality preset and screen finish; see night-order/picture.js.
 const picture=createNightPicture(THREE);let polishFrame=null,wildlife=null;
@@ -561,6 +561,7 @@ function build(data){
   lastShadowTime=-Infinity;lastShadowX=lastShadowZ=Infinity;lastShadowMechanisms="";
   if(!data.calibration)pixelEffects=createPixelEffects(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,moon,drain:data.drain?{x:data.drain.x*X_SCALE,z:-data.drain.y*SCALE}:null,blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE})),ponds:data.obstacles.filter(o=>o.id.includes('pond')).map(o=>({id:o.id,x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE}))});
   stats.ready=false;stats.preparing=true;loadProgress(0);currentKey=data.keyId;
+  if(!softwareRenderer)picture.prepare(renderer);
   gpuFrameSamples.length=0;stats.gpuFrameAverageMs=stats.gpuFrameP95Ms=stats.gpuFrameSamples=0;presentationMeasuresScene=false;
   const scene=world,start=performance.now(),cancelled=()=>world!==scene;
   (async()=>{
