@@ -1,5 +1,5 @@
 import {COURSE_MOON_OFFSET} from './course-moon-direction.js';
-import {createCourseLanternLightField} from './course-lantern-light-field.js';
+import {createCourseLanternLightField} from './course-lantern-light-field.js?v=20261121-fixes';
 import {createCourseLanternLightField as createPackedLanternLightField} from './course-lantern-light-field-packed.js';
 import {createCourseGroundLighting} from './course-ground-lighting.js';
 import {courseHabitatTint,tintCourseHabitatGround} from './course-habitat-palette.js';
@@ -27,7 +27,7 @@ import {createNoiseHazardScene} from './noise-hazard-scene.js';
 let noiseHazardScene=null;
 import { sprinklerLayout, createSprinklerSpray } from './sprinkler-system.js?v=20261116-soft-spray';
 import { createNightAir } from './course-night-air.js?v=20261117-work-lamp';
-import { createCourseMoonRim } from './course-moon-rim.js?v=20261117-moon-rim';
+import { createCourseMoonRim } from './course-moon-rim.js?v=20261121-fixes';
 import { createWetGround } from './wet-ground.js?v=20261113-visual-pass';
 let wetGround=null;
 let sprinklerSpray=null;

@@ -16,6 +16,9 @@ const m=new THREE.MeshLambertMaterial(),originalCompile=m.onBeforeCompile,origin
 const shader={uniforms:{},fragmentShader:'#include <lights_fragment_end>'};m.onBeforeCompile(shader);assert(shader.fragmentShader.includes('RE_Direct(courseLampLight'));assert.equal(shader.uniforms.courseLampSources.value.length,anchors.length);assert(Math.abs(shader.uniforms.courseLampSources.value[5].w-2.8*.62)<1e-6);
 const unlit=new THREE.MeshBasicMaterial(),oldVersion=unlit.version;field.apply(unlit);assert.equal(unlit.version,oldVersion);
 let disposed=0;textures.forEach(t=>t.addEventListener('dispose',()=>disposed++));field.dispose();field.dispose();assert.equal(disposed,1);
-assert.equal(m.onBeforeCompile,originalCompile);assert.equal(m.customProgramCacheKey,originalKey);
+// After dispose the material compiles as it did before any field (the wrapper stays installed but adds nothing).
+{const plain={uniforms:{},fragmentShader:'#include <lights_fragment_end>'};m.onBeforeCompile(plain);assert.equal(plain.fragmentShader,'#include <lights_fragment_end>');assert.deepEqual(plain.uniforms,{});assert.equal(m.customProgramCacheKey(),new THREE.MeshLambertMaterial().customProgramCacheKey());}
+// A rebuilt field over the same surviving material injects its declarations once, not twice.
+{const again=createCourseLanternLightField(anchors);again.apply(m);const twice={uniforms:{},fragmentShader:'#include <lights_fragment_end>'};m.onBeforeCompile(twice);assert.equal(twice.fragmentShader.split('uniform sampler2D courseLampCells;').length-1,1);again.dispose();}
 const empty=createCourseLanternLightField([]);assert.deepEqual(empty.candidates(0,0),[]);empty.dispose();
 console.log(JSON.stringify({passed:true,samples,checks:['Conservative cell membership','Every fixed source retained','Flicker changes uniforms without re-uploading grid','Lit materials only','Exact-once texture disposal and restored material hooks','Empty scene']}));
