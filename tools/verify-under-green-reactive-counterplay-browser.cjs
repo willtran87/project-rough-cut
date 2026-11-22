@@ -1,8 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/reactive-counterplay',study=JSON.parse(fs.readFileSync(out+'/expanded.json'));
- const selected=[study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===-1),study.reports[1].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===1),study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.5&&r.side===-1)].map(row=>({row,tape:JSON.parse(fs.readFileSync(row.file))}));
+ const out='output/under-green/reactive-counterplay',study=JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-counterplay-study.json')),tapeOf=(tapes=>name=>tapes[name.split('/').pop().replace('.json','')])(JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-counterplay-tapes.json')));fs.mkdirSync(out,{recursive:true});
+ const selected=[study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===-1),study.reports[1].rows.find(r=>r.moment==='refused'&&r.delay===.25&&r.side===1),study.reports[0].rows.find(r=>r.moment==='refused'&&r.delay===.5&&r.side===-1)].map(row=>({row,tape:tapeOf(row.file)}));
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],results=[],errors=[];
  try{
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
@@ -13,7 +13,7 @@ const {chromium}=require('playwright');
    // A future exit requirement is explained before the control becomes usable.
    await p.evaluate(async()=>{const {createRun}=await import('./under-green-sim.js');const r=createRun(2);r.mode='playing';r.messageTime=0;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);});
    const approach=await capture('approach');assert.match(approach.objective,/ahead of Joe.*outside/);
-   const closure=JSON.parse(fs.readFileSync(out+'/closing-fixture.json'));
+   const closure=JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-counterplay-closing.json'));
    await p.evaluate(initial=>{__underGreen.run=structuredClone(initial);__underGreen.clearInput();advanceTime(0);},closure.initial);
    if(width<900)await p.locator('#use').tap();else await p.keyboard.press('e');await p.evaluate(frames=>advanceTime(frames*1000/60-1e-6),closure.frames);
    const closing=await capture('active-closure');assert(closing.gate>0&&closing.gate<1);assert.match(closing.caption,/Stay inside/);

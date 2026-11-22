@@ -1,13 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const software=process.argv.includes('--software'),before=process.argv.includes('--before'),budget=process.argv.includes('--budget');
+ const software=process.argv.includes('--software'),before=false,budget=process.argv.includes('--budget');
  const out=(process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/level-one-runoff')+'/'+(before?'before-':'after-')+(software?'software':'native');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],checks=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__runoffGame={state,resetFirstHole,render,obstacleAtPosition};\n  window.advanceTime = (milliseconds) => {')}));
- await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(before?'output/level-one-runoff/baseline-source/scene-3d.js':'web/scene-3d.js','utf8').replace('const softwareBudget=createSoftwareFrameBudget()','const softwareBudget=createSoftwareFrameBudget({scales:[.75]})')+'\nwindow.__runoffScene=()=>({waterSurfaces,pixelWorld,renderer,world,camera});'}));
- if(before)for(const n of ['pixel-water.js','pixel-world-props.js'])await page.route('**/'+n+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-runoff/baseline-source/'+n,'utf8')}));
+ await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('const softwareBudget=createSoftwareFrameBudget()','const softwareBudget=createSoftwareFrameBudget({scales:[.75]})')+'\nwindow.__runoffScene=()=>({waterSurfaces,pixelWorld,renderer,world,camera});'}));
  const draw=()=>page.evaluate(async()=>{__runoffGame.render();await RCScene3D.whenPresented();});
  const read=()=>page.evaluate(()=>{const s=RCScene3D.stats(),r=__runoffScene().renderer;return {water:s.water,resolution:s.resolution,draws:s.drawCalls,triangles:s.triangles,memory:{...r.info.memory},programs:r.info.programs.length,lanterns:s.pathLanterns.pairs.length*2};});
  const shot=async name=>{await draw();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:out+'/'+name+'.jpg',type:'jpeg',quality:93});};

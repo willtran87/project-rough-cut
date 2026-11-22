@@ -2,18 +2,14 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
+ const before=false,software=process.argv.includes('--software'),preview=process.argv.includes('--preview');
  const base='output/level-one-arrival-composition',out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||`${base}/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__arrivalGame={state,resetFirstHole,render,obstacleAtPosition};\n  window.advanceTime = (milliseconds) => {')}));
  await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('softwareBudget=createSoftwareFrameBudget()','softwareBudget=createSoftwareFrameBudget({scales:[.625]})')+'\nwindow.__arrivalScene=()=>({world,renderer,camera,currentData,sceneTarget});'}));
- if(before)await page.route('**/course-arrival-phone.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(base+'/baseline-source/course-arrival-phone.js','utf8')}));
- const baselinePlayer=process.argv.find(a=>a.startsWith('--baseline-player='))?.slice(18);
- if(baselinePlayer)await page.route('**/course-player-craft.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(baselinePlayer,'utf8')}));
- const baselinePose=process.argv.find(a=>a.startsWith('--baseline-pose='))?.slice(16);
- if(baselinePose)await page.route('**/course-arrival-presentation.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(baselinePose,'utf8')}));
+ const baselinePlayer=null;
  const draw=()=>page.evaluate(async()=>{__arrivalGame.render();await RCScene3D.whenPresented();});
  const age=async value=>{await page.evaluate(value=>{Object.assign(__arrivalGame.state.hole.engagement.experience.arrival,{age:.55+value,lockAt:.55,phase:'complete',phoneDismissed:false,phoneCaptionShown:true});},value);await draw();};
  const read=()=>page.evaluate(async()=>{const THREE=await import('./vendor/three/three.module.js'),r=__arrivalScene(),root=r.world.getObjectByName('night-order-phone'),m=root.children[0],a=m.geometry.attributes.position,bounds={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};m.updateWorldMatrix(true,false);for(let i=0;i<a.count;i++){const v=new THREE.Vector3().fromBufferAttribute(a,i).applyMatrix4(m.matrixWorld).project(r.camera);bounds.minX=Math.min(bounds.minX,v.x);bounds.maxX=Math.max(bounds.maxX,v.x);bounds.minY=Math.min(bounds.minY,v.y);bounds.maxY=Math.max(bounds.maxY,v.y);}const s=RCScene3D.stats();return {visible:root.visible,position:root.position.toArray(),rotation:root.quaternion.toArray(),bounds,resolution:s.resolution,draws:s.drawCalls,triangles:s.triangles,arrival:{...__arrivalGame.state.hole.engagement.experience.arrival}};});
@@ -21,7 +17,7 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
  try{
   await page.goto('http://127.0.0.1:4187');await page.waitForFunction(()=>window.__arrivalGame);
   await page.evaluate(()=>{const t=__arrivalGame,s=t.state;t.resetFirstHole();Object.assign(s,{mode:'first_hole',manualTime:true,transitionAlpha:0,guidedHints:false,apparitions:false,reducedMotion:false,effectsDensity:0});s.keys.clear();Object.assign(s.player,{x:0,y:15,yaw:0,pitch:0});Object.assign(s.hole,{elapsed:100,tutorialVisible:false,messageTimer:0,zoneBannerTimer:0});s.hole.practiceDrill.active=false;Object.assign(s.hole.joe,{x:100,y:700,patrolPause:9999});RCSpatialControls.set('resolution',1);});
-  await draw();await page.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready&&RCScene3D.stats().pixelArt.pending===0,null,{timeout:180000});await age(2.6);
+  await page.evaluate(()=>advanceTime(17));await draw();await page.waitForFunction(()=>RCScene3D.stats().ready&&RCScene3D.stats().joeModel?.ready&&RCScene3D.stats().pixelArt.pending===0,null,{timeout:180000});await age(2.6);
   const inventory=await page.evaluate(()=>{const r=__arrivalScene(),s=RCScene3D.stats(),lights=[],phone=[];r.world.traverse(o=>{if(o.isLight)lights.push({type:o.type,position:o.position.toArray(),intensity:o.intensity});});r.world.getObjectByName('night-order-phone').traverse(o=>{if(o.isMesh)phone.push({position:o.position.toArray(),quaternion:o.quaternion.toArray(),attributes:Object.fromEntries(Object.entries(o.geometry.attributes).map(([k,a])=>[k,Array.from(a.array)])),index:o.geometry.index?Array.from(o.geometry.index.array):null});});return {objects:s.pixelWorld.objects,lanterns:s.pathLanterns,lights,obstacles:r.currentData.obstacles,phone};});
   const screen=await page.evaluate(()=>{const root=__arrivalScene().world.getObjectByName('night-order-phone'),m=root.children.find(o=>o.material?.map?.image?.width===512),c=m.material.map.image,a=c.getContext('2d').getImageData(0,0,c.width,c.height).data,colors=new Set();let alpha=true;for(let i=0;i<a.length;i+=4){colors.add(a[i]+','+a[i+1]+','+a[i+2]);alpha&&=a[i+3]===255;}return {size:[c.width,c.height],colors:colors.size,opaque:alpha};});if(!before){assert.equal(screen.colors,8);assert(screen.opaque);}
   let grip=null;

@@ -2,7 +2,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/pressure-envelopes',examples=JSON.parse(fs.readFileSync(out+'/examples.json'));
+ const out='output/under-green/pressure-envelopes',examples=JSON.parse(fs.readFileSync('tools/fixtures/under-green/pressure-envelope-examples.json'));fs.mkdirSync(out,{recursive:true});
  const selected=examples.filter(e=>e.kind==='protected-recovery');
  assert(selected.length>0,'No actual protected recovery tape available');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});

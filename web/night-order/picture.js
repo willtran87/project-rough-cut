@@ -2,7 +2,7 @@
 // scene's own knobs and owns the shared screen finish (bloom, grade, vignette,
 // grain). scene-3d.js calls preset/knobs() while building a frame and finish()
 // once the frame is on screen. Nothing here reads or changes the round.
-import {createScreenFinish,LOOKS} from '../screen-finish.js?v=20261119-polish';
+import {createScreenFinish,LOOKS} from '../screen-finish.js?v=20261122-fixes';
 import {createGraphicsQuality} from '../graphics-quality.js';
 
 const BASE_FAR=78,FOG_NEAR=24,FOG_FAR=70;
@@ -22,6 +22,13 @@ export function createNightPicture(THREE,{now=()=>performance.now()}={}){
   fog(fog){if(!fog||software)return;const s=quality.preset.viewScale;fog.near=FOG_NEAR*s;fog.far=FOG_FAR*s;},
   // frame.polish comes from game.js (night-order/feel.js); absent in menus.
   // gameplay: a moving, unpaused play frame, which is what Auto measures.
+  // Create the finish (which compiles its passes) while the course loads,
+  // so the first gameplay frame does not compile shaders.
+  prepare(renderer){
+   const level=software?'off':FORCED||quality.preset.finish;
+   if(level==='off'||!renderer||(finish&&finishRenderer===renderer))return;
+   finish?.dispose();finish=createScreenFinish(THREE,renderer,{look:LOOKS.nightOrder,level});finishRenderer=renderer;
+  },
   finish(renderer,frame,{gameplay=false}={}){
    const t=now();
    if(gameplay&&lastPresented)quality.frame(t-lastPresented);

@@ -1,8 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/close-recovery';
- const tapes=JSON.parse(fs.readFileSync(out+'/current-examples.json')).filter(t=>t.inputs);
+ const out='output/under-green/close-recovery';fs.mkdirSync(out,{recursive:true});
+ const tapes=JSON.parse(fs.readFileSync('tools/fixtures/under-green/close-recovery-examples.json')).filter(t=>t.inputs);
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const views=[],results=[],errors=[];let pauseVerified=false;
  try{

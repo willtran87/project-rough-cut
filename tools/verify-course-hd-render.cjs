@@ -1,15 +1,13 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software'),dpr=process.argv.includes('--dpr2')?2:1,noPools=process.argv.includes('--no-pools');
+ const baseline=false,software=process.argv.includes('--software'),dpr=process.argv.includes('--dpr2')?2:1,noPools=process.argv.includes('--no-pools');
  const out='output/level-one-hd-foundation/'+(baseline?'before':'after')+(software?'-software':'')+(dpr===2?'-dpr2':'')+(noPools?'-physical-light':'');fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),page=await browser.newPage({viewport:{width:2560,height:1600},deviceScaleFactor:dpr}),errors=[],views=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__hd={state,resetFirstHole,render};\n  window.advanceTime = (milliseconds) => {')}));
- const sceneSource=fs.readFileSync((baseline?'output/level-one-hd-foundation/baseline-source':'web')+'/scene-3d.js','utf8');
+ const sceneSource=fs.readFileSync('web/scene-3d.js','utf8');
  await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:sceneSource+'\nwindow.__hdScene=()=>({renderer,world,camera});'}));
- if(baseline)await page.route('**/course-viewport.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-hd-foundation/baseline-source/course-viewport.js','utf8')}));
- if(noPools)await page.route('**/floodlight-response.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/floodlight-response.js','utf8').replace('light.pool.material.opacity=.14*p;','light.pool.material.opacity=light.source?0:.14*p;')}));
  const draw=()=>page.evaluate(async()=>{__hd.render();await RCScene3D.whenPresented();return RCScene3D.stats();});
  async function info(){return page.evaluate(()=>{const c=document.getElementById('game'),r=c.getBoundingClientRect(),s=RCScene3D.stats();return {css:[r.width,r.height],buffer:[c.width,c.height],scene:s.resolution,presentation:s.presentationResolution,aspect:s.cameraAspect,software:s.quality.softwareRenderer,gpu:s.gpu,quality:s.quality,resources:__hdScene().renderer.info.memory,programs:__hdScene().renderer.info.programs.length};});}
  try{

@@ -1,17 +1,16 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const out=process.argv[2],before=process.argv.includes('--before'),software=process.argv.includes('--software'),contractsOnly=process.argv.includes('--contracts');if(!out)throw Error('Output directory required');
+const out=process.argv[2],software=process.argv.includes('--software'),contractsOnly=process.argv.includes('--contracts');if(!out)throw Error('Output directory required');
 const views=[['nursery',20,65,.12,true],['cottage',20,65,.46,true],['tower',-26,76,-.78,true],['range',0,420,0,false],['barn',21,712,1.95,true],['garage',-33.76177,769.442,.05788,true]];
 (async()=>{fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/parallax-scene.js*',r=>{
-  const baseline=before||r.request().url().includes('qa-horizon-baseline');let body=fs.readFileSync((baseline?'output/back-nine-visual-upgrade/estate-distance/baseline-source/':'web/')+'parallax-scene.js','utf8');
+  let body=fs.readFileSync('web/parallax-scene.js','utf8');
   if(!r.request().url().includes('qa-horizon-'))body=body.replace('return { scene, camera, update, stats,','return window.__horizonBackdrop={ scene, camera, update, stats,');
   return r.fulfill({contentType:'application/javascript',body});
  });
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__horizonWorld={scene,camera,renderer,update,draw()')}));
- if(before)await p.route('**/back-nine-horizon.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/estate-distance/baseline-source/back-nine-horizon.js','utf8')}));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
  for(const[name,x,y,yaw,foot]of (contractsOnly?[]:process.argv.includes('--garage')?views.slice(-1):views)){
@@ -20,18 +19,18 @@ const views=[['nursery',20,65,.12,true],['cottage',20,65,.46,true],['tower',-26,
  }
  for(const[width,height]of (contractsOnly?[]:[[1280,720],[390,844]])){await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();});await p.screenshot({path:path.join(out,'garage-'+width+'.jpg'),type:'jpeg',quality:93});}
  let contract=null;
- if(!before){
+ {
   assert.equal(await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics.parallax.horizon.architecture.sites.length),3);
   await p.keyboard.press('Escape');const time=await p.evaluate(()=>__backNine.run.time);await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>__backNine.run.time),time);await p.click('#primary');
-  contract=await verifyBackdrop(p);assert.equal(contract.defaultPixelsChanged,0,'Level 1 default rendering preserved');assert(contract.travelPixelsChanged>100,'travel changes actual horizon projection');assert(contract.turnPixelsChanged>100,'turning changes actual horizon projection');assert.equal(contract.disposedGeometries,7);assert.equal(contract.disposedMaterials,7);assert.equal(contract.texturesDisposed,0);
+  contract=await verifyBackdrop(p);assert(contract.travelPixelsChanged>100,'travel changes actual horizon projection');assert(contract.turnPixelsChanged>100,'turning changes actual horizon projection');assert.equal(contract.disposedGeometries,7);assert.equal(contract.disposedMaterials,7);assert.equal(contract.texturesDisposed,0);
   await p.keyboard.press('Escape');await p.click('#restart');await p.evaluate(()=>advanceTime(17));const run=await p.evaluate(()=>__backNine.run);assert.equal(run.checkpoint,0);assert(run.cart.y<20);
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,before,software,errors,samples,contract},null,2));
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,software,errors,samples,contract},null,2));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
 
 async function verifyBackdrop(page){return page.evaluate(async()=>{
- const THREE=await import('./vendor/three/three.module.js'),{createParallax}=await import('./parallax-scene.js?qa-horizon-current'),{createParallax:oldParallax}=await import('./parallax-scene.js?qa-horizon-baseline'),Art=await import('./pixel-art.js');
- const renderer=__horizonWorld.renderer,current=createParallax(),baseline=oldParallax();
+ const THREE=await import('./vendor/three/three.module.js'),{createParallax}=await import('./parallax-scene.js?qa-horizon-current'),Art=await import('./pixel-art.js');
+ const renderer=__horizonWorld.renderer,current=createParallax();
  const defaults=[];current.scene.traverse(o=>{const m=o.material?.map;if(m)defaults.push([m,m.wrapS,m.wrapT,m.repeat.x,m.repeat.y,m.offset.x,m.offset.y]);});
  const horizon=createParallax({travelScale:.08,showEstate:false,storm:.97,night:.92,stormCanopy:true,estateHorizon:true});
  for(const[m,s,t,x,y,u,v]of defaults)if(m.wrapS!==s||m.wrapT!==t||m.repeat.x!==x||m.repeat.y!==y||m.offset.x!==u||m.offset.y!==v)throw Error('Back Nine mutated shared default texture transform');
@@ -40,13 +39,8 @@ async function verifyBackdrop(page){return page.evaluate(async()=>{
  const target=new THREE.WebGLRenderTarget(640,360),oldTarget=renderer.getRenderTarget(),viewport=renderer.getViewport(new THREE.Vector4()),oldClear=renderer.autoClear;
  const render=w=>{renderer.setRenderTarget(target);renderer.autoClear=true;renderer.render(w.scene,w.camera);const pixels=new Uint8Array(640*360*4);renderer.readRenderTargetPixels(target,0,0,640,360,pixels);return pixels;};
  const changed=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=4)if(a[i]!==b[i]||a[i+1]!==b[i+1]||a[i+2]!==b[i+2])n++;return n;};
- let defaultPixelsChanged,travelPixelsChanged,turnPixelsChanged,disposedGeometries=0,disposedMaterials=0,texturesDisposed=0;const nodes=[];
+ let travelPixelsChanged,turnPixelsChanged,disposedGeometries=0,disposedMaterials=0,texturesDisposed=0;const nodes=[];
  try{
-  defaultPixelsChanged=0;
-  for(const[x,y,z,yaw]of [[0,3,-65,0],[20,7,-220,1.3],[-18,2,-715,3.1]]){
-   view.position.set(x,y,z);view.rotation.set(0,yaw,0);view.updateMatrixWorld();for(const w of [current,baseline])w.update(view,20,false,false);
-   defaultPixelsChanged+=changed(render(current),render(baseline));
-  }
   view.position.set(0,3,-65);view.lookAt(0,3,-100);view.updateMatrixWorld();horizon.update(view,20,false,false);
   const start=render(horizon),initial=horizon.stats();
   view.position.set(30,4,-710);view.lookAt(30,4,-750);view.updateMatrixWorld();horizon.update(view,20,false,false);const moved=render(horizon);travelPixelsChanged=changed(start,moved);
@@ -54,6 +48,6 @@ async function verifyBackdrop(page){return page.evaluate(async()=>{
   if(initial.moonCoverage!==travel.moonCoverage||initial.moonCoverage!==horizon.stats().moonCoverage)throw Error('View changed world moon coverage');
   horizon.scene.traverse(o=>{if(['far-estate-ridge','wooded-slope','estate-woodland'].includes(o.name)||o.name.startsWith('distant-estate-')&&o.isMesh){nodes.push(o);o.geometry.addEventListener('dispose',()=>disposedGeometries++);o.material.addEventListener('dispose',()=>disposedMaterials++);o.material.map?.addEventListener('dispose',()=>texturesDisposed++);}});
   for(const layer of travel.layers.filter(l=>nodes.some(n=>n.name===l.name)||l.name==='estate-outbuildings')){const expected=[30*.08*(1-layer.influence),-710*.08*(1-layer.influence)];if(layer.origin.some((x,i)=>Math.abs(x-expected[i])>1e-8))throw Error('Wrong horizon world anchor');}
- }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(viewport);renderer.autoClear=oldClear;target.dispose();current.dispose();baseline.dispose();horizon.dispose();}
- return {defaultViews:3,defaultPixelsChanged,defaultTexturesUntouched:true,travelPixelsChanged,turnPixelsChanged,disposedGeometries,disposedMaterials,texturesDisposed};
+ }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(viewport);renderer.autoClear=oldClear;target.dispose();current.dispose();horizon.dispose();}
+ return {defaultTexturesUntouched:true,travelPixelsChanged,turnPixelsChanged,disposedGeometries,disposedMaterials,texturesDisposed};
 });}

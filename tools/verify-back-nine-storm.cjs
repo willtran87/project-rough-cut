@@ -1,9 +1,9 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const out=process.argv[2]||'output/back-nine-visual-upgrade/storm/native',baseline=process.argv.includes('--baseline'),software=process.argv.includes('--software');fs.mkdirSync(out,{recursive:true});fs.rmSync(out+'/report.json',{force:true});
+const out=process.argv[2]||'output/back-nine-visual-upgrade/storm/native',software=process.argv.includes('--software');fs.mkdirSync(out,{recursive:true});fs.rmSync(out+'/report.json',{force:true});
 (async()=>{const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  for(const file of ['parallax-scene.js','back-nine-scene.js'])await p.route('**/'+file+'*',route=>{
-  let source=fs.readFileSync((baseline?'output/back-nine-visual-upgrade/storm/baseline-source/':'web/')+file,'utf8');
+  let source=fs.readFileSync('web/'+file,'utf8');
   if(file==='parallax-scene.js')source=source.replace('return { scene, camera, update, stats,','return window.__stormBackdrop={ scene, camera, update, stats,');
   else source=source.replace('const hemi=new THREE.HemisphereLight','const hemi=window.__stormHemi=new THREE.HemisphereLight').replace('const moon=new THREE.DirectionalLight','const moon=window.__stormMoon=new THREE.DirectionalLight').replace(' const scene=new THREE.Scene();',' window.__stormRenderer=renderer;const scene=new THREE.Scene();');
   route.fulfill({contentType:'application/javascript',body:source});
@@ -13,7 +13,7 @@ const out=process.argv[2]||'output/back-nine-visual-upgrade/storm/native',baseli
  const present=()=>p.evaluate(async()=>{await __backNine.whenPresented();__backNine.render();await __backNine.whenPresented();});
  const shot=async name=>{await present();await p.screenshot({path:`${out}/${name}.png`});samples.push({name,...await read()});console.log(name,JSON.stringify(samples.at(-1).state.graphics.parallax));};
  await p.evaluate(async()=>{const{createRun}=await import('./back-nine-sim.js');const r=createRun(0,0,713);r.mode='driving';r.time=20;r.grace=0;r.departure.phase='finished';r.tension.cooldown=r.hunt.cooldown=100;r.story.seen=7;r.story.choiceSeen=0xffff;r.panic.armed=false;Object.assign(r.cart,{x:0,y:90,yaw:0,speed:0});Object.assign(r.joe,{x:0,y:10,speed:0});__backNine.run=r;});await shot('start-2560');
- if(!baseline){
+ {
   assert((await read()).state.graphics.parallax.stormCanopy.densityReady);const initial=(await read()).state.graphics,initialPrograms=await p.evaluate(()=>__stormRenderer.info.programs.map(p=>p.cacheKey));
   const probes=await p.evaluate(async()=>{
    const THREE=await import('./vendor/three/three.module.js'),{stormCoordinates,stormOpacity,sampleStormDensity}=await import('./back-nine-storm-sky.js');
@@ -48,5 +48,5 @@ const out=process.argv[2]||'output/back-nine-visual-upgrade/storm/native',baseli
   const legacy=await p.evaluate(async()=>{const active=__stormBackdrop,{createParallax}=await import('./parallax-scene.js'),view=active.camera.clone(),sky=createParallax({storm:.97,night:.92});sky.update(view,0,true,false);const before=sky.stats();sky.update(view,0,true,false,{progress:1,skyScale:.8,moonScale:.92,cloudWidth:2,cloudHeight:1.2,cloudOpacity:.8});sky.update(view,0,true,false);const restored=sky.stats();sky.dispose();window.__stormBackdrop=active;return {before,restored};});
   assert.equal(legacy.before.clouds,9);assert.equal(legacy.before.cloudWidth,1.3395);assert.equal(legacy.before.cloudOpacity,.6546);assert.deepEqual(legacy.before,legacy.restored);fs.writeFileSync(out+'/legacy-defaults.json',JSON.stringify(legacy,null,2));
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,baseline,software,samples,errors},null,2));console.log('PASS',out);
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,samples,errors},null,2));console.log('PASS',out);
 }finally{await browser.close();}})().catch(e=>{fs.writeFileSync(out+'/report.json',JSON.stringify({passed:false,error:e.stack},null,2));console.error(e);process.exitCode=1;});

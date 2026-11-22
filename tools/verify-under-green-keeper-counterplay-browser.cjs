@@ -1,8 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/keeper-counterplay',baseline=process.argv.includes('--baseline');
- const tapes=[-1,1].map(side=>({side,...JSON.parse(fs.readFileSync(`${out}/attempt-${side}.json`))}));
+ const out='output/under-green/keeper-counterplay',baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});
+ const tapes=[-1,1].map(side=>({side,...JSON.parse(fs.readFileSync('tools/fixtures/under-green/keeper-counterplay-attempts.json'))[side]}));
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const views=[],errors=[],replays=[];
  try{
@@ -39,7 +39,7 @@ const {chromium}=require('playwright');
      await p.evaluate(()=>__underGreen.whenPresented());await p.screenshot({path:`${out}/side${tape.side}-${stage.name}-${width}.png`});views.push({side:tape.side,stage:stage.name,width,height,...state});
     }
    }
-   const defeat=JSON.parse(fs.readFileSync(out+'/defeat.json'));
+   const defeat=JSON.parse(fs.readFileSync('tools/fixtures/under-green/keeper-counterplay-defeat.json'));
    await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},defeat);
    assert(await p.locator('#panel').isVisible());
    const resultText=await p.locator('#panel').innerText();assert.match(resultText,/run back to the release/);

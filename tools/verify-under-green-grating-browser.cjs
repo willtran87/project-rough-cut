@@ -1,8 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {reveal,closeSettings}=require('./lib/legacy-ug-settings.cjs');// tabbed settings (game-theme.js)
 const {chromium}=require('playwright');
-const out='output/under-green/service-grate',routes=JSON.parse(fs.readFileSync(`${out}/routes.json`));
+const out='output/under-green/service-grate';fs.mkdirSync(out,{recursive:true});
 (async()=>{
+ // The same dry and wet routes verify-under-green-grating.mjs writes to routes.json (every second step
+ // between 33 s and 53 s), built here from the current route pilot so no earlier run is needed.
+ const {traverse}=await import('./probe-under-green-folded.mjs'),routes=[];
+ for(const [name,options]of [['dry',{}],['wet',{wet:true}]]){const frames=[];let frame=0;traverse({...options,dodge:true,inspect:r=>{if(++frame%2||r.elapsed<33||r.elapsed>53)return;const {telemetry,...state}=r;frames.push(structuredClone(state));}});routes.push({name,frames});}
  const viewsOnly=process.argv.includes('--views-only');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],results=viewsOnly?JSON.parse(fs.readFileSync(`${out}/browser.json`)).results:[],views=[];
  try{

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const out='output/under-green/approach-strike',initial=JSON.parse(fs.readFileSync(`${out}/initial.json`));
+const out='output/under-green/approach-strike',initial=JSON.parse(fs.readFileSync('tools/fixtures/under-green/approach-strike-initial.json'));fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),errors=[],cases=[],geometry=[];
  try{

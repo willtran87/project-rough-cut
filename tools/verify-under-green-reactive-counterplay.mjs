@@ -4,9 +4,9 @@ import {step,MOVEMENT,snapshot} from '../web/under-green-sim.js';
 import {solid,distance,keeperInside} from '../web/under-green-course.js';
 import {JOE_RADIUS} from '../web/under-green-clearance.js';
 import {sluiceObstruction} from '../web/under-green-sluice.js';
-const out='output/under-green/reactive-counterplay',study=JSON.parse(fs.readFileSync(out+'/expanded.json')),rows=[];
+const out='output/under-green/reactive-counterplay',study=JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-counterplay-study.json')),tapeOf=(tapes=>name=>tapes[name.split('/').pop().replace('.json','')])(JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-counterplay-tapes.json'))),rows=[];fs.mkdirSync(out,{recursive:true});
 for(const report of study.reports)for(const row of report.rows){
- const tape=JSON.parse(fs.readFileSync(row.file)),r=structuredClone(tape.initial);let maxPlayerStep=0,maxJoeStep=0,overlaps=0,securedFrames=0;
+ const tape=tapeOf(row.file),r=structuredClone(tape.initial);let maxPlayerStep=0,maxJoeStep=0,overlaps=0,securedFrames=0;
  for(const frame of tape.inputs){
   const player={...r.player},joe={...r.joe};r.player.yaw=frame.yaw;step(r,frame.input);
   maxPlayerStep=Math.max(maxPlayerStep,distance(player,r.player));maxJoeStep=Math.max(maxJoeStep,distance(joe,r.joe));

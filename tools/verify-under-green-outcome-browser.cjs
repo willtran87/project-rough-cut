@@ -1,18 +1,18 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/outcome',b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
+ const out='output/under-green/outcome',b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});fs.mkdirSync(out,{recursive:true});
  try{
   const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],checks=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.click('#primary');
   const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text()));
-  const fixture=JSON.parse(fs.readFileSync('output/under-green/navigation/service-encounter.json','utf8'));
+  const fixture=JSON.parse(fs.readFileSync('tools/fixtures/under-green/service-encounter.json','utf8'));
   await p.evaluate(r=>{r.evidence=true;__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},fixture);await tick(1500);
   let s=await read();assert.equal(s.mode,'under_green_caught');assert.equal(s.failure.kind,'sweep');assert.match(await p.locator('#retry-advice').innerText(),/Next try:.*sideways/);/* Standard keeps no checkpoints (981accb): retry starts fresh and the panel promises nothing kept */assert.doesNotMatch(await p.locator('#retry-progress').innerText(),/stays open|is kept|checkpoint/);assert.equal(await p.locator('#primary').textContent(),'Retry from the start');
   await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
   await p.click('#primary');await tick(0);s=await read();assert.equal(s.mode,'under_green_playing');assert.equal(s.failure,null);assert(!s.bypass&&!s.evidence);assert.equal(s.player.y,5);assert.equal(s.waterHits,0);assert(await p.locator('#retry-advice').isHidden());assert(await p.locator('#retry-progress').isHidden());
   checks.push('Actual browser sweep produces useful advice; ordinary retry starts fresh and clears the old failure');
-  const surge=JSON.parse(fs.readFileSync(out+'/caught-after-surge.json','utf8'));
+  const surge=JSON.parse(fs.readFileSync('tools/fixtures/under-green/outcome-caught-after-surge.json','utf8'));
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},surge);await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});
    /* the themed loss screen folds #result into 'Loss details & controls' (game-theme.js) */assert.match(await p.locator('#result').textContent(),/surge at east spillway/);assert.match(await p.locator('#retry-advice').innerText(),/full crossing window/);

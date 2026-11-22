@@ -2,8 +2,8 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
  const {step}=await import('../web/under-green-sim.js'),{SLUICE,distance}=await import('../web/under-green-course.js');
- const tapes=[-1,1].map(side=>({name:'occupied-'+side,...JSON.parse(fs.readFileSync(`output/under-green/keeper-counterplay/attempt-${side}.json`))}));
- const failed=JSON.parse(fs.readFileSync('output/under-green/reactive-routes/full-observed-tapes.json')).find(t=>t.failed);assert(failed);tapes.push(failed);
+ const tapes=[-1,1].map(side=>({name:'occupied-'+side,...JSON.parse(fs.readFileSync('tools/fixtures/under-green/keeper-counterplay-attempts.json'))[side]}));
+ /* the failed tape of output/under-green/reactive-routes/full-observed-tapes.json */const failed=JSON.parse(fs.readFileSync('tools/fixtures/under-green/reactive-routes-failed-tape.json'));assert(failed);tapes.push(failed);
  const runs=tapes.map(t=>{
   const r=structuredClone(t.initial),frames=[];let lastPhase='';
   for(let i=0;i<t.inputs.length;i++){
@@ -22,7 +22,7 @@ const {chromium}=require('playwright');
    },run.frames.slice(i,i+60)));}
    results.push({name:run.name,frames:run.frames.length,samples});console.log(JSON.stringify({name:run.name,frames:run.frames.length,samples:samples.length,hits:samples.reduce((n,s)=>n+s.geometry.hits.length,0)}));
   }
-  fs.writeFileSync('output/under-green/release/actor-clearance.json',JSON.stringify({results,errors},null,2));
+  fs.mkdirSync('output/under-green/release',{recursive:true});fs.writeFileSync('output/under-green/release/actor-clearance.json',JSON.stringify({results,errors},null,2));
   assert.deepEqual(errors,[]);for(const r of results)for(const s of r.samples)assert.deepEqual(s.geometry.hits,[],`${r.name} at ${s.time}`);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

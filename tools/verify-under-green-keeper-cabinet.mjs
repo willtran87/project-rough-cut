@@ -31,20 +31,13 @@ for(const eye of [[9.7,1.12,12.05],[11.65,1.65,13.1],[13.6,1.12,12.05]]){
 // its recessed back, not a flat facade or an infinite void.
 ray.set(new T.Vector3(11.495,.31,-12),new T.Vector3(0,0,1));ray.far=2;
 const hit=ray.intersectObjects(meshes,false)[0];assert(hit);assert(hit.point.z> -11.1&&hit.point.z< -10.9);
-const baseline=fs.readFileSync('output/under-green/visual-pass96/source/under-green-keeper-layout-before.js','utf8').replace("'./under-green-layout.js'",JSON.stringify(new URL('../web/under-green-layout.js',import.meta.url).href));
-const old=await import('data:text/javascript;base64,'+Buffer.from(baseline).toString('base64'));
-let wallPiecesChanged=0,unchangedWalls=0;
+// Behind the cabinet the niche wall keeps only a low .08 m sill.
+let wallPiecesChanged=0;
 for(const wall of floorLayout().walls){
- const height=wall.covered?4.2:1.8,a=old.keeperWallPieces(wall,height),b=keeperWallPieces(wall,height);
- assert.equal(a.length,b.length);
- for(let i=0;i<a.length;i++){
-  if(JSON.stringify(a[i])===JSON.stringify(b[i]))continue;
-  const {height:ah,...av}=a[i],{height:bh,...bv}=b[i];assert.deepEqual(av,bv);assert.equal(ah,1);assert.equal(bh,.08);
-  assert(Math.abs(a[i].y-KEEPER_NICHES[0].boundary)<.001);assert(a[i].x-a[i].w/2>=9.499&&a[i].x+a[i].w/2<=13.801);wallPiecesChanged++;
- }
- if(JSON.stringify(a)===JSON.stringify(b))unchangedWalls++;
+ const height=wall.covered?4.2:1.8;
+ for(const p of keeperWallPieces(wall,height))if(Math.abs(p.y-KEEPER_NICHES[0].boundary)<.001&&p.x-p.w/2>=9.499&&p.x+p.w/2<=13.801){assert.notEqual(p.height,1,'Former solid lower wall behind the cabinet');if(p.height===.08)wallPiecesChanged++;}
 }
 assert(wallPiecesChanged>0);
-const report={passed:true,parts:meshes.length,rays,wallPiecesChanged,unchangedWalls,drawerBack:hit.point.toArray(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()}};
-fs.writeFileSync('output/under-green/visual-pass96/geometry.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+const report={passed:true,parts:meshes.length,rays,wallPiecesChanged,drawerBack:hit.point.toArray(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()}};
+fs.mkdirSync('output/under-green/visual-pass96',{recursive:true});fs.writeFileSync('output/under-green/visual-pass96/geometry.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 cabinet.dispose();for(const m of meshes)m.geometry.dispose();

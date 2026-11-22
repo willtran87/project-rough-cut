@@ -1,13 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=`output/level-one-sign-craft/${before?'before':'after'}-${software?'software':'native'}`;
+ const before=false,software=process.argv.includes('--software'),out=`output/level-one-sign-craft/${before?'before':'after'}-${software?'software':'native'}`;
  fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],checks=[],views=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__signGame={state,resetFirstHole,render,actions:NIGHT_ORDER_ACTIONS};\n  window.advanceTime = (milliseconds) => {')}));
  await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__signScene=()=>({world,renderer,objectiveCues});'}));
- if(before)await p.route('**/objective-cues.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-sign-craft/baseline/objective-cues.js','utf8')}));
  const draw=()=>p.evaluate(async()=>{__signGame.render();await RCScene3D.whenPresented();});
  const shot=async name=>{await draw();await p.screenshot({path:out+'/'+name+'.jpg',type:'jpeg',quality:91});};
  const position=async(x,y,tx,ty,pitch=0)=>{await p.evaluate(v=>Object.assign(__signGame.state.player,v),{x,y,yaw:Math.atan2((tx-x)*.72,ty-y),pitch});await draw();};
@@ -23,14 +22,14 @@ const {chromium}=require('playwright');
   for(const [name,x,y,tx,ty,pitch]of [['opening',0,10,0,100,-.08],['front',-12,20,-22,40,0],['side',-45,36,-22,40,0],['rear',-22,60,-22,40,0]]){await position(x,y,tx,ty,pitch);await shot(name);views.push({name,...await read()});}
   await position(0,10,0,100,-.08);for(const [width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await shot('opening-'+width);}
   const start=await read();assert.equal(start.cue.batches,before?2:3);assert.equal(start.cue.visibleSigns,1);assert.deepEqual(start.cue.atlas,[960,672]);assert.equal(start.cue.approachDraw.sign.count,6);
-  assert.deepEqual(start.body.material,before?['MeshBasicMaterial']:['MeshBasicMaterial','MeshLambertMaterial']);assert.equal(start.body.drawRange.count,start.cue.approachDraw.body.count);
+  assert.deepEqual(start.body.material,before?['MeshBasicMaterial']:['MeshLambertMaterial','MeshLambertMaterial']);assert.equal(start.body.drawRange.count,start.cue.approachDraw.body.count);
   checks.push('Single approach sign, atlas and expected material groups retained');
   await p.evaluate(()=>__signGame.state.clearNavigation=true);await draw();assert.equal((await read()).cue.visibleSigns,15);
   for(const [name,x]of [['station-front',62],['station-back',110]]){await p.setViewportSize({width:2560,height:1600});await position(x,148,86,148,.42);await shot(name);}
   for(let i=0;i<=3;i++){await p.evaluate(i=>__signGame.state.hole.nightOrderActionsCompleted=__signGame.actions.slice(0,i).map(a=>a.id),i);await draw();const c=(await read()).cue;assert(c.state.slice(0,i).every(s=>s.done));if(i<3)assert(c.state[i].next);}
   await p.evaluate(()=>{__signGame.state.hole.keyCollected=true;__signGame.state.hole.drainUnlocked=true;});await draw();assert((await read()).cue.state.every(s=>s.done));assert((await read()).cue.exits.every(e=>e.ready));
   checks.push('All 15 signs, ordered completion, access and exit readiness still update');
-  await p.evaluate(()=>{const s=__signGame.state;s.clearNavigation=false;s.hole.nightOrderActionsCompleted=[];s.hole.keyCollected=false;s.hole.drainUnlocked=false;});await position(77,148,86,148);await p.evaluate(()=>advanceTime(17));await p.keyboard.press('e');await draw();assert(await p.evaluate(()=>__signGame.state.hole.nightOrderActionsCompleted.includes('audit-bell')));assert((await read()).cue.state[0].done);
+  await p.evaluate(()=>{const s=__signGame.state;s.clearNavigation=false;s.hole.nightOrderActionsCompleted=[];s.hole.keyCollected=false;s.hole.drainUnlocked=false;});await position(77,148,86,148);await p.evaluate(()=>advanceTime(17));await p.keyboard.press('e');for(let i=0;i<120&&!(await p.evaluate(()=>__signGame.state.hole.nightOrderActionsCompleted.includes('audit-bell')));i++)await p.evaluate(()=>advanceTime(100));await draw();assert(await p.evaluate(()=>__signGame.state.hole.nightOrderActionsCompleted.includes('audit-bell')));assert((await read()).cue.state[0].done);
   checks.push('Actual Use completes Audit Bell and updates sign');
   await position(-12,20,-22,40);await p.setViewportSize({width:2560,height:1600});await shot('completed');
   const frozen=await read();await p.keyboard.press('Escape');await p.evaluate(()=>advanceTime(800));await draw();assert.equal((await read()).cue.updates,frozen.cue.updates);await p.keyboard.press('Escape');

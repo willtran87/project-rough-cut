@@ -2,6 +2,8 @@ import * as THREE from './vendor/three/three.module.js';
 import {boundCourseSpotlights} from './course-bounded-spotlights.js';
 
 const RANGE=3.25,CELL=2,POWER=2.8;
+// One shader wrapper per material, shared by every field built over its life.
+const FIELD_SLOTS=new WeakMap();
 
 // Fixed world-space sources. A cell contains every source whose sphere can
 // reach it, including corners. Nothing is selected by the player's camera.
@@ -41,12 +43,19 @@ RE_Direct(courseLampLight,geometryPosition,geometryNormal,geometryViewDir,geomet
     }
   }
   body+='}';
+  const owner={},patch={uniforms,body,count:Math.max(1,anchors.length),key:'-course-lantern-field-v2-bounded-spots-'+[minX,minZ,width,height,layers,maxPerCell,anchors.length].join(':')};
   function apply(material){
     if(!material||materials.has(material)||(!material.isMeshLambertMaterial&&!material.isMeshPhongMaterial))return;
-    const compile=material.onBeforeCompile,cacheKey=material.customProgramCacheKey,key=material.customProgramCacheKey();
-    material.onBeforeCompile=function(shader,renderer){compile.call(this,shader,renderer);Object.assign(shader.uniforms,uniforms);shader.fragmentShader='uniform sampler2D courseLampCells;\nuniform vec4 courseLampSources['+Math.max(1,anchors.length)+'];\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',body+'\n#include <lights_fragment_end>');boundCourseSpotlights(shader);};
-    material.customProgramCacheKey=()=>key+'-course-lantern-field-v2-bounded-spots-'+[minX,minZ,width,height,layers,maxPerCell,anchors.length].join(':');material.needsUpdate=true;
-    materials.set(material,{compile,cacheKey,wrapper:material.onBeforeCompile});
+    // Materials survive rebuilds and other patches may wrap them too, so the
+    // wrapper is installed once and each field only swaps the active patch.
+    let slot=FIELD_SLOTS.get(material);
+    if(!slot){
+      slot={patch:null,owner:null};FIELD_SLOTS.set(material,slot);
+      const compile=material.onBeforeCompile,key=material.customProgramCacheKey();
+      material.onBeforeCompile=function(shader,renderer){compile.call(this,shader,renderer);const p=slot.patch;if(!p)return;Object.assign(shader.uniforms,p.uniforms);shader.fragmentShader='uniform sampler2D courseLampCells;\nuniform vec4 courseLampSources['+p.count+'];\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',p.body+'\n#include <lights_fragment_end>');boundCourseSpotlights(shader);};
+      material.customProgramCacheKey=()=>key+(slot.patch?slot.patch.key:'');
+    }
+    slot.patch=patch;slot.owner=owner;material.needsUpdate=true;materials.set(material,slot);
   }
   function update(){
     if(disposed)return;let changed=false;
@@ -58,7 +67,7 @@ RE_Direct(courseLampLight,geometryPosition,geometryNormal,geometryViewDir,geomet
     if(disposed)return;disposed=true;
     // Some course materials survive a rebuild. Remove this scene's shader
     // wrapper before its textures disappear, so the next field cannot stack.
-    for(const [m,previous]of materials)if(m.onBeforeCompile===previous.wrapper){m.onBeforeCompile=previous.compile;m.customProgramCacheKey=previous.cacheKey;m.needsUpdate=true;}
+    for(const [m,slot]of materials)if(slot.owner===owner){slot.patch=null;slot.owner=null;m.needsUpdate=true;}
     indexMap.dispose();materials.clear();
   },
     candidates(x,z){const cx=Math.floor((x-minX)/CELL),cz=Math.floor((z-minZ)/CELL);return cx<0||cz<0||cx>=width||cz>=height?[]:cells[cz*width+cx].slice();},

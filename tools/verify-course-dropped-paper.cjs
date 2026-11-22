@@ -3,12 +3,11 @@ const {restoreFullIndexReference}=require('./fixtures/full-index-reference.cjs')
 const {chromium}=require('playwright');
 process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-temp');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),out=`output/level-one-dropped-paper/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
+ const before=false,software=process.argv.includes('--software'),out=`output/level-one-dropped-paper/${before?'before':'after'}-${software?'software':'native'}`;fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__stoneGame={state,resetFirstHole,render,obstacleAtPosition};\n  window.advanceTime = (milliseconds) => {')}));
- await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(before?'output/level-one-dropped-paper/baseline-source/scene-3d.js':'web/scene-3d.js','utf8').replace('softwareBudget=createSoftwareFrameBudget()','softwareBudget=createSoftwareFrameBudget({scales:[.625]})').replace('understoryCulling?.update(camera);','if(window.__habitatAllInstances)understoryCulling?.restore();else understoryCulling?.update(camera);')+'\nwindow.__stoneScene=()=>({world,renderer,camera,currentData,pixelWorld,sceneTarget,environmentGuidance});'}));
- if(before)await p.route('**/environment-guidance.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-dropped-paper/baseline-source/environment-guidance.js','utf8')}));
+ await p.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8').replace('softwareBudget=createSoftwareFrameBudget()','softwareBudget=createSoftwareFrameBudget({scales:[.625]})').replace('understoryCulling?.update(camera);','if(window.__habitatAllInstances)understoryCulling?.restore();else understoryCulling?.update(camera);')+'\nwindow.__stoneScene=()=>({world,renderer,camera,currentData,pixelWorld,sceneTarget,environmentGuidance});'}));
  await p.route('**/pixel-world-props.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/pixel-world-props.js','utf8').replace('    if(stone){const courses=', '    if(!stone)r.userData.hedgeCore={position:Array.from(g.attributes.position.array),normal:Array.from(g.attributes.normal.array),index:Array.from(g.index.array)};\n    if(stone){const courses=').replace('function updateCulling(camera){',`function updateCulling(camera){if(window.__stoneNoCull){cullValid=false;for(const m of culledMeshes){if(m.userData.fullIndices)(${restoreFullIndexReference.toString()})(m);else m.visible=true;}return;}`)}));
 
 
@@ -38,7 +37,7 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
   }
 
   const clues=await p.evaluate(()=>__stoneScene().environmentGuidance.stats().paperClues);
-  const cameraFile='output/level-one-dropped-paper/cameras.json';
+  const cameraFile='tools/fixtures/night-order/dropped-paper-cameras.json';
   const cameras=(before||software)?JSON.parse(fs.readFileSync(cameraFile,'utf8')):await p.evaluate(async clues=>{
    const THREE=await import('./vendor/three/three.module.js'),r=__stoneScene(),t=__stoneGame;
    window.__stoneNoCull=true;window.__habitatAllInstances=true;t.render();await RCScene3D.whenPresented();
@@ -58,7 +57,7 @@ process.env.TEMP=process.env.TMP=require('./lib/artifacts.cjs').dir('browser-tem
    }
    window.__stoneNoCull=false;window.__habitatAllInstances=false;t.render();await RCScene3D.whenPresented();return result;
   },clues);
-  if(!before)fs.writeFileSync(cameraFile,JSON.stringify(cameras,null,2));
+  fs.writeFileSync(out+'/cameras.json',JSON.stringify(cameras,null,2));
   fs.writeFileSync(out+'/clues.json',JSON.stringify({clues,cameras},null,2));
   for(let i=0;i<clues.length;i++){const c=cameras[i];await place(c.x,c.y,c.yaw,c.pitch);await shot('paper-'+i);}
   if(process.argv.includes('--preview'))return;

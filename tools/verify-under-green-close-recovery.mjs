@@ -6,8 +6,7 @@ import {JOE_RADIUS} from '../web/under-green-clearance.js';
 import {WATER_TIMING} from '../web/under-green-water-state.js';
 
 const out='output/under-green/close-recovery';fs.mkdirSync(out,{recursive:true});
-const baseline=process.argv.includes('--baseline'),rows=[],examples=[],failures=[];
-if(baseline&&fs.existsSync(out+'/baseline.json'))throw Error('Preserve the retained pre-fix baseline; run without --baseline to verify current behavior.');
+const rows=[],examples=[],failures=[];
 
 // Valid warning-boundary fixtures: both actors already occupy the channel.
 // The actual water transition starts recovery; no recovery flags are injected.
@@ -74,10 +73,10 @@ for(const side of [-1,1])for(const steer of ['none','left','right','retreat']){
  }
  const row={side,steer,hitFrame,mode:r.mode,hits:r.waterHits,cleared:!inWater(r.player,w,.3),player:r.player};
  approaches.push(row);examples.push({name:`approach-${side}-${steer}`,initial,dt,inputs,hitFrame,frames,final:r,row});
- if(!baseline){assert(hitFrame!==null);assert(row.cleared);assert.equal(row.hits,1);assert.equal(row.mode,'playing');}
+ {assert(hitFrame!==null);assert(row.cleared);assert.equal(row.hits,1);assert.equal(row.mode,'playing');}
 }
 report.approaches=approaches;
-fs.writeFileSync(`${out}/${baseline?'baseline':'verified'}.json`,JSON.stringify(report,null,2));
-fs.writeFileSync(`${out}/${baseline?'baseline-':'current-'}examples.json`,JSON.stringify(examples));
-console.log(JSON.stringify({baseline,cases:rows.length,failures:failures.length,blocked:blocked.length,approaches:approaches.length}));
-if(!baseline)assert.deepEqual(failures,[]);
+fs.writeFileSync(`${out}/verified.json`,JSON.stringify(report,null,2));
+fs.writeFileSync(`${out}/current-examples.json`,JSON.stringify(examples));
+console.log(JSON.stringify({cases:rows.length,failures:failures.length,blocked:blocked.length,approaches:approaches.length}));
+assert.deepEqual(failures,[]);

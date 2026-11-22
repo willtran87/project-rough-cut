@@ -8,13 +8,20 @@ import {COURSE_MOON_OFFSET} from './course-moon-direction.js';
 // lean toward the moon pick up a cool edge. It follows the moon's own colour
 // and strength (cloud cover, nightfall), adds no light and no texture, and is
 // compiled into each material once, before the first frame.
+// Course materials are shared and survive a world rebuild, and each build makes
+// a new rim. The shader wrapper is installed once per material; a later rim
+// only rebinds its uniforms, so the declarations are never injected twice.
+const SLOTS=new WeakMap();
 export function createCourseMoonRim(moon,{strength=4.4}={}){
  const direction={value:new THREE.Vector3().fromArray(COURSE_MOON_OFFSET).normalize()},color={value:new THREE.Color()},materials=new Set();
  function apply(material){
   if(!material||materials.has(material)||!material.isMeshLambertMaterial)return;
+  let slot=SLOTS.get(material);
+  if(slot){slot.direction=direction;slot.color=color;material.needsUpdate=true;materials.add(material);return;}
+  slot={direction,color};SLOTS.set(material,slot);
   const compile=material.onBeforeCompile,key=material.customProgramCacheKey();
   material.onBeforeCompile=function(shader,renderer){
-   compile.call(this,shader,renderer);shader.uniforms.courseMoonRimDirection=direction;shader.uniforms.courseMoonRimColor=color;
+   compile.call(this,shader,renderer);shader.uniforms.courseMoonRimDirection=slot.direction;shader.uniforms.courseMoonRimColor=slot.color;
    if(!shader.fragmentShader.includes('#include <lights_fragment_end>'))return;
    shader.fragmentShader='uniform vec3 courseMoonRimDirection;\nuniform vec3 courseMoonRimColor;\n'+shader.fragmentShader;
    shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',`{

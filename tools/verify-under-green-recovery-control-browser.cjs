@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/recovery-control',examples=JSON.parse(fs.readFileSync(out+'/examples.json'));
+ const out='output/under-green/recovery-control',examples=JSON.parse(fs.readFileSync('tools/fixtures/under-green/recovery-control-examples.json'));fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const views=[],replays=[],errors=[];let pauseVerified=false;
  try{

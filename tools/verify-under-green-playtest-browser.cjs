@@ -19,7 +19,7 @@ const {chromium}=require('playwright');
   const pausedSeconds=first.attempts[0].activeSeconds;await tick(1000);const paused=await download('paused');assert.equal(paused.attempts[0].activeSeconds,pausedSeconds);
   checks.push('Actual downloaded JSON includes observed play and explicit classification; multiline typing and pause never control the game');
   // Physical windup fixture; outcome and retry still use ordinary input/UI.
-  await p.click('#primary');const fixture=JSON.parse(fs.readFileSync('output/under-green/navigation/service-encounter.json','utf8'));
+  await p.click('#primary');const fixture=JSON.parse(fs.readFileSync('tools/fixtures/under-green/service-encounter.json','utf8'));
   await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},fixture);await p.keyboard.down('w');await tick(1700);await p.keyboard.up('w');assert.equal(await p.evaluate(()=>__underGreen.run.mode),'caught');
   await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});const failed=await download('caught');assert.equal(failed.attempts.at(-1).outcome,'caught');assert(failed.attempts.at(-1).failure);assert.equal(failed.attempts.at(-1).outcomes.captures,1);
   await p.waitForFunction(()=>{advanceTime(0);return !document.body.classList.contains('transition-hold');},null,{timeout:8000});await p.click('#primary');await tick(100);await p.keyboard.press('Escape');await tick(0);const retried=await download('retried');assert.equal(retried.attempts.at(-2).outcome,'caught');/* standard retries start fresh (981accb) */assert.equal(retried.attempts.at(-1).startProgress.checkpoint,0);assert(!retried.attempts.at(-1).startProgress.bypass);

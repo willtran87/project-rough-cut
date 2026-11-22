@@ -32,8 +32,9 @@ assert(!observeJoe(r).visible);assert.equal(heardSide(observeJoe(r)),'');assert(
 r.player.yaw=0;assert.match(urgentThreatCaption(r),/^Joe raises/);assert(!/left|right/.test(urgentThreatCaption(r)));
 checks.push('Centred sound does not disclose front/back position; a visible preparation keeps its visual description');
 const retained=[];
-for(const {name}of JSON.parse(fs.readFileSync('output/under-green/range-captures/diagnostic.json')).reports){
- const {windup}=JSON.parse(fs.readFileSync(`output/under-green/range-captures/${name}.json`)),o=observeJoe(windup),text=urgentThreatCaption(windup,o);
+// Windup states of the four range captures (output/under-green/range-captures), kept as a fixture.
+for(const {name,windup}of JSON.parse(fs.readFileSync('tools/fixtures/under-green/range-capture-windups.json'))){
+ const o=observeJoe(windup),text=urgentThreatCaption(windup,o);
  assert(o.imminent&&!o.visible);assert(Math.abs(o.pan)>.99);assert(text.includes(o.pan<0?'to your left':'to your right'));
  retained.push({name,pan:o.pan,text});
 }

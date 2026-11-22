@@ -1,13 +1,12 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const before=process.argv.includes('--before'),software=process.argv.includes('--software'),fallback=process.argv.includes('--fallback'),variant=process.argv.find(a=>a.startsWith('--variant='))?.split('=')[1]||'standard_review';
+ const before=false,software=process.argv.includes('--software'),fallback=process.argv.includes('--fallback'),variant=process.argv.find(a=>a.startsWith('--variant='))?.split('=')[1]||'standard_review';
  const out='output/level-one-path-wear/'+(before?'before':'after')+(software?'-software':'')+(fallback?'-fallback':'')+'-'+variant;fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:software?['--use-gl=angle','--use-angle=swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']}),page=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/game.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/game.js','utf8').replace('  window.advanceTime = (milliseconds) => {','  window.__terrain={state,resetFirstHole,render,variants:RUN_VARIANTS};\n  window.advanceTime = (milliseconds) => {')}));
- await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync((before?'output/level-one-path-wear/baseline-source':'web')+'/scene-3d.js','utf8')+'\nwindow.__terrainScene=()=>({world,renderer,camera,currentData,lights});'}));
- if(before)for(const file of ['terrain-finish.js','baked-terrain.js'])await page.route('**/'+file+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/level-one-path-wear/baseline-source/'+file,'utf8')}));
+ await page.route('**/scene-3d.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/scene-3d.js','utf8')+'\nwindow.__terrainScene=()=>({world,renderer,camera,currentData,lights});'}));
  if(fallback)await page.route('**/assets/baked/terrain.json',r=>r.fulfill({contentType:'application/json',body:'{}'}));
  const draw=()=>page.evaluate(async()=>{__terrain.render();await RCScene3D.whenPresented();});
  const info=()=>page.evaluate(()=>{const s=RCScene3D.stats(),r=__terrainScene().renderer;return {baked:s.terrainBaked,resolution:s.resolution,draws:s.drawCalls,triangles:s.triangles,memory:r.info.memory,programs:r.info.programs.length,lanterns:s.pathLanterns.pairs.length*2};});
@@ -27,7 +26,7 @@ const {chromium}=require('playwright');
   const fixtures=[['first-lit-path',positions[0]],['second-lit-path',positions[1]],['crossing',{x:0,y:200,yaw:0,pitch:-.5}],['opening',{x:0,y:1,yaw:0,pitch:-.24}]];
   for(const [name,pose]of fixtures){await page.evaluate(p=>Object.assign(__terrain.state.player,p),pose);await draw();await page.screenshot({path:out+'/'+name+'-2560.png'});views.push({name,...await info()});}
   const atlas=await page.evaluate(async()=>{
-   const {world,currentData}=__terrainScene();let image;world.traverse(o=>{if(o.geometry?.parameters?.width===48&&o.geometry?.parameters?.height===130)image=o.material.map.image;});
+   const {world,currentData}=__terrainScene();let image;world.traverse(o=>{for(const mat of [o.material].flat())if(!image&&mat?.map?.image&&mat.map.image.width===1536&&mat.map.image.height===4096)image=mat.map.image;});
    const c=document.createElement('canvas');c.width=1536;c.height=4096;const g=c.getContext('2d',{willReadFrequently:true});if(image instanceof ImageBitmap){g.translate(0,4096);g.scale(1,-1);}g.drawImage(image,0,0);
    const bytes=g.getImageData(0,0,1536,4096).data,hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(n=>n.toString(16).padStart(2,'0')).join('');
    const {pathWearPatches}=await import('./course-path-wear.js');const marks=[...pathWearPatches(currentData,.1152,.16)],counts={};for(const m of marks)counts[m.kind]=(counts[m.kind]||0)+1;

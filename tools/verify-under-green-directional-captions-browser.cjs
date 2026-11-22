@@ -1,8 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/directional-captions';
- const cases=JSON.parse(fs.readFileSync('output/under-green/range-captures/diagnostic.json')).reports.map(({name})=>JSON.parse(fs.readFileSync(`output/under-green/range-captures/${name}.json`)));
+ const out='output/under-green/directional-captions';fs.mkdirSync(out,{recursive:true});
+ const cases=JSON.parse(fs.readFileSync('tools/fixtures/under-green/range-capture-windups.json'));/* name and windup of the four range captures */
  const {step}=await import('../web/under-green-sim.js');
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']}),views=[],results=[],errors=[];
  try{

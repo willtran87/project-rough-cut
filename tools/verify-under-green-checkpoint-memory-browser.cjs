@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 (async()=>{
- const out='output/under-green/checkpoint-one',errors=[],checks=[],views=[];
+ const out='output/under-green/checkpoint-one',errors=[],checks=[],views=[];fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
   const p=await browser.newPage({viewport:{width:2560,height:1600}});{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
@@ -31,7 +31,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   await p.click('#primary');await tick(0);state=await memory();assert(!state.active&&!state.remembered);assert.equal(state.checkpoint,0);assert.equal(state.age,0);
   await p.keyboard.press('Escape');const paused=await memory();await tick(2000);assert.deepEqual(await memory(),paused);
   checks.push('Reload and the real Retry action start fresh without the observed route; pause freezes the result');
-  const encounter=JSON.parse(fs.readFileSync(out+'/restored-encounter.json','utf8'));
+  const encounter=JSON.parse(fs.readFileSync('tools/fixtures/under-green/checkpoint-one-restored-encounter.json','utf8'));
   for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){
    await p.setViewportSize({width,height});await p.evaluate(r=>{__underGreen.run=r;__underGreen.clearInput();advanceTime(0);},encounter);
    const s=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert(s.joe.distance<6);assert.equal(s.mode,'under_green_playing');

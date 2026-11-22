@@ -1,8 +1,8 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/mixed-routes',baseline=process.argv.includes('--baseline');
- const tapes=JSON.parse(fs.readFileSync(out+'/tapes.json'));
+ const out='output/under-green/mixed-routes',baseline=process.argv.includes('--baseline');fs.mkdirSync(out,{recursive:true});
+ const tapes=JSON.parse(fs.readFileSync('tools/fixtures/under-green/mixed-routes-tapes.json'));
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const views=[],replays=[],errors=[];let clearance=null;
  try{

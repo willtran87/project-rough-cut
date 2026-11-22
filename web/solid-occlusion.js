@@ -40,14 +40,18 @@ export function createSolidOcclusion({maxSolids=Infinity}={}){
         view.copy(vertex).applyMatrix4(camera.matrixWorldInverse);
         // Near-plane crossings and inside-cover views fail open.
         if(-view.z<=camera.near*2){valid=false;break;}
-        far=Math.max(far,-view.z);point.copy(vertex).applyMatrix4(projection);points[i].x=point.x;points[i].y=point.y;
+        far=Math.max(far,-view.z);point.copy(vertex).applyMatrix4(projection);
+        // A non-finite projection (seen under software rendering) would stop the
+        // hull from ever popping and overrun the edge buffer: fail open instead.
+        if(!Number.isFinite(point.x)||!Number.isFinite(point.y)){valid=false;break;}
+        points[i].x=point.x;points[i].y=point.y;
       }
       if(!valid)continue;
       points.sort(byPosition);hull.length=0;
       for(const p of points){while(hull.length>=2&&cross(hull.at(-2),hull.at(-1),p)<=0)hull.pop();hull.push(p);}
       const lower=hull.length;
       for(let i=points.length-2;i>=0;i--){const p=points[i];while(hull.length>lower&&cross(hull.at(-2),hull.at(-1),p)<=0)hull.pop();hull.push(p);}hull.pop();
-      if(hull.length<3)continue;
+      if(hull.length<3||hull.length>edges.length)continue;
       for(let i=0;i<hull.length;i++){const a=hull[i],b=hull[(i+1)%hull.length],edge=edges[i];edge.x=a.x;edge.y=a.y;edge.dx=b.x-a.x;edge.dy=b.y-a.y;edge.margin=Math.hypot(edge.dx,edge.dy)*.006;}
       solid.edgeCount=hull.length;solid.far=far+.01;projected.push(solid);
       // Lift each contracted screen-space edge into a world-space half-plane.
