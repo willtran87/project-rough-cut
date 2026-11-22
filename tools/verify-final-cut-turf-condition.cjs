@@ -1,9 +1,8 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const software=process.argv.includes('--software'),before=process.argv.includes('--before'),out=`output/final-cut/turf-condition/${before?'before':software?'software':'hardware'}`;
+const software=process.argv.includes('--software'),out=`output/final-cut/turf-condition/${software?'software':'hardware'}`;
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- if(before)await p.route('**/final-cut-ground-finish.js',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/turf-condition/source/before-final-cut-ground-finish.js','utf8')}));
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook-standing',-2,0,0,50,.08,false],['overlook-cut',-2,0,0,50,.14,true],['west-turf',-16,33,-16,43,.35,true],['west-close',-16,39,-15,41,.8,true],['middle-turf',-3,34,-3,43,.35,true],['service-edge',-20.5,39,-23,41,.65,true],['pump-apron',17.3,39.3,14.5,39,.65,true],['swale-east',17.5,74,13,74,.55,true],['green',0,82,0,88,.38,true]];
  const fixture=async v=>p.evaluate(async([name,x,y,tx,ty,pitch,cut])=>{const {createRun}=await import('./final-cut-sim.js'),{SECTORS}=await import('./final-cut-course.js');const r=createRun({checkpoint:1,openingSeen:true,cut:cut?SECTORS.map(s=>s.id):[]});r.mode='playing';Object.assign(r.rig,{x:39,y:50,phase:'disabled'});Object.assign(r.player,{x,y,yaw:Math.atan2(tx-x,ty-y),pitch});__finalCut.run=r;await advanceTime(0);},v);
@@ -15,6 +14,6 @@ const software=process.argv.includes('--software'),before=process.argv.includes(
  await fixture(fixtures[3]);const still=await p.screenshot();await p.evaluate(()=>{__finalCut.run.player.yaw+=1;__finalCut.draw();__finalCut.run.player.yaw-=1;__finalCut.draw();});assert((await p.screenshot()).equals(still));
  for(const [width,height]of [[1920,1080],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});for(const v of [fixtures[2],fixtures[6]]){await fixture(v);await shot(v[0]+'-'+width);}}
  for(let k=0;k<2;k++)for(const v of fixtures)await fixture(v);const memory=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);for(const v of fixtures)await fixture(v);const after=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);assert.equal(after.geometries,memory.geometries);assert.equal(after.textures,memory.textures);assert.equal(after.groundFinish.physicalHeightChange,0);assert.equal(after.groundFinish.liveTireMarks,false);
- if(!before){assert.equal(after.groundFinish.turfPatches,19);assert.equal(after.groundFinish.soilSource,'ground-earth');}
- assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,before,software,views,errors,resources:{geometries:after.geometries,textures:after.textures}},null,2));console.log(JSON.stringify({passed:true,before,software,views:views.length,errors}));
+ {assert.equal(after.groundFinish.turfPatches,19);assert.equal(after.groundFinish.soilSource,'ground-earth');}
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,errors,resources:{geometries:after.geometries,textures:after.textures}},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,errors}));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

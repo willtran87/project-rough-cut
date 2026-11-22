@@ -6,7 +6,7 @@ import {observeEncounter} from '../web/under-green-observation.js';
 import {DRY_ROUTES,rangeY} from '../web/under-green-layout.js';
 import {solid} from '../web/under-green-course.js';
 
-const out='output/under-green/mixed-routes',tapes=JSON.parse(fs.readFileSync(out+'/tapes.json')),reports=[];
+const out='output/under-green/mixed-routes',tapes=JSON.parse(fs.readFileSync('tools/fixtures/under-green/mixed-routes-tapes.json')),reports=[];fs.mkdirSync(out,{recursive:true});
 for(const tape of tapes){
  const r=structuredClone(tape.initial),plain=structuredClone(tape.initial),recorder=createUnderGreenPlaytest();
  recorder.observe(r,'keyboard');

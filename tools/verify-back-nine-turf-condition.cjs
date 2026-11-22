@@ -1,16 +1,15 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const out=process.argv[2]||'output/back-nine-visual-upgrade/turf-condition/current';
-// Fixed playable viewpoints allow honest before/after comparisons; simulation
+// Fixed playable viewpoints keep captures comparable between runs; simulation
 // is frozen only after entering through the real menu and presentation fence.
-const before=process.argv.includes('--before'),software=process.argv.includes('--software');
+const software=process.argv.includes('--software');
 const views=[['nursery-thin',8,104,.15,true],['range-dry',-29,385,.1,true],['range-thin',-3,476,.1,true],['range-bank',22,505,.18,true],['club-dry',21,712,.1,true],['fairway',20,65,.12,true],['green',25,134,.12,true],['bunker',14,225,.3,true],['maintenance',-10,220,0,false],['beacon',20,65,.1,true,{x:20,y:72,yaw:Math.PI}],['rough',-32,410,.12,true],['flood',-12,220,.1,true]];
 (async()=>{fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync((before?'output/back-nine-visual-upgrade/turf-condition/baseline-source/':'web/')+'back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()',"return window.__turfWorld={scene,camera,renderer,dryMap:typeof dryTurfMap==='undefined'?null:dryTurfMap,conditionField:typeof turfConditionField==='undefined'?null:turfConditionField,update,draw()") }));
+ await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/'+'back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()',"return window.__turfWorld={scene,camera,renderer,dryMap:typeof dryTurfMap==='undefined'?null:dryTurfMap,conditionField:typeof turfConditionField==='undefined'?null:turfConditionField,update,draw()") }));
  await p.route('**/course-render-preparation.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/course-render-preparation.js','utf8').replace('renderer.initTexture(map);','(window.__turfTextureUploads??=[]).push(map.uuid);renderer.initTexture(map);')}));
- if(before)for(const file of ['back-nine-irrigation-art.js','back-nine-mower-scars.js'])await p.route('**/'+file+'*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/turf-condition/baseline-source/'+file,'utf8')}));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1',JSON.stringify({skip:true})));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});
  await p.locator('#primary').click();await p.evaluate(()=>advanceTime(0));
@@ -23,17 +22,17 @@ const views=[['nursery-thin',8,104,.15,true],['range-dry',-29,385,.1,true],['ran
  const dry=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(dry.graphics.irrigationArt.waterVisible[0],false);
  await p.screenshot({path:path.join(out,'flood-dry-2560.jpg'),type:'jpeg',quality:95});samples.push({name:'flood-dry',state:dry});
  for(const [width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();});await p.screenshot({path:path.join(out,`dry-${width}.jpg`),type:'jpeg',quality:95});}
- if(!before){const state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.graphics.turfCondition.areas,17);}
+ {const state=await p.evaluate(()=>JSON.parse(render_game_to_text()));assert.equal(state.graphics.turfCondition.areas,17);}
  const texture=await p.evaluate(async()=>{const Art=await import('./pixel-art.js');return Art.stats();});assert.deepEqual(texture.errors,[]);
  let fieldProbe=null,preparation=null;
- if(!before){
+ {
   await p.keyboard.press('Escape');const time=await p.evaluate(()=>__backNine.run.time);await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>__backNine.run.time),time);await p.locator('#primary').click();
   fieldProbe=await verifyField(p);assert(fieldProbe.maxError<=2/255,JSON.stringify(fieldProbe));
   preparation=await p.evaluate(()=>({fieldPrepared:__turfTextureUploads.includes(__turfWorld.conditionField.uuid),dryPrepared:__turfTextureUploads.includes(__turfWorld.dryMap.uuid),fieldVersion:__turfWorld.conditionField.version}));
   assert.deepEqual(preparation,{fieldPrepared:true,dryPrepared:true,fieldVersion:1});
   await p.keyboard.press('Escape');await p.locator('#restart').click();await p.evaluate(()=>advanceTime(17));const r=await p.evaluate(()=>__backNine.run);assert.equal(r.checkpoint,0);assert(r.cart.y<20);
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,before,software,texture,errors,samples,fieldProbe,preparation},null,2));
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,software,texture,errors,samples,fieldProbe,preparation},null,2));
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
 
 async function verifyField(page){return page.evaluate(async()=>{

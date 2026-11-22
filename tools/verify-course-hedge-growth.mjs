@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHedgeGrowth} from '../web/course-hedge-growth.js';
 import {HEDGE_PROFILE,coverRadiusAtHeight} from '../web/course-cover-profile.js';
-const inventory=JSON.parse(fs.readFileSync('output/level-one-sky-hierarchy/after-native/report.json'));
-const hedges=inventory.inventory.objects.filter(o=>o.kind==='hedge');
+// The Night Order hedge inventory (placement and hulls) recorded by the sky-hierarchy browser check, committed as a fixture.
+const inventory=JSON.parse(fs.readFileSync('tools/fixtures/night-order/hedge-inventory.json'));
+const hedges=inventory.hedges;
 let vertices=0,triangles=0,leaves=0,shoots=0;
 for(const hedge of hedges){
  const {rx,rz}=hedge.hull,seed=-hedge.position[2]/.16;

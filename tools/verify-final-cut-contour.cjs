@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),assert=require('node:assert/strict');
-const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),out='output/final-cut/contours/'+(baseline?'baseline':software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
+const software=process.argv.includes('--software'),out='output/final-cut/contours/'+(software?'software':'hardware');fs.mkdirSync(out,{recursive:true});
 const hook=`window.__contourAudit=()=>{
  const o=courseContour.mesh,a=o.geometry.attributes.position,n=o.geometry.attributes.normal;
  let area=0;for(let i=0;i<a.count;i+=3){const ax=a.getX(i+1)-a.getX(i),az=a.getZ(i+1)-a.getZ(i),bx=a.getX(i+2)-a.getX(i),bz=a.getZ(i+2)-a.getZ(i);area+=Math.abs(ax*bz-az*bx)/2;}
@@ -23,14 +23,14 @@ const hook=`window.__contourAudit=()=>{
 const overhead=`window.__courseOverhead=()=>{camera.position.set(0,85,-48);camera.lookAt(0,0,-48);renderer.render(scene,camera);};`;
 (async()=>{const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],shots=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
- const source=fs.readFileSync(baseline?'output/final-cut/contours/baseline-scene.js':'web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',(baseline?'':hook)+overhead+'await renderer.compileAsync(scene,camera);')}));
+ const source=fs.readFileSync('web/final-cut-scene.js','utf8');await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+overhead+'await renderer.compileAsync(scene,camera);')}));
  const tick=ms=>p.evaluate(ms=>advanceTime(ms),ms),read=()=>p.evaluate(()=>JSON.parse(render_game_to_text())),shot=async name=>{await tick(0);await p.screenshot({path:out+'/'+name+'.png'});shots.push({name,graphics:(await read()).graphics});};
  await p.goto('http://127.0.0.1:4187/final-cut.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await tick(0);await p.click('#primary');await tick(0);
- const audit=baseline?null:await p.evaluate(()=>__contourAudit());if(audit){fs.writeFileSync(out+'/geometry.json',JSON.stringify(audit,null,2));assert(audit.finite);assert.deepEqual(audit.bad,[]);assert.deepEqual(audit.intrusions,[]);assert(Math.abs(audit.area-48*96)<.01);assert(audit.maxHeightError<1e-7);}
+ const audit=await p.evaluate(()=>__contourAudit());if(audit){fs.writeFileSync(out+'/geometry.json',JSON.stringify(audit,null,2));assert(audit.finite);assert.deepEqual(audit.bad,[]);assert.deepEqual(audit.intrusions,[]);assert(Math.abs(audit.area-48*96)<.01);assert(audit.maxHeightError<1e-7);}
  for(const [width,height]of [[2560,1600],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await shot('arrival-'+width);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  await p.setViewportSize({width:2560,height:1600});
  for(const [name,pose]of [['fork',{x:16,y:58,yaw:-.8,pitch:.12}],['green',{x:0,y:82,yaw:0,pitch:.3}],['road',{x:0,y:102,yaw:Math.PI,pitch:.12}]]){await p.evaluate(async pose=>{Object.assign(__finalCut.run.player,pose);await advanceTime(0)},pose);await shot(name);}
  await p.evaluate(()=>__courseOverhead());await p.screenshot({path:out+'/overhead.png'});
  await p.evaluate(async()=>{const {SECTORS}=await import('./final-cut-course.js');__finalCut.run.cut=SECTORS.map(s=>s.id);Object.assign(__finalCut.run.player,{x:-2,y:2.5,yaw:.05,pitch:.2});await advanceTime(0)});await shot('fully-cut');
- assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,baseline,software,audit,shots,errors},null,2));console.log(JSON.stringify({passed:true,audit,shots:shots.length+1,errors}));
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,audit,shots,errors},null,2));console.log(JSON.stringify({passed:true,audit,shots:shots.length+1,errors}));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

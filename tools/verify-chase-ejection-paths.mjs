@@ -5,7 +5,8 @@ import {leaveBrokenCart} from '../web/chase-player.js';
 import {ejectionPathClear} from '../web/chase-ejection-clearance.js';
 import {COURSE,blocked,distance,navigationStats} from '../web/back-nine-course.js';
 import {hullOverlap} from '../web/vehicle-contact.js';
-const fixtures='output/back-nine-experience/wreck-routes',out=process.env.CHASE_QA_OUT||fixtures,before=JSON.parse(fs.readFileSync(fixtures+'/garage-crossings-before.json')),navigationBefore=navigationStats().signature;
+// Ejection paths that once crossed garage posts: a committed regression set.
+const out=process.env.CHASE_QA_OUT||'output/back-nine-experience/wreck-routes',before=JSON.parse(fs.readFileSync('tools/fixtures/back-nine/garage-wreck-crossings.json')),navigationBefore=navigationStats().signature;
 fs.mkdirSync(out,{recursive:true});
 // The garage shutter starts jammed and only ever opens. A cart on or past its
 // line implies it was already raised, so stage that state for those carts.

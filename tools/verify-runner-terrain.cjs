@@ -1,12 +1,11 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
- const software=process.argv.includes('--software'),baseline=process.argv.includes('--baseline'),hz=Number(process.argv.find(a=>a.startsWith('--hz='))?.slice(5)||30),tag=(software?'software':'hardware')+(baseline?'-baseline':'')+(hz===30?'':`-${hz}hz`),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/back-nine-experience/runner-terrain';fs.mkdirSync(out,{recursive:true});
+ const software=process.argv.includes('--software'),hz=Number(process.argv.find(a=>a.startsWith('--hz='))?.slice(5)||30),tag=(software?'software':'hardware')+(hz===30?'':`-${hz}hz`),out=process.argv.find(a=>a.startsWith('--out='))?.slice(6)||'output/back-nine-experience/runner-terrain';fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}');window.__uploads=0;const original=WebGL2RenderingContext.prototype.bufferData;WebGL2RenderingContext.prototype.bufferData=function(...args){__uploads++;return original.apply(this,args);};});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__terrainWorld={scene,camera,renderer,runner,update,draw()')}));
- if(baseline)for(const name of ['runner-gait','chase-runner'])await p.route(`**/${name}.js*`,r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(`${out}/baseline-source/${name}.js`,'utf8')}));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:120000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
  const before=await p.evaluate(()=>({uploads:__uploads,programs:__terrainWorld.renderer.info.programs.length,textures:__terrainWorld.renderer.info.memory.textures}));
  const result=await p.evaluate(async hz=>{
@@ -36,7 +35,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
   return {rows,draws:calls};
  },hz);
  fs.writeFileSync(`${out}/${tag}-grounding.json`,JSON.stringify({result,errors},null,2));console.log(JSON.stringify({tag,rows:result.rows.map(({worst,...r})=>r),errors}));
- if(!baseline)for(const r of result.rows){assert(r.minClearance>-.012,`terrain penetration ${JSON.stringify(r)}`);assert(r.maxPlantedClearance<.035,`floating sole ${JSON.stringify(r)}`);assert(r.maxReach<.025,`leg reach ${JSON.stringify(r)}`);assert(r.maxPlantSlide<.018,`planted slide ${JSON.stringify(r)}`);}
+ for(const r of result.rows){assert(r.minClearance>-.012,`terrain penetration ${JSON.stringify(r)}`);assert(r.maxPlantedClearance<.035,`floating sole ${JSON.stringify(r)}`);assert(r.maxReach<.025,`leg reach ${JSON.stringify(r)}`);assert(r.maxPlantSlide<.018,`planted slide ${JSON.stringify(r)}`);}
  for(const [width,height]of [[2560,1600],[1280,720],[844,390]]){
   await p.setViewportSize({width,height});
   for(const [name,x,y,yaw]of [['uphill',25.2,266,-.7],['downhill',27.5,260,-.7],['range',-12,371,-.4]]){

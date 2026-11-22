@@ -16,7 +16,7 @@ const out=process.argv.find(a=>a.startsWith('--output='))?.slice(9)||'output/und
   const ranges=[];for(let i=0;i<frames.length;i++)if(active[i]){const start=Math.max(0,i-60),end=Math.min(frames.length,i+31),last=ranges.at(-1);if(last&&last.end>=start)last.end=end;else ranges.push({start,end});}
   ranges.forEach((range,i)=>cases.push({name:`${name}-${i}`,frames:frames.slice(range.start,range.end),checkFrom:frames.findIndex((r,index)=>index>=range.start&&active[index])-range.start}));
  }
- for(const tape of JSON.parse(fs.readFileSync('output/under-green/close-recovery/current-examples.json'))){
+ for(const tape of JSON.parse(fs.readFileSync('tools/fixtures/under-green/close-recovery-examples.json'))){
   const r=structuredClone(tape.initial),frames=[snapshot(r)];for(const input of tape.inputs||Array.from({length:tape.frames.length},()=>({}))){step(r,input,tape.dt);frames.push(snapshot(r));}
   assert.equal(r.mode,tape.final.mode);assert.equal(r.waterHits,tape.final.waterHits);
   cases.push({name:`recovery-${tape.name}`,frames,checkFrom:0});

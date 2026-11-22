@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const software=process.argv.includes('--software'),before=process.argv.includes('--before');
-const out=`output/final-cut/refuge-lighting/${before?'before':software?'software':'hardware'}`;
+const software=process.argv.includes('--software');
+const out=`output/final-cut/refuge-lighting/${software?'software':'hardware'}`;
 const hook=`
 window.__refugeAudit={
  culling(){
@@ -30,16 +30,16 @@ window.__refugeAudit={
 const base=(process.env.GAME_URL||'http://127.0.0.1:4187').replace(/\/$/,'');
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:[software?'--use-angle=swiftshader':'--use-angle=d3d11','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],views=[],samples=[],culling=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.setDefaultTimeout(120000);p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- if(before){for(const f of ['final-cut-scene.js','final-cut-estate-detail.js'])await p.route('**/'+f,r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('output/final-cut/refuge-lighting/source/before-'+f,'utf8')}));}
- else {const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));}
+
+ {const source=fs.readFileSync('web/final-cut-scene.js','utf8');assert(source.includes('await renderer.compileAsync(scene,camera);'));await p.route('**/final-cut-scene.js',r=>r.fulfill({contentType:'text/javascript',body:source.replace('await renderer.compileAsync(scene,camera);',hook+'await renderer.compileAsync(scene,camera);')}));}
  // Chapters are gated by campaign progress: unlock the finale and skip its opening story before the page loads.
  await p.addInitScript(()=>{localStorage.setItem('rough-cut.campaign-progress.v1',JSON.stringify({version:1,revision:9,entered:{'night-order':true,'back-nine':true,'under-green':true,'final-cut':true},completed:{'night-order':true,'back-nine':true,'under-green':true},exits:{shed:true,drain:true},current:'final-cut',lastExit:'drain',finalRoute:'drain'}));localStorage.setItem('rough-cut.final-cut-story.v1',JSON.stringify({skipIntro:true}));});
  await p.goto(base+'/final-cut.html?test');await p.waitForFunction(()=>window.__finalCut&&JSON.parse(render_game_to_text()).ready);
  const fixtures=[['overlook',-2,0,0,50,.08],['bunker-entry',-3.3,19.5,-5.5,15,.22],['pump-entry',18,38,14,38,.25],['pavilion-entry',-7.5,86,-11,86,.25],['pump-oblique',18,40.5,14.5,38,.15],['fixture-close',16,38,14.73,38,-.38]];
  const fixture=async v=>p.evaluate(async([name,x,y,tx,ty,pitch])=>{const {createRun}=await import('./final-cut-sim.js');const r=createRun({checkpoint:1,openingSeen:true});r.mode='playing';Object.assign(r.rig,{x:39,y:50,phase:'disabled'});Object.assign(r.player,{x,y,yaw:Math.atan2(tx-x,ty-y),pitch});__finalCut.run=r;await advanceTime(0);},v);
  const shot=async name=>{await p.screenshot({path:`${out}/${name}.png`});views.push(await p.evaluate(name=>{const s=JSON.parse(render_game_to_text());return{name,player:s.player,graphics:s.graphics,viewport:[innerWidth,innerHeight]};},name));assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));};
- for(const v of fixtures){await fixture(v);await shot(v[0]);if(!before){const a=await p.evaluate(()=>__refugeAudit.culling());culling.push({name:v[0],...a});assert.equal(a.changed,0,'Culling must match all three lamps exactly');}}
- if(!before){
+ for(const v of fixtures){await fixture(v);await shot(v[0]);{const a=await p.evaluate(()=>__refugeAudit.culling());culling.push({name:v[0],...a});assert.equal(a.changed,0,'Culling must match all three lamps exactly');}}
+ {
   for(const [id,x,y]of [['bunker',-5.5,15],['pump',14.5,38],['pavilion',-11,86]]){
    await fixture([id,x+.95,y+1.5,x+.65,y+.6,.95]);const lit=await p.evaluate(points=>__refugeAudit.probe(points),[[x+.65,.071,-y-.6]]);assert(lit[0].inFrame);assert(lit[0].on-lit[0].off>8,`${id} apron illumination`);
    await fixture([id+'-inside',x-2.5,y,x-.5,y+2.6,.55]);const shadow=await p.evaluate(points=>__refugeAudit.probe(points),[[x-.5,.071,-y-2.6]]);samples.push({id,lit,shadow});console.log(JSON.stringify({id,lit:lit[0].on-lit[0].off,shadow:shadow[0].on-shadow[0].off}));assert(shadow[0].inFrame);assert(shadow[0].unoccluded-shadow[0].off>1,`${id} blocked sample must be in light cone`);assert(Math.abs(shadow[0].on-shadow[0].off)<.3,`${id} masonry must block the lamp`);
@@ -52,6 +52,6 @@ const base=(process.env.GAME_URL||'http://127.0.0.1:4187').replace(/\/$/,'');
  for(const [width,height]of [[1920,1080],[1280,720],[844,390],[390,844]]){await p.setViewportSize({width,height});await fixture(fixtures[2]);await shot('pump-entry-'+width);}
  await fixture(fixtures[2]);const start=await p.evaluate(()=>JSON.parse(render_game_to_text()).player);await p.keyboard.down('w');await p.evaluate(()=>advanceTime(1000));await p.keyboard.up('w');const end=await p.evaluate(()=>JSON.parse(render_game_to_text()).player);assert(start.x-end.x>3,'Real movement through lit doorway');await shot('doorway-traversal');
  for(let k=0;k<2;k++)for(const v of fixtures)await fixture(v);const memory=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);for(const v of fixtures)await fixture(v);const after=await p.evaluate(()=>JSON.parse(render_game_to_text()).graphics);assert.equal(after.geometries,memory.geometries);assert.equal(after.textures,memory.textures);
- let benchmark=null;if(!before){await p.setViewportSize({width:1280,height:720});await fixture(fixtures[2]);benchmark=await p.evaluate(()=>__refugeAudit.benchmark());}
- assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,before,software,views,samples,culling,benchmark,errors,resources:{geometries:after.geometries,textures:after.textures}},null,2));console.log(JSON.stringify({passed:true,before,software,views:views.length,benchmark,errors}));
+ let benchmark=null;{await p.setViewportSize({width:1280,height:720});await fixture(fixtures[2]);benchmark=await p.evaluate(()=>__refugeAudit.benchmark());}
+ assert.deepEqual(errors,[]);fs.writeFileSync(out+'/report.json',JSON.stringify({passed:true,software,views,samples,culling,benchmark,errors,resources:{geometries:after.geometries,textures:after.textures}},null,2));console.log(JSON.stringify({passed:true,software,views:views.length,benchmark,errors}));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

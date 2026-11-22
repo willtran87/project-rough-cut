@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {createRun,step,snapshot,readSave} from '../web/under-green-sim.js';
 import {captureFailure,retryProgress} from '../web/under-green-outcome.js';
 const out='output/under-green/outcome';fs.mkdirSync(out,{recursive:true});
-const fixture=JSON.parse(fs.readFileSync('output/under-green/navigation/service-encounter.json','utf8'));
+const fixture=JSON.parse(fs.readFileSync('tools/fixtures/under-green/service-encounter.json','utf8'));
 const cases=[],advance=(r,n,input={})=>{for(let i=0;i<n&&r.mode==='playing';i++)step(r,input);};
 for(const crouch of [false,true]){
  const r=structuredClone(fixture);advance(r,100,{crouch});assert.equal(r.mode,'caught');assert.equal(r.failure.kind,crouch?'crouched':'sweep');assert.match(r.failure.advice,/sideways/);cases.push({name:crouch?'crouched':'ordinary',failure:r.failure});

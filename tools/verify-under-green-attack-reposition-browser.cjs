@@ -1,7 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 (async()=>{
- const out='output/under-green/range-recovery',tapes=JSON.parse(fs.readFileSync(out+'/reposition-tapes.json'));
+ const out='output/under-green/range-recovery',tapes=JSON.parse(fs.readFileSync('tools/fixtures/under-green/range-recovery-reposition-tapes.json'));fs.mkdirSync(out,{recursive:true});
  const browser=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],views=[],geometry=[];
  try{

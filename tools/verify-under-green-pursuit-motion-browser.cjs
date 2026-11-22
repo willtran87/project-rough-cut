@@ -7,7 +7,14 @@ const out='output/under-green/pursuit-motion/browser';fs.mkdirSync(out,{recursiv
   const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],poses=[],responses=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));
   await p.goto('http://127.0.0.1:4187/under-green.html?test');await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
-  const reports=JSON.parse(fs.readFileSync('output/under-green/pursuit-motion/after/report.json')).results;
+  // The same runs probe-under-green-pursuit-motion.mjs writes to after/report.json (a frame every third step),
+  // built here from the current simulation so no earlier run is needed.
+  const {createRun,step}=await import('../web/under-green-sim.js'),reports=[];
+  for(const [name,jx,jy,px,py,seconds,moveWest]of [['diagonal-east',-3,7,3,13,16,false],['diagonal-west',3,7,-3,13,16,false],['pump-corner',-17,37,-24,46,24,false],['lost-service-trail',0,34,-4,40,24,true]]){
+   const r=createRun();r.mode='playing';r.time=10;r.messageTime=0;Object.assign(r.player,{x:px,y:py,yaw:-Math.PI/2,grace:0});Object.assign(r.joe,{x:jx,y:jy,yaw:Math.atan2(px-jx,py-jy),phase:'walk',last:{x:px,y:py}});
+   const frames=[];for(let i=0;i<seconds*60&&r.mode==='playing';i++){step(r,moveWest&&i<120?{forward:1}:{});if(i%3===0){const {telemetry,...state}=r;frames.push(structuredClone(state));}}
+   reports.push({name,frames});
+  }
   for(const row of reports){
    // Render continuous simulation samples, not invented actor poses.
    for(let i=0;i<row.frames.length;i+=8){

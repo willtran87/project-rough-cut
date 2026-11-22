@@ -1,12 +1,11 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const out=process.argv[2],software=process.argv.includes('--software'),before=process.argv.includes('--before');if(!out)throw Error('Output directory required');
+const out=process.argv[2],software=process.argv.includes('--software');if(!out)throw Error('Output directory required');
 const cases=[{name:'idle-inhale',idle:2},{name:'idle-exhale',idle:3.7},{name:'running',run:1},{name:'first-recovery',run:1,stop:.1},{name:'second-recovery',run:1,stop:.3},{name:'settled',run:1,stop:.6},{name:'reverse-stop',run:1,stop:.1,reverse:true},{name:'slope-stop',run:1,stop:.3,x:25,y:260,yaw:-.7},{name:'reduced',run:1,stop:.3,reduced:true}];
 cases.push({name:'brake-detail',run:1,stop:.1,inspect:true},{name:'settled-detail',run:1,stop:.6,inspect:true},{name:'restart-detail',run:1,stop:.07,resume:.07,inspect:true},{name:'breath-detail',idle:2,inspect:true});
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__playerWorld={runner,scene,camera,renderer,update,draw()')}));
- if(before)for(const name of ['chase-runner','runner-gait','back-nine-headlights'])await p.route('**/'+name+'.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('output/back-nine-visual-upgrade/player-motion/baseline-source/'+name+'.js','utf8')}));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
  for(const spec of cases){
   const sample=await p.evaluate(async spec=>{
@@ -22,7 +21,7 @@ cases.push({name:'brake-detail',run:1,stop:.1,inspect:true},{name:'settled-detai
  }
  for(const[width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();__playerWorld.update(__backNine.run,{reducedMotion:true});__playerWorld.draw();});await p.screenshot({path:path.join(out,'reduced-'+width+'.jpg'),type:'jpeg',quality:93});}
  let contract=null;
- if(!before){
+ {
   contract=await p.evaluate(async()=>{
    const T=await import('./vendor/three/three.module.js'),{terrainHeight}=await import('./course-terrain.js'),runner=__playerWorld.runner,boots=[],v=new T.Vector3(),expect=new T.Vector3();runner.root.traverse(o=>{if(o.name==='boot')boots.push(o);});
    let worstPlant=null,samples=0,minClearance=Infinity,maxPlantedClearance=0,maxReach=0,maxPlantedSlide=0,maxDuplicate=0,meshes=0;runner.root.traverse(o=>{if(o.isMesh)meshes++;});
@@ -51,5 +50,5 @@ cases.push({name:'brake-detail',run:1,stop:.1,inspect:true},{name:'settled-detai
   });
   await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.stringify(__backNine.run));await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>JSON.stringify(__backNine.run)),frozen);await p.click('#primary');await p.keyboard.press('Escape');await p.click('#restart');await p.evaluate(()=>advanceTime(17));assert.equal(await p.evaluate(()=>__backNine.run.checkpoint),0);
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,before,software,samples,contract,errors},null,2));
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,software,samples,contract,errors},null,2));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

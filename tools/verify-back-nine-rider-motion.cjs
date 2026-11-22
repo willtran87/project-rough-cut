@@ -1,10 +1,10 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const out=process.argv[2],software=process.argv.includes('--software'),before=process.argv.includes('--before');if(!out)throw Error('Output directory required');
+const out=process.argv[2],software=process.argv.includes('--software');if(!out)throw Error('Output directory required');
 const cases=[{name:'idle'},{name:'turn-left',turn:-1.4,speed:12},{name:'turn-right',turn:1.4,speed:12},{name:'braking',speed:14,brake:12},{name:'brace',load:1,speed:3},{name:'reverse',turn:.8,speed:-2.5},{name:'head-right',target:5},{name:'reduced',turn:1.4,speed:12,load:1,reduced:true}];
 (async()=>{fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true,args:software?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:['--use-angle=d3d11','--ignore-gpu-blocklist']});try{
  const p=await b.newPage({viewport:{width:2560,height:1600}}),errors=[],samples=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync((before?'output/back-nine-visual-upgrade/rider-motion/baseline-source/':'web/')+'back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__riderWorld={rider,mower,scene,camera,renderer,update,draw()')}));
+ await p.route('**/back-nine-scene.js*',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync('web/back-nine-scene.js','utf8').replace('return {scene,camera,update,draw()','return window.__riderWorld={rider,mower,scene,camera,renderer,update,draw()')}));
  await p.addInitScript(()=>localStorage.setItem('rough-cut.back-nine-opening.v1','{"skip":true}'));
  await p.goto('http://127.0.0.1:4187/back-nine.html?test');await p.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:180000});await p.click('#primary');await p.evaluate(()=>advanceTime(0));
  for(const spec of (process.argv.includes('--reduced')?cases.filter(s=>s.reduced):cases)){
@@ -20,10 +20,10 @@ const cases=[{name:'idle'},{name:'turn-left',turn:-1.4,speed:12},{name:'turn-rig
   await p.screenshot({path:path.join(out,spec.name+'-2560.jpg'),type:'jpeg',quality:94});samples.push(result);console.log('captured',spec.name);
  }
  await p.keyboard.press('Escape');await p.locator('#chase-reduced').evaluate(e=>{e.checked=true;e.dispatchEvent(new Event('change'));});await p.click('#primary');await p.keyboard.down('KeyQ');await p.evaluate(()=>advanceTime(17));assert.equal(await p.evaluate(()=>__backNine.run.lookBack),true);
- for(const[width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();});await p.screenshot({path:path.join(out,'reduced-'+width+'.jpg'),type:'jpeg',quality:93});if(!before){assert.equal(await p.evaluate(()=>__riderWorld.stats().riderMotion.breath),0);assert.equal(await p.evaluate(()=>__riderWorld.stats().riderCulling.rejected),0);}}
+ for(const[width,height]of [[1280,720],[390,844]]){await p.setViewportSize({width,height});await p.evaluate(async()=>{__backNine.render();await __backNine.whenPresented();});await p.screenshot({path:path.join(out,'reduced-'+width+'.jpg'),type:'jpeg',quality:93});{assert.equal(await p.evaluate(()=>__riderWorld.stats().riderMotion.breath),0);assert.equal(await p.evaluate(()=>__riderWorld.stats().riderCulling.rejected),0);}}
  await p.keyboard.up('KeyQ');
  let contract=null;
- if(!before){
+ {
   contract=await p.evaluate(async()=>{
    const T=await import('./vendor/three/three.module.js'),{CHASE_RIDER_CENTER,CHASE_RIDER_RADIUS}=await import('./chase-rider-culling.js'),{createRun}=await import('./back-nine-sim.js'),w=__riderWorld,meshes=[],point=new T.Vector3(),center=new T.Vector3(...CHASE_RIDER_CENTER);w.rider.traverseVisible(o=>{if(o.isSkinnedMesh)meshes.push(o);});
    let radius=0,points=0,poses=0,grip=0;const r=createRun(0,0,713);r.mode='driving';r.departure.phase='finished';Object.assign(r.cart,{x:27,y:65,speed:0});Object.assign(r.joe,{x:20,y:55});
@@ -46,5 +46,5 @@ const cases=[{name:'idle'},{name:'turn-left',turn:-1.4,speed:12},{name:'turn-rig
   });
   await p.keyboard.press('Escape');const frozen=await p.evaluate(()=>JSON.stringify(__backNine.run));await p.evaluate(()=>advanceTime(500));assert.equal(await p.evaluate(()=>JSON.stringify(__backNine.run)),frozen);await p.click('#primary');await p.keyboard.press('Escape');await p.click('#restart');await p.evaluate(()=>advanceTime(17));assert.equal(await p.evaluate(()=>__backNine.run.checkpoint),0);
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,software,before,samples,contract,errors},null,2));
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({passed:true,software,samples,contract,errors},null,2));
  }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

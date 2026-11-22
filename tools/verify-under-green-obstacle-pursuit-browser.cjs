@@ -7,7 +7,10 @@ const out='output/under-green/obstacle-pursuit/browser';fs.mkdirSync(out,{recurs
   const p=await browser.newPage({viewport:{width:2560,height:1600}}),errors=[],poses=[],views=[];{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(p);await fx.skipStories(p);}
   p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:4187/under-green.html?test');
   await p.waitForFunction(()=>window.__underGreen&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await p.evaluate(()=>advanceTime(0));await p.click('#primary');
-  const tapes=JSON.parse(fs.readFileSync('output/under-green/obstacle-pursuit/frames.json'));
+  // The same tapes verify-under-green-obstacle-pursuit.mjs writes to frames.json: each stall fixture stepped
+  // for up to 20 s with no input, keeping every sixth step. Built here so no earlier run is needed.
+  const {step}=await import('../web/under-green-sim.js'),{stalls}=JSON.parse(fs.readFileSync('tools/fixtures/under-green-obstacle-pursuit.json'));
+  const tapes=stalls.map((fixture,index)=>{const r=structuredClone(fixture.initial),frames=[];for(let i=0;i<1200&&r.mode==='playing';i++){step(r,{});if(i%6===0)frames.push(structuredClone(r));}return {index,obstacle:fixture.row.obstacle,initial:fixture.initial,frames};});
   for(const tape of tapes)for(let i=0;i<tape.frames.length;i+=4){
    const state=tape.frames[i];if(state.joe.phase==='guard'&&state.elapsed>9)continue;
    const result=await p.evaluate(state=>{__underGreen.run=state;__underGreen.clearInput();advanceTime(0);return {geometry:__underGreen.inspectJoeGeometry(),footing:__underGreen.inspectJoeFooting()};},state);

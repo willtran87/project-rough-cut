@@ -1,9 +1,9 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const baseline=process.argv.includes('--baseline'),out='output/final-cut-spatial-recovery',base='http://127.0.0.1:4187',key='rough-cut.spatial.v1';
+const out='output/final-cut-spatial-recovery',base='http://127.0.0.1:4187',key='rough-cut.spatial.v1';
 const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
 (async()=>{
- fs.mkdirSync(out,{recursive:true});if(baseline)assert(!fs.existsSync(out+'/baseline.json'));
+ fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({headless:true,args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
  const errors=[],views=[],checks=[];
  try{
@@ -20,11 +20,11 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
   await p.evaluate(()=>rejectSpatial=true);await show('resolution');await control('resolution').fill('0.75');await show('controller');await control('controller').fill('1.5');await show('acceleration');await control('acceleration').check();await tick(0);
   const storedDuring=await p.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),session=await p.evaluate(()=>__finalCut.spatialStore.get());
   assert.equal(storedDuring.resolution,1);assert.equal(storedDuring.controller,1);assert.equal(storedDuring.acceleration,false);assert.equal(session.resolution,.75);assert.equal(session.controller,1.5);assert.equal(session.acceleration,true);
-  const warning=await status.count()?await status.innerText():'';if(baseline)assert.equal(warning,'');else assert.match(warning,/session.*storage is unavailable/i);
+  const warning=await status.count()?await status.innerText():'';assert.match(warning,/session.*storage is unavailable/i);
   near((await read()).graphics.width/before.graphics.width,.75,'actual scene resolution');
   // A successful write in another preference group cannot hide this failure.
-  await require('./lib/legacy-fc-settings.cjs').showSetting(p,'muted');await p.locator('[data-campaign=muted]').check();if(!baseline)assert.equal(await status.innerText(),warning);
-  if(!baseline)for(const [width,height]of [[2560,1600],[1280,720]]){await p.setViewportSize({width,height});await show('resolution');await status.scrollIntoViewIfNeeded();const bounds=await status.boundingBox();assert(bounds.y>=0&&bounds.y+bounds.height<=height);await p.screenshot({path:`${out}/warning-${width}.png`});views.push({width,height,bounds});}
+  await require('./lib/legacy-fc-settings.cjs').showSetting(p,'muted');await p.locator('[data-campaign=muted]').check();assert.equal(await status.innerText(),warning);
+  for(const [width,height]of [[2560,1600],[1280,720]]){await p.setViewportSize({width,height});await show('resolution');await status.scrollIntoViewIfNeeded();const bounds=await status.boundingBox();assert(bounds.y>=0&&bounds.y+bounds.height<=height);await p.screenshot({path:`${out}/warning-${width}.png`});views.push({width,height,bounds});}
   await p.locator('#primary').click();await p.evaluate(async()=>{const {createRun}=await import('./final-cut-sim.js'),r=createRun();r.mode='playing';Object.assign(r.player,{x:16,y:8,yaw:0});__finalCut.run=r;});await tick(0);
   await p.keyboard.down('w');await tick(1000/60);await p.keyboard.up('w');near((await read()).player.y-8,.0336,'unsaved easing applies');await tick(100);
   await p.evaluate(()=>{window.recoveryPad={connected:true,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};navigator.getGamepads=()=>[recoveryPad];});await tick(1000/60);const yaw=(await read()).player.yaw;
@@ -33,9 +33,9 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
   // Peer writes a different field before recovery; pending fields must merge.
   const peer=await context.newPage();await peer.route('**/settings-peer',r=>r.fulfill({contentType:'text/html',body:'<title>Preference peer</title>'}));await peer.goto(base+'/settings-peer');await peer.evaluate(key=>{const r=JSON.parse(localStorage.getItem(key));r.fov=73;r.extension.peer=true;localStorage.setItem(key,JSON.stringify(r));},key);await peer.close();await p.bringToFront();
   await p.evaluate(()=>rejectSpatial=false);await show('touch');await control('touch').fill('1.25');const recovered=await p.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
-  assert.equal(recovered.resolution,.75);assert.equal(recovered.controller,1.5);assert.equal(recovered.acceleration,true);assert.equal(recovered.fov,73);assert.deepEqual(recovered.extension,{keep:42,peer:true});if(!baseline)assert.equal(await status.innerText(),'');
+  assert.equal(recovered.resolution,.75);assert.equal(recovered.controller,1.5);assert.equal(recovered.acceleration,true);assert.equal(recovered.fov,73);assert.deepEqual(recovered.extension,{keep:42,peer:true});assert.equal(await status.innerText(),'');
   checks.push('Recovery flushes all pending spatial edits and preserves unrelated peer fields');
-  if(!baseline){
+  {
    await p.reload();await ready();await tick(0);await p.locator('#comfort>summary').click();assert(await control('acceleration').isChecked());assert.equal(await control('controller').inputValue(),'1.5');assert.equal(await control('fov').inputValue(),'73');
    await p.evaluate(()=>{rejectSpatial=true;rejectSpatialRead=true;});await show('mouse');await control('mouse').fill('1.75');assert.match(await status.innerText(),/session/);assert.equal(await p.evaluate(()=>__finalCut.spatialStore.get().mouse),1.75);
    await p.evaluate(()=>{rejectSpatial=false;rejectSpatialRead=false;});await show('fov');await control('fov').fill('70');assert.equal(await status.innerText(),'');assert.equal(await p.evaluate(key=>JSON.parse(localStorage.getItem(key)).mouse,key),1.75);
@@ -44,6 +44,6 @@ const near=(a,b,label)=>assert(Math.abs(a-b)<1e-5,`${label}: ${a} != ${b}`);
     const tc=await b.newContext({viewport:{width,height},hasTouch:true,isMobile:true}),t=await tc.newPage();{const fx=require('./lib/campaign-fixture.cjs');await fx.unlockChapters(tc);await fx.skipStories(tc);}t.on('pageerror',e=>errors.push(e.message));await t.goto(base+'/final-cut.html?test');await t.waitForFunction(()=>window.render_game_to_text&&JSON.parse(render_game_to_text()).ready,null,{timeout:90000});await t.evaluate(()=>advanceTime(0));await t.locator('#comfort>summary').tap();await t.evaluate(()=>{const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k==='rough-cut.spatial.v1')throw new DOMException('QA failure','QuotaExceededError');return set.call(this,k,v);};});await require('./lib/legacy-fc-settings.cjs').showSetting(t,'[data-spatial=acceleration]');await t.locator('[data-spatial=acceleration]').check();const s=t.locator('#spatial-settings-status');assert.match(await s.innerText(),/session/);await s.scrollIntoViewIfNeeded();const bounds=await s.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width&&bounds.y>=0&&bounds.y+bounds.height<=height);await t.screenshot({path:`${out}/warning-touch-${width}.png`});views.push({width,height,touch:true,bounds});await tc.close();
    }
   }
-  assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/${baseline?'baseline':'verified'}.json`,JSON.stringify({baseline,warning,storedDuring,session,recovered,checks,views,errors},null,2));console.log(JSON.stringify({baseline,warning,checks,views:views.length,errors}));
+  assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/verified.json`,JSON.stringify({warning,storedDuring,session,recovered,checks,views,errors},null,2));console.log(JSON.stringify({warning,checks,views:views.length,errors}));
  }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
