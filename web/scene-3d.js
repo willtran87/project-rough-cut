@@ -568,6 +568,9 @@ function build(data){
   const scene=world,start=performance.now(),cancelled=()=>world!==scene;
   (async()=>{
   loadProgress(0.05);await yieldPreparation(cancelled);if(cancelled())return;
+  // Joe's skinned model loads and decodes off the critical path while the
+  // course is built; lighting is still applied only after it is ready.
+  const joeEarly=!data.calibration;if(joeEarly)buildJoe();
   const terrainStart=performance.now();await buildTerrain(data,data.calibration,cancelled);stats.terrainBuildMs=performance.now()-terrainStart;
   loadProgress(0.22);await yieldPreparation(cancelled);if(cancelled())return;
   let constructionSlice=performance.now();
@@ -602,7 +605,7 @@ function build(data){
     if(pixelVolume)for(const head of irrigation)pixelWorld.irrigationHead(head);
     sprinklerSpray=createSprinklerSpray(world,irrigation,{software:softwareRenderer});
     if(pixelVolume)nightAir=createNightAir(world,{software:softwareRenderer,scale:SCALE,xScale:X_SCALE,trees:treeSites,bounds:{x:data.bounds.maxX*X_SCALE,z:data.bounds.maxY*SCALE},blockers:data.obstacles.filter(o=>o.blocks&&!o.id.includes('pond')&&!o.lightRadius).map(o=>({x:o.x*X_SCALE,z:-o.y*SCALE,rx:(o.radiusX||o.radius)*SCALE,rz:(o.radiusY||o.radius)*SCALE,box:o.shape==='box'}))});
-    buildJoe();
+    if(!joeEarly)buildJoe();
     if(pixelVolume)courseVisualDetail=createCourseVisualDetail(world,data,{scale:SCALE,xScale:X_SCALE,software:softwareRenderer,wind:courseWind});
     const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(3,16,10),new THREE.MeshBasicMaterial({color:0xc9d7d1}));moonMesh.scale.setScalar(.5);moonMesh.position.set(-30,38,-48);sky.add(moonMesh);
   }else pickups.marker=station({...data.marker,label:'FINISH'},'bell');
@@ -657,18 +660,22 @@ function build(data){
     if(renderer.shadowMap.enabled&&moonShadow&&!softwareRenderer){const shadowLights=[];scene.traverse(o=>{if(o.isLight&&o.shadow&&(o.castShadow||o===moonShadow))shadowLights.push(o);});shadowCasters=createShadowCasterMerge(THREE,staticRoot,shadowLights);staticMerge?.setRestoreDepth(()=>shadowCasters.depthMaterial());renderer.shadowMap.needsUpdate=true;}
     pixelWorld?.updateCulling(camera);updateGlows();
     const backdrop=parallax,target=direct?sceneTarget:null;
+    // Hardware GPUs absorb small geometry uploads quickly: wait for the GPU
+    // every 8 MiB instead of after every 2 MiB slice (slices are unchanged and
+    // still separated by a task yield). Software rendering waits per slice.
+    const pacing=softwareRenderer?{}:{drainBytes:8*1024*1024};
     loadProgress(0.68);if(backdrop)await prepareRendering(renderer,backdrop.scene,backdrop.camera,backdrop.scene,target,cancelled);
     await prepareRendering(renderer,scene,camera,scene,target,cancelled);
     const lightVariants=pixelWorld?.localLighting?.preparation;
     if(lightVariants){
       await prepareRendering(renderer,lightVariants,camera,scene,target,cancelled);
-      await prepareStaticBuffers(renderer,lightVariants,camera,scene,target,cancelled);
+      await prepareStaticBuffers(renderer,lightVariants,camera,scene,target,cancelled,pacing);
     }
     // The scene target and the display framebuffer use different shader
     // variants. Prepare the final scene/HUD compositor before the first view.
     loadProgress(0.88);if(direct)await prepareRendering(renderer,compositor,screenCamera,compositor,null,cancelled);
-    if(pixelEffects)await prepareStaticBuffers(renderer,pixelEffects.preparation,camera,scene,target,cancelled);
-    await prepareStaticBuffers(renderer,staticRoot,camera,scene,target,cancelled);
+    if(pixelEffects)await prepareStaticBuffers(renderer,pixelEffects.preparation,camera,scene,target,cancelled,pacing);
+    await prepareStaticBuffers(renderer,staticRoot,camera,scene,target,cancelled,pacing);
     while(joeModel&&!joeModel.stats().ready&&!joeModel.stats().error){if(cancelled())return;await yieldPreparation(cancelled);}
     if(cancelled())return;
     // Allocate geometry buffers and the shadow framebuffer before simulation
