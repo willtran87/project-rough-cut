@@ -21,7 +21,9 @@ export function createFinalCutAudio(preferences,initialRun){
    gain.gain.value=0;source.connect(filter);filter.connect(gain);gain.connect(pan);pan.connect(buses[bus]);source.start();voices[name]={source,filter,gain,pan,type};stats.sources++;
   }speech=createFinalCutVoice(ctx,buses.effects,speechAssets);footsteps=createFinalCutFootsteps(ctx,voices.step);ctx.resume();
  }
- const value=(param,v,t=.05)=>param.setTargetAtTime(v,ctx.currentTime,t);
+ // A repeated target with the same time constant continues the same curve,
+ // so only changed targets are scheduled (most stay constant frame to frame).
+ const targets=new Map(),value=(param,v,t=.05)=>{const last=targets.get(param);if(last&&last.t===t&&Math.abs(last.v-v)<=1e-4)return;targets.set(param,{v,t});param.setTargetAtTime(v,ctx.currentTime,t);};
  function update(r){
   if(!ctx)return;const prefs=preferences(),live=['playing','aftermath'].includes(r.mode);stats.muted=!!prefs.muted;
   const score=scoreFrame(r);stats.score=score;
@@ -36,7 +38,7 @@ export function createFinalCutAudio(preferences,initialRun){
    const id='capture:'+r.captures;
    if(!heard.has(id)){
     heard.add(id);stats.events++;stats.captureKind=r.failure?.kind;stats.captureImpacts=(stats.captureImpacts||0)+1;
-    for(const v of Object.values(voices)){v.gain.gain.cancelScheduledValues(ctx.currentTime);v.gain.gain.setValueAtTime(0,ctx.currentTime);}
+    targets.clear();for(const v of Object.values(voices)){v.gain.gain.cancelScheduledValues(ctx.currentTime);v.gain.gain.setValueAtTime(0,ctx.currentTime);}
     const cutting=r.failure?.kind==='cutting-bank';
     for(const [name,level,hz,duration]of [['crack',.12,cutting?1700:420,.14],['scrape',.09,cutting?850:180,cutting?.38:.26]]){
      const v=voices[name];v.filter.frequency.setValueAtTime(hz,ctx.currentTime);v.pan.pan.setValueAtTime((r.failure?.side||1)*.3,ctx.currentTime);

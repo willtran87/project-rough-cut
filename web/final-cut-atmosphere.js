@@ -73,7 +73,9 @@ function coneBuilder(){
   }
  },build(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(position,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(normal,3));g.setAttribute('along',new THREE.Float32BufferAttribute(along,1));g.setAttribute('tint',new THREE.Float32BufferAttribute(tint,3));g.setAttribute('gain',new THREE.Float32BufferAttribute(gain,3));g.setIndex(index);g.computeBoundingSphere();return g;}};
 }
-const additive=(vertexShader,fragmentShader,uniforms,extra={})=>new THREE.ShaderMaterial({vertexShader,fragmentShader,uniforms,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,...extra});
+// Additive light is order-independent, so both faces draw in one pass
+// (three.js otherwise draws back then front and rebuilds the program key twice).
+const additive=(vertexShader,fragmentShader,uniforms,extra={})=>new THREE.ShaderMaterial({vertexShader,fragmentShader,uniforms,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,forceSinglePass:true,...extra});
 
 export function createFinalCutAtmosphere(scene,body,{clippingGeometry,clippingMaterial,lite=false}){
  // lite (software rendering): half the shafts at half the detail, no searchlights, still cloth.

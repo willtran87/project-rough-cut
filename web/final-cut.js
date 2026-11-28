@@ -27,10 +27,11 @@ import {createRumble} from './pad-rumble.js?v=20261119-polish';
 import {recordRun,summaryRows,renderSummary,chapterRecord,formatSeconds} from './run-records.js?v=20261119-polish';
 import {createPhotoMode} from './photo-mode.js?v=20261119-polish';
 import {createFinalCutPolish,DISCOVERIES,CHAPTER} from './final-cut-polish.js?v=20261119-polish';
-import {createFinalCutAmbience} from './final-cut-ambience.js?v=20261119-polish';
+import {createFinalCutAmbience} from './final-cut-ambience.js?v=20261127-perf';
 import {applyDifficulty} from './final-cut-difficulty.js';
 import {scoreFrame} from './final-cut-drama.js';
-const $=id=>document.getElementById(id),canvas=$('game'),query=new URLSearchParams(location.search),keys=new Set(),touch=new Set();
+// paint() touches about twenty elements every frame; look each up once.
+const domCache=new Map(),$=id=>{let el=domCache.get(id);if(!el||!el.isConnected){el=document.getElementById(id);if(el)domCache.set(id,el);}return el;},canvas=$('game'),query=new URLSearchParams(location.search),keys=new Set(),touch=new Set();
 const preferences=campaignPreferences(matchMedia('(prefers-reduced-motion:reduce)').matches),spatialStore=RCSpatialPreferences.create();let spatial=spatialStore.get();
 const feel=RCFoundation.readComfort(),touchRun=createTouchRunControl();let toggleCrouch=false,toggleSprint=false,dirty=true;
 const bindings=actionBindings('onFoot',preferences.keyboardBindings,preferences.keyboardBindingsVersion||0),label=id=>keyLabel(bindings[id]);

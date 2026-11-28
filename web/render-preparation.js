@@ -94,6 +94,8 @@ export function prepareRendering(renderer, object, camera, scene, target=null, c
         await ready;await finishPrograms();batch.clear();
         // compileAsync has already waited for this shader batch. An additional
         // GPU fence here forces redundant driver round trips without uploads.
+        // (Keeping several batches in flight was measured: faster, but the
+        // busier driver dropped loading-screen frames.)
         await new Promise(resolve=>setTimeout(resolve,8));
       }
     }
@@ -140,14 +142,17 @@ export function prepareRendering(renderer, object, camera, scene, target=null, c
 // Compile does not allocate vertex/index buffers. Warm every static chunk under
 // the loading gate, including chunks outside the initial camera. Zero-length
 // draws upload the real buffers without rasterizing the whole course.
-export function prepareStaticBuffers(renderer,root,camera,scene,target,cancelled=()=>false){return enqueue(renderer,async()=>{
+// options.drainBytes: upload volume between GPU completion waits (default 0:
+// wait after every slice). Slices stay at most 24 meshes / 2 MiB either way;
+// between waits the slices are separated by an ordinary task yield.
+export function prepareStaticBuffers(renderer,root,camera,scene,target,cancelled=()=>false,{drainBytes=0}={}){return enqueue(renderer,async()=>{
   if(!await waitForPreparationTurn(cancelled))return;
   const meshes=[];root.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&!o.isInstancedMesh)meshes.push(o);});
   const warmScene=new THREE.Scene();warmScene.fog=scene.fog;
   scene.traverseVisible(o=>{if(o.isLight)warmScene.add(o.clone());});
   const previous=renderer.getRenderTarget(),shadowUpdate=renderer.shadowMap.needsUpdate;
   const ranges=new Map(),group=new THREE.Group();warmScene.add(group);
-  const started=performance.now();let prepared=0,maxSliceMs=0;
+  const started=performance.now();let prepared=0,maxSliceMs=0,undrained=0;
   try{
     renderer.shadowMap.needsUpdate=false;renderer.setRenderTarget(target);
     for(let start=0;start<meshes.length;){
@@ -169,7 +174,9 @@ export function prepareStaticBuffers(renderer,root,camera,scene,target,cancelled
       ranges.clear();group.clear();maxSliceMs=Math.max(maxSliceMs,performance.now()-sliceStart);
       // Restore shared renderer state before allowing another preparation job.
       renderer.setRenderTarget(previous);renderer.shadowMap.needsUpdate=shadowUpdate;
-      await drainPreparation(renderer,cancelled,bytes);
+      undrained+=bytes;
+      if(undrained>=drainBytes||start>=meshes.length){await drainPreparation(renderer,cancelled,undrained);undrained=0;}
+      else await yieldPreparation(cancelled);
       if(cancelled())return;
       renderer.setRenderTarget(target);renderer.shadowMap.needsUpdate=false;
     }

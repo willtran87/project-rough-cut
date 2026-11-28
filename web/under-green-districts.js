@@ -47,7 +47,7 @@ export function buildUnderGreenDistricts({scene,materials,layout,box,put,cyl,bal
  const canvas=document.createElement('canvas');canvas.width=canvas.height=32;
  const ctx=canvas.getContext('2d');ctx.strokeStyle='#8c9e83';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(32,32);ctx.moveTo(32,0);ctx.lineTo(0,32);ctx.stroke();
  const texture=new THREE.CanvasTexture(canvas);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(40,8);texture.magFilter=THREE.NearestFilter;
- const net=new THREE.Mesh(new THREE.PlaneGeometry(25*RANGE_SCALE,2.4),new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.3,side:THREE.DoubleSide,color:0x7a8875}));
+ const net=new THREE.Mesh(new THREE.PlaneGeometry(25*RANGE_SCALE,2.4),new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.3,side:THREE.DoubleSide,forceSinglePass:true,color:0x7a8875}));
  net.position.set(23.12,5.3,-rangeY(24));net.rotation.y=Math.PI/2;scene.add(net);
  for(let i=0;i<13;i++)put(ball,'white',23.06,4.4+(i%4)*.35,-rangeY(14+i*1.55),.065,.065,.065);
  // The keeper hoist owns its frame and open travel pocket in gate-scene.

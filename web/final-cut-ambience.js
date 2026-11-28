@@ -8,7 +8,8 @@ import {SWALE} from './final-cut-course.js';
 export function createFinalCutAmbience(){
  let ctx=null,buses=null,nodes=null,quiet=0,exertion=0,lastTime=0,owner=null;
  const stats={attached:false,sources:0,beats:0,horns:0,flutters:0,frogs:0,crickets:0,breath:0,pad:0,frogsQuiet:false};
- const set=(param,v,t=.05)=>param.setTargetAtTime(v,ctx.currentTime,t);
+ // Schedule only changed targets: a repeated target continues the same curve.
+ const targets=new Map(),set=(param,v,t=.05)=>{const last=targets.get(param);if(last&&last.t===t&&Math.abs(last.v-v)<=1e-4)return;targets.set(param,{v,t});param.setTargetAtTime(v,ctx.currentTime,t);};
  function attach(graph){
   if(ctx||!graph?.ctx)return;ctx=graph.ctx;buses=graph.buses;
   const noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),data=noise.getChannelData(0);let seed=8123;for(let i=0;i<data.length;i++){seed=(seed*1664525+1013904223)>>>0;data[i]=(seed/4294967296*2-1)*.5;}

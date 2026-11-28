@@ -27,9 +27,12 @@ export function floorLayout(){
   for(const sign of [-1,1]){if(!onFloor(x+sign*(w/2+.001),y))walls.push({x:x+sign*w/2,y,w:.22,d,covered:covered(y,x)});if(!onFloor(x,y+sign*(d/2+.001)))walls.push({x,y:y+sign*d/2,w,d:.22,covered:covered(y,x)});}
  }return {tiles,walls};
 }
+// Same nine probe points, without allocating them per call. A zero radius puts
+// all nine on the centre, so one test gives the identical answer.
+const SOLID_OFFSETS=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[.707,.707],[-.707,.707],[.707,-.707],[-.707,-.707]];
 export function solid(p,r=.3,gate=false,sightHeight=0){
- for(const [dx,dy]of [[0,0],[r,0],[-r,0],[0,r],[0,-r],[r*.707,r*.707],[-r*.707,r*.707],[r*.707,-r*.707],[-r*.707,-r*.707]])if(!onFloor(p.x+dx,p.y+dy))return true;
- if(OBSTACLES.some(o=>(o.sightHeight??Infinity)>=sightHeight&&Math.abs(p.x-o.x)<o.w/2+r&&Math.abs(p.y-o.y)<o.d/2+r))return true;
+ for(let i=0,n=r?SOLID_OFFSETS.length:1;i<n;i++){const o=SOLID_OFFSETS[i];if(!onFloor(p.x+o[0]*r,p.y+o[1]*r))return true;}
+ for(let i=0;i<OBSTACLES.length;i++){const o=OBSTACLES[i];if((o.sightHeight??Infinity)>=sightHeight&&Math.abs(p.x-o.x)<o.w/2+r&&Math.abs(p.y-o.y)<o.d/2+r)return true;}
  return gate&&Math.abs(p.y-GATE.y)<.3+r&&Math.abs(p.x-GATE.x)<GATE.width/2+.1+r;
 }
 export function lineClear(a,b,r=0,gate=false){const d=distance(a,b),n=Math.max(1,Math.ceil(d/.25));for(let i=0;i<=n;i++){const t=i/n;if(solid({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},r,gate))return false;}return true;}

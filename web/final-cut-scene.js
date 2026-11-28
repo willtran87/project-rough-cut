@@ -64,6 +64,7 @@ import {createFinalCutCameraCues} from './final-cut-camera-cues.js';
 import {createFinalCutEffects} from './final-cut-effects.js?v=20261119-polish';
 import {FINAL_CUT_LOOK} from './final-cut-polish.js?v=20261119-polish';
 import {ambushTell} from './final-cut-ambush.js';
+import {createShadowProxies} from './final-cut-shadow-proxies.js?v=20261127-perf';
 
 export async function createFinalCutScene(canvas,onProgress=()=>{}){
  onProgress('Preparing the championship grounds…',.02);
@@ -415,6 +416,13 @@ export async function createFinalCutScene(canvas,onProgress=()=>{}){
  // Software retains architectural occlusion; tiny machinery self-shadows are
  // reserved for hardware. Neither tier changes the threat or sight rules.
  for(const root of [...(software?[]:[rig]),accessGate,exitGate])root.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&o.visible&&!o.material.isShaderMaterial&&![materials.lamp,materials.headLamp,materials.wingLamp].includes(o.material))o.castShadow=true;});
+ // Fixed scenery never moves after it is built: compose its matrices once
+ // instead of on every frame's scene update.
+ for(const o of scene.children)if(o.isMesh&&/^(FinalCutStatic-|FinalCutTree|FinalCutVerge-|AmbushReedScreens$|StaticSignAtlas$|ChampionshipCourseContour$)/.test(o.name)){o.updateMatrix();o.matrixAutoUpdate=false;}
+ // Hardware draws whole-course batches for the view; shadow maps (and the
+ // camera, for the reeds) use culled copies of them (final-cut-shadow-proxies.js).
+ const shadowProxies=software?null:createShadowProxies(THREE,{scene,renderer,camera,moonlight,viewCell:48});
+ if(shadowProxies){for(const m of staticMeshes)shadowProxies.instanced(m);const reeds=scene.getObjectByName('AmbushReedScreens');if(reeds&&reeds.onBeforeShadow===THREE.Mesh.prototype.onBeforeShadow)shadowProxies.indexed(reeds,{pivot:'reedRoot',view:true,margin:box=>new THREE.Vector3(3.1,box.max.y*.12+.01,2.56)});shadowProxies.finish();}
  await Promise.resolve();
  onProgress('Preparing lamps, water and shadows…',.8);
  await renderer.compileAsync(backdrop.scene,backdrop.camera);

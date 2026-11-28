@@ -29,14 +29,14 @@ export function createDrainPolish({scene,camera,renderer,lamps,software=false,re
  const baseGrain=LOOKS.underGreen.grain;if(!filmGrain)finish.setLook({grain:0});
  let effects=true,qualityFinish='high';
  // Moths: one instanced draw. Pale wings catch the lamp, so they are unlit.
- const mothGeometry=new THREE.PlaneGeometry(1,1),mothMaterial=new THREE.MeshBasicMaterial({color:0xd9cfae,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide});
+ const mothGeometry=new THREE.PlaneGeometry(1,1),mothMaterial=new THREE.MeshBasicMaterial({color:0xd9cfae,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide});mothMaterial.forceSinglePass=true;// camera-facing cards: the back-face pass draws nothing
  const moths=new THREE.InstancedMesh(mothGeometry,mothMaterial,lamps.length*MOTHS_PER_LAMP),dummy=new THREE.Object3D();
  moths.name='Lamp moths';moths.frustumCulled=false;moths.instanceMatrix.setUsage(THREE.DynamicDrawUsage);moths.count=0;scene.add(moths);
  // Scythe trail: a short ribbon behind the blade for the cut itself.
  const trailGeometry=new THREE.BufferGeometry(),trailPositions=new Float32Array(TRAIL_STEPS*2*3),trailColors=new Float32Array(TRAIL_STEPS*2*3),trailIndex=[];
  for(let i=0;i<TRAIL_STEPS-1;i++){const a=i*2;trailIndex.push(a,a+1,a+2,a+1,a+3,a+2);}
  trailGeometry.setAttribute('position',new THREE.BufferAttribute(trailPositions,3).setUsage(THREE.DynamicDrawUsage));trailGeometry.setAttribute('color',new THREE.BufferAttribute(trailColors,3).setUsage(THREE.DynamicDrawUsage));trailGeometry.setIndex(trailIndex);
- const trailMaterial=new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false});
+ const trailMaterial=new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false,forceSinglePass:true});// additive: pass order cannot change the sum
  const trail=new THREE.Mesh(trailGeometry,trailMaterial);trail.name='Scythe cutting trail';trail.frustumCulled=false;trail.visible=false;trail.renderOrder=4;scene.add(trail);
  const state={moths:0,trail:false,fovKick:0,shake:0,tension:0};
  let owner=null,lastTime=0,sprint=0,lastHits=0,hitAt=-9,sealAt=-9,sealed=false,missAt=-9;

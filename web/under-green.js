@@ -33,7 +33,8 @@ import {createRumble,firstPad} from './pad-rumble.js?v=20261119-polish';
 import {recordRun,summaryRows,renderSummary,markFound,foundIn,chapterRecord,formatSeconds} from './run-records.js?v=20261119-polish';
 import {createPhotoMode} from './photo-mode.js?v=20261119-polish';
 import {createDrainFeel,PRESSURE_FOR,DIFFICULTY_FOR,DISCOVERIES} from './under-green-feel.js?v=20261119-polish';
-const $=id=>document.getElementById(id),canvas=$('game'),keys=new Set(),touch=new Set(),audio=createUnderGreenAudio(()=>shared),test=new URLSearchParams(location.search).has('test');
+// Elements are looked up once per frame by paint(); keep each connected one.
+const elementCache=new Map(),$=id=>{let e=elementCache.get(id);if(!e?.isConnected){e=document.getElementById(id);if(e)elementCache.set(id,e);}return e;},canvas=$('game'),keys=new Set(),touch=new Set(),audio=createUnderGreenAudio(()=>shared),test=new URLSearchParams(location.search).has('test');
 const finalCutLink=mountFinalCutLink(document.querySelector('#panel .actions'),'drain');
 const gratingCue=createGratingCue();
 function stored(key){try{return localStorage.getItem(key);}catch{return null;}}
@@ -226,11 +227,12 @@ function input(dt=1/60){
  };
  lookX=lookY=0;usePressed=false;return i;
 }
+const keyCache=new Map(),$key=name=>{let e=keyCache.get(name);if(!e?.isConnected){e=document.querySelector('[data-key='+name+']');if(e)keyCache.set(name,e);}return e;};
 const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
 let transitionMoving=false;
 function paint(){drainTransitions.observe(run,performance.now(),prefs.reduced);document.body.classList.toggle('transition-hold',drainTransitions.holding());document.body.classList.toggle('impact-flash',drainTransitions.flashing());window.RCChapterLaunch.update(run.mode,ready);playtest?.observe(run,inputMethod);playtest?.refresh();const mode=run.mode,playing=live();finalCutLink.update(mode==='complete');document.body.dataset.mode=mode;document.body.classList.toggle('touch',inputMethod==='touch');$('hud').hidden=!playing;$('touch').hidden=!playing||inputMethod!=='touch';$('panel').hidden=playing;
- const runButton=document.querySelector('[data-key=sprint]');runButton.textContent=touchRun.active?'Run on':feel.touchSprintToggle?'Tap Run':'Run';runButton.setAttribute('aria-pressed',String(touchRun.active));
- const listening=playing&&run.player.focus===true;$('focus-state').hidden=!listening;document.querySelector('[data-key=focus]').setAttribute('aria-pressed',String(listening));
+ const runButton=$key('sprint'),runLabel=touchRun.active?'Run on':feel.touchSprintToggle?'Tap Run':'Run';if(runButton.textContent!==runLabel)runButton.textContent=runLabel;if(runButton.getAttribute('aria-pressed')!==String(touchRun.active))runButton.setAttribute('aria-pressed',String(touchRun.active));
+ const listening=playing&&run.player.focus===true;$('focus-state').hidden=!listening;$key('focus').setAttribute('aria-pressed',String(listening));
  text('control-guide',`${movementKeyLabel(bindings)} or arrows move relative to your view. Mouse or drag to look. ${onFootActionVerb('sprint','keyboard',feel)} ${label('sprint')} to run; ${onFootActionVerb('crouch','keyboard',feel)} ${label('crouch')} to crouch; ${label('focus')} listens; ${label('look_back')} glances behind; ${label('interact')} uses. F fullscreen. Controller: left stick move, right stick look, ${onFootActionVerb('sprint','gamepad',feel)} RT to run (RB also runs while held), ${onFootActionVerb('crouch','gamepad',feel)} LB to crouch, LT listen, A use, R3 rear, Start pause. Touch: movement pad and drag to look; ${onFootActionVerb('sprint','touch',feel)} Run to sprint, hold Crouch to crouch and Listen to focus. Listening Focus slows your movement, quiets water and brings Joe’s breathing and steps forward. It does not hide you from sight.`);
  text('sound',prefs.muted?'Sound off':'Sound on');text('district',district(run.player));text('objective',hudObjective(run));text('record-status',run.evidence?'RECORD KEPT':'');$('record-status').hidden=!run.evidence;
  text('hint',inputMethod==='gamepad'?'Left stick move · RT run · LB crouch · R3 rear · A use':inputMethod==='touch'?'Pad move · Drag look · Rear glance · Use':`${movementKeyLabel(bindings)} / arrows move · ${label('sprint')} run · ${label('crouch')} crouch · ${label('look_back')} rear · ${label('interact')} use`);
