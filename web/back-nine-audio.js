@@ -1,3 +1,4 @@
+import {glide,forgetGlide} from './chase-audio-glide.js';
 import {experienceMotor} from './chase-experience.js';
 import {createCourseAmbienceAudio} from './chase-course-ambience.js';
 import {createRunnerFootstepAudio} from './runner-footstep-audio.js';
@@ -25,18 +26,13 @@ export function createChaseAudio(volume=.72,settings={}){
  let score=null,footsteps=null,courseAmbience=null,coolingTick=-1,coolingPlays=0,motorMix=1,rollingAudio=false;
  const buses={};
  const channels=Object.entries({effects:['effectsVolume',1],mower:['mowerVolume',1],ambience:['ambienceVolume',.9],danger:['dangerVolume',.9]});
- // These five mixer parameters have one owner and no scheduled envelopes.
+ // The mixer parameters and the engine/blade/pan targets below have one owner
+ // and no scheduled envelopes (cart.osc.frequency, which has ramps, is excluded).
  // Repeating the same exponential target/time constant continues the same
- // curve; do not enqueue it again on every fixed simulation tick. Voice
- // envelopes, moving sources and music retain their authored scheduling.
- const mixerTargets=new WeakMap();
- function mixerTarget(param,value,now,constant){
-  const prior=mixerTargets.get(param);
-  if(prior&&prior.value===value&&prior.constant===constant)return;
-  param.setTargetAtTime(value,now,constant);
-  if(prior){prior.value=value;prior.constant=constant;}
-  else mixerTargets.set(param,{value,constant});
- }
+ // curve; do not enqueue it again on every fixed simulation tick. Repeats
+ // within 1e-6 are skipped: every changed value is scheduled as before.
+ // See chase-audio-glide.js: exact (1e-6) repeats of a target are skipped.
+ const mixerTarget=glide;
  function mix(preferences=settings){for(const [name,[key,fallback]]of channels)mixerTarget(buses[name].gain,preferences[key]??fallback,ctx.currentTime,.03);}
  let introIndex=-1,introPlaying=false,spatial={pan:0,distance:0,engineHz:31,occluded:false};
  const atmosphere=createChaseAtmosphere();const approach=createPursuitFeedback();let approachLevel=0;
@@ -100,48 +96,48 @@ export function createChaseAudio(volume=.72,settings={}){
   if(finale.latched&&!lastLatch){lastLatch=true;if(running){latchPlays++;damageAudio.release();thump.osc.frequency.setValueAtTime(74,now);thump.osc.frequency.exponentialRampToValueAtTime(34,now+.25);for(const v of [thump,crash]){v.level.gain.cancelScheduledValues(now);v.level.gain.setValueAtTime(.65,now);v.level.gain.exponentialRampToValueAtTime(.0001,now+.35);v.level.gain.setValueAtTime(0,now+.4);}}}
   const dt=lastTime===null?0:Math.max(0,Math.min(.1,run.time-lastTime));lastTime=run.time;if(active)beat=(beat+dt*(.95+fear*.9+panic.percussion*.7+panic.finalPush*.25))%1;
   const rumble=cartRumble(run);rumbleLevel=running&&run.mode==='driving'?rumble.intensity:0;
-  mixerTarget(master.gain,running?(settings.volume??volume)*.24*(tail?Math.min(1,(finale.tail||0)/2):1):0,now,.1);if(!run.foot){cart.osc.frequency.setTargetAtTime(53+Math.abs(c.speed)*5+rumble.detune,now,.025);cart.level.gain.setTargetAtTime(run.mode==='sealing'||tail?0:(.11+Math.abs(c.speed)*.009)*(1+rumbleLevel*.75*rumble.chatter)*rumble.mechanics.engineGain,now,.025);cart.filter.frequency.setTargetAtTime(320+rumbleLevel*700,now,.06);}
+  mixerTarget(master.gain,running?(settings.volume??volume)*.24*(tail?Math.min(1,(finale.tail||0)/2):1):0,now,.1,tail?.002:0);if(!run.foot){cart.osc.frequency.setTargetAtTime(53+Math.abs(c.speed)*5+rumble.detune,now,.025);mixerTarget(cart.level.gain,run.mode==='sealing'||tail?0:(.11+Math.abs(c.speed)*.009)*(1+rumbleLevel*.75*rumble.chatter)*rumble.mechanics.engineGain,now,.025);mixerTarget(cart.filter.frequency,320+rumbleLevel*700,now,.06);}
   const bladeCut=tail&&(finale.tail||0)<4,sideApproach=run.hunt?.kind==='alongside'&&['signal','alongside'].includes(run.hunt?.phase);
   motorMix=experienceMotor(run);const motor=motorMix*(run.grace>0?.18:(t.motorGain??1)*ram.motor*panic.motor*(commit.warning?.6+commit.load*.5:1)),chug=.82+.1*Math.sin(run.time*(23+Math.abs(j.speed)))+.08*Math.sin(run.time*11.7);
-  mower.osc.frequency.setTargetAtTime(31+Math.abs(j.speed)*2.3+rev*40+ram.load*22+ram.pulse*6+surge*15+panic.level*12+panic.finalPush*9+approachLevel*(14+Math.sin(run.time*31)*3)+(flanking?12:0)+(sideApproach?Math.sin(run.time*8)*7:0),now,.1);mower.level.gain.setTargetAtTime(proximity*.46*motor*chug*(1+approachLevel*.65)*(occluded?.8:1),now,.1);mower.filter.frequency.setTargetAtTime((110+proximity*600+rev*240+approachLevel*600)*(occluded||finale.latched?.35:1),now,.15);
+  mixerTarget(mower.osc.frequency,31+Math.abs(j.speed)*2.3+rev*40+ram.load*22+ram.pulse*6+surge*15+panic.level*12+panic.finalPush*9+approachLevel*(14+Math.sin(run.time*31)*3)+(flanking?12:0)+(sideApproach?Math.sin(run.time*8)*7:0),now,.1);mixerTarget(mower.level.gain,proximity*.46*motor*chug*(1+approachLevel*.65)*(occluded?.8:1),now,.1);mixerTarget(mower.filter.frequency,(110+proximity*600+rev*240+approachLevel*600)*(occluded||finale.latched?.35:1),now,.15);
   // Mechanical emphasis belongs to the source: a surge or recent impact
   // must not leave a phantom blade audible after Joe is out of earshot.
-  blade.osc.frequency.setTargetAtTime(130+Math.abs(j.speed)*7+run.lastImpact*100+surge*45+ram.load*160+approachLevel*80,now,.08);blade.level.gain.setTargetAtTime((proximity*.10+(run.lastImpact*.25+surge*.035+approachLevel*.065)*Math.min(1,proximity*2))*motor*(ram.active?.08+ram.load*.7:flanking?.15:1)*(bladeCut?0:1),now,.06);
-  blade.filter.frequency.setTargetAtTime((260+proximity*540+ram.load*300+approachLevel*420)*(occluded||finale.latched?.4:1),now,.12);
-  spatial.engineHz=31+Math.abs(j.speed)*2.3+rev*40;pan.pan.setTargetAtTime(placement.pan,now,.1);
+  mixerTarget(blade.osc.frequency,130+Math.abs(j.speed)*7+run.lastImpact*100+surge*45+ram.load*160+approachLevel*80,now,.08);mixerTarget(blade.level.gain,(proximity*.10+(run.lastImpact*.25+surge*.035+approachLevel*.065)*Math.min(1,proximity*2))*motor*(ram.active?.08+ram.load*.7:flanking?.15:1)*(bladeCut?0:1),now,.06);
+  mixerTarget(blade.filter.frequency,(260+proximity*540+ram.load*300+approachLevel*420)*(occluded||finale.latched?.4:1),now,.12);
+  spatial.engineHz=31+Math.abs(j.speed)*2.3+rev*40;mixerTarget(pan.pan,placement.pan,now,.1);
   const quiet=atmospherePose.ambientGain*(1-approachLevel*.22)*wave.gain*(finale.latched?0:1)*(t.phase==='breather'?.2:1-(t.silence||0)*.78)*(ram.active?.5:1)*(panic.reveal?.22:1),sting=t.sting||0;
   courseAmbience.update(run,running,(.035+fear*.06+atmospherePose.rumble*.075)*quiet,43.65+rev*3-atmospherePose.rumble*9);
   const servicing=run.service?.active>=0&&running&&d>16&&!ram.active;
-  alarmPan.pan.setTargetAtTime(0,now,.05);
-  harmonic.filter.frequency.setTargetAtTime(servicing?480:320,now,.03);
-  harmonic.osc.frequency.setTargetAtTime(servicing?110:sting>.05?287+sting*61:44.3+fear*1.7-atmospherePose.rumble*8.5,now,.22);
-  harmonic.level.gain.setTargetAtTime(servicing?.035:(.025+fear*.03+sting*.055+atmospherePose.rumble*.035)*quiet,now,.15);
+  mixerTarget(alarmPan.pan,0,now,.05);
+  mixerTarget(harmonic.filter.frequency,servicing?480:320,now,.03);
+  mixerTarget(harmonic.osc.frequency,servicing?110:sting>.05?287+sting*61:44.3+fear*1.7-atmospherePose.rumble*8.5,now,.22);
+  mixerTarget(harmonic.level.gain,servicing?.035:(.025+fear*.03+sting*.055+atmospherePose.rumble*.035)*quiet,now,.15);
   const heartbeat=Math.exp(-(((beat-.08)/.045)**2))+.6*Math.exp(-(((beat-.27)/.055)**2));
   // The same beat drives the screen pulse (see pulse()), muted or not.
   pulseLevel=active&&!finale.latched&&run.mode==='driving'?Math.min(1,Math.max(0,(fear-.45)/.5)*heartbeat):0;air.update(run,running,{fear,ears});
   const kick=Math.exp(-beat*18),rhythm=panic.percussion*(.19*kick+.055*Math.exp(-(((beat-.5)/.055)**2)));
-  pulse.level.gain.setTargetAtTime(finale.latched?0:fear*heartbeat*.22*wave.gain*(panic.reveal?.15:1)+rhythm,now,.015);pulse.osc.frequency.setTargetAtTime(54+fear*8+panic.percussion*kick*19,now,.025);
+  mixerTarget(pulse.level.gain,finale.latched?0:fear*heartbeat*.22*wave.gain*(panic.reveal?.15:1)+rhythm,now,.015);mixerTarget(pulse.osc.frequency,54+fear*8+panic.percussion*kick*19,now,.025);
   const rattle=rumbleLevel*clampSpeed(c.speed)*Math.pow(Math.max(0,Math.sin(run.time*31)*Math.sin(run.time*47)),8);
-  wind.filter.frequency.setTargetAtTime(330+fear*420+Math.sin(run.time*.17)*70-atmospherePose.rumble*180+panic.level*500+wave.gasp*1500+rattle*1800,now,.04);wind.level.gain.setTargetAtTime((.1+(1-fear)*.08+atmospherePose.rumble*.10)*quiet+rumbleLevel*.14*rumble.chatter+panic.level*Math.min(1,Math.abs(c.speed)/12)*.08+wave.gasp*.16+rattle*.1+approachLevel*.035,now,.025);
+  mixerTarget(wind.filter.frequency,330+fear*420+Math.sin(run.time*.17)*70-atmospherePose.rumble*180+panic.level*500+wave.gasp*1500+rattle*1800,now,.04);mixerTarget(wind.level.gain,(.1+(1-fear)*.08+atmospherePose.rumble*.10)*quiet+rumbleLevel*.14*rumble.chatter+panic.level*Math.min(1,Math.abs(c.speed)/12)*.08+wave.gasp*.16+rattle*.1+approachLevel*.035,now,.025);
   const silence=run.experience?.silence,missAge=run.time-(run.experience?.nearMiss.at??-99),rolling=run.tactics?.active>=0;
   if(running&&!damageBusy&&(impact?.age??99)>.7&&fxPriorityAge>.8&&!ram.active&&!closing){
    if(silence?.phase==='quiet'){
     const tick=Math.floor(silence.age/.85);if(tick!==coolingTick){coolingTick=tick;coolingPlays++;impactPan.pan.setValueAtTime(placement.pan,now);crash.filter.frequency.setValueAtTime(2300,now);crash.filter.Q.setValueAtTime(7,now);crash.level.gain.cancelScheduledValues(now);crash.level.gain.setValueAtTime(.018*proximity,now);crash.level.gain.exponentialRampToValueAtTime(.0001,now+.16);crash.level.gain.setValueAtTime(0,now+.18);}
    }else if(rolling){rollingAudio=true;const f=run.destruction.features['range-abandoned-cart'],range=Math.hypot(f.x-c.x,f.y-c.y);impactPan.pan.setTargetAtTime(Math.sin(Math.atan2(f.x-c.x,f.y-c.y)-ears)*.8,now,.05);crash.filter.frequency.setTargetAtTime(470,now,.1);crash.filter.Q.setTargetAtTime(1.2,now,.1);crash.level.gain.setTargetAtTime(Math.max(0,1-range/45)*.06*(.6+.4*Math.sin(run.time*32)**2),now,.025);}
    if(!rolling&&rollingAudio){crash.level.gain.setTargetAtTime(0,now,.05);rollingAudio=false;}
-   if(missAge>=0&&missAge<.65){wind.filter.frequency.setTargetAtTime(1400,now,.015);wind.level.gain.setTargetAtTime(.25*Math.exp(-missAge*5),now,.015);}
+   if(missAge>=0&&missAge<.65){mixerTarget(wind.filter.frequency,1400,now,.015);mixerTarget(wind.level.gain,.25*Math.exp(-missAge*5),now,.015);}
   }
   damageAudio.update(run,running,!damageBusy&&!closing&&!tail&&(impact?.age??99)>.7&&fxPriorityAge>.85&&!(j.ram?.release>0)&&!(commit.release>0)&&!(wave.release>0)&&!(run.panic?.phase==='panic'&&run.panic.age<.5),rumble.mechanics);
  }
  function intro(index,active=true,preferences=settings){
   introPlaying=active;if(!ctx)return;air.silence();courseAmbience.reset();mix(preferences);score.silence();const now=ctx.currentTime,running=active&&!muted&&!preferences.muted;
   const engine=[0,0,.035,.16,.29][index]||0,cartLevel=[0,.10,.08,.08,.15][index]||0;
-  for(const v of [cart,mower,blade,drone,harmonic,pulse,wind,thump,crash])v.level.gain.cancelScheduledValues(now);
+  for(const v of [cart,mower,blade,drone,harmonic,pulse,wind,thump,crash]){v.level.gain.cancelScheduledValues(now);forgetGlide(v.level.gain);}
   mixerTarget(master.gain,running?(preferences.volume??volume)*.24:0,now,.09);
   const gains=[cartLevel,engine,engine*.16,.008,0,0,.09,0,0];
-  [cart,mower,blade,drone,harmonic,pulse,wind,thump,crash].forEach((v,i)=>v.level.gain.setTargetAtTime(running?gains[i]:0,now,.12));
-  cart.osc.frequency.setTargetAtTime(index===4?72:54,now,.3);mower.osc.frequency.setTargetAtTime([30,30,32,43,62][index],now,.4);
-  mower.filter.frequency.setTargetAtTime(index>=3?430:160,now,.2);blade.osc.frequency.setTargetAtTime(170,now,.2);pan.pan.setTargetAtTime(.25,now,.2);wind.filter.frequency.setTargetAtTime(340,now,.15);
+  [cart,mower,blade,drone,harmonic,pulse,wind,thump,crash].forEach((v,i)=>glide(v.level.gain,running?gains[i]:0,now,.12));
+  cart.osc.frequency.setTargetAtTime(index===4?72:54,now,.3);mixerTarget(mower.osc.frequency,[30,30,32,43,62][index],now,.4);
+  mixerTarget(mower.filter.frequency,index>=3?430:160,now,.2);mixerTarget(blade.osc.frequency,170,now,.2);mixerTarget(pan.pan,.25,now,.2);mixerTarget(wind.filter.frequency,340,now,.15);
   if(running&&index!==introIndex){
    introIndex=index;crash.filter.frequency.setValueAtTime(index===0?850:530,now);crash.filter.Q.setValueAtTime(1.7,now);impactPan.pan.setValueAtTime(-.25,now);
    const amount=([.06,.08,.025,.045,.07][index]);

@@ -404,7 +404,7 @@ export async function createUnderGreenScene(canvas,onProgress=()=>{},{captureBuf
  structureDetails.bunkerRetaining.backingTrim=trimBunkerBacking(batches,structureDetails.bunkerRetaining.bankFaces);
  const staticLightMeshes=[],staticLightBounds=new Map();
  const renderBatches=software?groupDrainSurfaceLights(batches.values(),lamps):batches.values();
- for(const batch of renderBatches){const geometry=mergeIndexedGeometries(batch.parts),mesh=new THREE.Mesh(geometry,materials[batch.type]);geometry.computeBoundingSphere();geometry.computeBoundingBox();batchCulling?.register(mesh,batch.parts);mesh.name=batch.type;scene.add(mesh);structureMeshes.push(mesh);staticLightMeshes.push(mesh);staticLightBounds.set(mesh,batch.parts.map(g=>{g.computeBoundingBox();return g.boundingBox.clone();}));batch.parts.forEach(g=>g.dispose());}
+ for(const batch of renderBatches){const geometry=mergeIndexedGeometries(batch.parts),mesh=new THREE.Mesh(geometry,materials[batch.type]);geometry.computeBoundingSphere();geometry.computeBoundingBox();batchCulling?.register(mesh,batch.parts);mesh.name=batch.type;mesh.matrixAutoUpdate=false;/* world-space batch at the origin; never moves */scene.add(mesh);structureMeshes.push(mesh);staticLightMeshes.push(mesh);staticLightBounds.set(mesh,batch.parts.map(g=>{g.computeBoundingBox();return g.boundingBox.clone();}));batch.parts.forEach(g=>g.dispose());}
  scene.traverse(mesh=>{if(mesh.isMesh&&mesh.userData.drainStaticLight)staticLightMeshes.push(mesh);});
  const dampFinish=finishDrainDampResponse(materials);
  flood.bindReceivers([...floodReceivers,...structureMeshes]);

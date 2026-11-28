@@ -1,3 +1,4 @@
+import {glide} from './chase-audio-glide.js';
 import {COURSE} from './back-nine-course.js';
 
 // Four quiet layers added by the polish pass, all synthesised and all routed
@@ -40,14 +41,14 @@ export function createBackNineAirAudio(ctx,{effects,ambience}){
   const playing=running&&run.mode==='driving'&&!run.death,outdoors=c.y<800;
   // Tyres.
   const rolling=playing&&!run.foot&&(run.cart.health??100)>0,voice=tyreVoice(c.surface,rolling?c.speed:0);tyreGain=rolling?voice.gain:0;
-  tyres.filter.frequency.setTargetAtTime(voice.hz,now,.08);tyres.filter.Q.setTargetAtTime(voice.q,now,.1);tyres.level.gain.setTargetAtTime(tyreGain,now,.07);
+  glide(tyres.filter.frequency,voice.hz,now,.08);glide(tyres.filter.Q,voice.q,now,.1);glide(tyres.level.gain,tyreGain,now,.07);
   // Rain: quieter under the garage roof and under the chase at its loudest.
-  rainGain=running&&run.mode!=='caught'?.016*(outdoors?1:.35)*(1-.4*clamp(fear)):0;rain.level.gain.setTargetAtTime(rainGain,now,.4);
+  rainGain=running&&run.mode!=='caught'?.016*(outdoors?1:.35)*(1-.4*clamp(fear)):0;glide(rain.level.gain,rainGain,now,.4);
   // Breath: in on the first 42% of the cycle (brighter), out on the rest.
   const footAge=run.foot?.ejection?run.time-run.foot.ejection.at:99,panting=playing&&!!run.foot&&footAge>1.3,effort=clamp(Math.abs(c.speed||0)/7)*.6+clamp(fear)*.4;
   if(panting){breathPhase=(breathPhase+dt*(.55+effort*.95))%1;const inhale=breathPhase<.42,t=inhale?breathPhase/.42:(breathPhase-.42)/.58,shape=Math.sin(t*Math.PI);
-   breathGain=(.012+.03*effort)*shape*(inhale?.75:1);breath.filter.frequency.setTargetAtTime(inhale?1500:820,now,.03);breath.level.gain.setTargetAtTime(breathGain,now,.03);}
-  else if(breathGain!==0){breathGain=0;breath.level.gain.setTargetAtTime(0,now,.08);}
+   breathGain=(.012+.03*effort)*shape*(inhale?.75:1);glide(breath.filter.frequency,inhale?1500:820,now,.03);glide(breath.level.gain,breathGain,now,.03);}
+  else if(breathGain!==0){breathGain=0;glide(breath.level.gain,0,now,.08);}
   // Frogs: three short pulses per croak, at uneven intervals.
   if(playing&&run.time>=nextCroak){
    const n=Math.floor(run.time*7.3)+croaks*13,place=frogPlacement(c,run.joe,ears);nextCroak=run.time+1.6+hash(n)*3.4;
@@ -56,6 +57,6 @@ export function createBackNineAirAudio(ctx,{effects,ambience}){
     frogLevel.gain.setValueAtTime(0,now+.34);}
   }
  }
- function silence(){const now=ctx.currentTime;for(const v of [tyres,rain,breath])v.level.gain.setTargetAtTime(0,now,.05);frogLevel.gain.cancelScheduledValues(now);frogLevel.gain.setValueAtTime(0,now);tyreGain=breathGain=rainGain=0;}
+ function silence(){const now=ctx.currentTime;for(const v of [tyres,rain,breath])glide(v.level.gain,0,now,.05);frogLevel.gain.cancelScheduledValues(now);frogLevel.gain.setValueAtTime(0,now);tyreGain=breathGain=rainGain=0;}
  return {update,silence,stats:()=>({tyres:tyreGain,rain:rainGain,breath:breathGain,croaks,water:WATER.length,voices:2})};
 }

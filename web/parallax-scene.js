@@ -43,7 +43,7 @@ export function createParallax({travelScale=1,showEstate=true,storm=0,night=0,st
   if(canopy){sky.root.add(canopy.mesh);moon.renderOrder=-4;}
   const cloudLayer = layer('clouds', .025);
   for (let i = 0; i < (canopy?0:9); i++) {
-    const cloud = Art.card('rough-cut-cloud-atlas-v2', [(i % 3) * 512, i % 2 ? 512 : 0, 512, 512], 210 + i % 3 * 45, 145, { transparent: true, opacity: .48, alphaTest: .025, color: 0x8eabb8, depthWrite: false });
+    const cloud = Art.card('rough-cut-cloud-atlas-v2', [(i % 3) * 512, i % 2 ? 512 : 0, 512, 512], 210 + i % 3 * 45, 145, { transparent: true, opacity: .48, alphaTest: .025, color: 0x8eabb8, depthWrite: false, forceSinglePass: true });
     cloud.material.opacity+=storm*.18;cloud.scale.set(1+storm*.35,1+storm*.12,1);cloud.material.color.multiplyScalar((1-storm*.15)*(1-night*.3));
     // Colour only: opacity, cloud coverage and physical moonlight stay intact.
     if(courseSky)cloud.material.color.multiplyScalar(.5);

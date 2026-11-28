@@ -1,5 +1,5 @@
 import {COURSE_MOON_OFFSET} from './course-moon-direction.js';
-import {createCourseLanternLightField} from './course-lantern-light-field.js?v=20261121-fixes';
+import {createCourseLanternLightField} from './course-lantern-light-field.js?v=20261127-perf';
 import {createCourseLanternLightField as createPackedLanternLightField} from './course-lantern-light-field-packed.js';
 import {createCourseGroundLighting} from './course-ground-lighting.js';
 import {courseHabitatTint,tintCourseHabitatGround} from './course-habitat-palette.js';
@@ -55,7 +55,7 @@ import {lanternBlackout,siteBrightness} from './lantern-blackout.js?v=20261118-d
 import * as THREE from './vendor/three/three.module.js';
 import {stationFacing} from './station-facing.js';
 import * as PixelArt from './pixel-art.js';
-import { createParallax } from './parallax-scene.js?v=20261114-moon-direction';
+import { createParallax } from './parallax-scene.js?v=20261127-perf';
 import { createIllustratedProps } from './illustrated-props.js';
 import { detailedGroundMaterial, finishPaths, paintApproachWear } from './terrain-finish.js?v=20261114-approach-wear';
 import { createPixelWorld } from './pixel-world-props.js?v=20261118-dread';
@@ -63,14 +63,16 @@ import { woodlandHeight } from './pixel-landscape.js';
 import {courseWoodlandPose} from './course-woodland-composition.js';
 import { createJoeModel } from './joe-model.js?v=20261113-mower-finish';
 import { prepareRendering, yieldPreparation, waitForGPU, preparationStats, prepareStaticBuffers } from './render-preparation.js';
-import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261118-dread';
+import { createPixelEffects, createImpactMask } from './pixel-effects.js?v=20261127-perf';
 import { createPixelWater } from './pixel-water.js?v=20261113-runoff-contact';
 import { updateFloodlight } from './floodlight-response.js?v=20261113-physical-light';
 import { loadBakedTerrain } from './baked-terrain.js?v=20261114-approach-wear';
 import { bitmapDecodeStats } from './bitmap-decoder.js';
 import { createScreenFracture, drawCopyFracture } from './screen-fracture.js';
 import { createNightPicture } from './night-order/picture.js?v=20261122-fixes';
-import { createNightWildlife } from './night-order/wildlife.js?v=20261119-polish';
+import { createNightWildlife } from './night-order/wildlife.js?v=20261127-perf';
+import { createShadowCasterMerge } from './night-order/shadow-casters.js?v=20261127-perf';
+import { createStaticMerge } from './night-order/static-merge.js?v=20261127-perf';
 // Shared quality preset and screen finish; see night-order/picture.js.
 const picture=createNightPicture(THREE);let polishFrame=null,wildlife=null;
 let screenFracture=null;
@@ -79,7 +81,7 @@ let impactMask=null;
 let pixelEffects=null;
 let joeModel=null;
 let pixelWorld=null;
-let moonShadow=null,nearLamp=null;
+let moonShadow=null,nearLamp=null,shadowCasters=null,staticMerge=null;
 let softwareRenderer=false,lastShadowTime=-Infinity,lastShadowX=Infinity,lastShadowZ=Infinity,lastShadowMechanisms="";
 let coursePointLights=[];
 const actorFrustum=new THREE.Frustum(),actorProjection=new THREE.Matrix4(),actorBounds=new THREE.Sphere(new THREE.Vector3(),2.4);
@@ -141,7 +143,7 @@ function whenPresented(){
 }
 function performanceStats(){return {softwareRenderer,completedSceneSamples:gpuFrameSamples.length,averageCompletedSceneMs:stats.gpuFrameAverageMs||0,p95CompletedSceneMs:stats.gpuFrameP95Ms||0,method:'software scene submission through GPU fence completion, including bounded timer polling delay'};}
 let frozenFrame='', renderer, world, camera, failure = null, currentKey = '', currentData, lastTime=0;
-let lastHudKey=null, direct=false, surface=null, sceneTarget=null, compositor=null, screenCamera=null, sceneQuad=null, hudTexture=null, worldDrawn=false, useDomHud=false, overlayQuad=null;
+let loadingElement=null, surfaceDirty=true, lastSurfaceSize='', lastHudKey=null, direct=false, surface=null, sceneTarget=null, compositor=null, screenCamera=null, sceneQuad=null, hudTexture=null, worldDrawn=false, useDomHud=false, overlayQuad=null;
 // Player Brightness (campaign setting) scales only the composited 3D scene pass;
 // the HUD overlay is drawn after it untouched. 1 leaves the image as authored.
 let sceneBrightness=1;
@@ -540,7 +542,7 @@ async function buildLandmarks(data,cancelled=()=>false){
   stats.entryGate=courseEntryGate.stats();
   if(pixelVolume)for(const side of [-1,1])for(let i=0;i<44;i++){pixelWorld.boundaryRope(side*13.1,1-i*2.7);if(i%8===7){await yieldPreparation(cancelled);if(cancelled())return;}}
 }
-function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];moonRim=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];glowFloorSites=[];lanternSites=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
+function disposeWorld(){courseWind=null;courseVisualDetail?.dispose();courseVisualDetail=null;vegetationContact=null;ballPresentation=null;coursePointLights=[];groundLighting?.dispose();groundLighting=null;if(practicalLighting){practicalLighting.dispose();for(const m of materials.values())if(m.isMeshLambertMaterial||m.isMeshPhongMaterial)m.dispose();}practicalLighting=null;exitMechanisms?.dispose();exitMechanisms=null;understoryCulling=null;playerCraft?.dispose();playerCraft=null;noiseHazardScene=null;wetGround?.dispose();wetGround=null;sprinklerSpray=null;nightAir=null;treeSites=[];moonRim=null;objectiveCues?.dispose?.();objectiveCues=null;environmentGuidance=null;impactMask?.dispose();impactMask=null;waterSurfaces=[];pixelEffects?.dispose();pixelEffects=null;glowBillboards=null;glowFloor=null;glowAnchors=[];glowFloorPhases=[];glowFloorSites=[];lanternSites=[];pixelWorld?.dispose();joeModel?.dispose();joeModel=null;shadowCasters=null;staticMerge?.dispose();staticMerge=null;parallax?.dispose();parallax=null;if(!world)return;world.traverse(o=>{if(o.isLight)o.shadow?.dispose();o.customDepthMaterial?.dispose();if(o.isInstancedMesh)o.dispose();if(o.geometry&&!Object.values(geometries).includes(o.geometry))o.geometry.dispose();if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms)if(![...materials.values()].includes(m)){if(!m.map?.userData.sharedPixelArt)m.map?.dispose();m.dispose();}}});}
 function build(data){
   courseEntryGate=null;stats.entryGate=null;
   arrivalPhone=null;
@@ -611,7 +613,7 @@ function build(data){
   aimLine.geometry.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(75),3));
   recoveryBalls=[];for(let i=0;i<12;i++){const b=new THREE.Mesh(geometries.sphere,material(0xf5f0d7,true));b.scale.setScalar(.065);world.add(b);recoveryBalls.push(b);}
   particles=new THREE.InstancedMesh(geometries.leaf,new THREE.MeshBasicMaterial({color:0xffffff}),64);particles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);particles.frustumCulled=false;particles.setColorAt(0,particleColor.set(0xffffff));particles.setMatrixAt(0,matrix.makeTranslation(0,-1000,0));particles.count=1;world.add(particles);
-  impactMask=pixelStyle?createImpactMask():null;effectRings=[];for(let i=0;i<16;i++){const ring=new THREE.Mesh(pixelStyle?new THREE.PlaneGeometry(2,2):new THREE.RingGeometry(.8,1,16),new THREE.MeshBasicMaterial({map:impactMask,alphaTest:pixelStyle?.02:0,color:0xd7c891,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;world.add(ring);effectRings.push(ring);}
+  impactMask=pixelStyle?createImpactMask():null;effectRings=[];for(let i=0;i<16;i++){const ring=new THREE.Mesh(pixelStyle?new THREE.PlaneGeometry(2,2):new THREE.RingGeometry(.8,1,16),new THREE.MeshBasicMaterial({map:impactMask,alphaTest:pixelStyle?.02:0,color:0xd7c891,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,forceSinglePass:true}));ring.rotation.x=-Math.PI/2;world.add(ring);effectRings.push(ring);}
   restMarker=new THREE.Mesh(new THREE.RingGeometry(.07,.11,20),new THREE.MeshBasicMaterial({color:0xc4e5db,side:THREE.DoubleSide}));restMarker.rotation.x=-Math.PI/2;world.add(restMarker);
   rollLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:0xc4e5db,dashSize:.15,gapSize:.1}));rollLine.geometry.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(6),3));world.add(rollLine);
   playerCraft=createCoursePlayerCraft(world);
@@ -649,6 +651,10 @@ function build(data){
       for(const m of pixelWorld?.localLighting?.allMaterials()||[]){practicalLighting.apply(m);moonRim?.apply(m);}
       for(const texture of practicalLighting.textures)renderer.initTexture(texture);
     }
+    // Static scenery that shares a material draws as one mesh per ground cell.
+    if(pixelVolume&&!softwareRenderer)staticMerge=createStaticMerge(THREE,staticRoot);
+    // Static moon-shadow casters draw as a few merged shadow-only proxies.
+    if(renderer.shadowMap.enabled&&moonShadow&&!softwareRenderer){const shadowLights=[];scene.traverse(o=>{if(o.isLight&&o.shadow&&(o.castShadow||o===moonShadow))shadowLights.push(o);});shadowCasters=createShadowCasterMerge(THREE,staticRoot,shadowLights);staticMerge?.setRestoreDepth(()=>shadowCasters.depthMaterial());renderer.shadowMap.needsUpdate=true;}
     pixelWorld?.updateCulling(camera);updateGlows();
     const backdrop=parallax,target=direct?sceneTarget:null;
     loadProgress(0.68);if(backdrop)await prepareRendering(renderer,backdrop.scene,backdrop.camera,backdrop.scene,target,cancelled);
@@ -690,6 +696,9 @@ function createSurface(canvas){
   if(legacy||new URLSearchParams(location.search).get('presentation')==='copy')return null;
   initialize(canvas);if(failure)return null;direct=true;
   surface=document.createElement('canvas');surface.width=1280;surface.height=720;
+  // The canvas HUD/menu surface is uploaded to the GPU only after something
+  // has drawn on it. Menus that sit on DOM layers leave it untouched.
+  {const getContext=surface.getContext.bind(surface);surface.getContext=(type,...rest)=>{const c=getContext(type,...rest);if(type==='2d'&&c&&!c.__surfaceDirtyWrap){c.__surfaceDirtyWrap=true;for(const name of ['clearRect','fillRect','strokeRect','fillText','strokeText','drawImage','putImageData','fill','stroke','reset','drawFocusIfNeeded']){const original=c[name];if(typeof original==='function')c[name]=function(...args){surfaceDirty=true;return original.apply(this,args);};}}return c;};}
   sceneTarget=new THREE.WebGLRenderTarget(960,540,{depthBuffer:true,stencilBuffer:false,minFilter:pixelStyle?THREE.NearestFilter:THREE.LinearFilter,magFilter:pixelStyle?THREE.NearestFilter:THREE.LinearFilter});
   customTarget=softwareRenderer?sceneTarget.clone():sceneTarget;
   if(softwareRenderer)for(const scale of [.75,.625,.5]){
@@ -704,7 +713,7 @@ function createSurface(canvas){
 }
 // Real loading progress: build() reports each finished stage to the bar on the loading screen.
 function loadProgress(v){stats.preparationProgress=v;const bar=document.getElementById('course-loading-bar');if(bar){bar.value=v;bar.textContent=Math.round(v*100)+'%';}}
-function beginFrame(){skipPresentation=false;worldDrawn=false;useDomHud=false;screenFracture?.clear();pixelEffects?.hide();window.RCQualityUI?.hide();const loading=document.getElementById('course-loading');if(loading)loading.hidden=true;}
+function beginFrame(){skipPresentation=false;worldDrawn=false;useDomHud=false;screenFracture?.clear();pixelEffects?.hide();window.RCQualityUI?.hide();if(!loadingElement?.isConnected)loadingElement=document.getElementById('course-loading');if(loadingElement&&!loadingElement.hidden)loadingElement.hidden=true;}
 function present(uiKey=null){
   if(!direct)return;
   if(skipPresentation)return;
@@ -716,7 +725,8 @@ function present(uiKey=null){
   const outputWidth=nativePixels||portrait?sceneTarget.width:1280,outputHeight=nativePixels||portrait?sceneTarget.height:720;
   if(renderer.domElement.width!==outputWidth||renderer.domElement.height!==outputHeight)renderer.setSize(outputWidth,outputHeight,false);
   stats.presentationResolution=[outputWidth,outputHeight];
-  const start=performance.now();sceneQuad.visible=worldDrawn;overlayQuad.visible=!useDomHud;if(!useDomHud&&(uiKey===null||uiKey!==lastHudKey))hudTexture.needsUpdate=true;lastHudKey=uiKey;renderer.setRenderTarget(null);renderer.render(compositor,screenCamera);stats.compositeSubmitMs=performance.now()-start;
+  const start=performance.now();sceneQuad.visible=worldDrawn;overlayQuad.visible=!useDomHud;const surfaceSize=surface.width+'x'+surface.height;if(surfaceSize!==lastSurfaceSize){surfaceDirty=true;lastSurfaceSize=surfaceSize;}
+  if(!useDomHud&&(uiKey===null?surfaceDirty:uiKey!==lastHudKey)){hudTexture.needsUpdate=true;surfaceDirty=false;}lastHudKey=uiKey;renderer.setRenderTarget(null);renderer.render(compositor,screenCamera);stats.compositeSubmitMs=performance.now()-start;
   // The finish grades the finished screen, so it runs only when the HUD is DOM
   // (never over canvas-drawn HUD or menu text) and never on the software path.
   if(worldDrawn&&useDomHud&&!softwareRenderer&&!stats.preparing){picture.finish(renderer,polishFrame,{gameplay:!!polishFrame&&!polishFrame.paused&&!polishFrame.photo});renderer.setRenderTarget(null);}
@@ -763,6 +773,8 @@ function render(ctx,data,frame){polishFrame=frame;
     const mechanisms=[frame.sealing,frame.exitProgress,frame.valveOpen,frame.quietProgress,frame.hasKey,frame.completed.join(','),frame.reviews.join(',')].join(':');
     if(p.x!==lastShadowX||p.z!==lastShadowZ||mechanisms!==lastShadowMechanisms||frame.time<lastShadowTime||frame.time-lastShadowTime>=1/30){renderer.shadowMap.needsUpdate=true;lastShadowTime=frame.time;lastShadowX=p.x;lastShadowZ=p.z;lastShadowMechanisms=mechanisms;}
   }
+  staticMerge?.validate();
+  if(renderer.shadowMap.needsUpdate)shadowCasters?.validate();
   if(joeModel){
     const position=point(frame.joe);joeModel.setDistance(camera.position.distanceTo(position));joeModel.update(frame,position,SCALE,dt);
     actorProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);actorFrustum.setFromProjectionMatrix(actorProjection);

@@ -53119,7 +53119,10 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       ctx.restore();
     }
   }
-  function studyDialogOpen() {return Boolean(document.getElementById("study-dialog")?.open||window.RCQualityUI?.isDialogOpen());}
+  // Elements looked up every frame are cached while they stay in the page.
+  const frameElements=new Map();
+  function frameElement(id){let element=frameElements.get(id);if(!element?.isConnected){element=document.getElementById(id);if(element)frameElements.set(id,element);}return element;}
+  function studyDialogOpen() {return Boolean(frameElement("study-dialog")?.open||window.RCQualityUI?.isDialogOpen());}
   // The active camera beat, if any (see armCourseCameraBeat).
   let courseCameraBeat=null;
   window.roughCutStudy = {
@@ -59332,7 +59335,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     const portrait=Boolean(((state.mode==='settings'&&window.RCCourseSettings)||(['menu','claim','clocked_out'].includes(state.mode)&&window.RCCourseMenu)||(window.RCScene3D?.domHud()&&spatialViewEnabled()&&['first_hole','paused','victory','defeat'].includes(state.mode)))&&window.innerHeight>window.innerWidth);
     if(state.mode!=='settings')window.RCCourseSettings?.hide();
     if(!['menu','claim','clocked_out'].includes(state.mode))window.RCCourseMenu?.hide();
-    const shell=document.getElementById('game-shell');
+    const shell=frameElement('game-shell');
     const introVisible=['gate','intro'].includes(state.mode);if(shell.dataset.intro!==String(introVisible))shell.dataset.intro=String(introVisible);
     if(shell.dataset.coursePortrait!==String(portrait))shell.dataset.coursePortrait=String(portrait);
     const viewportKey=portrait?`${canvas.clientWidth}:${canvas.clientHeight}`:'landscape';
@@ -59356,7 +59359,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     // The opaque DOM briefing owns the screen after preparation. Keep input and
     // readiness live without redrawing the hidden course or uploading its canvas.
     if(state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()&&window.RCQualityUI?.briefing&&!window.RCScene3D?.isPreparing()){
-      const loading=document.getElementById('course-loading');if(loading&&!loading.hidden)loading.hidden=true;
+      const loading=frameElement('course-loading');if(loading&&!loading.hidden)loading.hidden=true;
       const key=[state.inputMethod,state.hole.overtime,state.uiScale,window.innerWidth,window.innerHeight,keyboardBindingLabel('interact'),keyboardBindingLabel('chip')].join(':');
       if(key===lastBriefingRenderKey)return;lastBriefingRenderKey=key;
       window.RCQualityUI.mode(state.mode,true);drawTutorialBriefing();syncAccessibleGameStatus();return;
@@ -61054,10 +61057,19 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       return;
     }
     const now = audioContext.currentTime;
-    motorGain.gain.setTargetAtTime(level, now, 0.035);
-    motorOscillator.frequency.setTargetAtTime(frequency, now, 0.045);
+    approachAudio(motorGain.gain,level, now, 0.035);
+    approachAudio(motorOscillator.frequency,frequency, now, 0.045);
   }
 
+  // Ambience, score and motor parameters are retargeted every frame. A
+  // setTargetAtTime with the same target only restarts an identical
+  // approach, so it is scheduled only when the target actually moves.
+  const audioTargets=new WeakMap();
+  function approachAudio(param,value,now,timeConstant){
+    if(!param)return;const last=audioTargets.get(param);
+    if(last&&last.timeConstant===timeConstant&&Math.abs(last.value-value)<=1e-5+1e-4*Math.abs(value))return;
+    audioTargets.set(param,{value,timeConstant});param.setTargetAtTime(value,now,timeConstant);
+  }
   function updateAudio() {
     if(outputAnalyser){outputAnalyser.getFloatTimeDomainData(outputSamples);for(const sample of outputSamples){const level=Math.abs(sample);audioLevels.peak=Math.max(audioLevels.peak,level);if(level>=1)audioLevels.clippedSamples++;}audioLevels.samples+=outputSamples.length;}
     if (!audioContext) {
@@ -61070,13 +61082,13 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       // volumes still apply. No new oscillators, noise buffers or downloads.
       const slide=openingStorySlide,hidden=document.hidden;
       setMotorLevel(hidden?0:slide.motor,slide.hz);
-      ambienceGain?.gain.setTargetAtTime(hidden?0:slide.wind,now,.12);
-      ambienceFilter?.frequency.setTargetAtTime(340,now,.18);
-      ambienceDroneGain?.gain.setTargetAtTime(hidden?0:slide.hum,now,.1);
-      scoreGain?.gain.setTargetAtTime(0,now,.08);
-      motorReflectionGain?.gain.setTargetAtTime(0,now,.04);
-      motorOcclusionFilter?.frequency.setTargetAtTime(1100+slide.motor*16000,now,.08);
-      motorPanNode?.pan.setTargetAtTime(.13,now,.1);
+      approachAudio(ambienceGain?.gain,hidden?0:slide.wind,now,.12);
+      approachAudio(ambienceFilter?.frequency,340,now,.18);
+      approachAudio(ambienceDroneGain?.gain,hidden?0:slide.hum,now,.1);
+      approachAudio(scoreGain?.gain,0,now,.08);
+      approachAudio(motorReflectionGain?.gain,0,now,.04);
+      approachAudio(motorOcclusionFilter?.frequency,1100+slide.motor*16000,now,.08);
+      approachAudio(motorPanNode?.pan,.13,now,.1);
       return;
     }
     const isCourse = state.mode === "first_hole";
@@ -61094,14 +61106,14 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       ["menu", "settings", "claim", "victory", "clocked_out"].includes(state.mode);
     if (!isCourse) {
       if (motorOcclusionFilter) {
-        motorOcclusionFilter.frequency.setTargetAtTime(
+        approachAudio(motorOcclusionFilter.frequency,
           6200,
           now,
           0.08,
         );
       }
       if (motorReflectionGain) {
-        motorReflectionGain.gain.setTargetAtTime(
+        approachAudio(motorReflectionGain.gain,
           0,
           now,
           0.08,
@@ -61142,10 +61154,10 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
             ? 0.013
             : 0.018;
     if (ambienceGain) {
-      ambienceGain.gain.setTargetAtTime(ambienceLevel * informationDuck * atmosphereHush, now, 0.18);
+      approachAudio(ambienceGain.gain,ambienceLevel * informationDuck * atmosphereHush, now, 0.18);
     }
     if (ambienceFilter) {
-      ambienceFilter.frequency.setTargetAtTime(
+      approachAudio(ambienceFilter.frequency,
         420 + Math.sin(state.time * 0.19) * 120 + (isCourse ? state.hole.noise * 90 : 0),
         now,
         0.45,
@@ -61162,12 +61174,12 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
                 .pressure *
                 0.007
             : 0.002;
-      ambienceDroneGain.gain.setTargetAtTime(dangerDrone * informationDuck * shelterMix.drone, now, 0.28);
+      approachAudio(ambienceDroneGain.gain,dangerDrone * informationDuck * shelterMix.drone, now, 0.28);
     }
     const reactiveScore =
       reactiveScoreState();
     if (scoreGain) {
-      scoreGain.gain.setTargetAtTime(
+      approachAudio(scoreGain.gain,
         reactiveScore.gain * informationDuck * atmosphereHush * shelterMix.score,
         now,
         reactiveScore.active
@@ -61176,7 +61188,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       );
     }
     if (scoreFilter) {
-      scoreFilter.frequency.setTargetAtTime(
+      approachAudio(scoreFilter.frequency,
         (
           260 +
           reactiveScore.intensity * 960
@@ -61185,7 +61197,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         now,
         0.3,
       );
-      scoreFilter.Q.setTargetAtTime(
+      approachAudio(scoreFilter.Q,
         1.2 +
           reactiveScore.intensity * 2.3,
         now,
@@ -61193,14 +61205,14 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       );
     }
     if (scoreRootOscillator) {
-      scoreRootOscillator.frequency.setTargetAtTime(
+      approachAudio(scoreRootOscillator.frequency,
         reactiveScore.rootHz,
         now,
         0.65,
       );
     }
     if (scoreFifthOscillator) {
-      scoreFifthOscillator.frequency.setTargetAtTime(
+      approachAudio(scoreFifthOscillator.frequency,
         reactiveScore.rootHz *
           (
             1.498 +
@@ -61212,7 +61224,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       );
     }
     if (scoreTensionOscillator) {
-      scoreTensionOscillator.frequency.setTargetAtTime(
+      approachAudio(scoreTensionOscillator.frequency,
         reactiveScore.rootHz *
           (
             2.012 +
@@ -61224,7 +61236,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       );
     }
     if (scoreFifthGain) {
-      scoreFifthGain.gain.setTargetAtTime(
+      approachAudio(scoreFifthGain.gain,
         0.12 +
           reactiveScore.intensity *
             0.2,
@@ -61233,7 +61245,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       );
     }
     if (scoreTensionGain) {
-      scoreTensionGain.gain.setTargetAtTime(
+      approachAudio(scoreTensionGain.gain,
         0.015 +
           reactiveScore.intensity *
             0.11,
@@ -61245,7 +61257,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
       const revealMotor = window.RCIntroPresentation?.motor?.(state.time);
       if (revealMotor) {
         setMotorLevel(revealMotor.level, revealMotor.hz);
-        motorOcclusionFilter?.frequency.setTargetAtTime(revealMotor.cutoff ?? 6200, now, 0.08);
+        approachAudio(motorOcclusionFilter?.frequency,revealMotor.cutoff ?? 6200, now, 0.08);
       } else if (state.time < 0.95) {
         const sputter = Math.sin(state.time * 29) * 0.5 + 0.5 >= 0.35 ? 0.07 : 0;
         setMotorLevel(sputter, 58);
@@ -61358,14 +61370,14 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         ) * acoustics.dopplerMultiplier,
       );
       if (motorOcclusionFilter) {
-        motorOcclusionFilter.frequency.setTargetAtTime(
+        approachAudio(motorOcclusionFilter.frequency,
           acoustics.filterHz,
           now,
           acoustics.occluded
             ? 0.075
             : 0.14,
         );
-        motorOcclusionFilter.Q.setTargetAtTime(
+        approachAudio(motorOcclusionFilter.Q,
           acoustics.occluded
             ? 0.82
             : 0.62,
@@ -61374,7 +61386,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         );
       }
       if (motorReflectionGain) {
-        motorReflectionGain.gain.setTargetAtTime(
+        approachAudio(motorReflectionGain.gain,
           authoredMotorLevel *
             motorVisibility *
             acoustics.reflection,
@@ -61383,7 +61395,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         );
       }
       if (motorReflectionDelay) {
-        motorReflectionDelay.delayTime.setTargetAtTime(
+        approachAudio(motorReflectionDelay.delayTime,
           acoustics.material === "metal"
             ? 0.064
             : acoustics.material ===
@@ -61395,7 +61407,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         );
       }
       if (cutterOscillator) {
-        cutterOscillator.frequency.setTargetAtTime(
+        approachAudio(cutterOscillator.frequency,
           (
             238 +
               proximity * 76 +
@@ -61407,7 +61419,7 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
         );
       }
       if (motorPanNode) {
-        motorPanNode.pan.setTargetAtTime(
+        approachAudio(motorPanNode.pan,
           acoustics.pan,
           now,
           0.08,
@@ -63499,12 +63511,12 @@ import {DISPLAY_TEXT_REPLACEMENTS} from './night-order/display-text.js?v=2026111
     // These existing DOM dialogs sit above the canvas menu. Use the same
     // focused-control adapter as the other chapters and consume their input.
     const hadDialog=studyDialogOpen();
-    const briefingRoot=document.getElementById('night-order');
+    const briefingRoot=frameElement('night-order');
     const briefingActive=state.mode==='first_hole'&&state.hole.tutorialVisible&&spatialViewEnabled()&&!hadDialog;
     if(briefingRoot&&!gamepadDialogs.has('night-order'))gamepadDialogs.set('night-order',createDOMGamepadMenu({root:briefingRoot,onBack:()=>enterPause(),onStart:()=>window.roughCutRebuild.startBriefing()}));
     if(!briefingActive||!pad)gamepadDialogs.get('night-order')?.update(pad,false,dt);
     for(const [id,closeSelector] of [['controls-dialog','button'],['study-dialog','#study-close']]){
-      const root=document.getElementById(id);if(!root)continue;
+      const root=frameElement(id);if(!root)continue;
       if(!gamepadDialogs.has(id)){
         const close=()=>{if(root.open)root.querySelector(closeSelector)?.click();};
         gamepadDialogs.set(id,createDOMGamepadMenu({root,onBack:close,onStart:close}));

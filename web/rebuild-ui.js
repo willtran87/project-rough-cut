@@ -23,7 +23,7 @@
   });choices.append(b);}
   let previous='';
   function renderChoices(input=api().route().input){
-    const choice=api().choices();choices.hidden=!choice||Boolean(document.pointerLockElement)||input==='gamepad';
+    const choice=api().choices();const hideChoices=!choice||Boolean(document.pointerLockElement)||input==='gamepad';if(choices.hidden!==hideChoices)choices.hidden=hideChoices;
     if(choice){const signature=choiceSignature(choice);if(signature!==previous){[...choices.children].forEach((b,i)=>b.textContent=(i+1)+': '+choice.labels[i]);previous=signature;}}
   }
   window.RCRebuildUI={renderChoices};

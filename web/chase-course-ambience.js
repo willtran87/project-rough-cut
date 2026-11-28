@@ -1,3 +1,4 @@
+import {glide} from './chase-audio-glide.js';
 import {COURSE} from './back-nine-course.js';
 import {chaseActor} from './chase-player.js';
 import {listenerYaw} from './runner-look.js';
@@ -60,15 +61,15 @@ export function createCourseAmbienceAudio(ctx,voice,bus){
  const pan=ctx.createStereoPanner(),placement={};
  // Explicit stereo upmix preserves the old centered mono drone at pan zero.
  pan.channelCount=2;pan.channelCountMode='explicit';voice.level.connect(pan);pan.connect(bus);
- function reset(){if(!placement.id&&!placement.mix)return;voice.osc.frequency.setTargetAtTime(43.65,ctx.currentTime,.08);Object.assign(placement,{id:'',kind:'',mix:0,pan:0,level:0});pan.pan.setTargetAtTime(0,ctx.currentTime,.06);voice.filter.frequency.setTargetAtTime(320,ctx.currentTime,.08);}
+ function reset(){if(!placement.id&&!placement.mix)return;glide(voice.osc.frequency,43.65,ctx.currentTime,.08);Object.assign(placement,{id:'',kind:'',mix:0,pan:0,level:0});glide(pan.pan,0,ctx.currentTime,.06);glide(voice.filter.frequency,320,ctx.currentTime,.08);}
  return {
   update(run,running,baseGain,baseHz){
    courseAmbiencePlacement(run,placement);if(!running){placement.id='';placement.mix=0;placement.pan=0;placement.level=0;}
    const now=ctx.currentTime,blend=placement.mix;
-   voice.level.gain.setTargetAtTime(running?baseGain*(1-blend)+placement.level:0,now,blend?.18:.3);
-   voice.osc.frequency.setTargetAtTime(baseHz+(placement.hz-baseHz)*blend,now,blend?.25:.3);
-   voice.filter.frequency.setTargetAtTime(320+(placement.cutoff-320)*blend,now,.15);
-   pan.pan.setTargetAtTime(placement.pan,now,.12);
+   glide(voice.level.gain,running?baseGain*(1-blend)+placement.level:0,now,blend?.18:.3);
+   glide(voice.osc.frequency,baseHz+(placement.hz-baseHz)*blend,now,blend?.25:.3);
+   glide(voice.filter.frequency,320+(placement.cutoff-320)*blend,now,.15);
+   glide(pan.pan,placement.pan,now,.12);
   },reset,stats:()=>({...placement})
  };
 }

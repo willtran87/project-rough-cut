@@ -3,6 +3,14 @@
   const shell=document.getElementById('game-shell'),canvas=document.getElementById('game'),root=document.createElement('div');
   root.id='quality-hud';root.hidden=true;root.innerHTML='<div class="q-objective"><small data-q="zone"></small><strong data-q="goal"></strong></div><div class="q-threat" data-q="threat"></div><button class="q-map" type="button">Map</button><div class="q-reticle">·</div><div class="q-target" hidden></div><div class="q-messages" tabindex="0" aria-label="Messages and captions"><div class="q-caption" data-q="caption"></div><div class="q-danger-action" hidden><strong data-q="action"></strong><span data-q="consequence"></span></div><div class="q-context"><span data-q="context"></span><small class="q-progress-label" data-q="progressLabel" hidden></small><progress max="1" value="0" aria-label="Action progress" hidden></progress></div></div><div class="q-resources" data-q="resources"></div><svg class="q-touch" viewBox="0 0 1280 720" aria-hidden="true"></svg>';
   shell.append(root);const fields=Object.fromEntries([...root.querySelectorAll('[data-q]')].map(e=>[e.dataset.q,e]));
+  // The HUD is rebuilt from game state every frame. Write a DOM property,
+  // data attribute or style only when its value changes, so an unchanged
+  // HUD costs no attribute mutations or style invalidation.
+  const put=(el,k,v)=>{if(el[k]!==v)el[k]=v;},ds=(el,k,v)=>{v=String(v);if(el.dataset[k]!==v)el.dataset[k]=v;},styleCache=new WeakMap();
+  // Custom properties are also written by the pause and result panels, so they
+  // compare against the live value; other properties are written only here.
+  const css=(el,k,v)=>{v=String(v);if(k.startsWith('--')){if(el.style.getPropertyValue(k)!==v)el.style.setProperty(k,v);return;}let c=styleCache.get(el);if(!c)styleCache.set(el,c={});if(c[k]!==v){c[k]=v;el.style.setProperty(k,v);}};
+  const attr=(el,k,v)=>{v=String(v);if(el.getAttribute(k)!==v)el.setAttribute(k,v);};
   const messageStack=root.querySelector('.q-messages');
   messageStack.append(root.querySelector('.q-danger-action'));
   const listeningHeader=document.createElement('div');listeningHeader.className='q-listening-header';listeningHeader.hidden=true;
@@ -10,15 +18,16 @@
   const cadence=document.createElement('div');cadence.className='q-listening-cadence';cadence.hidden=true;cadence.innerHTML='<span></span><progress max="1"></progress>';
   const clues=document.createElement('details');clues.className='q-listening-clues';clues.hidden=true;clues.innerHTML='<summary></summary><ul></ul>';
   messageStack.prepend(listeningHeader,cadence);messageStack.append(clues);const clueRows=new Map();let wasListening=false;
+  const listenStrong=listeningHeader.querySelector('strong'),listenSpan=listeningHeader.querySelector('span'),listenArrow=listeningHeader.querySelector('[data-listening-arrow]'),cadenceText=cadence.querySelector('span'),cadenceBar=cadence.querySelector('progress'),cluesSummary=clues.querySelector('summary');
   function renderListening(data){
-    const active=!!data;root.dataset.listening=String(active);listeningHeader.hidden=cadence.hidden=clues.hidden=!active;
-    if(!active){clues.open=false;wasListening=false;return;}
+    const active=!!data;ds(root,'listening',active);put(listeningHeader,'hidden',!active);put(cadence,'hidden',!active);put(clues,'hidden',!active);
+    if(!active){put(clues,'open',false);wasListening=false;return;}
     if(!wasListening){messageStack.scrollTop=0;clues.open=true;}wasListening=true;
-    listeningHeader.querySelector('strong').textContent=`Joe ${data.joe.bearing.toLowerCase()} · ${data.joe.metres}m`;
-    listeningHeader.querySelector('span').textContent=data.joe.trend?`Search ${data.joe.trend}`:'';
-    listeningHeader.querySelector('[data-listening-arrow]').setAttribute('transform',`rotate(${data.joe.angle*180/Math.PI} 50 50)`);
-    cadence.querySelector('span').textContent=data.cadence.text;const bar=cadence.querySelector('progress');bar.hidden=data.cadence.progress===null;bar.value=data.cadence.progress||0;
-    clues.querySelector('summary').textContent=`Nearby clues (${data.entries.length})`;
+    put(listenStrong,'textContent',`Joe ${data.joe.bearing.toLowerCase()} · ${data.joe.metres}m`);
+    put(listenSpan,'textContent',data.joe.trend?`Search ${data.joe.trend}`:'');
+    attr(listenArrow,'transform',`rotate(${data.joe.angle*180/Math.PI} 50 50)`);
+    put(cadenceText,'textContent',data.cadence.text);put(cadenceBar,'hidden',data.cadence.progress===null);put(cadenceBar,'value',data.cadence.progress||0);
+    put(cluesSummary,'textContent',`Nearby clues (${data.entries.length})`);
     const ids=new Set(data.entries.map(e=>e.id));for(const [id,row]of clueRows)if(!ids.has(id)){row.remove();clueRows.delete(id);}
     for(const entry of data.entries){let row=clueRows.get(entry.id);if(!row){row=document.createElement('li');row.dataset.clue=entry.id;clues.querySelector('ul').append(row);clueRows.set(entry.id,row);}const text=`${entry.label} · ${entry.bearing.toLowerCase()} · ${entry.metres}m${entry.detail?' · '+entry.detail:''}`;if(row.textContent!==text)row.textContent=text;}
   }
@@ -47,7 +56,7 @@
   function pause(data){
     const signature=JSON.stringify(data)+':'+canvas.clientWidth+':'+canvas.clientHeight;
     if(!pausePanel.hidden&&!root.hidden&&signature===pauseSignature)return;pauseSignature=signature;
-    root.hidden=false;root.dataset.pause='true';root.dataset.map='false';root.style.setProperty('--q-user-scale',data.scale||1);mapPanel.hidden=true;pausePanel.hidden=false;
+    hidePending=false;root.hidden=false;root.dataset.pause='true';root.dataset.map='false';root.style.setProperty('--q-user-scale',data.scale||1);mapPanel.hidden=true;pausePanel.hidden=false;
     for(const key of ['zone','title','objective','next','status','threat','controls']){const el=pausePanel.querySelector('[data-pause="'+key+'"]');if(el.textContent!==data[key])el.textContent=data[key];}
     const buttons=[...pausePanel.querySelectorAll('[data-pause-action]')];buttons.forEach((b,i)=>{b.dataset.selected=String(i===data.selected);const title=b.querySelector('strong'),description=b.querySelector('small');if(title.textContent!==data.actions[i].label)title.textContent=data.actions[i].label;if(description.textContent!==data.actions[i].description)description.textContent=data.actions[i].description;});
     const extras=pausePanel.querySelector('.course-pause-extras');for(const id of ['controls-launch','study-launch']){const button=document.getElementById(id);if(button){if(button.parentElement!==extras)extras.append(button);if(id==='study-launch')button.hidden=!window.roughCutStudy?.available();}}
@@ -62,7 +71,7 @@
   for(let i=0;i<3;i++){const b=document.createElement('button');b.type='button';b.dataset.resultAction=i;b.onclick=()=>window.roughCutRebuild?.activateResult(i);b.onfocus=()=>window.roughCutRebuild?.selectResult(i);resultPanel.querySelector('nav').append(b);}
   function result(data){
     if(!wasResult||resultPanel.dataset.outcome!==data.outcome){for(const detail of resultPanel.querySelectorAll('.rc-report,.rc-loss-details'))detail.open=false;}
-    root.hidden=false;root.dataset.result='true';root.dataset.pause='false';root.dataset.map='false';root.style.setProperty('--q-user-scale',data.scale||1);pausePanel.hidden=mapPanel.hidden=true;resultPanel.hidden=false;resultPanel.dataset.outcome=data.outcome;
+    hidePending=false;root.hidden=false;root.dataset.result='true';root.dataset.pause='false';root.dataset.map='false';root.style.setProperty('--q-user-scale',data.scale||1);pausePanel.hidden=mapPanel.hidden=true;resultPanel.hidden=false;resultPanel.dataset.outcome=data.outcome;
     for(const key of ['title','kicker','summary','headline','evidence','advice','dialogue','milestone','controls']){const el=resultPanel.querySelector('[data-result="'+key+'"]');if(el.textContent!==data[key])el.textContent=data[key];}
     window.RCGameTheme?.resultLoss(data.outcome==='defeat');const still=resultPanel.querySelector('.rc-loss-still');if(still)still.hidden=data.outcome!=='defeat';if(data.outcome!=='defeat'){resultArt.clearRect(0,0,1280,720);resultArt.imageSmoothingEnabled=false;resultArt.drawImage(data.art,0,0,1280,720);}resultPanel.querySelector('blockquote').hidden=!data.dialogue;
     const key=JSON.stringify([data.stats,data.events,data.actions]);if(key!==resultContentKey){
@@ -75,18 +84,21 @@
     if((!wasResult||lastResultSelection!==data.selected)&&!document.querySelector('dialog[open]'))buttons[data.selected].focus({preventScroll:true});
     if(!wasResult)resultPanel.querySelector('.course-result-scroll').scrollTop=0;wasResult=true;lastResultSelection=data.selected;
   }
-  let touchKey='',messageKey='';const svg=root.querySelector('.q-touch');
+  // scene-3d hides the HUD at the start of every frame and render() shows it
+  // again; the hide is applied after the frame only if nothing rendered.
+  let touchKey='',messageKey='',lastMode=null,hidePending=false;const svg=root.querySelector('.q-touch'),hudMarker=root.querySelector('.q-target'),hudProgress=root.querySelector('.q-context progress'),hudDanger=root.querySelector('.q-danger-action');
   function render(data){
-    mapPanel.hidden=true;root.dataset.map='false';pausePanel.hidden=true;root.dataset.pause='false';
+    hidePending=false;
+    put(mapPanel,'hidden',true);ds(root,'map','false');put(pausePanel,'hidden',true);ds(root,'pause','false');
     renderListening(data.listening);
-    const threat=fields.threat,messages=root.querySelector('.q-messages');
+    const threat=fields.threat,messages=messageStack;
     if(shell.dataset.coursePortrait==='true'){if(threat.parentElement!==messages)messages.prepend(threat);}else if(threat.parentElement!==root)root.insertBefore(threat,root.querySelector('.q-map'));
-    root.hidden=false;root.dataset.touch=Boolean(data.touch);root.style.setProperty('--q-user-scale',data.scale||1);root.style.fontSize='calc(var(--q-font) * '+(data.scale||1)+')';const marker=root.querySelector('.q-target');marker.hidden=!data.target;if(data.target){marker.style.left=(data.target.x/1280*100)+'%';marker.style.top=(data.target.y/720*100)+'%';}for(const [key,element]of Object.entries(fields)){const text=data[key]||'';if(element.textContent!==text)element.textContent=text;element.hidden=!text;}
-    const progress=root.querySelector('.q-context progress');progress.parentElement.hidden=!data.context&&data.progress==null;progress.hidden=data.progress==null;if(!progress.hidden){progress.value=data.progress;progress.setAttribute('aria-label',data.progressLabel||'Action progress');}
-    root.querySelector('.q-danger-action').hidden=!data.action;
+    hidePending=false;put(root,'hidden',false);ds(root,'touch',Boolean(data.touch));css(root,'--q-user-scale',data.scale||1);css(root,'font-size','calc(var(--q-font) * '+(data.scale||1)+')');const marker=hudMarker;put(marker,'hidden',!data.target);if(data.target){css(marker,'left',(data.target.x/1280*100)+'%');css(marker,'top',(data.target.y/720*100)+'%');}for(const key in fields){const element=fields[key],text=data[key]||'';put(element,'textContent',text);put(element,'hidden',!text);}
+    const progress=hudProgress;put(progress.parentElement,'hidden',!data.context&&data.progress==null);put(progress,'hidden',data.progress==null);if(!progress.hidden){put(progress,'value',data.progress);attr(progress,'aria-label',data.progressLabel||'Action progress');}
+    put(hudDanger,'hidden',!data.action);
     const nextMessageKey=[data.context,data.caption,data.action,data.consequence,canvas.clientWidth,canvas.clientHeight,data.scale,Boolean(data.touch)].join('|');
     if(nextMessageKey!==messageKey){const messages=root.querySelector('.q-messages');if(!data.listening)messages.scrollTop=messages.scrollHeight;messageKey=nextMessageKey;}
-    root.dataset.danger=data.danger?'true':'false';svg.hidden=!data.touch;svg.style.display=data.touch?'block':'none';
+    ds(root,'danger',data.danger?'true':'false');put(svg,'hidden',!data.touch);css(svg,'display',data.touch?'block':'none');
     if(data.touch){
       const w=canvas.clientWidth,h=canvas.clientHeight,sx=w/1280,sy=h/720;
       const key=w+':'+h+':'+JSON.stringify(data.touch);
@@ -132,5 +144,5 @@
     if(appearing&&data.ready)start.focus({preventScroll:true});
   }
   window.RCGameTheme?.night();
-  window.RCQualityUI={render,map,pause,result,scrollResult:amount=>{resultPanel.querySelector('.course-result-scroll').scrollTop+=amount;},scrollMap:amount=>{mapPanel.querySelector('.course-map-scroll').scrollTop+=amount;},briefing,hide:()=>{root.hidden=true;},mode:(mode,briefingVisible=false)=>{if(!['victory','defeat'].includes(mode)){wasResult=false;resultPanel.hidden=true;root.dataset.result='false';const journal=document.getElementById('study-launch');if(journal&&resultPanel.contains(journal))shell.append(journal);}if(mode!=='paused'){wasPaused=false;pausePanel.hidden=true;root.dataset.pause='false';for(const id of ['controls-launch','study-launch']){const button=document.getElementById(id);if(button&&pausePanel.contains(button))shell.append(button);}{const photo=document.getElementById('photo-launch');if(photo&&pausePanel.contains(photo)){shell.append(photo);photo.hidden=true;}}}if(mode!=='first_hole'||root.dataset.map!=='true')wasMap=false;if(mode!=='first_hole'||!briefingVisible)brief.hidden=true;settings.hidden=!['menu','paused','settings'].includes(mode);if(mode==='first_hole'&&dialog.open)dialog.close();},isDialogOpen:()=>dialog.open};
+  window.RCQualityUI={render,map,pause,result,scrollResult:amount=>{resultPanel.querySelector('.course-result-scroll').scrollTop+=amount;},scrollMap:amount=>{mapPanel.querySelector('.course-map-scroll').scrollTop+=amount;},briefing,hide:()=>{hidePending=true;queueMicrotask(()=>{if(hidePending){hidePending=false;put(root,'hidden',true);}});},mode:(mode,briefingVisible=false)=>{const entered=mode!==lastMode;lastMode=mode;if(!['victory','defeat'].includes(mode)){wasResult=false;put(resultPanel,'hidden',true);ds(root,'result','false');if(entered){const journal=document.getElementById('study-launch');if(journal&&resultPanel.contains(journal))shell.append(journal);}}if(mode!=='paused'){wasPaused=false;put(pausePanel,'hidden',true);ds(root,'pause','false');if(entered){for(const id of ['controls-launch','study-launch']){const button=document.getElementById(id);if(button&&pausePanel.contains(button))shell.append(button);}{const photo=document.getElementById('photo-launch');if(photo&&pausePanel.contains(photo)){shell.append(photo);photo.hidden=true;}}}}if(mode!=='first_hole'||root.dataset.map!=='true')wasMap=false;if(mode!=='first_hole'||!briefingVisible)put(brief,'hidden',true);put(settings,'hidden',!['menu','paused','settings'].includes(mode));if(mode==='first_hole'&&dialog.open)dialog.close();},isDialogOpen:()=>dialog.open};
 })();

@@ -326,8 +326,9 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
     const resize=()=>{Object.assign(canvas.style,{left:stage.offsetLeft+'px',top:stage.offsetTop+'px',width:stage.clientWidth+'px',height:stage.clientHeight+'px'});};
     const observer=new ResizeObserver(resize);observer.observe(stage);resize();
     const g=canvas.getContext('2d',{alpha:true,willReadFrequently:true});let stamp='',paints=0;
+    let hidePending=false;
     function draw(frame){
-      const f=frame.fx||{};canvas.hidden=!f.screen||f.enabled===false;if(canvas.hidden)return;
+      const f=frame.fx||{};hidePending=false;const hideCanvas=!f.screen||f.enabled===false;if(canvas.hidden!==hideCanvas)canvas.hidden=hideCanvas;if(hideCanvas)return;
       const pressure=clamp((f.pressure||0)*(f.pursuitIntensity??1),0,1),conceal=clamp(f.concealment||0,0,1),flash=f.flashes&&!frame.reducedMotion&&!f.suppressScares&&frame.joe.mode!=='chase'?f.horror?.visualFlash:null;
       const envelope=flash&&flash.type!=='course_tear'?Math.sin(clamp(1-flash.seconds/flash.duration,0,1)*Math.PI)*.32:0;
       const pulse=frame.reducedMotion?1:.92+.08*Math.sin(frame.time*3);
@@ -356,7 +357,10 @@ export function createPixelEffects(world,{software=false,scale,xScale,moon,block
         if(side)for(let i=0;i<14;i++){g.fillStyle=`rgba(232,176,92,${grip*(14-i)*.02})`;g.fillRect(side<0?i*2:254-i*2,8+i*3,2,128-i*6);}
       }
     }
-    return {draw,hide:()=>{canvas.hidden=true;},dispose:()=>{observer.disconnect();canvas.remove();},stats:()=>({paints,resolution:[256,144],visible:!canvas.hidden,ghostTear:ghostTear?{...ghostTear}:null})};
+    // scene-3d hides at the start of every frame and draw() decides again; the
+    // hide lands after the frame only if draw() did not run, so the canvas
+    // is not toggled twice per frame.
+    return {draw,hide:()=>{hidePending=true;queueMicrotask(()=>{if(hidePending){hidePending=false;if(!canvas.hidden)canvas.hidden=true;}});},dispose:()=>{observer.disconnect();canvas.remove();},stats:()=>({paints,resolution:[256,144],visible:!canvas.hidden,ghostTear:ghostTear?{...ghostTear}:null})};
   })();
   return {root,encounterPhase:()=>root.visible?ghostSightings.stats().phase:'quiet',interference:()=>ghostTear,audioState:()=>root.visible?audioGhost:null,ready:ghost.ready,preparation:ghost.root,update,screen:feedback.draw,hide:feedback.hide,stats:()=>{const {key,camera,preferences,...publicReport}=report;return {...publicReport,drawCalls:(publicReport.drawCalls||0)+(original.stats().drawCalls||0),original:original.stats(),limits,updates,updateMs:lastCost,maxUpdateMs:maxCost,feedback:feedback.stats(),ghost:ghost.stats()};},dispose:()=>{original.dispose();ghost.dispose();feedback.dispose();root.removeFromParent();for(const mesh of Object.values(batches)){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}for(const t of textures)t.dispose();}};
 }

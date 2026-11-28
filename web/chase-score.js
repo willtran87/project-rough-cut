@@ -1,3 +1,4 @@
+import {glide} from './chase-audio-glide.js';
 import {encounterQuiet} from './chase-encounter.js';
 const clamp=v=>Math.max(0,Math.min(1,v));
 const MIX_KEYS=['steps','bass','pulse','upper','bow'];
@@ -29,7 +30,7 @@ export function createChaseScore(ctx,destination){
  });
  let lastRun=null,lastTime=0,phase=0,level=0,step=-1,playing=false,tempo=62,arrangement='departure',duck=1;
  const mix={steps:.5,bass:.45,pulse:0,upper:.12,bow:.2};
- function silence(){for(const v of voices)v.gain.gain.setTargetAtTime(0,ctx.currentTime,.06);playing=false;}
+ function silence(){for(const v of voices)glide(v.gain.gain,0,ctx.currentTime,.06);playing=false;}
  function update(run,active,settings={}){
   if(!run){silence();return;}
   if(lastRun!==run){lastRun=run;lastTime=run.time;phase=0;step=-1;level=0;tempo=62;Object.assign(mix,{steps:.5,bass:.45,pulse:0,upper:.12,bow:.2});}
@@ -45,11 +46,11 @@ export function createChaseScore(ctx,destination){
   tempo+=(score.tempo+level*(relief||arrangement==='departure'?0:22)-tempo)*(1-Math.exp(-dt*1.6));if(active)phase+=dt*tempo/60*mix.steps;
   const whole=Math.floor(phase),beat=phase-whole,now=ctx.currentTime;
   if(whole!==step){step=whole;const n=score.notes[whole%score.notes.length],root=55*Math.pow(2,n/12);
-   voices[0].osc.frequency.setTargetAtTime(root,now,.012);
-   voices[1].osc.frequency.setTargetAtTime(root*4,now,.025);
+   glide(voices[0].osc.frequency,root,now,.012);
+   glide(voices[1].osc.frequency,root*4,now,.025);
    // A held, slightly beating minor ninth above the bass across each phrase.
-   voices[2].osc.frequency.setTargetAtTime(220*Math.pow(2,(Math.floor(whole/16)%2?1:0)/12),now,.2);
-   voices[4].osc.frequency.setTargetAtTime(root*2*Math.pow(2,3/12),now,.03);
+   glide(voices[2].osc.frequency,220*Math.pow(2,(Math.floor(whole/16)%2?1:0)/12),now,.2);
+   glide(voices[4].osc.frequency,root*2*Math.pow(2,3/12),now,.03);
   }
   const allowed=active&&!run.death&&['driving','sealing'].includes(run.mode)&&!run.finale?.latched;
   duck=run.experience?.silence.phase==='quiet'?.025:run.experience?.silence.phase==='restart'?.15:run.panic?.phase==='reveal'?.08:run.joe.ram?.phase==='lineup'||run.pressure?.phase==='gather'||['commit_warning','signal'].includes(run.hunt?.phase)?.32:(run.impact?.age??99)<.5?.25:gap<18?.65:1;
@@ -57,9 +58,9 @@ export function createChaseScore(ctx,destination){
   const pulse=Math.exp(-beat*7),bow=.65+.35*Math.sin(phase*Math.PI*2),downbeat=whole%4===0?Math.exp(-beat*13):0;
   // Low drum accents and bowed minor thirds make the pursuit more forceful.
   // Both still duck beneath Joe's attack cues and fall away in earned relief.
-  voices[3].osc.frequency.setTargetAtTime(42+downbeat*58,now,.012);
+  glide(voices[3].osc.frequency,42+downbeat*58,now,.012);
   const amounts=[gain*(.12*mix.bass+.2*pulse*mix.pulse),gain*level*.12*pulse*mix.upper,gain*Math.max(0,level-.2)*.1*bow*mix.bow,gain*.24*downbeat*mix.pulse,gain*level*.075*pulse*mix.upper];
-  for(let i=0;i<voices.length;i++){voices[i].gain.gain.setTargetAtTime(amounts[i],now,allowed?.018:.05);voices[i].filter.frequency.setTargetAtTime(i===3?180:180+i*150+level*(i?1000:230),now,.12);}
+  for(let i=0;i<voices.length;i++){glide(voices[i].gain.gain,amounts[i],now,allowed?.018:.05);glide(voices[i].filter.frequency,i===3?180:180+i*150+level*(i?1000:230),now,.12);}
   playing=gain>.001;
  }
  return {update,silence,stats:()=>({voices:voices.length,playing,level,tempo,step,phase,arrangement,duck,pulse:mix.pulse}),dispose(){for(const v of voices){v.osc.stop();v.osc.disconnect();v.filter.disconnect();v.gain.disconnect();}}};

@@ -21,7 +21,9 @@ export function createCourseLanternLightField(anchors){
   const indices=new Float32Array(width*height*layers*4),sources=new Float32Array(Math.max(1,anchors.length)*4);
   cells.forEach((ids,cell)=>ids.forEach((id,i)=>{const x=cell%width,z=Math.floor(cell/width),layer=Math.floor(i/4);indices[((z*layers+layer)*width+x)*4+i%4]=id+1;}));
   const texture=(data,w,h)=>{const t=new THREE.DataTexture(data,w,h,THREE.RGBAFormat,THREE.FloatType);t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;};
-  const indexMap=texture(indices,width,height*layers),sourceValues=Array.from({length:Math.max(1,anchors.length)},()=>new THREE.Vector4());
+  // The vec4 array uniform reads this Float32Array directly. An array of
+  // Vector4 would be flattened again on every program upload.
+  const indexMap=texture(indices,width,height*layers),sourceValues=sources;
   const color=new THREE.Color(0xffcb82),uniforms={courseLampCells:{value:indexMap},courseLampSources:{value:sourceValues}};
   const materials=new Map();let disposed=false;
   let body=`vec3 courseLampWorld=(vec4(geometryPosition,1.0)-viewMatrix[3]).xyz*mat3(viewMatrix);
@@ -58,9 +60,8 @@ RE_Direct(courseLampLight,geometryPosition,geometryNormal,geometryViewDir,geomet
     slot.patch=patch;slot.owner=owner;material.needsUpdate=true;materials.set(material,slot);
   }
   function update(){
-    if(disposed)return;let changed=false;
-    anchors.forEach((a,i)=>{const values=[a.position.x,a.position.y,a.position.z,POWER*a.intensity];for(let j=0;j<4;j++){const value=Math.fround(values[j]);if(sources[i*4+j]!==value){sources[i*4+j]=value;changed=true;}}});
-    if(changed)sourceValues.forEach((v,i)=>v.fromArray(sources,i*4));
+    if(disposed)return;
+    for(let i=0;i<anchors.length;i++){const a=anchors[i],p=a.position,o=i*4;sources[o]=p.x;sources[o+1]=p.y;sources[o+2]=p.z;sources[o+3]=POWER*a.intensity;}
   }
   update();
   return {apply,update,textures:[indexMap],dispose(){

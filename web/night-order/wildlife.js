@@ -23,7 +23,7 @@ export function createNightWildlife(THREE,parent,{lamps=[],trees=[],ponds=[]}={}
  const dots=dotTexture(THREE),wings=birdTexture(THREE);
  const lights=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:dots,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),total);
  lights.name='NightWildlifeLights';lights.frustumCulled=false;lights.renderOrder=4;lights.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
- const birds=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,.5),new THREE.MeshBasicMaterial({map:wings,color:0x5a6b7e,transparent:true,alphaTest:.4,depthWrite:false,side:THREE.DoubleSide}),BIRDS);
+ const birds=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,.5),new THREE.MeshBasicMaterial({map:wings,color:0x5a6b7e,transparent:true,alphaTest:.4,depthWrite:false,side:THREE.DoubleSide,forceSinglePass:true}),BIRDS);
  birds.name='NightWildlifeBirds';birds.frustumCulled=false;birds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
  const m=new THREE.Matrix4(),p=new THREE.Vector3(),s=new THREE.Vector3(),color=new THREE.Color(),q=new THREE.Quaternion(),zero=new THREE.Vector3(0,0,0),tilt=new THREE.Quaternion(),axis=new THREE.Vector3(0,0,1);
  for(let i=0;i<total;i++){lights.setMatrixAt(i,m.compose(zero,q,s.set(.03,.03,.03)));lights.setColorAt(i,color.setRGB(1,1,1));}
